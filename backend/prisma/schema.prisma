@@ -10,6 +10,7 @@ datasource db {
 enum Rol {
   ADMIN
   CARPINTERO
+  EMPLEADO
 }
 
 enum EstadoPedido {
@@ -55,9 +56,26 @@ model Pedido {
   @@map("pedidos")
 }
 
+model Material {
+  id                 String          @id @default(uuid())
+  nombre             String          @unique
+  valor              Float
+  espesorMm          Int             @default(18)
+  anchoPlaca         Int
+  altoPlaca          Int
+  activo             Boolean         @default(true)
+  fechaCreacion      DateTime        @default(now())
+  fechaActualizacion DateTime        @updatedAt
+  detalles           DetallePedido[]
+
+  @@index([activo])
+  @@map("materiales")
+}
+
 model DetallePedido {
   id                 String  @id @default(uuid())
   pedidoId           String
+  materialId         String?
   codigoBarra        String
   material           String
   largo              Int
@@ -67,12 +85,16 @@ model DetallePedido {
   cantoLargo2        Boolean @default(false)
   cantoAncho1        Boolean @default(false)
   cantoAncho2        Boolean @default(false)
+  permiteRotar       Boolean @default(false)
   codigoBarraCentro  String?
   remark             String?
   numeroCliente      String?
   nombreCliente      String?
   nombreProducto     String?
   pedido             Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  materialRef        Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+
+  @@index([materialId])
 
   @@map("detalle_pedidos")
 }
