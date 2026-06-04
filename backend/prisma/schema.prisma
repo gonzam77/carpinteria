@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Rol {
+  ADMIN
+  CARPINTERO
+}
+
+enum EstadoPedido {
+  PENDIENTE
+  EN_PROCESO
+  TERMINADA
+  RECHAZADA
+}
+
+model Usuario {
+  id            String          @id @default(uuid())
+  nombre        String
+  apellido      String
+  email         String          @unique
+  password      String?
+  telefono      String?
+  googleId      String?         @unique
+  rol           Rol             @default(CARPINTERO)
+  fechaCreacion DateTime        @default(now())
+  pedidos       Pedido[]
+  auditorias    Auditoria[]     @relation("AuditoriaUsuario")
+  cambios       HistorialPedido[] @relation("CambioUsuario")
+
+  @@map("usuarios")
+}
+
+model Pedido {
+  id            String            @id @default(uuid())
+  cliente       String
+  numeroContacto String?
+  observaciones String?
+  estado        EstadoPedido      @default(PENDIENTE)
+  usuarioId     String
+  fechaCreacion DateTime          @default(now())
+  fechaActualizacion DateTime     @updatedAt
+  usuario       Usuario           @relation(fields: [usuarioId], references: [id])
+  detalles      DetallePedido[]
+  historial     HistorialPedido[]
+
+  @@index([estado])
+  @@index([cliente])
+  @@index([fechaCreacion])
+  @@map("pedidos")
+}
+
+model DetallePedido {
+  id                 String  @id @default(uuid())
+  pedidoId           String
+  codigoBarra        String
+  material           String
+  largo              Int
+  ancho              Int
+  cantidad           Int
+  cantoLargo1        Boolean @default(false)
+  cantoLargo2        Boolean @default(false)
+  cantoAncho1        Boolean @default(false)
+  cantoAncho2        Boolean @default(false)
+  codigoBarraCentro  String?
+  remark             String?
+  numeroCliente      String?
+  nombreCliente      String?
+  nombreProducto     String?
+  pedido             Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@map("detalle_pedidos")
+}
+
+model HistorialPedido {
+  id            String       @id @default(uuid())
+  pedidoId      String
+  usuarioId     String
+  accion        String
+  valorAnterior String?
+  valorNuevo    String?
+  fechaCreacion DateTime     @default(now())
+  pedido        Pedido       @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  usuario       Usuario      @relation("CambioUsuario", fields: [usuarioId], references: [id])
+
+  @@index([pedidoId])
+  @@map("historial_pedidos")
+}
+
+model Auditoria {
+  id            String   @id @default(uuid())
+  usuarioId     String?
+  accion        String
+  entidad       String
+  entidadId     String?
+  metadata      Json?
+  fechaCreacion DateTime @default(now())
+  usuario       Usuario? @relation("AuditoriaUsuario", fields: [usuarioId], references: [id])
+
+  @@index([entidad])
+  @@map("auditorias")
+}
