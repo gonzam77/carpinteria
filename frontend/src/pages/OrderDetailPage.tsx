@@ -1,18 +1,21 @@
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Button, Chip, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { saveAs } from "file-saver";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
+import { CutOptimizer } from "../components/CutOptimizer";
 import { useAuth } from "../context/AuthContext";
-import { EstadoSolicitud, Order } from "../types";
+import { EstadoSolicitud, Material, Order } from "../types";
 
 const estados: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "RECHAZADA"];
 
 export function OrderDetailPage() {
   const { id } = useParams();
   const [order, setOrder] = useState<Order | null>(null);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -24,6 +27,11 @@ export function OrderDetailPage() {
   useEffect(() => {
     loadOrder();
   }, [id]);
+
+  useEffect(() => {
+    if (user?.rol !== "ADMIN") return;
+    api.get<Material[]>("/materiales", { params: { incluirInactivos: true } }).then((response) => setMaterials(response.data));
+  }, [user]);
 
   async function exportOrder() {
     const response = await api.get("/orders/export", { params: { ids: id }, responseType: "blob" });
@@ -48,6 +56,9 @@ export function OrderDetailPage() {
           </Typography>
         </div>
         <Stack direction="row" spacing={1}>
+          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes")}>
+            Volver
+          </Button>
           {user?.rol === "ADMIN" ? (
             <Select size="small" value={order.estado} onChange={(event) => changeStatus(event.target.value as EstadoSolicitud)}>
               {estados.map((estado) => (
@@ -65,7 +76,7 @@ export function OrderDetailPage() {
             </Button>
           )}
           {(user?.rol === "ADMIN" || order.estado === "PENDIENTE") && (
-            <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`)}>
+            <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })}>
               Editar
             </Button>
           )}
@@ -75,7 +86,7 @@ export function OrderDetailPage() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              {["Codigo barra", "Material", "Largo", "Ancho", "Cantidad", "CL1", "CL2", "CA1", "CA2", "Centro", "Remark", "Cliente", "Producto"].map((header) => (
+              {["Codigo barra", "Material", "Largo", "Ancho", "Cantidad", "CL1", "CL2", "CA1", "CA2", "Rotar", "Centro", "Remark", "Cliente", "Producto"].map((header) => (
                 <TableCell key={header} sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
                   {header}
                 </TableCell>
@@ -94,6 +105,7 @@ export function OrderDetailPage() {
                 <TableCell>{detail.cantoLargo2 ? "Canto" : ""}</TableCell>
                 <TableCell>{detail.cantoAncho1 ? "Canto" : ""}</TableCell>
                 <TableCell>{detail.cantoAncho2 ? "Canto" : ""}</TableCell>
+                <TableCell>{detail.permiteRotar ? "Si" : "No"}</TableCell>
                 <TableCell>{detail.codigoBarraCentro}</TableCell>
                 <TableCell>{detail.remark}</TableCell>
                 <TableCell>{detail.nombreCliente}</TableCell>
@@ -103,6 +115,11 @@ export function OrderDetailPage() {
           </TableBody>
         </Table>
       </Paper>
+      {user?.rol === "ADMIN" && (
+        <Paper sx={{ p: 2 }}>
+          <CutOptimizer rows={order.detalles} materials={materials} autoCalculate />
+        </Paper>
+      )}
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>
           Historial

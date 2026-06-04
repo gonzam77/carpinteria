@@ -1,6 +1,7 @@
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import GroupIcon from "@mui/icons-material/Group";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PostAddIcon from "@mui/icons-material/PostAdd";
 import { AppBar, Box, Button, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from "@mui/material";
@@ -27,7 +28,12 @@ export function AppLayout() {
       icon: <PostAddIcon />,
       match: (pathname: string) => pathname === "/pedidos/nuevo" || pathname === "/solicitar"
     },
-    ...(user?.rol === "ADMIN" ? [{ label: "Usuarios", to: "/usuarios", icon: <GroupIcon />, match: (pathname: string) => pathname === "/usuarios" }] : [])
+    ...(user?.rol === "ADMIN"
+      ? [
+          { label: "Materiales", to: "/materiales", icon: <Inventory2Icon />, match: (pathname: string) => pathname === "/materiales" },
+          { label: "Usuarios", to: "/usuarios", icon: <GroupIcon />, match: (pathname: string) => pathname === "/usuarios" }
+        ]
+      : [])
   ];
 
   return (

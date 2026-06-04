@@ -54,9 +54,9 @@ export function OrdersPage() {
             </Tooltip>
             {(user?.rol === "ADMIN" || row.estado === "PENDIENTE") && (
               <Tooltip title="Editar">
-                <IconButton onClick={() => navigate(`/pedidos/${row.id}/editar`)}>
-                  <EditIcon />
-                </IconButton>
+              <IconButton onClick={() => navigate(`/pedidos/${row.id}/editar`, { state: { returnTo: user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes" } })}>
+                <EditIcon />
+              </IconButton>
               </Tooltip>
             )}
           </>

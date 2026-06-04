@@ -1,6 +1,18 @@
 export type Rol = "ADMIN" | "CARPINTERO";
 export type EstadoSolicitud = "PENDIENTE" | "EN_PROCESO" | "TERMINADA" | "RECHAZADA";
 
+export type Material = {
+  id: string;
+  nombre: string;
+  valor: number;
+  espesorMm: number;
+  anchoPlaca: number;
+  altoPlaca: number;
+  activo: boolean;
+  fechaCreacion?: string;
+  fechaActualizacion?: string;
+};
+
 export type User = {
   id: string;
   nombre: string;
@@ -13,6 +25,7 @@ export type User = {
 
 export type OrderDetail = {
   id?: string;
+  materialId?: string;
   codigoBarra: string;
   material: string;
   largo: number | string;
@@ -22,6 +35,7 @@ export type OrderDetail = {
   cantoLargo2: boolean;
   cantoAncho1: boolean;
   cantoAncho2: boolean;
+  permiteRotar: boolean;
   codigoBarraCentro?: string;
   remark?: string;
   numeroCliente?: string;

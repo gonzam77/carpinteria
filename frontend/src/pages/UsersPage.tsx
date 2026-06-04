@@ -49,7 +49,7 @@ export function UsersPage() {
             <MenuItem value="ADMIN">ADMIN</MenuItem>
           </TextField>
           <Button type="submit" variant="contained" startIcon={<SaveIcon />}>
-            Crear
+            Crear Usuario
           </Button>
         </Stack>
       </Paper>

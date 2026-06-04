@@ -3,6 +3,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./layouts/AppLayout";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
+import { MaterialsPage } from "./pages/MaterialsPage";
 import { OrderDetailPage } from "./pages/OrderDetailPage";
 import { OrderFormPage } from "./pages/OrderFormPage";
 import { OrdersPage } from "./pages/OrdersPage";
@@ -27,6 +28,14 @@ export function App() {
         <Route path="mis-solicitudes" element={<OrdersPage />} />
         <Route path="pedidos/:id" element={<OrderDetailPage />} />
         <Route path="pedidos/:id/editar" element={<OrderFormPage />} />
+        <Route
+          path="materiales"
+          element={
+            <ProtectedRoute roles={["ADMIN"]}>
+              <MaterialsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="usuarios"
           element={
