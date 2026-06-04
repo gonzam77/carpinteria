@@ -2,8 +2,9 @@ import { EstadoPedido } from "../../generated/prisma/client.js";
 import { z } from "zod";
 
 export const detailSchema = z.object({
+  materialId: z.string().uuid(),
   codigoBarra: z.string().optional().default(""),
-  material: z.string().min(1),
+  material: z.string().optional(),
   largo: z.coerce.number().int().positive(),
   ancho: z.coerce.number().int().positive(),
   cantidad: z.coerce.number().int().positive(),
@@ -11,6 +12,7 @@ export const detailSchema = z.object({
   cantoLargo2: z.boolean().default(false),
   cantoAncho1: z.boolean().default(false),
   cantoAncho2: z.boolean().default(false),
+  permiteRotar: z.boolean().default(false),
   codigoBarraCentro: z.string().optional().nullable(),
   remark: z.string().optional().nullable(),
   numeroCliente: z.string().optional().nullable(),
