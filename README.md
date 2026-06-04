@@ -89,3 +89,4 @@ La exportacion respeta este orden:
 `codigo barra`, `Material`, `largo`, `ancho`, `cantidad`, `canto largo 1`, `canto largo 2`, `canto ancho 1`, `canto ancho 2`, `codigo barra centro p`, `Remark`, `numero cliente`, `nombre cliente`, `nombre producto`.
 
 Si un canto esta activo escribe `Canto`; si no, deja la celda vacia.
+# carpinteria
