@@ -1,21 +1,25 @@
 import ExcelJS from "exceljs";
 
 const columns = [
-  "codigo barra",
-  "Material",
-  "largo",
-  "ancho",
-  "cantidad",
-  "canto largo 1",
-  "canto largo 2",
-  "canto ancho 1",
-  "canto ancho 2",
-  "permite rotar",
-  "codigo barra centro p",
-  "Remark",
-  "numero cliente",
-  "nombre cliente",
-  "nombre producto"
+  { header: "codigo barra", key: "codigo barra" },
+  { header: "Material", key: "Material" },
+  { header: "largo", key: "largo" },
+  { header: "ancho", key: "ancho" },
+  { header: "cantidad", key: "cantidad" },
+  { header: "", key: "blank1" },
+  { header: "", key: "blank2" },
+  { header: "", key: "blank3" },
+  { header: "", key: "blank4" },
+  { header: "canto largo 1", key: "canto largo 1" },
+  { header: "canto largo 2", key: "canto largo 2" },
+  { header: "canto ancho 1", key: "canto ancho 1" },
+  { header: "canto ancho 2", key: "canto ancho 2" },
+  { header: "permite rotar", key: "permite rotar" },
+  { header: "codigo barra centro p", key: "codigo barra centro p" },
+  { header: "Remark", key: "Remark" },
+  { header: "numero cliente", key: "numero cliente" },
+  { header: "nombre cliente", key: "nombre cliente" },
+  { header: "nombre producto", key: "nombre producto" }
 ] as const;
 
 function canto(value: boolean) {
@@ -28,10 +32,10 @@ export async function buildOrdersWorkbook(orders: any[]) {
   workbook.created = new Date();
   const sheet = workbook.addWorksheet("Pedidos");
 
-  sheet.columns = columns.map((header) => ({
-    header,
-    key: header,
-    width: Math.max(header.length + 4, 16)
+  sheet.columns = columns.map((column) => ({
+    header: column.header,
+    key: column.key,
+    width: Math.max(column.header.length + 4, 16)
   }));
 
   sheet.getRow(1).font = { bold: true };
