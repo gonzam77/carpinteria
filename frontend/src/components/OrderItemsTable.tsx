@@ -66,7 +66,7 @@ export function OrderItemsTable({ rows, setRows, materials }: { rows: OrderDetai
                   <TextField select value={selectedMaterialId(row)} onChange={(event) => patchMaterial(index, event.target.value)} size="small" fullWidth required>
                     {materials.map((material) => (
                       <MenuItem key={material.id} value={material.id}>
-                        {material.nombre}
+                        {material.nombre + " " + material.espesorMm + "mm"}
                       </MenuItem>
                     ))}
                   </TextField>
