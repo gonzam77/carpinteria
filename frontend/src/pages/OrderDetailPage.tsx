@@ -52,7 +52,7 @@ export function OrderDetailPage() {
           <Typography variant="h4">{order.cliente}</Typography>
           <Typography color="text.secondary">{order.observaciones}</Typography>
           <Typography color="text.secondary">
-            Contacto: {order.usuario?.nombre} {order.usuario?.apellido} - {order.numeroContacto ?? order.usuario?.telefono ?? "Sin telefono"}
+            Telefono: {order.numeroContacto ?? order.usuario?.telefono ?? "Sin telefono"}
           </Typography>
         </div>
         <Stack direction="row" spacing={1}>
@@ -108,7 +108,7 @@ export function OrderDetailPage() {
                 <TableCell>{detail.permiteRotar ? "Si" : "No"}</TableCell>
                 <TableCell>{detail.codigoBarraCentro}</TableCell>
                 <TableCell>{detail.remark}</TableCell>
-                <TableCell>{detail.nombreCliente}</TableCell>
+                <TableCell>{detail.nombreCliente || order.cliente}</TableCell>
                 <TableCell>{detail.nombreProducto}</TableCell>
               </TableRow>
             ))}

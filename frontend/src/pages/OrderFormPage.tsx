@@ -24,6 +24,14 @@ function validateRows(rows: OrderDetail[], materials: Material[]) {
   return "";
 }
 
+function fillClientFields(rows: OrderDetail[], numeroCliente: string, nombreCliente: string) {
+  return rows.map((row) => ({
+    ...row,
+    numeroCliente: row.numeroCliente || numeroCliente,
+    nombreCliente: row.nombreCliente || nombreCliente
+  }));
+}
+
 type PlacedPiece = {
   x: number;
   y: number;
@@ -331,10 +339,8 @@ export function OrderFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, updateProfile } = useAuth();
-  const [cliente, setCliente] = useState("");
-  const [nombre, setNombre] = useState(user?.nombre ?? "");
-  const [apellido, setApellido] = useState(user?.apellido ?? "");
+  const { user } = useAuth();
+  const [cliente, setCliente] = useState(`${user?.nombre ?? ""} ${user?.apellido ?? ""}`.trim());
   const [telefono, setTelefono] = useState(user?.telefono ?? "");
   const [observaciones, setObservaciones] = useState("");
   const [rows, setRows] = useState<OrderDetail[]>([createEmptyDetail()]);
@@ -346,8 +352,7 @@ export function OrderFormPage() {
   const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? (id ? `/pedidos/${id}` : user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes");
 
   useEffect(() => {
-    setNombre(user?.nombre ?? "");
-    setApellido(user?.apellido ?? "");
+    setCliente((currentCliente) => currentCliente || `${user?.nombre ?? ""} ${user?.apellido ?? ""}`.trim());
     setTelefono(user?.telefono ?? "");
   }, [user]);
 
@@ -368,11 +373,11 @@ export function OrderFormPage() {
   async function nextStep() {
     setError("");
     if (step === 0) {
-      if (!nombre || !apellido || !telefono || !cliente) {
-        setError("Complete sus datos personales, telefono de contacto y cliente.");
+      if (!cliente || !telefono) {
+        setError("Complete cliente y telefono de contacto.");
         return;
       }
-      await updateProfile({ nombre, apellido, telefono });
+      setRows((currentRows) => fillClientFields(currentRows, telefono, cliente));
     }
     if (step === 1) {
       const rowError = validateRows(rows, materials);
@@ -447,12 +452,10 @@ export function OrderFormPage() {
         <Paper sx={{ p: 2 }}>
           <Stack spacing={2}>
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <TextField label="Nombre" value={nombre} onChange={(event) => setNombre(event.target.value)} required fullWidth />
-              <TextField label="Apellido" value={apellido} onChange={(event) => setApellido(event.target.value)} required fullWidth />
+              <TextField label="Cliente" value={cliente} onChange={(event) => setCliente(event.target.value)} required fullWidth />
               <TextField label="Telefono de contacto" value={telefono} onChange={(event) => setTelefono(event.target.value)} required fullWidth />
             </Stack>
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <TextField label="Cliente / obra" value={cliente} onChange={(event) => setCliente(event.target.value)} required fullWidth />
               <TextField label="Observaciones" value={observaciones} onChange={(event) => setObservaciones(event.target.value)} fullWidth />
             </Stack>
           </Stack>
@@ -460,7 +463,7 @@ export function OrderFormPage() {
       )}
       {step === 1 && (
         <Stack spacing={2}>
-          <OrderItemsTable rows={rows} setRows={updateRows} materials={materials} />
+          <OrderItemsTable rows={rows} setRows={updateRows} materials={materials} defaultDetailValues={{ numeroCliente: telefono, nombreCliente: cliente }} />
           <Button type="button" variant="contained" startIcon={<CalculateIcon />} onClick={() => calculateBoards(0)} sx={{ alignSelf: "flex-start" }}>
             Calcular placas
           </Button>
@@ -477,8 +480,7 @@ export function OrderFormPage() {
           <Stack spacing={2}>
             <Box>
               <Typography variant="h6">Datos de contacto</Typography>
-              <Typography>{nombre} {apellido} - {telefono}</Typography>
-              <Typography color="text.secondary">{cliente}</Typography>
+              <Typography>{cliente} - {telefono}</Typography>
             </Box>
             <Box>
               <Typography variant="h6">Cortes solicitados</Typography>

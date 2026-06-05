@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { EstadoPedido, Rol } from "../../generated/prisma/client.js";
+import { EstadoPedido, Rol, type Material } from "../../generated/prisma/client.js";
 import dayjs from "dayjs";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
@@ -15,9 +15,9 @@ function orderAccessWhere(user: any) {
   return user.rol === Rol.ADMIN ? {} : { usuarioId: user.id };
 }
 
-async function normalizeDetails(detalles: any[]) {
+async function normalizeDetails(detalles: any[], cliente: string, numeroContacto: string) {
   const materialIds = [...new Set(detalles.map((detail) => detail.materialId))];
-  const materials = await prisma.material.findMany({
+  const materials: Material[] = await prisma.material.findMany({
     where: { id: { in: materialIds }, activo: true }
   });
   const materialById = new Map(materials.map((material) => [material.id, material]));
@@ -42,8 +42,8 @@ async function normalizeDetails(detalles: any[]) {
       permiteRotar: detail.permiteRotar,
       codigoBarraCentro: detail.codigoBarraCentro,
       remark: detail.remark,
-      numeroCliente: detail.numeroCliente,
-      nombreCliente: detail.nombreCliente,
+      numeroCliente: detail.numeroCliente || numeroContacto,
+      nombreCliente: detail.nombreCliente || cliente,
       nombreProducto: detail.nombreProducto
     };
   });
@@ -87,7 +87,7 @@ ordersRouter.post(
   "/",
   asyncHandler(async (req: any, res: any) => {
     const data = orderSchema.parse(req.body);
-    const detalles = await normalizeDetails(data.detalles);
+    const detalles = await normalizeDetails(data.detalles, data.cliente, data.numeroContacto);
     const order = await prisma.pedido.create({
       data: {
         cliente: data.cliente,
@@ -144,7 +144,7 @@ ordersRouter.put(
   "/:id",
   asyncHandler(async (req: any, res: any) => {
     const data = orderSchema.parse(req.body);
-    const detalles = await normalizeDetails(data.detalles);
+    const detalles = await normalizeDetails(data.detalles, data.cliente, data.numeroContacto);
     const existing = await prisma.pedido.findFirst({ where: { id: req.params.id, ...orderAccessWhere(req.user) } });
     if (!existing) throw new AppError(404, "Pedido no encontrado");
     if (req.user.rol !== Rol.ADMIN && existing.estado !== EstadoPedido.PENDIENTE) {

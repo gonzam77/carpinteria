@@ -22,11 +22,21 @@ const emptyRow: OrderDetail = {
   nombreProducto: ""
 };
 
-export function createEmptyDetail(): OrderDetail {
-  return { ...emptyRow };
+export function createEmptyDetail(defaults: Partial<Pick<OrderDetail, "numeroCliente" | "nombreCliente">> = {}): OrderDetail {
+  return { ...emptyRow, ...defaults };
 }
 
-export function OrderItemsTable({ rows, setRows, materials }: { rows: OrderDetail[]; setRows: (rows: OrderDetail[]) => void; materials: Material[] }) {
+export function OrderItemsTable({
+  rows,
+  setRows,
+  materials,
+  defaultDetailValues = {}
+}: {
+  rows: OrderDetail[];
+  setRows: (rows: OrderDetail[]) => void;
+  materials: Material[];
+  defaultDetailValues?: Partial<Pick<OrderDetail, "numeroCliente" | "nombreCliente">>;
+}) {
   function patchRow(index: number, field: keyof OrderDetail, value: any) {
     setRows(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [field]: value } : row)));
   }
@@ -110,7 +120,7 @@ export function OrderItemsTable({ rows, setRows, materials }: { rows: OrderDetai
           </TableBody>
         </Table>
       </TableContainer>
-      <Button sx={{ mt: 2 }} variant="outlined" onClick={() => setRows([...rows, createEmptyDetail()])}>
+      <Button sx={{ mt: 2 }} variant="outlined" onClick={() => setRows([...rows, createEmptyDetail(defaultDetailValues)])}>
         Agregar fila
       </Button>
     </>

@@ -35,7 +35,7 @@ export function OrdersPage() {
 
   const columns = useMemo<GridColDef<Order>[]>(
     () => [
-      { field: "cliente", headerName: "Cliente/Obra", flex: 1, minWidth: 180 },
+      { field: "cliente", headerName: "Cliente", flex: 1, minWidth: 180 },
       { field: "estado", headerName: "Estado", width: 140, renderCell: ({ value }) => <Chip size="small" label={value} /> },
       { field: "fechaCreacion", headerName: "Fecha", width: 150, valueGetter: (_, row) => new Date(row.fechaCreacion).toLocaleDateString() },
       { field: "piezas", headerName: "Piezas", width: 100, valueGetter: (_, row) => row.detalles.length },
