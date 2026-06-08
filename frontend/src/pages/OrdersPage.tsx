@@ -1,32 +1,50 @@
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { Button, Chip, IconButton, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import { Button, Chip, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRowSelectionModel } from "@mui/x-data-grid";
 import { saveAs } from "file-saver";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import { Order } from "../types";
+import { EstadoSolicitud, Order } from "../types";
+
+const statusOptions: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
+
+function getValidStatus(value: string | null): EstadoSolicitud | "" {
+  return statusOptions.includes(value as EstadoSolicitud) ? (value as EstadoSolicitud) : "";
+}
 
 export function OrdersPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<EstadoSolicitud | "">(() => getValidStatus(searchParams.get("estado")));
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [selection, setSelection] = useState<GridRowSelectionModel>([]);
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  async function loadOrders() {
-    const response = await api.get<Order[]>("/orders", { params: { search, desde: from, hasta: to } });
+  async function loadOrders(nextStatus = status) {
+    const response = await api.get<Order[]>("/orders", { params: { search, estado: nextStatus || undefined, desde: from, hasta: to } });
     setOrders(response.data);
   }
 
   useEffect(() => {
+    const nextStatus = getValidStatus(searchParams.get("estado"));
+    setStatus(nextStatus);
+    loadOrders(nextStatus);
+  }, [searchParams]);
+
+  function applyFilters() {
+    const nextParams = new URLSearchParams(searchParams);
+    if (status) nextParams.set("estado", status);
+    else nextParams.delete("estado");
+    setSearchParams(nextParams);
     loadOrders();
-  }, []);
+  }
 
   async function exportOrders(ids: string[]) {
     const response = await api.get("/orders/export", { params: { ids: ids.join(",") }, responseType: "blob" });
@@ -72,9 +90,17 @@ export function OrdersPage() {
       <Paper sx={{ p: 2 }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
           <TextField label="Buscar" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <TextField select label="Estado" value={status} onChange={(event) => setStatus(event.target.value as EstadoSolicitud | "")} sx={{ minWidth: 160 }}>
+            <MenuItem value="">Todos</MenuItem>
+            {statusOptions.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </TextField>
           <TextField label="Desde" type="date" value={from} onChange={(event) => setFrom(event.target.value)} InputLabelProps={{ shrink: true }} />
           <TextField label="Hasta" type="date" value={to} onChange={(event) => setTo(event.target.value)} InputLabelProps={{ shrink: true }} />
-          <Button variant="outlined" onClick={loadOrders}>
+          <Button variant="outlined" onClick={applyFilters}>
             Filtrar
           </Button>
           {user?.rol === "ADMIN" && (

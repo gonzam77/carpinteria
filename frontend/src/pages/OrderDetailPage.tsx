@@ -10,7 +10,7 @@ import { CutOptimizer } from "../components/CutOptimizer";
 import { useAuth } from "../context/AuthContext";
 import { EstadoSolicitud, Material, Order } from "../types";
 
-const estados: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "RECHAZADA"];
+const estados: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
 
 export function OrderDetailPage() {
   const { id } = useParams();

@@ -1,0 +1,1 @@
+ALTER TYPE "EstadoPedido" ADD VALUE 'ENTREGADA';

@@ -17,6 +17,7 @@ enum EstadoPedido {
   PENDIENTE
   EN_PROCESO
   TERMINADA
+  ENTREGADA
   RECHAZADA
 }
 

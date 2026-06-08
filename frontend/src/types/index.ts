@@ -1,5 +1,5 @@
 export type Rol = "ADMIN" | "CARPINTERO";
-export type EstadoSolicitud = "PENDIENTE" | "EN_PROCESO" | "TERMINADA" | "RECHAZADA";
+export type EstadoSolicitud = "PENDIENTE" | "EN_PROCESO" | "TERMINADA" | "ENTREGADA" | "RECHAZADA";
 
 export type Material = {
   id: string;
