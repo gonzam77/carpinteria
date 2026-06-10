@@ -8,8 +8,8 @@ import { useAuth } from "../context/AuthContext";
 export function LoginPage() {
   const { login, loginWithGoogle, user } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@carpinteria.local");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   if (user) return <Navigate to="/" replace />;
