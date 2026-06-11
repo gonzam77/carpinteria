@@ -90,7 +90,7 @@ export function AppLayout() {
             Business
           </Typography>
           <Typography variant="h6" sx={{ color: "#ffffff", fontWeight: 900, lineHeight: 1.1 }}>
-            Carpinteria
+            R O M A
           </Typography>
         </Box>
         <List sx={{ px: 1.25, py: 1 }}>
