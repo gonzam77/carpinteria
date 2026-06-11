@@ -434,7 +434,9 @@ export function OrderFormPage() {
     };
 
     const response = id ? await api.put(`/orders/${id}`, payload) : await api.post("/orders", payload);
-    navigate(user?.rol === "ADMIN" ? `/pedidos/${response.data.id}` : "/mis-solicitudes");
+    navigate(user?.rol === "ADMIN" ? `/pedidos/${response.data.id}` : "/mis-solicitudes", {
+      state: { notification: id ? "Solicitud de corte actualizada correctamente." : "Solicitud de corte enviada correctamente." }
+    });
   }
 
   return (
@@ -507,11 +509,11 @@ export function OrderFormPage() {
         )}
         {step < 2 ? (
           <Button type="button" variant="contained" endIcon={<ArrowForwardIcon />} onClick={nextStep}>
-            Continuar
+            Enviar
           </Button>
         ) : (
           <Button type="submit" variant="contained" startIcon={<SaveIcon />}>
-            Enviar solicitud
+            Enviando...
           </Button>
         )}
       </Stack>

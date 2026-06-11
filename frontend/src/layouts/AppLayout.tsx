@@ -4,8 +4,9 @@ import GroupIcon from "@mui/icons-material/Group";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PostAddIcon from "@mui/icons-material/PostAdd";
-import { AppBar, Avatar, Box, Button, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from "@mui/material";
+import { Alert, AppBar, Avatar, Box, Button, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Snackbar, Toolbar, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
+import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -15,6 +16,7 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [notification, setNotification] = useState("");
   const navItems = [
     { label: "Dashboard", to: "/", icon: <AssessmentIcon />, match: (pathname: string) => pathname === "/" },
     {
@@ -36,6 +38,14 @@ export function AppLayout() {
         ]
       : [])
   ];
+
+  useEffect(() => {
+    const state = location.state as { notification?: string } | null;
+    if (!state?.notification) return;
+
+    setNotification(state.notification);
+    navigate(location.pathname + location.search, { replace: true, state: {} });
+  }, [location, navigate]);
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "transparent" }}>
@@ -117,6 +127,28 @@ export function AppLayout() {
         <Toolbar />
         <Outlet />
       </Box>
+      <Snackbar
+        open={Boolean(notification)}
+        autoHideDuration={4200}
+        onClose={() => setNotification("")}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        sx={{ mt: 8 }}
+      >
+        <Alert
+          severity="success"
+          variant="filled"
+          onClose={() => setNotification("")}
+          sx={{
+            alignItems: "center",
+            background: "linear-gradient(135deg, #21c383 0%, #23d6c8 100%)",
+            borderRadius: "8px",
+            boxShadow: "0 18px 42px rgba(33, 195, 131, 0.28)",
+            fontWeight: 800
+          }}
+        >
+          {notification}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

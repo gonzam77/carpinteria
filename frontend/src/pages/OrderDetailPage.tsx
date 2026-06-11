@@ -1,13 +1,13 @@
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { Button, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { Alert, Button, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { saveAs } from "file-saver";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { CutOptimizer } from "../components/CutOptimizer";
-import { StatusChip } from "../components/StatusChip";
+import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
 import { EstadoSolicitud, Material, Order } from "../types";
 
@@ -17,6 +17,7 @@ export function OrderDetailPage() {
   const { id } = useParams();
   const [order, setOrder] = useState<Order | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [notification, setNotification] = useState("");
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -40,8 +41,11 @@ export function OrderDetailPage() {
   }
 
   async function changeStatus(estado: EstadoSolicitud) {
+    if (estado === order?.estado) return;
+
     await api.patch(`/orders/${id}/status`, { estado });
-    loadOrder();
+    await loadOrder();
+    setNotification(`Estado actualizado a ${getStatusStyle(estado).label}.`);
   }
 
   if (!order) return null;
@@ -136,6 +140,28 @@ export function OrderDetailPage() {
           ))}
         </Stack>
       </Paper>
+      <Snackbar
+        open={Boolean(notification)}
+        autoHideDuration={4200}
+        onClose={() => setNotification("")}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        sx={{ mt: 8 }}
+      >
+        <Alert
+          severity="success"
+          variant="filled"
+          onClose={() => setNotification("")}
+          sx={{
+            alignItems: "center",
+            background: "linear-gradient(135deg, #21c383 0%, #23d6c8 100%)",
+            borderRadius: "8px",
+            boxShadow: "0 18px 42px rgba(33, 195, 131, 0.28)",
+            fontWeight: 800
+          }}
+        >
+          {notification}
+        </Alert>
+      </Snackbar>
     </Stack>
   );
 }
