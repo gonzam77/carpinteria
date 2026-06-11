@@ -1,12 +1,13 @@
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { Button, Chip, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { Button, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { saveAs } from "file-saver";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { CutOptimizer } from "../components/CutOptimizer";
+import { StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
 import { EstadoSolicitud, Material, Order } from "../types";
 
@@ -49,7 +50,10 @@ export function OrderDetailPage() {
     <Stack spacing={3}>
       <Stack direction={{ xs: "column", md: "row" }} alignItems={{ md: "center" }} justifyContent="space-between" gap={2}>
         <div>
-          <Typography variant="h4">{order.cliente}</Typography>
+          <Stack direction="row" spacing={1.25} alignItems="center" flexWrap="wrap">
+            <Typography variant="h4">{order.cliente}</Typography>
+            <StatusChip size="small" status={order.estado} />
+          </Stack>
           <Typography color="text.secondary">{order.observaciones}</Typography>
           <Typography color="text.secondary">
             Telefono: {order.numeroContacto ?? order.usuario?.telefono ?? "Sin telefono"}
@@ -68,7 +72,7 @@ export function OrderDetailPage() {
               ))}
             </Select>
           ) : (
-            <Chip label={order.estado} />
+            <StatusChip status={order.estado} />
           )}
           {user?.rol === "ADMIN" && (
             <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportOrder}>
@@ -82,7 +86,7 @@ export function OrderDetailPage() {
           )}
         </Stack>
       </Stack>
-      <Paper sx={{ overflowX: "auto" }}>
+      <Paper sx={{ overflowX: "auto", borderRadius: "8px" }}>
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -116,11 +120,11 @@ export function OrderDetailPage() {
         </Table>
       </Paper>
       {user?.rol === "ADMIN" && (
-        <Paper sx={{ p: 2 }}>
+        <Paper sx={{ p: 2, borderRadius: "8px" }}>
           <CutOptimizer rows={order.detalles} materials={materials} autoCalculate />
         </Paper>
       )}
-      <Paper sx={{ p: 2 }}>
+      <Paper sx={{ p: 2.5, borderRadius: "8px" }}>
         <Typography variant="h6" gutterBottom>
           Historial
         </Typography>

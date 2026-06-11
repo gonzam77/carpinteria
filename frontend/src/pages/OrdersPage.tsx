@@ -1,12 +1,13 @@
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { Button, Chip, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import { Button, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRowSelectionModel } from "@mui/x-data-grid";
 import { saveAs } from "file-saver";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import { StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
 import { EstadoSolicitud, Order } from "../types";
 
@@ -54,7 +55,7 @@ export function OrdersPage() {
   const columns = useMemo<GridColDef<Order>[]>(
     () => [
       { field: "cliente", headerName: "Cliente", flex: 1, minWidth: 180 },
-      { field: "estado", headerName: "Estado", width: 140, renderCell: ({ value }) => <Chip size="small" label={value} /> },
+      { field: "estado", headerName: "Estado", width: 150, renderCell: ({ value }) => <StatusChip size="small" status={value as EstadoSolicitud} /> },
       { field: "fechaCreacion", headerName: "Fecha", width: 150, valueGetter: (_, row) => new Date(row.fechaCreacion).toLocaleDateString() },
       { field: "piezas", headerName: "Piezas", width: 100, valueGetter: (_, row) => row.detalles.length },
       { field: "usuario", headerName: "Carpintero", width: 180, valueGetter: (_, row) => (row.usuario ? `${row.usuario.nombre} ${row.usuario.apellido}` : "") },
@@ -85,9 +86,12 @@ export function OrdersPage() {
   );
 
   return (
-    <Stack spacing={2}>
-      <Typography variant="h4">{user?.rol === "ADMIN" ? "Solicitudes recibidas" : "Mis solicitudes"}</Typography>
-      <Paper sx={{ p: 2 }}>
+    <Stack spacing={2.5}>
+      <Stack spacing={0.5}>
+        <Typography variant="h4">{user?.rol === "ADMIN" ? "Solicitudes recibidas" : "Mis solicitudes"}</Typography>
+        <Typography color="text.secondary">Seguimiento de pedidos, filtros rapidos y exportacion de cortes.</Typography>
+      </Stack>
+      <Paper sx={{ p: 2.25, borderRadius: "8px" }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
           <TextField label="Buscar" value={search} onChange={(event) => setSearch(event.target.value)} />
           <TextField select label="Estado" value={status} onChange={(event) => setStatus(event.target.value as EstadoSolicitud | "")} sx={{ minWidth: 160 }}>
@@ -104,13 +108,13 @@ export function OrdersPage() {
             Filtrar
           </Button>
           {user?.rol === "ADMIN" && (
-            <Button variant="contained" startIcon={<DownloadIcon />} disabled={!selection.length} onClick={() => exportOrders(selection as string[])}>
+            <Button style={{color:'#fff'}} variant="contained" startIcon={<DownloadIcon />} disabled={!selection.length} onClick={() => exportOrders(selection as string[])}>
               Exportar seleccion
             </Button>
           )}
         </Stack>
       </Paper>
-      <Paper sx={{ height: 560 }}>
+      <Paper sx={{ height: 560, borderRadius: "8px", overflow: "hidden" }}>
         <DataGrid rows={orders} columns={columns} checkboxSelection onRowSelectionModelChange={setSelection} disableRowSelectionOnClick />
       </Paper>
     </Stack>

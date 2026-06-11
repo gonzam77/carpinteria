@@ -37,8 +37,11 @@ export function UsersPage() {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h4">Gestion de usuarios</Typography>
-      <Paper sx={{ p: 2 }}>
+      <Stack spacing={0.5}>
+        <Typography variant="h4">Gestion de usuarios</Typography>
+        <Typography color="text.secondary">Alta y administracion de perfiles con acceso al sistema.</Typography>
+      </Stack>
+      <Paper sx={{ p: 2.25, borderRadius: "8px" }}>
         <Stack component="form" onSubmit={submit} direction={{ xs: "column", md: "row" }} spacing={2}>
           <TextField label="Nombre" value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} required />
           <TextField label="Apellido" value={form.apellido} onChange={(event) => setForm({ ...form, apellido: event.target.value })} required />
@@ -53,7 +56,7 @@ export function UsersPage() {
           </Button>
         </Stack>
       </Paper>
-      <Paper sx={{ height: 520 }}>
+      <Paper sx={{ height: 520, borderRadius: "8px", overflow: "hidden" }}>
         <DataGrid rows={users} columns={columns} />
       </Paper>
     </Stack>

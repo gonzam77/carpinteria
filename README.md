@@ -1,4 +1,4 @@
-# Carpinteria Melamina
+# Carpinteria
 
 Aplicacion web full stack para cargar pedidos de corte de placas, administrar usuarios y exportar pedidos a Excel en el formato requerido por fabrica.
 

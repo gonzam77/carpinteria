@@ -1,6 +1,7 @@
 import LoginIcon from "@mui/icons-material/Login";
 import { GoogleLogin } from "@react-oauth/google";
 import { Alert, Box, Button, Divider, Paper, Stack, TextField, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { FormEvent, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -26,9 +27,10 @@ export function LoginPage() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "background.default", p: 2 }}>
-      <Paper sx={{ width: "100%", maxWidth: 420, p: 4 }}>
-        <Stack spacing={3}>
+    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "transparent", p: 2 }}>
+      <Paper sx={{ width: "100%", maxWidth: 440, p: 4, borderRadius: "8px", position: "relative", overflow: "hidden" }}>
+        <Box sx={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${alpha("#4f7cff", 0.15)}, transparent 48%), linear-gradient(315deg, ${alpha("#23d6c8", 0.2)}, transparent 44%)` }} />
+        <Stack spacing={3} sx={{ position: "relative" }}>
           <Box>
             <Typography variant="h4">Solicitar cortes</Typography>
             <Typography color="text.secondary">Acceso para carpinteros con cuenta de Google</Typography>
@@ -48,7 +50,7 @@ export function LoginPage() {
           ) : (
             <Alert severity="warning">Configura VITE_GOOGLE_CLIENT_ID para habilitar Google Login.</Alert>
           )}
-          <Divider>Administracion</Divider>
+          <Divider sx={{ color: "text.secondary", fontWeight: 700 }}>Administracion</Divider>
           <Stack spacing={2} component="form" onSubmit={handleSubmit}>
             <TextField label="Email" value={email} onChange={(event) => setEmail(event.target.value)} fullWidth />
             <TextField label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} fullWidth />

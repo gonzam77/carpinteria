@@ -107,8 +107,11 @@ export function MaterialsPage() {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h4">Materiales</Typography>
-      <Paper sx={{ p: 2 }}>
+      <Stack spacing={0.5}>
+        <Typography variant="h4">Materiales</Typography>
+        <Typography color="text.secondary">Catalogo de placas, espesores y valores disponibles para cortes.</Typography>
+      </Stack>
+      <Paper sx={{ p: 2.25, borderRadius: "8px" }}>
         <Stack component="form" onSubmit={submit} direction={{ xs: "column", md: "row" }} spacing={2}>
           <TextField label="Material" value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} required />
           <TextField label="Valor" type="number" value={form.valor} onChange={(event) => setForm({ ...form, valor: event.target.value })} required />
@@ -125,7 +128,7 @@ export function MaterialsPage() {
           )}
         </Stack>
       </Paper>
-      <Paper sx={{ height: 520 }}>
+      <Paper sx={{ height: 520, borderRadius: "8px", overflow: "hidden" }}>
         <DataGrid rows={materials} columns={columns} disableRowSelectionOnClick />
       </Paper>
     </Stack>

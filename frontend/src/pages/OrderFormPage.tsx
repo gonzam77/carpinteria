@@ -296,7 +296,7 @@ function CutResults({ results }: { results: MaterialCutResult[] }) {
   const totalUsage = totalBoardArea ? (totalArea / totalBoardArea) * 100 : 0;
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <Paper sx={{ p: 2.5, borderRadius: "8px" }}>
       <Stack spacing={2}>
         <Box>
           <Typography variant="h6">Calculo de placas</Typography>
@@ -439,7 +439,10 @@ export function OrderFormPage() {
 
   return (
     <Stack spacing={3} component="form" onSubmit={handleSubmit}>
-      <Typography variant="h4">{id ? "Editar solicitud" : "Nueva solicitud de corte"}</Typography>
+      <Stack spacing={0.5}>
+        <Typography variant="h4">{id ? "Editar solicitud" : "Nueva solicitud de corte"}</Typography>
+        <Typography color="text.secondary">Carga los datos del cliente, define las piezas y revisa el resumen antes de enviar.</Typography>
+      </Stack>
       {error && <Alert severity="error">{error}</Alert>}
       <Stepper activeStep={step} sx={{ maxWidth: 760 }}>
         {["Datos", "Cortes", "Resumen"].map((label) => (
@@ -449,7 +452,7 @@ export function OrderFormPage() {
         ))}
       </Stepper>
       {step === 0 && (
-        <Paper sx={{ p: 2 }}>
+        <Paper sx={{ p: 2.5, borderRadius: "8px" }}>
           <Stack spacing={2}>
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <TextField label="Cliente" value={cliente} onChange={(event) => setCliente(event.target.value)} required fullWidth />
@@ -476,7 +479,7 @@ export function OrderFormPage() {
         </Stack>
       )}
       {step === 2 && (
-        <Paper sx={{ p: 3 }}>
+        <Paper sx={{ p: 3, borderRadius: "8px" }}>
           <Stack spacing={2}>
             <Box>
               <Typography variant="h6">Datos de contacto</Typography>

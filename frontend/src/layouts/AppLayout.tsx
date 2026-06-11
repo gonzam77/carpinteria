@@ -4,11 +4,12 @@ import GroupIcon from "@mui/icons-material/Group";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PostAddIcon from "@mui/icons-material/PostAdd";
-import { AppBar, Box, Button, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from "@mui/material";
+import { AppBar, Avatar, Box, Button, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const drawerWidth = 248;
+const drawerWidth = 236;
 
 export function AppLayout() {
   const { user, logout } = useAuth();
@@ -37,13 +38,21 @@ export function AppLayout() {
   ];
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Carpinteria Melamina
-          </Typography>
-          <Typography variant="body2" sx={{ mr: 2 }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "transparent" }}>
+      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, ml: `${drawerWidth}px`, width: `calc(100% - ${drawerWidth}px)` }}>
+        <Toolbar sx={{ minHeight: 72, px: 3 }}>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="overline" sx={{ color: "text.secondary", fontWeight: 900, letterSpacing: 1.2 }}>
+              Carpinteria
+            </Typography>
+            <Typography variant="h6" sx={{ color: "text.primary", fontWeight: 900, letterSpacing: 0, lineHeight: 1.1 }}>
+              Panel de solicitudes
+            </Typography>
+          </Box>
+          <Avatar sx={{ width: 38, height: 38, mr: 1.25, background: "linear-gradient(135deg, #4f7cff, #23d6c8)", fontWeight: 900 }}>
+            {user?.nombre?.[0] ?? "U"}
+          </Avatar>
+          <Typography variant="body2" sx={{ mr: 2, color: "text.secondary", fontWeight: 800 }}>
             {user?.nombre} {user?.apellido} - {user?.rol}
           </Typography>
           <Button
@@ -66,8 +75,15 @@ export function AppLayout() {
           [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: "border-box" }
         }}
       >
-        <Toolbar />
-        <List sx={{ p: 1 }}>
+        <Box sx={{ px: 2.25, py: 2.5 }}>
+          <Typography variant="overline" sx={{ color: "rgba(255,255,255,0.72)", fontWeight: 900, letterSpacing: 1.2 }}>
+            Business
+          </Typography>
+          <Typography variant="h6" sx={{ color: "#ffffff", fontWeight: 900, lineHeight: 1.1 }}>
+            Carpinteria
+          </Typography>
+        </Box>
+        <List sx={{ px: 1.25, py: 1 }}>
           {navItems.map((item) => (
             <ListItemButton
               key={item.to}
@@ -75,10 +91,20 @@ export function AppLayout() {
               to={item.to}
               selected={item.match(location.pathname)}
               sx={{
-                borderRadius: 1,
-                mb: 0.5,
-                "&.Mui-selected": { bgcolor: "primary.main", color: "primary.contrastText", "& .MuiListItemIcon-root": { color: "inherit" } },
-                "&.Mui-selected:hover": { bgcolor: "primary.dark" }
+                borderRadius: "8px",
+                mb: 0.75,
+                minHeight: 46,
+                color: "rgba(255,255,255,0.78)",
+                "& .MuiListItemIcon-root": { color: "inherit", minWidth: 38 },
+                "&:hover": { bgcolor: alpha("#ffffff", 0.14), color: "#ffffff" },
+                "&.Mui-selected": {
+                  bgcolor: alpha("#ffffff", 0.22),
+                  background: "rgba(255,255,255,0.22)",
+                  boxShadow: "inset 3px 0 0 #ffffff, 0 12px 28px rgba(22, 76, 170, 0.18)",
+                  color: "#ffffff",
+                  "& .MuiListItemIcon-root": { color: "inherit" }
+                },
+                "&.Mui-selected:hover": { bgcolor: alpha("#ffffff", 0.24) }
               }}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
@@ -87,7 +113,7 @@ export function AppLayout() {
           ))}
         </List>
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: `calc(100% - ${drawerWidth}px)` }}>
+      <Box component="main" sx={{ flexGrow: 1, p: { xs: 2.5, md: 3.5 }, width: `calc(100% - ${drawerWidth}px)` }}>
         <Toolbar />
         <Outlet />
       </Box>

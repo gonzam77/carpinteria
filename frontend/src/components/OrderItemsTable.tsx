@@ -55,7 +55,7 @@ export function OrderItemsTable({
 
   return (
     <>
-      <TableContainer component={Paper} sx={{ maxHeight: 520 }}>
+      <TableContainer component={Paper} sx={{ maxHeight: 520, borderRadius: "8px", overflow: "auto" }}>
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
