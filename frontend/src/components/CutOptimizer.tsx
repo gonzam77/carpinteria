@@ -232,7 +232,7 @@ function BoardPreview({ board, material }: { board: BoardPlan; material: Materia
               border: "1px solid",
               borderColor: "primary.dark",
               bgcolor: "primary.light",
-              color: "primary.contrastText",
+              color: "#000000",
               overflow: "hidden",
               p: 0.5,
               fontSize: 10,
