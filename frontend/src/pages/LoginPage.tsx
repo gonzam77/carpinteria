@@ -40,8 +40,12 @@ export function LoginPage() {
             <GoogleLogin
               onSuccess={async (response) => {
                 if (!response.credential) return;
-                await loginWithGoogle(response.credential);
-                navigate("/solicitar");
+                try {
+                  await loginWithGoogle(response.credential);
+                  navigate("/solicitar");
+                } catch {
+                  setError("Google inicio sesion correctamente, pero la API rechazo el acceso");
+                }
               }}
               onError={() => setError("No se pudo ingresar con Google")}
               width="100%"

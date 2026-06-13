@@ -12,4 +12,11 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional().default("")
 });
 
-export const env = envSchema.parse(process.env);
+const parsedEnv = envSchema.parse(process.env);
+
+export const env = {
+  ...parsedEnv,
+  FRONTEND_URLS: parsedEnv.FRONTEND_URL.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+};
