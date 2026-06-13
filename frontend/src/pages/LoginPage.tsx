@@ -1,5 +1,6 @@
 import LoginIcon from "@mui/icons-material/Login";
 import { GoogleLogin } from "@react-oauth/google";
+import axios from "axios";
 import { Alert, Box, Button, Divider, Paper, Stack, TextField, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { FormEvent, useState } from "react";
@@ -13,6 +14,14 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  function getErrorMessage(err: unknown, fallback: string) {
+    if (axios.isAxiosError(err)) {
+      return err.response?.data?.message ?? fallback;
+    }
+
+    return fallback;
+  }
+
   if (user) return <Navigate to="/" replace />;
 
   async function handleSubmit(event: FormEvent) {
@@ -21,8 +30,8 @@ export function LoginPage() {
     try {
       await login(email, password);
       navigate("/");
-    } catch {
-      setError("Email o password incorrectos");
+    } catch (err) {
+      setError(getErrorMessage(err, "Email o password incorrectos"));
     }
   }
 
@@ -43,8 +52,8 @@ export function LoginPage() {
                 try {
                   await loginWithGoogle(response.credential);
                   navigate("/solicitar");
-                } catch {
-                  setError("Google inicio sesion correctamente, pero la API rechazo el acceso");
+                } catch (err) {
+                  setError(getErrorMessage(err, "Google inicio sesion correctamente, pero la API rechazo el acceso"));
                 }
               }}
               onError={() => setError("No se pudo ingresar con Google")}
