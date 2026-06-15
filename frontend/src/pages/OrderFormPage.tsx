@@ -251,7 +251,7 @@ function BoardPreview({ board, material }: { board: BoardPlan; material: Materia
       <Typography variant="caption" color="text.secondary">
         Placa {material.anchoPlaca}x{material.altoPlaca} cm ({boardWidthMm}x{boardHeightMm} mm)
       </Typography>
-      <Box sx={{ border: "1px solid", borderColor: "divider", width: 310, aspectRatio: `${boardWidthMm} / ${boardHeightMm}`, position: "relative", bgcolor: "background.default", mt: 0.5 }}>
+      <Box sx={{ border: "1px solid", borderColor: "divider", width: { xs: 280, sm: 310 }, maxWidth: "100%", aspectRatio: `${boardWidthMm} / ${boardHeightMm}`, position: "relative", bgcolor: "background.default", mt: 0.5 }}>
         <Box sx={{ position: "absolute", top: 4, right: 6, fontSize: 10, color: "text.secondary", bgcolor: "rgba(255,255,255,0.75)", px: 0.5 }}>
           {boardWidthMm} mm
         </Box>
@@ -296,7 +296,7 @@ function CutResults({ results }: { results: MaterialCutResult[] }) {
   const totalUsage = totalBoardArea ? (totalArea / totalBoardArea) * 100 : 0;
 
   return (
-    <Paper sx={{ p: 2.5, borderRadius: "8px" }}>
+    <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "8px", overflow: "hidden" }}>
       <Stack spacing={2}>
         <Box>
           <Typography variant="h6">Calculo de placas</Typography>
@@ -318,9 +318,9 @@ function CutResults({ results }: { results: MaterialCutResult[] }) {
                 Hay piezas que no entran en una placa: {result.unplaced.join(", ")}
               </Alert>
             )}
-            <Stack direction="row" spacing={2} sx={{ mt: 2, overflowX: "auto", pb: 1 }}>
+            <Stack direction="row" spacing={2} sx={{ mt: 2, overflowX: "auto", pb: 1, width: "100%" }}>
               {result.optimizedBoards.map((board) => (
-                <Box key={board.index} sx={{ minWidth: 310 }}>
+                <Box key={board.index} sx={{ minWidth: { xs: 280, sm: 310 } }}>
                   <Typography variant="body2" fontWeight={700} gutterBottom>
                     Placa {board.index}
                   </Typography>
@@ -446,7 +446,16 @@ export function OrderFormPage() {
         <Typography color="text.secondary">Carga los datos del cliente, define las piezas y revisa el resumen antes de enviar.</Typography>
       </Stack>
       {error && <Alert severity="error">{error}</Alert>}
-      <Stepper activeStep={step} sx={{ maxWidth: 760 }}>
+      <Stepper
+        activeStep={step}
+        sx={{
+          maxWidth: 760,
+          overflowX: "auto",
+          pb: 0.5,
+          width: "100%",
+          "& .MuiStepLabel-label": { fontSize: { xs: 12, sm: 14 } }
+        }}
+      >
         {["Datos", "Cortes", "Resumen"].map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>
@@ -454,7 +463,7 @@ export function OrderFormPage() {
         ))}
       </Stepper>
       {step === 0 && (
-        <Paper sx={{ p: 2.5, borderRadius: "8px" }}>
+        <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "8px" }}>
           <Stack spacing={2}>
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <TextField label="Cliente" value={cliente} onChange={(event) => setCliente(event.target.value)} required fullWidth />
@@ -469,11 +478,11 @@ export function OrderFormPage() {
       {step === 1 && (
         <Stack spacing={2}>
           <OrderItemsTable rows={rows} setRows={updateRows} materials={materials} defaultDetailValues={{ numeroCliente: telefono, nombreCliente: cliente }} />
-          <Button type="button" variant="contained" startIcon={<CalculateIcon />} onClick={() => calculateBoards(0)} sx={{ alignSelf: "flex-start" }}>
+          <Button type="button" variant="contained" startIcon={<CalculateIcon />} onClick={() => calculateBoards(0)} sx={{ alignSelf: { xs: "stretch", sm: "flex-start" }, width: { xs: "100%", sm: "auto" } }}>
             Calcular placas
           </Button>
           {cutResults.length > 0 && (
-            <Button type="button" variant="outlined" startIcon={<CalculateIcon />} onClick={recalculateBoards} sx={{ alignSelf: "flex-start" }}>
+            <Button type="button" variant="outlined" startIcon={<CalculateIcon />} onClick={recalculateBoards} sx={{ alignSelf: { xs: "stretch", sm: "flex-start" }, width: { xs: "100%", sm: "auto" } }}>
               Recalcular distribucion
             </Button>
           )}
@@ -481,7 +490,7 @@ export function OrderFormPage() {
         </Stack>
       )}
       {step === 2 && (
-        <Paper sx={{ p: 3, borderRadius: "8px" }}>
+        <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: "8px", overflow: "hidden" }}>
           <Stack spacing={2}>
             <Box>
               <Typography variant="h6">Datos de contacto</Typography>
@@ -496,23 +505,23 @@ export function OrderFormPage() {
           </Stack>
         </Paper>
       )}
-      <Stack direction="row" spacing={1}>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
         {id && (
-          <Button variant="outlined" startIcon={<CloseIcon />} onClick={() => navigate(returnTo)}>
+          <Button variant="outlined" startIcon={<CloseIcon />} onClick={() => navigate(returnTo)} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Cancelar
           </Button>
         )}
         {step > 0 && (
-          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => setStep((current) => current - 1)}>
+          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => setStep((current) => current - 1)} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Volver
           </Button>
         )}
         {step < 2 ? (
-          <Button type="button" variant="contained" endIcon={<ArrowForwardIcon />} onClick={nextStep}>
+          <Button type="button" variant="contained" endIcon={<ArrowForwardIcon />} onClick={nextStep} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Enviar
           </Button>
         ) : (
-          <Button type="submit" variant="contained" startIcon={<SaveIcon />}>
+          <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Enviando...
           </Button>
         )}

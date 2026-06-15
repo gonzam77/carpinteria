@@ -91,10 +91,19 @@ export function OrdersPage() {
         <Typography variant="h4">{user?.rol === "ADMIN" ? "Solicitudes recibidas" : "Mis solicitudes"}</Typography>
         <Typography color="text.secondary">Seguimiento de pedidos, filtros rapidos y exportacion de cortes.</Typography>
       </Stack>
-      <Paper sx={{ p: 2.25, borderRadius: "8px" }}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-          <TextField label="Buscar" value={search} onChange={(event) => setSearch(event.target.value)} />
-          <TextField select label="Estado" value={status} onChange={(event) => setStatus(event.target.value as EstadoSolicitud | "")} sx={{ minWidth: 160 }}>
+      <Paper sx={{ p: { xs: 2, sm: 2.25 }, borderRadius: "8px", overflow: "hidden" }}>
+        <Stack
+          direction={{ xs: "column", lg: "row" }}
+          spacing={2}
+          useFlexGap
+          sx={{
+            alignItems: { lg: "center" },
+            flexWrap: "wrap",
+            "& .MuiTextField-root": { flex: { lg: "1 1 150px" }, minWidth: { lg: 150 } }
+          }}
+        >
+          <TextField fullWidth label="Buscar" value={search} onChange={(event) => setSearch(event.target.value)} sx={{ flex: { lg: "2 1 220px" } }} />
+          <TextField fullWidth select label="Estado" value={status} onChange={(event) => setStatus(event.target.value as EstadoSolicitud | "")} sx={{ minWidth: { lg: 160 } }}>
             <MenuItem value="">Todos</MenuItem>
             {statusOptions.map((option) => (
               <MenuItem key={option} value={option}>
@@ -102,20 +111,20 @@ export function OrdersPage() {
               </MenuItem>
             ))}
           </TextField>
-          <TextField label="Desde" type="date" value={from} onChange={(event) => setFrom(event.target.value)} InputLabelProps={{ shrink: true }} />
-          <TextField label="Hasta" type="date" value={to} onChange={(event) => setTo(event.target.value)} InputLabelProps={{ shrink: true }} />
-          <Button variant="outlined" onClick={applyFilters}>
+          <TextField fullWidth label="Desde" type="date" value={from} onChange={(event) => setFrom(event.target.value)} InputLabelProps={{ shrink: true }} />
+          <TextField fullWidth label="Hasta" type="date" value={to} onChange={(event) => setTo(event.target.value)} InputLabelProps={{ shrink: true }} />
+          <Button variant="outlined" onClick={applyFilters} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
             Filtrar
           </Button>
           {user?.rol === "ADMIN" && (
-            <Button style={{color:'#fff'}} variant="contained" startIcon={<DownloadIcon />} disabled={!selection.length} onClick={() => exportOrders(selection as string[])}>
+            <Button sx={{ color: "#fff", flexShrink: 0, width: { xs: "100%", sm: "auto" } }} variant="contained" startIcon={<DownloadIcon />} disabled={!selection.length} onClick={() => exportOrders(selection as string[])}>
               Exportar seleccion
             </Button>
           )}
         </Stack>
       </Paper>
-      <Paper sx={{ height: 560, borderRadius: "8px", overflow: "hidden" }}>
-        <DataGrid rows={orders} columns={columns} checkboxSelection onRowSelectionModelChange={setSelection} disableRowSelectionOnClick />
+      <Paper sx={{ height: { xs: 520, md: 560 }, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
+        <DataGrid rows={orders} columns={columns} checkboxSelection onRowSelectionModelChange={setSelection} disableRowSelectionOnClick sx={{ minWidth: { xs: 760, md: "100%" } }} />
       </Paper>
     </Stack>
   );

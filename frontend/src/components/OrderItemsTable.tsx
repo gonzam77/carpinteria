@@ -55,8 +55,8 @@ export function OrderItemsTable({
 
   return (
     <>
-      <TableContainer component={Paper} sx={{ maxHeight: 520, borderRadius: "8px", overflow: "auto" }}>
-        <Table stickyHeader size="small">
+      <TableContainer component={Paper} sx={{ maxHeight: { xs: 440, md: 520 }, borderRadius: "8px", overflow: "auto", width: "100%" }}>
+        <Table stickyHeader size="small" sx={{ minWidth: 1500 }}>
           <TableHead>
             <TableRow>
               {["Codigo barra", "Material", "Largo", "Ancho", "Cantidad", "CL1", "CL2", "CA1", "CA2", "Rotar", "Codigo centro", "Remark", "Nro cliente", "Nombre cliente", "Producto", ""].map((header) => (
@@ -120,7 +120,7 @@ export function OrderItemsTable({
           </TableBody>
         </Table>
       </TableContainer>
-      <Button sx={{ mt: 2 }} variant="outlined" onClick={() => setRows([...rows, createEmptyDetail(defaultDetailValues)])}>
+      <Button sx={{ mt: 2, width: { xs: "100%", sm: "auto" } }} variant="outlined" onClick={() => setRows([...rows, createEmptyDetail(defaultDetailValues)])}>
         Agregar fila
       </Button>
     </>

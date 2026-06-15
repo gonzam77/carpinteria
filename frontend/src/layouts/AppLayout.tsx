@@ -3,8 +3,9 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import GroupIcon from "@mui/icons-material/Group";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import LogoutIcon from "@mui/icons-material/Logout";
+import MenuIcon from "@mui/icons-material/Menu";
 import PostAddIcon from "@mui/icons-material/PostAdd";
-import { Alert, AppBar, Avatar, Box, Button, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Snackbar, Toolbar, Typography } from "@mui/material";
+import { Alert, AppBar, Avatar, Box, Button, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Snackbar, Toolbar, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -17,6 +18,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [notification, setNotification] = useState("");
+  const [mobileOpen, setMobileOpen] = useState(false);
   const navItems = [
     { label: "Dashboard", to: "/", icon: <AssessmentIcon />, match: (pathname: string) => pathname === "/" },
     {
@@ -47,22 +49,68 @@ export function AppLayout() {
     navigate(location.pathname + location.search, { replace: true, state: {} });
   }, [location, navigate]);
 
+  const drawerContent = (
+    <>
+      <Box sx={{ px: 2.25, py: 2.5 }}>
+        <Typography variant="overline" sx={{ color: "rgba(255,255,255,0.72)", fontWeight: 900, letterSpacing: 1.2 }}>
+          Business
+        </Typography>
+        <Typography variant="h6" sx={{ color: "#ffffff", fontWeight: 900, lineHeight: 1.1 }}>
+          R O M A
+        </Typography>
+      </Box>
+      <List sx={{ px: 1.25, py: 1 }}>
+        {navItems.map((item) => (
+          <ListItemButton
+            key={item.to}
+            component={Link}
+            to={item.to}
+            selected={item.match(location.pathname)}
+            onClick={() => setMobileOpen(false)}
+            sx={{
+              borderRadius: "8px",
+              mb: 0.75,
+              minHeight: 46,
+              color: "rgba(255,255,255,0.78)",
+              "& .MuiListItemIcon-root": { color: "inherit", minWidth: 38 },
+              "&:hover": { bgcolor: alpha("#ffffff", 0.14), color: "#ffffff" },
+              "&.Mui-selected": {
+                bgcolor: alpha("#ffffff", 0.22),
+                background: "rgba(255,255,255,0.22)",
+                boxShadow: "inset 3px 0 0 #ffffff, 0 12px 28px rgba(22, 76, 170, 0.18)",
+                color: "#ffffff",
+                "& .MuiListItemIcon-root": { color: "inherit" }
+              },
+              "&.Mui-selected:hover": { bgcolor: alpha("#ffffff", 0.24) }
+            }}
+          >
+            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.label} />
+          </ListItemButton>
+        ))}
+      </List>
+    </>
+  );
+
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "transparent" }}>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, ml: `${drawerWidth}px`, width: `calc(100% - ${drawerWidth}px)` }}>
-        <Toolbar sx={{ minHeight: 72, px: 3 }}>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="overline" sx={{ color: "text.secondary", fontWeight: 900, letterSpacing: 1.2 }}>
+      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, ml: { md: `${drawerWidth}px` }, width: { xs: "100%", md: `calc(100% - ${drawerWidth}px)` } }}>
+        <Toolbar sx={{ minHeight: { xs: 64, sm: 72 }, px: { xs: 1.5, sm: 2.5, md: 3 }, gap: { xs: 1, sm: 1.5 } }}>
+          <IconButton color="inherit" aria-label="Abrir menu" edge="start" onClick={() => setMobileOpen(true)} sx={{ display: { md: "none" }, flexShrink: 0 }}>
+            <MenuIcon />
+          </IconButton>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="overline" sx={{ color: "text.secondary", display: { xs: "none", sm: "block" }, fontWeight: 900, letterSpacing: 1.2 }}>
               Carpinteria
             </Typography>
-            <Typography variant="h6" sx={{ color: "text.primary", fontWeight: 900, letterSpacing: 0, lineHeight: 1.1 }}>
+            <Typography noWrap variant="h6" sx={{ color: "text.primary", fontSize: { xs: "1rem", sm: "1.25rem" }, fontWeight: 900, letterSpacing: 0, lineHeight: 1.1 }}>
               Panel de solicitudes
             </Typography>
           </Box>
-          <Avatar sx={{ width: 38, height: 38, mr: 1.25, background: "linear-gradient(135deg, #4f7cff, #23d6c8)", fontWeight: 900 }}>
+          <Avatar sx={{ width: { xs: 34, sm: 38 }, height: { xs: 34, sm: 38 }, background: "linear-gradient(135deg, #4f7cff, #23d6c8)", flexShrink: 0, fontWeight: 900 }}>
             {user?.nombre?.[0] ?? "U"}
           </Avatar>
-          <Typography variant="body2" sx={{ mr: 2, color: "text.secondary", fontWeight: 800 }}>
+          <Typography noWrap variant="body2" sx={{ color: "text.secondary", display: { xs: "none", md: "block" }, fontWeight: 800, maxWidth: 260 }}>
             {user?.nombre} {user?.apellido} - {user?.rol}
           </Typography>
           <Button
@@ -72,58 +120,36 @@ export function AppLayout() {
               logout();
               navigate("/login");
             }}
+            sx={{ px: { xs: 1.25, sm: 2.25 }, flexShrink: 0, minWidth: { xs: 0, sm: 64 } }}
           >
             Salir
           </Button>
         </Toolbar>
       </AppBar>
       <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: "block", md: "none" },
+          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: "border-box" }
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+      <Drawer
         variant="permanent"
         sx={{
+          display: { xs: "none", md: "block" },
           width: drawerWidth,
           flexShrink: 0,
           [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: "border-box" }
         }}
       >
-        <Box sx={{ px: 2.25, py: 2.5 }}>
-          <Typography variant="overline" sx={{ color: "rgba(255,255,255,0.72)", fontWeight: 900, letterSpacing: 1.2 }}>
-            Business
-          </Typography>
-          <Typography variant="h6" sx={{ color: "#ffffff", fontWeight: 900, lineHeight: 1.1 }}>
-            R O M A
-          </Typography>
-        </Box>
-        <List sx={{ px: 1.25, py: 1 }}>
-          {navItems.map((item) => (
-            <ListItemButton
-              key={item.to}
-              component={Link}
-              to={item.to}
-              selected={item.match(location.pathname)}
-              sx={{
-                borderRadius: "8px",
-                mb: 0.75,
-                minHeight: 46,
-                color: "rgba(255,255,255,0.78)",
-                "& .MuiListItemIcon-root": { color: "inherit", minWidth: 38 },
-                "&:hover": { bgcolor: alpha("#ffffff", 0.14), color: "#ffffff" },
-                "&.Mui-selected": {
-                  bgcolor: alpha("#ffffff", 0.22),
-                  background: "rgba(255,255,255,0.22)",
-                  boxShadow: "inset 3px 0 0 #ffffff, 0 12px 28px rgba(22, 76, 170, 0.18)",
-                  color: "#ffffff",
-                  "& .MuiListItemIcon-root": { color: "inherit" }
-                },
-                "&.Mui-selected:hover": { bgcolor: alpha("#ffffff", 0.24) }
-              }}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.label} />
-            </ListItemButton>
-          ))}
-        </List>
+        {drawerContent}
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, p: { xs: 2.5, md: 3.5 }, width: `calc(100% - ${drawerWidth}px)` }}>
+      <Box component="main" sx={{ flexGrow: 1, maxWidth: "100%", overflowX: "hidden", p: { xs: 2, sm: 2.5, md: 3.5 }, width: { xs: "100%", md: `calc(100% - ${drawerWidth}px)` } }}>
         <Toolbar />
         <Outlet />
       </Box>

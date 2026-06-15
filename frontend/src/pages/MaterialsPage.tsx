@@ -111,25 +111,36 @@ export function MaterialsPage() {
         <Typography variant="h4">Materiales</Typography>
         <Typography color="text.secondary">Catalogo de placas, espesores y valores disponibles para cortes.</Typography>
       </Stack>
-      <Paper sx={{ p: 2.25, borderRadius: "8px" }}>
-        <Stack component="form" onSubmit={submit} direction={{ xs: "column", md: "row" }} spacing={2}>
-          <TextField label="Material" value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} required />
-          <TextField label="Valor" type="number" value={form.valor} onChange={(event) => setForm({ ...form, valor: event.target.value })} required />
-          <TextField label="Espesor mm" type="number" value={form.espesorMm} onChange={(event) => setForm({ ...form, espesorMm: event.target.value })} required />
-          <TextField label="Ancho placa cm" type="number" value={form.anchoPlaca} onChange={(event) => setForm({ ...form, anchoPlaca: event.target.value })} required />
-          <TextField label="Alto placa cm" type="number" value={form.altoPlaca} onChange={(event) => setForm({ ...form, altoPlaca: event.target.value })} required />
-          <Button type="submit" variant="contained" startIcon={<SaveIcon />}>
+      <Paper sx={{ p: { xs: 2, sm: 2.25 }, borderRadius: "8px", overflow: "hidden" }}>
+        <Stack
+          component="form"
+          onSubmit={submit}
+          direction={{ xs: "column", lg: "row" }}
+          spacing={2}
+          useFlexGap
+          sx={{
+            alignItems: { lg: "center" },
+            flexWrap: "wrap",
+            "& .MuiTextField-root": { flex: { lg: "1 1 150px" }, minWidth: { lg: 150 } }
+          }}
+        >
+          <TextField fullWidth label="Material" value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} required sx={{ flex: { lg: "2 1 220px" } }} />
+          <TextField fullWidth label="Valor" type="number" value={form.valor} onChange={(event) => setForm({ ...form, valor: event.target.value })} required />
+          <TextField fullWidth label="Espesor mm" type="number" value={form.espesorMm} onChange={(event) => setForm({ ...form, espesorMm: event.target.value })} required />
+          <TextField fullWidth label="Ancho placa cm" type="number" value={form.anchoPlaca} onChange={(event) => setForm({ ...form, anchoPlaca: event.target.value })} required />
+          <TextField fullWidth label="Alto placa cm" type="number" value={form.altoPlaca} onChange={(event) => setForm({ ...form, altoPlaca: event.target.value })} required />
+          <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
             {editingId ? "Guardar" : "Crear"}
           </Button>
           {editingId && (
-            <Button type="button" variant="outlined" onClick={resetForm}>
+            <Button type="button" variant="outlined" onClick={resetForm} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
               Cancelar
             </Button>
           )}
         </Stack>
       </Paper>
-      <Paper sx={{ height: 520, borderRadius: "8px", overflow: "hidden" }}>
-        <DataGrid rows={materials} columns={columns} disableRowSelectionOnClick />
+      <Paper sx={{ height: 520, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
+        <DataGrid rows={materials} columns={columns} disableRowSelectionOnClick sx={{ minWidth: { xs: 900, md: "100%" } }} />
       </Paper>
     </Stack>
   );
