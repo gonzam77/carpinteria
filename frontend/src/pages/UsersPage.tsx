@@ -41,23 +41,34 @@ export function UsersPage() {
         <Typography variant="h4">Gestion de usuarios</Typography>
         <Typography color="text.secondary">Alta y administracion de perfiles con acceso al sistema.</Typography>
       </Stack>
-      <Paper sx={{ p: 2.25, borderRadius: "8px" }}>
-        <Stack component="form" onSubmit={submit} direction={{ xs: "column", md: "row" }} spacing={2}>
-          <TextField label="Nombre" value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} required />
-          <TextField label="Apellido" value={form.apellido} onChange={(event) => setForm({ ...form, apellido: event.target.value })} required />
-          <TextField label="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
-          <TextField label="Password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
-          <TextField select label="Rol" value={form.rol} onChange={(event) => setForm({ ...form, rol: event.target.value as Rol })} sx={{ minWidth: 150 }}>
+      <Paper sx={{ p: { xs: 2, sm: 2.25 }, borderRadius: "8px", overflow: "hidden" }}>
+        <Stack
+          component="form"
+          onSubmit={submit}
+          direction={{ xs: "column", lg: "row" }}
+          spacing={2}
+          useFlexGap
+          sx={{
+            alignItems: { lg: "center" },
+            flexWrap: "wrap",
+            "& .MuiTextField-root": { flex: { lg: "1 1 170px" }, minWidth: { lg: 160 } }
+          }}
+        >
+          <TextField fullWidth label="Nombre" value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} required />
+          <TextField fullWidth label="Apellido" value={form.apellido} onChange={(event) => setForm({ ...form, apellido: event.target.value })} required />
+          <TextField fullWidth label="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required sx={{ flex: { lg: "1.5 1 220px" } }} />
+          <TextField fullWidth label="Password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
+          <TextField fullWidth select label="Rol" value={form.rol} onChange={(event) => setForm({ ...form, rol: event.target.value as Rol })} sx={{ minWidth: { lg: 150 } }}>
             <MenuItem value="CARPINTERO">CARPINTERO</MenuItem>
             <MenuItem value="ADMIN">ADMIN</MenuItem>
           </TextField>
-          <Button type="submit" variant="contained" startIcon={<SaveIcon />}>
+          <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
             Crear Usuario
           </Button>
         </Stack>
       </Paper>
-      <Paper sx={{ height: 520, borderRadius: "8px", overflow: "hidden" }}>
-        <DataGrid rows={users} columns={columns} />
+      <Paper sx={{ height: 520, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
+        <DataGrid rows={users} columns={columns} sx={{ minWidth: { xs: 720, md: "100%" } }} />
       </Paper>
     </Stack>
   );

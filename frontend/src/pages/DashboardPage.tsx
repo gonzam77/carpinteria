@@ -43,7 +43,7 @@ export function DashboardPage() {
       </Stack>
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 2.25 }}>
         {cards.map((card) => (
-          <Paper key={card.label} sx={{ p: 3, border: 0, borderRadius: "8px", color: "#ffffff", background: card.gradient, boxShadow: `0 20px 42px ${card.shadow}`, overflow: "hidden", position: "relative" }}>
+          <Paper key={card.label} sx={{ p: { xs: 2.5, sm: 3 }, border: 0, borderRadius: "8px", color: "#ffffff", background: card.gradient, boxShadow: `0 20px 42px ${card.shadow}`, overflow: "hidden", position: "relative" }}>
             <Box sx={{ position: "absolute", right: -24, top: -28, width: 112, height: 112, borderRadius: "50%", bgcolor: "rgba(255,255,255,0.18)" }} />
             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
               <Box sx={{ zIndex: 1 }}>
@@ -57,11 +57,11 @@ export function DashboardPage() {
           </Paper>
         ))}
       </Box>
-      <Paper sx={{ p: 3, borderRadius: "8px" }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: "8px" }}>
         <Typography variant="h6" gutterBottom>
           Pedidos por estado
         </Typography>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2} useFlexGap sx={{ flexWrap: "wrap" }}>
           {(stats?.byStatus ?? []).map((item: any) => (
             <ButtonBase
               key={item.estado}

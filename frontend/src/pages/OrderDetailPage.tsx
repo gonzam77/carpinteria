@@ -63,12 +63,12 @@ export function OrderDetailPage() {
             Telefono: {order.numeroContacto ?? order.usuario?.telefono ?? "Sin telefono"}
           </Typography>
         </div>
-        <Stack direction="row" spacing={1}>
-          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes")}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap sx={{ flexWrap: "wrap", width: { xs: "100%", md: "auto" } }}>
+          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes")} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Volver
           </Button>
           {user?.rol === "ADMIN" ? (
-            <Select size="small" value={order.estado} onChange={(event) => changeStatus(event.target.value as EstadoSolicitud)}>
+            <Select size="small" value={order.estado} onChange={(event) => changeStatus(event.target.value as EstadoSolicitud)} sx={{ minWidth: { sm: 150 }, width: { xs: "100%", sm: "auto" } }}>
               {estados.map((estado) => (
                 <MenuItem key={estado} value={estado}>
                   {estado}
@@ -79,19 +79,19 @@ export function OrderDetailPage() {
             <StatusChip status={order.estado} />
           )}
           {user?.rol === "ADMIN" && (
-            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportOrder}>
+            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportOrder} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Exportar
             </Button>
           )}
           {(user?.rol === "ADMIN" || order.estado === "PENDIENTE") && (
-            <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })}>
+            <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Editar
             </Button>
           )}
         </Stack>
       </Stack>
       <Paper sx={{ overflowX: "auto", borderRadius: "8px" }}>
-        <Table size="small">
+        <Table size="small" sx={{ minWidth: 1180 }}>
           <TableHead>
             <TableRow>
               {["Codigo barra", "Material", "Largo", "Ancho", "Cantidad", "CL1", "CL2", "CA1", "CA2", "Rotar", "Centro", "Remark", "Cliente", "Producto"].map((header) => (

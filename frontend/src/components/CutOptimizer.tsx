@@ -217,7 +217,7 @@ function BoardPreview({ board, material }: { board: BoardPlan; material: Materia
       <Typography variant="caption" color="text.secondary">
         Placa {material.anchoPlaca}x{material.altoPlaca} cm ({boardWidthMm}x{boardHeightMm} mm)
       </Typography>
-      <Box sx={{ border: "1px solid", borderColor: "divider", width: 310, aspectRatio: `${boardWidthMm} / ${boardHeightMm}`, position: "relative", bgcolor: "background.default", mt: 0.5 }}>
+      <Box sx={{ border: "1px solid", borderColor: "divider", width: { xs: 280, sm: 310 }, maxWidth: "100%", aspectRatio: `${boardWidthMm} / ${boardHeightMm}`, position: "relative", bgcolor: "background.default", mt: 0.5 }}>
         <Box sx={{ position: "absolute", top: 4, right: 6, fontSize: 10, color: "text.secondary", bgcolor: "rgba(255,255,255,0.75)", px: 0.5 }}>{boardWidthMm} mm</Box>
         <Box sx={{ position: "absolute", bottom: 4, left: 6, fontSize: 10, color: "text.secondary", bgcolor: "rgba(255,255,255,0.75)", px: 0.5 }}>{boardHeightMm} mm</Box>
         {board.pieces.map((piece, index) => (
@@ -258,7 +258,7 @@ function CutResults({ results }: { results: MaterialCutResult[] }) {
   const totalUsage = totalBoardArea ? (totalArea / totalBoardArea) * 100 : 0;
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <Paper sx={{ p: { xs: 2, sm: 2.5 }, overflow: "hidden" }}>
       <Stack spacing={2}>
         <Box>
           <Typography variant="h6">Optimizador de cortes</Typography>
@@ -280,9 +280,9 @@ function CutResults({ results }: { results: MaterialCutResult[] }) {
                 Hay piezas que no entran en una placa: {result.unplaced.join(", ")}
               </Alert>
             )}
-            <Stack direction="row" spacing={2} sx={{ mt: 2, overflowX: "auto", pb: 1 }}>
+            <Stack direction="row" spacing={2} sx={{ mt: 2, overflowX: "auto", pb: 1, width: "100%" }}>
               {result.optimizedBoards.map((board) => (
-                <Box key={board.index} sx={{ minWidth: 310 }}>
+                <Box key={board.index} sx={{ minWidth: { xs: 280, sm: 310 } }}>
                   <Typography variant="body2" fontWeight={700} gutterBottom>
                     Placa {board.index}
                   </Typography>
@@ -316,12 +316,12 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" spacing={1}>
-        <Button type="button" variant="contained" startIcon={<CalculateIcon />} onClick={() => calculate(0)}>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+        <Button type="button" variant="contained" startIcon={<CalculateIcon />} onClick={() => calculate(0)} sx={{ width: { xs: "100%", sm: "auto" } }}>
           Optimizar cortes
         </Button>
         {results.length > 0 && (
-          <Button type="button" variant="outlined" startIcon={<CalculateIcon />} onClick={() => calculate(variant + 1)}>
+          <Button type="button" variant="outlined" startIcon={<CalculateIcon />} onClick={() => calculate(variant + 1)} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Recalcular distribucion
           </Button>
         )}
