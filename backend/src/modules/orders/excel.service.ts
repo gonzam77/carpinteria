@@ -22,8 +22,8 @@ const columns = [
   { header: "nombre producto", key: "nombre producto" }
 ] as const;
 
-function canto(value: boolean) {
-  return value ? "Canto" : "";
+function canto(value: boolean, nombre?: string | null) {
+  return value ? nombre || "Canto" : "";
 }
 
 export async function buildOrdersWorkbook(orders: any[]) {
@@ -49,10 +49,10 @@ export async function buildOrdersWorkbook(orders: any[]) {
         largo: detail.largo,
         ancho: detail.ancho,
         cantidad: detail.cantidad,
-        "canto largo 1": canto(detail.cantoLargo1),
-        "canto largo 2": canto(detail.cantoLargo2),
-        "canto ancho 1": canto(detail.cantoAncho1),
-        "canto ancho 2": canto(detail.cantoAncho2),
+        "canto largo 1": canto(detail.cantoLargo1, detail.cantoLargo1Nombre),
+        "canto largo 2": canto(detail.cantoLargo2, detail.cantoLargo2Nombre),
+        "canto ancho 1": canto(detail.cantoAncho1, detail.cantoAncho1Nombre),
+        "canto ancho 2": canto(detail.cantoAncho2, detail.cantoAncho2Nombre),
         "permite rotar": detail.permiteRotar ? "Si" : "No",
         "codigo barra centro p": detail.codigoBarraCentro ?? "",
         Remark: detail.remark ?? "",

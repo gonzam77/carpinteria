@@ -5,6 +5,7 @@ import Inventory2Icon from "@mui/icons-material/Inventory2";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import PostAddIcon from "@mui/icons-material/PostAdd";
+import TuneIcon from "@mui/icons-material/Tune";
 import { Alert, AppBar, Avatar, Box, Button, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Snackbar, Toolbar, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useEffect, useState } from "react";
@@ -36,6 +37,7 @@ export function AppLayout() {
     ...(user?.rol === "ADMIN"
       ? [
           { label: "Materiales", to: "/materiales", icon: <Inventory2Icon />, match: (pathname: string) => pathname === "/materiales" },
+          { label: "Optimizador", to: "/configuracion-optimizador", icon: <TuneIcon />, match: (pathname: string) => pathname === "/configuracion-optimizador" },
           { label: "Usuarios", to: "/usuarios", icon: <GroupIcon />, match: (pathname: string) => pathname === "/usuarios" }
         ]
       : [])

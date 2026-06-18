@@ -1,7 +1,8 @@
 import CalculateIcon from "@mui/icons-material/Calculate";
 import { Alert, Box, Button, Divider, Paper, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
-import { Material, OrderDetail } from "../types";
+import { api } from "../api/client";
+import { Material, OptimizerSettings, OrderDetail } from "../types";
 
 type PlacedPiece = {
   x: number;
@@ -12,6 +13,12 @@ type PlacedPiece = {
   requestedHeight: number;
   label: string;
   rotated: boolean;
+  edges: {
+    top?: string | null;
+    right?: string | null;
+    bottom?: string | null;
+    left?: string | null;
+  };
 };
 
 type FreeRect = {
@@ -32,13 +39,24 @@ type MaterialCutResult = {
   material: Material;
   boardWidthMm: number;
   boardHeightMm: number;
+  usableBoardWidthMm: number;
+  usableBoardHeightMm: number;
   totalArea: number;
   areaEstimatedBoards: number;
   optimizedBoards: BoardPlan[];
+  boardCost: number;
+  edgeCost: number;
+  edgeMeters: number;
   cost: number;
   usagePercent: number;
   wastePercent: number;
   unplaced: string[];
+};
+
+const DEFAULT_OPTIMIZER_SETTINGS: OptimizerSettings = {
+  id: "default",
+  espesorSierraMm: 4.3,
+  perfiladoBordeMm: 10
 };
 
 function resolveMaterialId(row: OrderDetail, materials: Material[]) {
@@ -50,18 +68,26 @@ function formatMoney(value: number) {
 }
 
 function materialBoardWidthMm(material: Material) {
-  return material.anchoPlaca * 10;
+  return material.anchoPlaca ?? 0;
 }
 
 function materialBoardHeightMm(material: Material) {
-  return material.altoPlaca * 10;
+  return material.altoPlaca ?? 0;
 }
 
-function createBoard(index: number, material: Material): BoardPlan {
+function usableBoardWidthMm(material: Material, settings: OptimizerSettings) {
+  return Math.max(0, materialBoardWidthMm(material) - settings.perfiladoBordeMm * 2);
+}
+
+function usableBoardHeightMm(material: Material, settings: OptimizerSettings) {
+  return Math.max(0, materialBoardHeightMm(material) - settings.perfiladoBordeMm * 2);
+}
+
+function createBoard(index: number, material: Material, settings: OptimizerSettings): BoardPlan {
   return {
     index,
     pieces: [],
-    freeRects: [{ x: 0, y: 0, width: materialBoardWidthMm(material), height: materialBoardHeightMm(material) }],
+    freeRects: [{ x: 0, y: 0, width: usableBoardWidthMm(material, settings), height: usableBoardHeightMm(material, settings) }],
     usedArea: 0
   };
 }
@@ -109,10 +135,29 @@ function sortPlacements<T extends { waste: number; shortSideWaste: number; rect:
   });
 }
 
-function tryPlaceInBoard(board: BoardPlan, piece: { width: number; height: number; label: string; canRotate: boolean }, variant: number) {
+function tryPlaceInBoard(
+  board: BoardPlan,
+  piece: { width: number; height: number; label: string; canRotate: boolean; edges: PlacedPiece["edges"] },
+  variant: number,
+  settings: OptimizerSettings
+) {
   const orientations = [
-    { width: piece.width, height: piece.height, rotated: false },
-    ...(piece.canRotate ? [{ width: piece.height, height: piece.width, rotated: true }] : [])
+    { width: piece.width, height: piece.height, rotated: false, edges: piece.edges },
+    ...(piece.canRotate
+      ? [
+          {
+            width: piece.height,
+            height: piece.width,
+            rotated: true,
+            edges: {
+              top: piece.edges.left,
+              right: piece.edges.top,
+              bottom: piece.edges.right,
+              left: piece.edges.bottom
+            }
+          }
+        ]
+      : [])
   ];
 
   const placements = board.freeRects.flatMap((rect, rectIndex) =>
@@ -130,13 +175,22 @@ function tryPlaceInBoard(board: BoardPlan, piece: { width: number; height: numbe
 
   if (!placement) return false;
 
-  const usedRect = { x: placement.rect.x, y: placement.rect.y, width: placement.width, height: placement.height };
+  const usedRect = {
+    x: placement.rect.x,
+    y: placement.rect.y,
+    width: placement.width + (placement.rect.width > placement.width ? settings.espesorSierraMm : 0),
+    height: placement.height + (placement.rect.height > placement.height ? settings.espesorSierraMm : 0)
+  };
   board.pieces.push({
-    ...usedRect,
+    x: placement.rect.x,
+    y: placement.rect.y,
+    width: placement.width,
+    height: placement.height,
     requestedWidth: piece.width,
     requestedHeight: piece.height,
     label: piece.label,
-    rotated: placement.rotated
+    rotated: placement.rotated,
+    edges: placement.edges
   });
   board.usedArea += placement.width * placement.height;
   board.freeRects = pruneFreeRects(board.freeRects.flatMap((rect) => splitFreeRect(rect, usedRect)));
@@ -152,8 +206,47 @@ function sortPieces<T extends { width: number; height: number }>(pieces: T[], va
   });
 }
 
-function calculateCuts(rows: OrderDetail[], materials: Material[], variant: number) {
+function resolvePieceEdges(row: OrderDetail) {
+  const originalEdges = {
+    top: row.cantoAncho1Nombre || (row.cantoAncho1 ? "Canto" : null),
+    right: row.cantoLargo2Nombre || (row.cantoLargo2 ? "Canto" : null),
+    bottom: row.cantoAncho2Nombre || (row.cantoAncho2 ? "Canto" : null),
+    left: row.cantoLargo1Nombre || (row.cantoLargo1 ? "Canto" : null)
+  };
+  return originalEdges;
+}
+
+function calculateRowEdgeCost(row: OrderDetail, cantoById: Map<string, Material>) {
+  const largoMeters = Number(row.largo || 0) / 1000;
+  const anchoMeters = Number(row.ancho || 0) / 1000;
+  const cantidad = Number(row.cantidad || 0);
+
+  const edges = [
+    { id: row.cantoLargo1Id, meters: largoMeters },
+    { id: row.cantoLargo2Id, meters: largoMeters },
+    { id: row.cantoAncho1Id, meters: anchoMeters },
+    { id: row.cantoAncho2Id, meters: anchoMeters }
+  ];
+
+  return edges.reduce(
+    (total, edge) => {
+      if (!edge.id) return total;
+      const canto = cantoById.get(edge.id);
+      if (!canto) return total;
+      return {
+        cost: total.cost + edge.meters * cantidad * canto.valor,
+        meters: total.meters + edge.meters * cantidad
+      };
+    },
+    { cost: 0, meters: 0 }
+  );
+}
+
+function calculateCuts(rows: OrderDetail[], materials: Material[], variant: number, settings: OptimizerSettings) {
+  const cantoById = new Map(materials.filter((material) => material.tipo === "CANTO").map((material) => [material.id, material]));
+
   return materials
+    .filter((material) => material.tipo === "PLACA" && material.anchoPlaca && material.altoPlaca)
     .map((material) => {
       const materialRows = rows.filter((row) => resolveMaterialId(row, materials) === material.id);
       const pieces = sortPieces(
@@ -162,7 +255,8 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
             width: Number(row.ancho),
             height: Number(row.largo),
             label: pieceLabel(row, rowIndex, copyIndex),
-            canRotate: Boolean(row.permiteRotar)
+            canRotate: Boolean(row.permiteRotar),
+            edges: resolvePieceEdges(row)
           }))
         ),
         variant
@@ -172,17 +266,19 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
 
       const boardWidthMm = materialBoardWidthMm(material);
       const boardHeightMm = materialBoardHeightMm(material);
-      const boardArea = boardWidthMm * boardHeightMm;
+      const usableWidthMm = usableBoardWidthMm(material, settings);
+      const usableHeightMm = usableBoardHeightMm(material, settings);
+      const boardArea = usableWidthMm * usableHeightMm;
       const totalArea = pieces.reduce((total, piece) => total + piece.width * piece.height, 0);
       const boards: BoardPlan[] = [];
       const unplaced: string[] = [];
 
       for (const piece of pieces) {
-        const placed = boards.some((board) => tryPlaceInBoard(board, piece, variant));
+        const placed = boards.some((board) => tryPlaceInBoard(board, piece, variant, settings));
         if (placed) continue;
 
-        const board = createBoard(boards.length + 1, material);
-        if (tryPlaceInBoard(board, piece, variant)) {
+        const board = createBoard(boards.length + 1, material, settings);
+        if (tryPlaceInBoard(board, piece, variant, settings)) {
           boards.push(board);
         } else {
           unplaced.push(`${piece.label} (${piece.height}x${piece.width})`);
@@ -191,21 +287,74 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
 
       const optimizedArea = boards.length * boardArea;
       const usagePercent = optimizedArea ? (totalArea / optimizedArea) * 100 : 0;
+      const boardCost = boards.length * material.valor;
+      const edgeSummary = materialRows.reduce(
+        (total, row) => {
+          const edgeTotals = calculateRowEdgeCost(row, cantoById);
+          return {
+            cost: total.cost + edgeTotals.cost,
+            meters: total.meters + edgeTotals.meters
+          };
+        },
+        { cost: 0, meters: 0 }
+      );
 
       return {
         material,
         boardWidthMm,
         boardHeightMm,
+        usableBoardWidthMm: usableWidthMm,
+        usableBoardHeightMm: usableHeightMm,
         totalArea,
         areaEstimatedBoards: Math.ceil(totalArea / boardArea),
         optimizedBoards: boards,
-        cost: boards.length * material.valor,
+        boardCost,
+        edgeCost: edgeSummary.cost,
+        edgeMeters: edgeSummary.meters,
+        cost: boardCost + edgeSummary.cost,
         usagePercent,
         wastePercent: optimizedArea ? 100 - usagePercent : 0,
         unplaced
       };
     })
     .filter(Boolean) as MaterialCutResult[];
+}
+
+function edgeLineStyle(side: "top" | "right" | "bottom" | "left") {
+  const common = {
+    position: "absolute" as const,
+    bgcolor: "#000000",
+    color: "#000000",
+    fontSize: 8,
+    fontWeight: 700,
+    lineHeight: 1,
+    zIndex: 2
+  };
+
+  if (side === "top") return { ...common, top: 5, left: "18%", width: "64%", height: 4, borderRadius: "999px" };
+  if (side === "bottom") return { ...common, bottom: 5, left: "18%", width: "64%", height: 4, borderRadius: "999px" };
+  if (side === "left") return { ...common, top: "18%", left: 5, width: 4, height: "64%", borderRadius: "999px" };
+  return { ...common, top: "18%", right: 5, width: 4, height: "64%", borderRadius: "999px" };
+}
+
+function edgeLabelStyle(side: "top" | "right" | "bottom" | "left") {
+  const common = {
+    position: "absolute" as const,
+    color: "#000000",
+    fontSize: 9,
+    fontWeight: 700,
+    lineHeight: 1.05,
+    zIndex: 3,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
+    maxWidth: "70%"
+  };
+
+  if (side === "top") return { ...common, top: 12, left: "50%", transform: "translateX(-50%)" };
+  if (side === "bottom") return { ...common, bottom: 12, left: "50%", transform: "translateX(-50%)" };
+  if (side === "left") return { ...common, top: "50%", left: 12, transform: "translateY(-50%) rotate(-90deg)", transformOrigin: "left center", maxWidth: "none" };
+  return { ...common, top: "50%", right: 12, transform: "translateY(-50%) rotate(90deg)", transformOrigin: "right center", maxWidth: "none" };
 }
 
 function BoardPreview({ board, material }: { board: BoardPlan; material: Material }) {
@@ -215,9 +364,9 @@ function BoardPreview({ board, material }: { board: BoardPlan; material: Materia
   return (
     <Box>
       <Typography variant="caption" color="text.secondary">
-        Placa {material.anchoPlaca}x{material.altoPlaca} cm ({boardWidthMm}x{boardHeightMm} mm)
+        Placa {material.anchoPlaca}x{material.altoPlaca} mm
       </Typography>
-      <Box sx={{ border: "1px solid", borderColor: "divider", width: { xs: 280, sm: 310 }, maxWidth: "100%", aspectRatio: `${boardWidthMm} / ${boardHeightMm}`, position: "relative", bgcolor: "background.default", mt: 0.5 }}>
+      <Box sx={{ border: "1px solid", borderColor: "divider", width: { xs: 340, sm: 420, lg: 500 }, maxWidth: "100%", aspectRatio: `${boardWidthMm} / ${boardHeightMm}`, position: "relative", bgcolor: "background.default", mt: 0.5 }}>
         <Box sx={{ position: "absolute", top: 4, right: 6, fontSize: 10, color: "text.secondary", bgcolor: "rgba(255,255,255,0.75)", px: 0.5 }}>{boardWidthMm} mm</Box>
         <Box sx={{ position: "absolute", bottom: 4, left: 6, fontSize: 10, color: "text.secondary", bgcolor: "rgba(255,255,255,0.75)", px: 0.5 }}>{boardHeightMm} mm</Box>
         {board.pieces.map((piece, index) => (
@@ -235,14 +384,43 @@ function BoardPreview({ board, material }: { board: BoardPlan; material: Materia
               color: "#000000",
               overflow: "hidden",
               p: 0.5,
-              fontSize: 10,
-              lineHeight: 1.1
+              fontSize: 8,
+              lineHeight: 1.05
             }}
           >
-            <strong>{piece.label}</strong>
-            {piece.rotated ? " (R)" : ""}
-            <br />
-            {piece.requestedHeight}x{piece.requestedWidth} mm
+            {(["top", "right", "bottom", "left"] as const).map((side) =>
+              piece.edges[side] ? <Box key={`${side}-line`} sx={edgeLineStyle(side)} /> : null
+            )}
+            {(["top", "right", "bottom", "left"] as const).map((side) =>
+              piece.edges[side] ? (
+                <Box key={`${side}-label`} sx={edgeLabelStyle(side)}>
+                  {piece.edges[side]}
+                </Box>
+              ) : null
+            )}
+            <Box
+              sx={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                px: 1.25,
+                py: 1.5,
+                zIndex: 1
+              }}
+            >
+              <Box>
+                <Box sx={{ fontSize: 8, fontWeight: 700, lineHeight: 1.05 }}>
+                  {piece.label}
+                  {piece.rotated ? " (R)" : ""}
+                </Box>
+                <Box sx={{ fontSize: 7, lineHeight: 1.05 }}>
+                  {piece.requestedHeight}x{piece.requestedWidth} mm
+                </Box>
+              </Box>
+            </Box>
           </Box>
         ))}
       </Box>
@@ -250,11 +428,11 @@ function BoardPreview({ board, material }: { board: BoardPlan; material: Materia
   );
 }
 
-function CutResults({ results }: { results: MaterialCutResult[] }) {
+function CutResults({ results, settings }: { results: MaterialCutResult[]; settings: OptimizerSettings }) {
   const totalBoards = results.reduce((total, result) => total + result.optimizedBoards.length, 0);
   const totalCost = results.reduce((total, result) => total + result.cost, 0);
   const totalArea = results.reduce((total, result) => total + result.totalArea, 0);
-  const totalBoardArea = results.reduce((total, result) => total + result.optimizedBoards.length * result.boardWidthMm * result.boardHeightMm, 0);
+  const totalBoardArea = results.reduce((total, result) => total + result.optimizedBoards.length * result.usableBoardWidthMm * result.usableBoardHeightMm, 0);
   const totalUsage = totalBoardArea ? (totalArea / totalBoardArea) * 100 : 0;
 
   return (
@@ -265,15 +443,18 @@ function CutResults({ results }: { results: MaterialCutResult[] }) {
           <Typography color="text.secondary">
             Placas necesarias: {totalBoards} - Costo material: {formatMoney(totalCost)} - Aprovechamiento: {totalUsage.toFixed(1)}% - Desperdicio: {(100 - totalUsage).toFixed(1)}%
           </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Perfilado: {settings.perfiladoBordeMm} mm por lado - Sierra: {settings.espesorSierraMm} mm por pasada
+          </Typography>
         </Box>
         {results.map((result) => (
           <Box key={result.material.id}>
             <Divider sx={{ mb: 2 }} />
             <Typography fontWeight={700}>
-              {result.material.nombre} {result.material.espesorMm}mm - Placa {result.material.anchoPlaca}x{result.material.altoPlaca} cm
+              {result.material.nombre} {result.material.espesorMm}mm - Placa {result.material.anchoPlaca}x{result.material.altoPlaca} mm
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Placas estimadas por area: {result.areaEstimatedBoards} - Placas optimizadas: {result.optimizedBoards.length} - Costo: {formatMoney(result.cost)} - Aprovechamiento: {result.usagePercent.toFixed(1)}% - Desperdicio: {result.wastePercent.toFixed(1)}%
+              Area util placa: {result.usableBoardWidthMm}x{result.usableBoardHeightMm} mm - Placas estimadas por area: {result.areaEstimatedBoards} - Placas optimizadas: {result.optimizedBoards.length} - Costo placas: {formatMoney(result.boardCost)} - Costo cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - Total: {formatMoney(result.cost)} - Aprovechamiento: {result.usagePercent.toFixed(1)}% - Desperdicio: {result.wastePercent.toFixed(1)}%
             </Typography>
             {result.unplaced.length > 0 && (
               <Alert severity="warning" sx={{ mt: 1 }}>
@@ -282,7 +463,7 @@ function CutResults({ results }: { results: MaterialCutResult[] }) {
             )}
             <Stack direction="row" spacing={2} sx={{ mt: 2, overflowX: "auto", pb: 1, width: "100%" }}>
               {result.optimizedBoards.map((board) => (
-                <Box key={board.index} sx={{ minWidth: { xs: 280, sm: 310 } }}>
+                <Box key={board.index} sx={{ minWidth: { xs: 340, sm: 420, lg: 500 } }}>
                   <Typography variant="body2" fontWeight={700} gutterBottom>
                     Placa {board.index}
                   </Typography>
@@ -300,19 +481,27 @@ function CutResults({ results }: { results: MaterialCutResult[] }) {
 export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows: OrderDetail[]; materials: Material[]; autoCalculate?: boolean }) {
   const [results, setResults] = useState<MaterialCutResult[]>([]);
   const [variant, setVariant] = useState(0);
+  const [settings, setSettings] = useState<OptimizerSettings>(DEFAULT_OPTIMIZER_SETTINGS);
+
+  useEffect(() => {
+    api
+      .get<OptimizerSettings>("/optimizer-settings")
+      .then((response) => setSettings(response.data))
+      .catch(() => setSettings(DEFAULT_OPTIMIZER_SETTINGS));
+  }, []);
 
   function calculate(nextVariant = 0) {
     setVariant(nextVariant);
-    setResults(calculateCuts(rows, materials, nextVariant));
+    setResults(calculateCuts(rows, materials, nextVariant, settings));
   }
 
   useEffect(() => {
     setResults([]);
     setVariant(0);
     if (autoCalculate && rows.length && materials.length) {
-      setResults(calculateCuts(rows, materials, 0));
+      setResults(calculateCuts(rows, materials, 0, settings));
     }
-  }, [autoCalculate, rows, materials]);
+  }, [autoCalculate, rows, materials, settings]);
 
   return (
     <Stack spacing={2}>
@@ -326,7 +515,7 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
           </Button>
         )}
       </Stack>
-      {results.length > 0 && <CutResults results={results} />}
+      {results.length > 0 && <CutResults results={results} settings={settings} />}
     </Stack>
   );
 }

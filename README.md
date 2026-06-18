@@ -27,7 +27,7 @@ docker compose up --build
 
 Luego abrir:
 
-- Web: `http://localhost:5173`
+- Web: `http://127.0.0.1:5173`
 - API: `http://localhost:4000/health`
 
 Para cargar datos de ejemplo en Docker:
@@ -43,7 +43,7 @@ GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
 VITE_GOOGLE_CLIENT_ID=tu-client-id.apps.googleusercontent.com
 ```
 
-Origen autorizado recomendado para desarrollo: `http://localhost:5173`.
+Origen autorizado recomendado para desarrollo: `http://127.0.0.1:5173`.
 
 ## Ejecutar localmente
 

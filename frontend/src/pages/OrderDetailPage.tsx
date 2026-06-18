@@ -32,7 +32,7 @@ export function OrderDetailPage() {
 
   useEffect(() => {
     if (user?.rol !== "ADMIN") return;
-    api.get<Material[]>("/materiales", { params: { incluirInactivos: true } }).then((response) => setMaterials(response.data));
+    api.get<Material[]>("/materiales", { params: { incluirInactivos: true, tipo: "PLACA" } }).then((response) => setMaterials(response.data));
   }, [user]);
 
   async function exportOrder() {
@@ -49,6 +49,10 @@ export function OrderDetailPage() {
   }
 
   if (!order) return null;
+
+  function cantoLabel(active: boolean, name?: string | null) {
+    return active ? name || "Canto" : "";
+  }
 
   return (
     <Stack spacing={3}>
@@ -109,10 +113,10 @@ export function OrderDetailPage() {
                 <TableCell>{detail.largo}</TableCell>
                 <TableCell>{detail.ancho}</TableCell>
                 <TableCell>{detail.cantidad}</TableCell>
-                <TableCell>{detail.cantoLargo1 ? "Canto" : ""}</TableCell>
-                <TableCell>{detail.cantoLargo2 ? "Canto" : ""}</TableCell>
-                <TableCell>{detail.cantoAncho1 ? "Canto" : ""}</TableCell>
-                <TableCell>{detail.cantoAncho2 ? "Canto" : ""}</TableCell>
+                <TableCell>{cantoLabel(detail.cantoLargo1, detail.cantoLargo1Nombre)}</TableCell>
+                <TableCell>{cantoLabel(detail.cantoLargo2, detail.cantoLargo2Nombre)}</TableCell>
+                <TableCell>{cantoLabel(detail.cantoAncho1, detail.cantoAncho1Nombre)}</TableCell>
+                <TableCell>{cantoLabel(detail.cantoAncho2, detail.cantoAncho2Nombre)}</TableCell>
                 <TableCell>{detail.permiteRotar ? "Si" : "No"}</TableCell>
                 <TableCell>{detail.codigoBarraCentro}</TableCell>
                 <TableCell>{detail.remark}</TableCell>
