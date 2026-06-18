@@ -53,11 +53,17 @@ export function OrderItemsTable({
   rows,
   setRows,
   materials,
+  clientName,
+  clientPhone,
+  onClientPhoneChange,
   defaultDetailValues = {}
 }: {
   rows: OrderDetail[];
   setRows: (rows: OrderDetail[]) => void;
   materials: Material[];
+  clientName: string;
+  clientPhone: string;
+  onClientPhoneChange: (value: string) => void;
   defaultDetailValues?: Partial<Pick<OrderDetail, "numeroCliente" | "nombreCliente">>;
 }) {
   const placaMaterials = materials.filter((material) => material.tipo === "PLACA");
@@ -87,6 +93,29 @@ export function OrderItemsTable({
 
   return (
     <Stack spacing={2.25}>
+      <Paper variant="outlined" sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "10px", bgcolor: "background.default" }}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} justifyContent="space-between">
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              Cliente
+            </Typography>
+            <Typography fontWeight={700}>{clientName || "Sin cliente"}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              Telefono
+            </Typography>
+            <TextField
+              size="small"
+              value={clientPhone}
+              onChange={(event) => onClientPhoneChange(event.target.value)}
+              placeholder="Telefono de contacto"
+              sx={{ minWidth: { md: 240 } }}
+            />
+          </Box>
+        </Stack>
+      </Paper>
+
       {rows.map((row, index) => (
         <Paper key={index} sx={{ p: { xs: 2, md: 2.5 }, borderRadius: "10px" }}>
           <Stack spacing={2}>
@@ -138,8 +167,6 @@ export function OrderItemsTable({
               <TextField label="Codigo centro" value={row.codigoBarraCentro ?? ""} onChange={(event) => patchRow(index, { codigoBarraCentro: event.target.value })} fullWidth />
               <TextField label="Producto" value={row.nombreProducto ?? ""} onChange={(event) => patchRow(index, { nombreProducto: event.target.value })} fullWidth />
               <TextField label="Remark" value={row.remark ?? ""} onChange={(event) => patchRow(index, { remark: event.target.value })} fullWidth />
-              <TextField label="Nro cliente" value={row.numeroCliente ?? ""} onChange={(event) => patchRow(index, { numeroCliente: event.target.value })} fullWidth />
-              <TextField label="Nombre cliente" value={row.nombreCliente ?? ""} onChange={(event) => patchRow(index, { nombreCliente: event.target.value })} fullWidth />
             </Box>
 
             <Paper variant="outlined" sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "10px" }}>
@@ -156,7 +183,8 @@ export function OrderItemsTable({
                     gap: 2,
                     gridTemplateColumns: {
                       xs: "1fr",
-                      md: "repeat(2, minmax(0, 1fr))"
+                      md: "repeat(2, minmax(0, 1fr))",
+                      xl: "repeat(4, minmax(0, 1fr))"
                     }
                   }}
                 >

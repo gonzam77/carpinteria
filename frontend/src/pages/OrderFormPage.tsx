@@ -156,7 +156,15 @@ export function OrderFormPage() {
       )}
       {step === 1 && (
         <Stack spacing={2}>
-          <OrderItemsTable rows={rows} setRows={updateRows} materials={materials} defaultDetailValues={{ numeroCliente: telefono, nombreCliente: cliente }} />
+          <OrderItemsTable
+            rows={rows}
+            setRows={updateRows}
+            materials={materials}
+            clientName={cliente}
+            clientPhone={telefono}
+            onClientPhoneChange={setTelefono}
+            defaultDetailValues={{ numeroCliente: telefono, nombreCliente: cliente }}
+          />
           <Paper sx={{ p: 2, borderRadius: "8px" }}>
             <CutOptimizer
               rows={rows}

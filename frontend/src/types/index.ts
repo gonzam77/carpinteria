@@ -1,4 +1,4 @@
-export type Rol = "ADMIN" | "CARPINTERO";
+export type Rol = "ADMIN" | "CARPINTERO" | "OPERARIO";
 export type EstadoSolicitud = "PENDIENTE" | "EN_PROCESO" | "TERMINADA" | "ENTREGADA" | "RECHAZADA";
 export type MaterialType = "PLACA" | "CANTO";
 
