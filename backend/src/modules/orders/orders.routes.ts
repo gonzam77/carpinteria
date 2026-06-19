@@ -251,9 +251,6 @@ ordersRouter.delete(
       include: { detalles: true }
     });
     if (!existing) throw new AppError(404, "Pedido no encontrado");
-    if (req.user.rol !== Rol.ADMIN && existing.estado !== EstadoPedido.PENDIENTE) {
-      throw new AppError(403, "Solo se pueden eliminar pedidos pendientes");
-    }
     await prisma.$transaction(async (tx) => {
       if (existing.estado === EstadoPedido.EN_PROCESO) {
         await releaseOrderStock(tx as any, existing.detalles as any);
