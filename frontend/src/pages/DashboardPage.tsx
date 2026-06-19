@@ -2,22 +2,23 @@ import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import PeopleIcon from "@mui/icons-material/People";
 import StraightenIcon from "@mui/icons-material/Straighten";
-import { Box, ButtonBase, Paper, Stack, Typography } from "@mui/material";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { Alert, Box, ButtonBase, Paper, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
-import { EstadoSolicitud } from "../types";
+import { DashboardStats, EstadoSolicitud } from "../types";
 
 export function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
 
   useEffect(() => {
-    if (user?.rol === "ADMIN") api.get("/stats").then((response) => setStats(response.data));
+    if (user?.rol === "ADMIN") api.get<DashboardStats>("/stats").then((response) => setStats(response.data));
   }, [user]);
 
   if (user?.rol !== "ADMIN") {
@@ -87,6 +88,54 @@ export function DashboardPage() {
               <ArrowForwardIcon sx={{ color: getStatusStyle(item.estado as EstadoSolicitud).fg }} fontSize="small" />
             </ButtonBase>
           ))}
+        </Stack>
+      </Paper>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: "8px" }}>
+        <Stack spacing={2}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <WarningAmberIcon color="warning" />
+            <Typography variant="h6">Alertas de stock</Typography>
+          </Stack>
+          {stats?.stockAlerts?.length ? (
+            <Stack spacing={1.5}>
+              {stats.stockAlerts.map((alert) => (
+                <ButtonBase
+                  key={alert.materialId}
+                  onClick={() => navigate("/pedidos?estado=PENDIENTE")}
+                  sx={{
+                    alignItems: "stretch",
+                    border: "1px solid",
+                    borderColor: alpha("#d36b00", 0.28),
+                    borderRadius: "8px",
+                    display: "block",
+                    overflow: "hidden",
+                    textAlign: "left",
+                    width: "100%"
+                  }}
+                >
+                  <Alert
+                    severity="warning"
+                    sx={{
+                      alignItems: "flex-start",
+                      borderRadius: 0,
+                      height: "100%",
+                      "& .MuiAlert-message": { width: "100%" }
+                    }}
+                  >
+                    <Typography fontWeight={800}>{alert.materialNombre}</Typography>
+                    <Typography variant="body2">
+                      Stock disponible: {alert.stockDisponible} placas - Solicitudes pendientes: {alert.placasPendientes} placas - Faltante: {alert.faltantePlacas} placas
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Pedidos pendientes afectados: {alert.pedidosPendientes}
+                    </Typography>
+                  </Alert>
+                </ButtonBase>
+              ))}
+            </Stack>
+          ) : (
+            <Typography color="text.secondary">No hay faltantes de stock para cubrir las solicitudes pendientes.</Typography>
+          )}
         </Stack>
       </Paper>
     </Stack>

@@ -2,7 +2,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { Alert, Button, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { Alert, Box, Button, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { saveAs } from "file-saver";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -14,6 +14,10 @@ import { useAuth } from "../context/AuthContext";
 import { EstadoSolicitud, Material, Order } from "../types";
 
 const estados: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
+
+function canEditOrder(estado: EstadoSolicitud) {
+  return estado !== "EN_PROCESO" && estado !== "TERMINADA" && estado !== "ENTREGADA";
+}
 
 export function OrderDetailPage() {
   const { id } = useParams();
@@ -74,6 +78,19 @@ export function OrderDetailPage() {
     return active ? name || "Canto" : "";
   }
 
+  function DimensionCell({ value, count }: { value: number | string; count: number }) {
+    return (
+      <Box sx={{ minWidth: 56 }}>
+        <Typography variant="body2">{value}</Typography>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35, mt: 0.35, minHeight: 4 }}>
+          {Array.from({ length: count }).map((_, index) => (
+            <Box key={index} sx={{ width: 18, height: 3, borderRadius: "999px", bgcolor: "#1f1f1f" }} />
+          ))}
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Stack spacing={3}>
       <Stack direction={{ xs: "column", md: "row" }} alignItems={{ md: "center" }} justifyContent="space-between" gap={2}>
@@ -107,10 +124,12 @@ export function OrderDetailPage() {
               Exportar
             </Button>
           )}
-          <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => setDeleteOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Eliminar
-          </Button>
-          {(user?.rol === "ADMIN" || order.estado === "PENDIENTE") && (
+          {user?.rol === "ADMIN" && (
+            <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => setDeleteOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              Eliminar
+            </Button>
+          )}
+          {canEditOrder(order.estado) && (
             <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Editar
             </Button>
@@ -133,8 +152,12 @@ export function OrderDetailPage() {
               <TableRow key={detail.id}>
                 <TableCell>{detail.codigoBarra}</TableCell>
                 <TableCell>{detail.material}</TableCell>
-                <TableCell>{detail.largo}</TableCell>
-                <TableCell>{detail.ancho}</TableCell>
+                <TableCell>
+                  <DimensionCell value={detail.largo} count={Number(Boolean(detail.cantoLargo1)) + Number(Boolean(detail.cantoLargo2))} />
+                </TableCell>
+                <TableCell>
+                  <DimensionCell value={detail.ancho} count={Number(Boolean(detail.cantoAncho1)) + Number(Boolean(detail.cantoAncho2))} />
+                </TableCell>
                 <TableCell>{detail.cantidad}</TableCell>
                 <TableCell>{cantoLabel(detail.cantoLargo1, detail.cantoLargo1Nombre)}</TableCell>
                 <TableCell>{cantoLabel(detail.cantoLargo2, detail.cantoLargo2Nombre)}</TableCell>
@@ -189,7 +212,7 @@ export function OrderDetailPage() {
           {notification}
         </Alert>
       </Snackbar>
-      <DeleteOrderDialog order={order} open={deleteOpen} loading={deleting} onCancel={() => setDeleteOpen(false)} onConfirm={deleteOrder} />
+      {user?.rol === "ADMIN" && <DeleteOrderDialog order={order} open={deleteOpen} loading={deleting} onCancel={() => setDeleteOpen(false)} onConfirm={deleteOrder} />}
     </Stack>
   );
 }

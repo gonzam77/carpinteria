@@ -9,6 +9,24 @@ export type OptimizerSettings = {
   fechaActualizacion?: string;
 };
 
+export type StockAlert = {
+  materialId: string;
+  materialNombre: string;
+  stockDisponible: number;
+  placasPendientes: number;
+  pedidosPendientes: number;
+  faltantePlacas: number;
+};
+
+export type DashboardStats = {
+  totalOrders: number;
+  totalUsers: number;
+  totalPieces: number;
+  totalRows: number;
+  byStatus: Array<{ estado: EstadoSolicitud; total: number }>;
+  stockAlerts: StockAlert[];
+};
+
 export type Material = {
   id: string;
   nombre: string;

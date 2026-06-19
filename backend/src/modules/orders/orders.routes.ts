@@ -10,6 +10,10 @@ import { orderFiltersSchema, orderSchema } from "./order.schemas.js";
 
 export const ordersRouter = Router();
 
+function canEditOrder(estado: EstadoPedido) {
+  return estado !== EstadoPedido.EN_PROCESO && estado !== EstadoPedido.TERMINADA && estado !== EstadoPedido.ENTREGADA;
+}
+
 ordersRouter.use(authenticate);
 
 function orderAccessWhere(user: any) {
@@ -181,6 +185,9 @@ ordersRouter.put(
       include: { detalles: true }
     });
     if (!existing) throw new AppError(404, "Pedido no encontrado");
+    if (!canEditOrder(existing.estado)) {
+      throw new AppError(403, "No se pueden editar pedidos en proceso, terminados o entregados.");
+    }
     if (req.user.rol !== Rol.ADMIN && existing.estado !== EstadoPedido.PENDIENTE) {
       throw new AppError(403, "Solo se pueden editar pedidos pendientes");
     }
@@ -246,6 +253,9 @@ ordersRouter.patch(
 ordersRouter.delete(
   "/:id",
   asyncHandler(async (req: any, res: any) => {
+    if (req.user.rol !== Rol.ADMIN) {
+      throw new AppError(403, "Solo un administrador puede eliminar solicitudes.");
+    }
     const existing = await prisma.pedido.findFirst({
       where: { id: req.params.id, ...orderAccessWhere(req.user) },
       include: { detalles: true }
