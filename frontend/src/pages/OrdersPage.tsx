@@ -1,4 +1,5 @@
 import DownloadIcon from "@mui/icons-material/Download";
+import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { Button, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
@@ -52,17 +53,25 @@ export function OrdersPage() {
     saveAs(response.data, "pedidos-carpinteria.xlsx");
   }
 
+  async function deleteOrder(order: Order) {
+    const confirmed = window.confirm(`¿Estas seguro que deseas eliminar la solicitud de ${order.cliente}? Esta accion no se puede deshacer.`);
+    if (!confirmed) return;
+
+    await api.delete(`/orders/${order.id}`);
+    await loadOrders();
+  }
+
   const columns = useMemo<GridColDef<Order>[]>(
     () => [
       { field: "cliente", headerName: "Cliente", flex: 1, minWidth: 180 },
       { field: "estado", headerName: "Estado", width: 150, renderCell: ({ value }) => <StatusChip size="small" status={value as EstadoSolicitud} /> },
       { field: "fechaCreacion", headerName: "Fecha", width: 150, valueGetter: (_, row) => new Date(row.fechaCreacion).toLocaleDateString() },
-      { field: "piezas", headerName: "Piezas", width: 100, valueGetter: (_, row) => row.detalles.length },
+      { field: "piezas", headerName: "Piezas", width: 100, valueGetter: (_, row) => row.detalles.reduce((total, detail) => total + Number(detail.cantidad || 0), 0) },
       { field: "usuario", headerName: "Carpintero", width: 180, valueGetter: (_, row) => (row.usuario ? `${row.usuario.nombre} ${row.usuario.apellido}` : "") },
       {
         field: "acciones",
         headerName: "",
-        width: 150,
+        width: 190,
         sortable: false,
         renderCell: ({ row }) => (
           <>
@@ -78,6 +87,11 @@ export function OrdersPage() {
               </IconButton>
               </Tooltip>
             )}
+            <Tooltip title="Eliminar">
+              <IconButton color="error" onClick={() => deleteOrder(row)}>
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
           </>
         )
       }
