@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { CutOptimizer } from "../components/CutOptimizer";
+import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
 import { EstadoSolicitud, Material, Order } from "../types";
@@ -19,6 +20,8 @@ export function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [notification, setNotification] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -53,13 +56,16 @@ export function OrderDetailPage() {
 
   async function deleteOrder() {
     if (!order) return;
-    const confirmed = window.confirm(`¿Estas seguro que deseas eliminar la solicitud de ${order.cliente}? Esta accion no se puede deshacer.`);
-    if (!confirmed) return;
-
-    await api.delete(`/orders/${order.id}`);
-    navigate(user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes", {
-      state: { notification: "Solicitud eliminada correctamente." }
-    });
+    setDeleting(true);
+    try {
+      await api.delete(`/orders/${order.id}`);
+      navigate(user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes", {
+        state: { notification: "Solicitud eliminada correctamente." }
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
   }
 
   if (!order) return null;
@@ -101,7 +107,7 @@ export function OrderDetailPage() {
               Exportar
             </Button>
           )}
-          <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={deleteOrder} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => setDeleteOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Eliminar
           </Button>
           {(user?.rol === "ADMIN" || order.estado === "PENDIENTE") && (
@@ -183,6 +189,7 @@ export function OrderDetailPage() {
           {notification}
         </Alert>
       </Snackbar>
+      <DeleteOrderDialog order={order} open={deleteOpen} loading={deleting} onCancel={() => setDeleteOpen(false)} onConfirm={deleteOrder} />
     </Stack>
   );
 }

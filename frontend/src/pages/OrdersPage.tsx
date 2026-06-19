@@ -8,6 +8,7 @@ import { saveAs } from "file-saver";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
 import { StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
 import { EstadoSolicitud, Order } from "../types";
@@ -26,6 +27,8 @@ export function OrdersPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [selection, setSelection] = useState<GridRowSelectionModel>([]);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -54,11 +57,14 @@ export function OrdersPage() {
   }
 
   async function deleteOrder(order: Order) {
-    const confirmed = window.confirm(`¿Estas seguro que deseas eliminar la solicitud de ${order.cliente}? Esta accion no se puede deshacer.`);
-    if (!confirmed) return;
-
-    await api.delete(`/orders/${order.id}`);
-    await loadOrders();
+    setDeleting(true);
+    try {
+      await api.delete(`/orders/${order.id}`);
+      await loadOrders();
+    } finally {
+      setDeleting(false);
+      setOrderToDelete(null);
+    }
   }
 
   const columns = useMemo<GridColDef<Order>[]>(
@@ -88,7 +94,7 @@ export function OrdersPage() {
               </Tooltip>
             )}
             <Tooltip title="Eliminar">
-              <IconButton color="error" onClick={() => deleteOrder(row)}>
+              <IconButton color="error" onClick={() => setOrderToDelete(row)}>
                 <DeleteIcon />
               </IconButton>
             </Tooltip>
@@ -140,6 +146,7 @@ export function OrdersPage() {
       <Paper sx={{ height: { xs: 520, md: 560 }, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
         <DataGrid rows={orders} columns={columns} checkboxSelection onRowSelectionModelChange={setSelection} disableRowSelectionOnClick sx={{ minWidth: { xs: 760, md: "100%" } }} />
       </Paper>
+      <DeleteOrderDialog order={orderToDelete} open={Boolean(orderToDelete)} loading={deleting} onCancel={() => setOrderToDelete(null)} onConfirm={() => orderToDelete && deleteOrder(orderToDelete)} />
     </Stack>
   );
 }
