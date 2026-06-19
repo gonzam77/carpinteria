@@ -1,4 +1,5 @@
 import DownloadIcon from "@mui/icons-material/Download";
+import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Alert, Button, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
@@ -37,7 +38,9 @@ export function OrderDetailPage() {
 
   async function exportOrder() {
     const response = await api.get("/orders/export", { params: { ids: id }, responseType: "blob" });
-    saveAs(response.data, `pedido-${id}.xlsx`);
+    const safeClientName = (order?.cliente || "pedido").replace(/[\\/:*?"<>|]/g, "").trim().replace(/\s+/g, "-");
+    const orderDate = order?.fechaCreacion ? new Date(order.fechaCreacion).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+    saveAs(response.data, `${safeClientName}-${orderDate}.xlsx`);
   }
 
   async function changeStatus(estado: EstadoSolicitud) {
@@ -46,6 +49,17 @@ export function OrderDetailPage() {
     await api.patch(`/orders/${id}/status`, { estado });
     await loadOrder();
     setNotification(`Estado actualizado a ${getStatusStyle(estado).label}.`);
+  }
+
+  async function deleteOrder() {
+    if (!order) return;
+    const confirmed = window.confirm(`¿Estas seguro que deseas eliminar la solicitud de ${order.cliente}? Esta accion no se puede deshacer.`);
+    if (!confirmed) return;
+
+    await api.delete(`/orders/${order.id}`);
+    navigate(user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes", {
+      state: { notification: "Solicitud eliminada correctamente." }
+    });
   }
 
   if (!order) return null;
@@ -87,6 +101,9 @@ export function OrderDetailPage() {
               Exportar
             </Button>
           )}
+          <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={deleteOrder} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            Eliminar
+          </Button>
           {(user?.rol === "ADMIN" || order.estado === "PENDIENTE") && (
             <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Editar
