@@ -105,8 +105,8 @@ export function MaterialsPage() {
       { field: "nombre", headerName: "Material", flex: 1, minWidth: 180 },
       { field: "valor", headerName: "Valor", width: 130, valueFormatter: (value) => Number(value).toLocaleString() },
       { field: "espesorMm", headerName: "Espesor", width: 110, valueFormatter: (value) => `${value} mm` },
-      { field: "anchoPlaca", headerName: "Ancho placa mm", width: 150 },
       { field: "altoPlaca", headerName: "Largo placa mm", width: 150 },
+      { field: "anchoPlaca", headerName: "Ancho placa mm", width: 150 },
       { field: "stockPlacas", headerName: "Stock placas", width: 130, valueGetter: (_value, row) => row.stockPlacas ?? 0 },
       { field: "activo", headerName: "Estado", width: 120, renderCell: ({ value }) => <Chip size="small" label={value ? "Activo" : "Inactivo"} color={value ? "success" : "default"} /> },
       {
@@ -214,8 +214,8 @@ export function MaterialsPage() {
           />
           {form.tipo === "PLACA" ? (
             <>
-              <TextField fullWidth label="Ancho placa mm" type="number" value={form.anchoPlaca} onChange={(event) => setForm({ ...form, anchoPlaca: event.target.value })} required />
               <TextField fullWidth label="Largo placa mm" type="number" value={form.altoPlaca} onChange={(event) => setForm({ ...form, altoPlaca: event.target.value })} required />
+              <TextField fullWidth label="Ancho placa mm" type="number" value={form.anchoPlaca} onChange={(event) => setForm({ ...form, anchoPlaca: event.target.value })} required />
               <TextField fullWidth label="Stock placas" type="number" value={form.stockPlacas} onChange={(event) => setForm({ ...form, stockPlacas: event.target.value })} inputProps={{ min: 0, step: 1 }} required />
             </>
           ) : (
