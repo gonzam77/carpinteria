@@ -60,6 +60,7 @@ export function UsersPage() {
           <TextField fullWidth label="Password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
           <TextField fullWidth select label="Rol" value={form.rol} onChange={(event) => setForm({ ...form, rol: event.target.value as Rol })} sx={{ minWidth: { lg: 150 } }}>
             <MenuItem value="CARPINTERO">CARPINTERO</MenuItem>
+            <MenuItem value="OPERARIO">OPERARIO</MenuItem>
             <MenuItem value="ADMIN">ADMIN</MenuItem>
           </TextField>
           <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>

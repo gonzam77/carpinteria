@@ -10,6 +10,7 @@ datasource db {
 enum Rol {
   ADMIN
   CARPINTERO
+  OPERARIO
   EMPLEADO
 }
 
@@ -19,6 +20,11 @@ enum EstadoPedido {
   TERMINADA
   ENTREGADA
   RECHAZADA
+}
+
+enum TipoMaterial {
+  PLACA
+  CANTO
 }
 
 model Usuario {
@@ -60,15 +66,19 @@ model Pedido {
 model Material {
   id                 String          @id @default(uuid())
   nombre             String          @unique
+  tipo               TipoMaterial    @default(PLACA)
   valor              Float
-  espesorMm          Int             @default(18)
-  anchoPlaca         Int
-  altoPlaca          Int
+  espesorMm          Float           @default(18)
+  anchoPlaca         Int?
+  altoPlaca          Int?
+  colorCanto         String?
+  stockPlacas        Int?
   activo             Boolean         @default(true)
   fechaCreacion      DateTime        @default(now())
   fechaActualizacion DateTime        @updatedAt
   detalles           DetallePedido[]
 
+  @@index([tipo])
   @@index([activo])
   @@map("materiales")
 }
@@ -82,9 +92,17 @@ model DetallePedido {
   largo              Int
   ancho              Int
   cantidad           Int
+  cantoLargo1Id      String?
+  cantoLargo1Nombre  String?
   cantoLargo1        Boolean @default(false)
+  cantoLargo2Id      String?
+  cantoLargo2Nombre  String?
   cantoLargo2        Boolean @default(false)
+  cantoAncho1Id      String?
+  cantoAncho1Nombre  String?
   cantoAncho1        Boolean @default(false)
+  cantoAncho2Id      String?
+  cantoAncho2Nombre  String?
   cantoAncho2        Boolean @default(false)
   permiteRotar       Boolean @default(false)
   codigoBarraCentro  String?
@@ -127,4 +145,13 @@ model Auditoria {
 
   @@index([entidad])
   @@map("auditorias")
+}
+
+model ConfiguracionOptimizador {
+  id                 String   @id @default("default")
+  espesorSierraMm    Float    @default(4.3)
+  perfiladoBordeMm   Int      @default(10)
+  fechaActualizacion DateTime @updatedAt
+
+  @@map("configuracion_optimizador")
 }

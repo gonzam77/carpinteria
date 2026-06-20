@@ -1,23 +1,31 @@
 import DownloadIcon from "@mui/icons-material/Download";
+import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { Alert, Button, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { Alert, Box, Button, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { saveAs } from "file-saver";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { CutOptimizer } from "../components/CutOptimizer";
+import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
 import { EstadoSolicitud, Material, Order } from "../types";
 
 const estados: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
 
+function canEditOrder(estado: EstadoSolicitud) {
+  return estado !== "EN_PROCESO" && estado !== "TERMINADA" && estado !== "ENTREGADA";
+}
+
 export function OrderDetailPage() {
   const { id } = useParams();
   const [order, setOrder] = useState<Order | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [notification, setNotification] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -32,12 +40,14 @@ export function OrderDetailPage() {
 
   useEffect(() => {
     if (user?.rol !== "ADMIN") return;
-    api.get<Material[]>("/materiales", { params: { incluirInactivos: true } }).then((response) => setMaterials(response.data));
+    api.get<Material[]>("/materiales", { params: { incluirInactivos: true, tipo: "PLACA" } }).then((response) => setMaterials(response.data));
   }, [user]);
 
   async function exportOrder() {
     const response = await api.get("/orders/export", { params: { ids: id }, responseType: "blob" });
-    saveAs(response.data, `pedido-${id}.xlsx`);
+    const safeClientName = (order?.cliente || "pedido").replace(/[\\/:*?"<>|]/g, "").trim().replace(/\s+/g, "-");
+    const orderDate = order?.fechaCreacion ? new Date(order.fechaCreacion).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+    saveAs(response.data, `${safeClientName}-${orderDate}.xlsx`);
   }
 
   async function changeStatus(estado: EstadoSolicitud) {
@@ -48,7 +58,38 @@ export function OrderDetailPage() {
     setNotification(`Estado actualizado a ${getStatusStyle(estado).label}.`);
   }
 
+  async function deleteOrder() {
+    if (!order) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/orders/${order.id}`);
+      navigate(user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes", {
+        state: { notification: "Solicitud eliminada correctamente." }
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  }
+
   if (!order) return null;
+
+  function cantoLabel(active: boolean, name?: string | null) {
+    return active ? name || "Canto" : "";
+  }
+
+  function DimensionCell({ value, count }: { value: number | string; count: number }) {
+    return (
+      <Box sx={{ minWidth: 56 }}>
+        <Typography variant="body2">{value}</Typography>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35, mt: 0.35, minHeight: 4 }}>
+          {Array.from({ length: count }).map((_, index) => (
+            <Box key={index} sx={{ width: 18, height: 3, borderRadius: "999px", bgcolor: "#1f1f1f" }} />
+          ))}
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Stack spacing={3}>
@@ -83,7 +124,12 @@ export function OrderDetailPage() {
               Exportar
             </Button>
           )}
-          {(user?.rol === "ADMIN" || order.estado === "PENDIENTE") && (
+          {user?.rol === "ADMIN" && (
+            <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => setDeleteOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              Eliminar
+            </Button>
+          )}
+          {canEditOrder(order.estado) && (
             <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Editar
             </Button>
@@ -106,13 +152,17 @@ export function OrderDetailPage() {
               <TableRow key={detail.id}>
                 <TableCell>{detail.codigoBarra}</TableCell>
                 <TableCell>{detail.material}</TableCell>
-                <TableCell>{detail.largo}</TableCell>
-                <TableCell>{detail.ancho}</TableCell>
+                <TableCell>
+                  <DimensionCell value={detail.largo} count={Number(Boolean(detail.cantoLargo1)) + Number(Boolean(detail.cantoLargo2))} />
+                </TableCell>
+                <TableCell>
+                  <DimensionCell value={detail.ancho} count={Number(Boolean(detail.cantoAncho1)) + Number(Boolean(detail.cantoAncho2))} />
+                </TableCell>
                 <TableCell>{detail.cantidad}</TableCell>
-                <TableCell>{detail.cantoLargo1 ? "Canto" : ""}</TableCell>
-                <TableCell>{detail.cantoLargo2 ? "Canto" : ""}</TableCell>
-                <TableCell>{detail.cantoAncho1 ? "Canto" : ""}</TableCell>
-                <TableCell>{detail.cantoAncho2 ? "Canto" : ""}</TableCell>
+                <TableCell>{cantoLabel(detail.cantoLargo1, detail.cantoLargo1Nombre)}</TableCell>
+                <TableCell>{cantoLabel(detail.cantoLargo2, detail.cantoLargo2Nombre)}</TableCell>
+                <TableCell>{cantoLabel(detail.cantoAncho1, detail.cantoAncho1Nombre)}</TableCell>
+                <TableCell>{cantoLabel(detail.cantoAncho2, detail.cantoAncho2Nombre)}</TableCell>
                 <TableCell>{detail.permiteRotar ? "Si" : "No"}</TableCell>
                 <TableCell>{detail.codigoBarraCentro}</TableCell>
                 <TableCell>{detail.remark}</TableCell>
@@ -162,6 +212,7 @@ export function OrderDetailPage() {
           {notification}
         </Alert>
       </Snackbar>
+      {user?.rol === "ADMIN" && <DeleteOrderDialog order={order} open={deleteOpen} loading={deleting} onCancel={() => setDeleteOpen(false)} onConfirm={deleteOrder} />}
     </Stack>
   );
 }

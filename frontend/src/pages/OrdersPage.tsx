@@ -1,17 +1,25 @@
 import DownloadIcon from "@mui/icons-material/Download";
+import DeleteIcon from "@mui/icons-material/Delete";
+import DescriptionIcon from "@mui/icons-material/Description";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { Button, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import { Box, Button, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRowSelectionModel } from "@mui/x-data-grid";
 import { saveAs } from "file-saver";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
+import { OrderReceiptDialog } from "../components/OrderReceiptDialog";
 import { StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
-import { EstadoSolicitud, Order } from "../types";
+import { EstadoSolicitud, Material, OptimizerSettings, Order } from "../types";
 
 const statusOptions: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
+
+function canEditOrder(estado: EstadoSolicitud) {
+  return estado !== "EN_PROCESO" && estado !== "TERMINADA" && estado !== "ENTREGADA";
+}
 
 function getValidStatus(value: string | null): EstadoSolicitud | "" {
   return statusOptions.includes(value as EstadoSolicitud) ? (value as EstadoSolicitud) : "";
@@ -25,6 +33,11 @@ export function OrdersPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [selection, setSelection] = useState<GridRowSelectionModel>([]);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [orderToPreview, setOrderToPreview] = useState<Order | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [optimizerSettings, setOptimizerSettings] = useState<OptimizerSettings>({ id: "default", espesorSierraMm: 4.3, perfiladoBordeMm: 10 });
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -39,6 +52,11 @@ export function OrdersPage() {
     loadOrders(nextStatus);
   }, [searchParams]);
 
+  useEffect(() => {
+    api.get<Material[]>("/materiales").then((response) => setMaterials(response.data));
+    api.get<OptimizerSettings>("/optimizer-settings").then((response) => setOptimizerSettings(response.data));
+  }, []);
+
   function applyFilters() {
     const nextParams = new URLSearchParams(searchParams);
     if (status) nextParams.set("estado", status);
@@ -52,33 +70,60 @@ export function OrdersPage() {
     saveAs(response.data, "pedidos-carpinteria.xlsx");
   }
 
+  async function deleteOrder(order: Order) {
+    setDeleting(true);
+    try {
+      await api.delete(`/orders/${order.id}`);
+      await loadOrders();
+    } finally {
+      setDeleting(false);
+      setOrderToDelete(null);
+    }
+  }
+
   const columns = useMemo<GridColDef<Order>[]>(
     () => [
       { field: "cliente", headerName: "Cliente", flex: 1, minWidth: 180 },
       { field: "estado", headerName: "Estado", width: 150, renderCell: ({ value }) => <StatusChip size="small" status={value as EstadoSolicitud} /> },
       { field: "fechaCreacion", headerName: "Fecha", width: 150, valueGetter: (_, row) => new Date(row.fechaCreacion).toLocaleDateString() },
-      { field: "piezas", headerName: "Piezas", width: 100, valueGetter: (_, row) => row.detalles.length },
+      { field: "piezas", headerName: "Piezas", width: 100, valueGetter: (_, row) => row.detalles.reduce((total, detail) => total + Number(detail.cantidad || 0), 0) },
       { field: "usuario", headerName: "Carpintero", width: 180, valueGetter: (_, row) => (row.usuario ? `${row.usuario.nombre} ${row.usuario.apellido}` : "") },
       {
         field: "acciones",
         headerName: "",
-        width: 150,
+        width: 210,
         sortable: false,
         renderCell: ({ row }) => (
-          <>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", gap: 0.5 }}>
             <Tooltip title="Ver">
               <IconButton onClick={() => navigate(`/pedidos/${row.id}`)}>
                 <VisibilityIcon />
               </IconButton>
             </Tooltip>
-            {(user?.rol === "ADMIN" || row.estado === "PENDIENTE") && (
-              <Tooltip title="Editar">
-              <IconButton onClick={() => navigate(`/pedidos/${row.id}/editar`, { state: { returnTo: user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes" } })}>
-                <EditIcon />
+            <Tooltip title="Comprobante">
+              <IconButton onClick={() => setOrderToPreview(row)}>
+                <DescriptionIcon />
               </IconButton>
-              </Tooltip>
-            )}
-          </>
+            </Tooltip>
+            <Box sx={{ width: 40, display: "flex", justifyContent: "center" }}>
+              {canEditOrder(row.estado) ? (
+                <Tooltip title="Editar">
+                  <IconButton onClick={() => navigate(`/pedidos/${row.id}/editar`, { state: { returnTo: user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes" } })}>
+                    <EditIcon />
+                  </IconButton>
+                </Tooltip>
+              ) : null}
+            </Box>
+            <Box sx={{ width: 40, display: "flex", justifyContent: "center" }}>
+              {user?.rol === "ADMIN" ? (
+                <Tooltip title="Eliminar">
+                  <IconButton color="error" onClick={() => setOrderToDelete(row)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
+              ) : null}
+            </Box>
+          </Box>
         )
       }
     ],
@@ -126,6 +171,8 @@ export function OrdersPage() {
       <Paper sx={{ height: { xs: 520, md: 560 }, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
         <DataGrid rows={orders} columns={columns} checkboxSelection onRowSelectionModelChange={setSelection} disableRowSelectionOnClick sx={{ minWidth: { xs: 760, md: "100%" } }} />
       </Paper>
+      <DeleteOrderDialog order={orderToDelete} open={Boolean(orderToDelete)} loading={deleting} onCancel={() => setOrderToDelete(null)} onConfirm={() => orderToDelete && deleteOrder(orderToDelete)} />
+      <OrderReceiptDialog order={orderToPreview} open={Boolean(orderToPreview)} onClose={() => setOrderToPreview(null)} materials={materials} settings={optimizerSettings} />
     </Stack>
   );
 }
