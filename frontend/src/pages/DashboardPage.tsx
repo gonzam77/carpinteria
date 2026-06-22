@@ -8,6 +8,7 @@ import { alpha } from "@mui/material/styles";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
+import { PushNotificationsCard } from "../components/PushNotificationsCard";
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
 import { DashboardStats, EstadoSolicitud } from "../types";
@@ -42,6 +43,7 @@ export function DashboardPage() {
         <Typography variant="h4">Dashboard de solicitudes</Typography>
         <Typography color="text.secondary">Vista general de actividad, volumen y avance de trabajos.</Typography>
       </Stack>
+      <PushNotificationsCard />
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 2.25 }}>
         {cards.map((card) => (
           <Paper key={card.label} sx={{ p: { xs: 2.5, sm: 3 }, border: 0, borderRadius: "8px", color: "#ffffff", background: card.gradient, boxShadow: `0 20px 42px ${card.shadow}`, overflow: "hidden", position: "relative" }}>
@@ -141,3 +143,5 @@ export function DashboardPage() {
     </Stack>
   );
 }
+
+

@@ -8,6 +8,7 @@ import { AppError, asyncHandler } from "../../utils/http.js";
 import { buildOrdersWorkbook } from "./excel.service.js";
 import { orderFiltersSchema, orderSchema } from "./order.schemas.js";
 import { sendNewOrderWhatsappNotification } from "./whatsapp.service.js";
+import { sendNewOrderPushNotification } from "../push-notifications/push-notifications.service.js";
 
 export const ordersRouter = Router();
 
@@ -139,6 +140,9 @@ ordersRouter.post(
     });
     sendNewOrderWhatsappNotification(order).catch((error) => {
       console.error("WhatsApp notification error", error);
+    });
+    sendNewOrderPushNotification(order).catch((error) => {
+      console.error("Push notification error", error);
     });
     res.status(201).json(order);
   })
@@ -274,3 +278,6 @@ ordersRouter.delete(
     res.status(204).send();
   })
 );
+
+
+

@@ -12,7 +12,10 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
   WHATSAPP_TOKEN: z.string().optional().default(""),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default(""),
-  WHATSAPP_NOTIFY_TO: z.string().optional().default("")
+  WHATSAPP_NOTIFY_TO: z.string().optional().default(""),
+  PUSH_VAPID_PUBLIC_KEY: z.string().optional().default(""),
+  PUSH_VAPID_PRIVATE_KEY: z.string().optional().default(""),
+  PUSH_VAPID_SUBJECT: z.string().default("mailto:admin@carpinteria.local")
 });
 
 const parsedEnv = envSchema.parse(process.env);

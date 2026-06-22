@@ -40,6 +40,7 @@ model Usuario {
   pedidos       Pedido[]
   auditorias    Auditoria[]     @relation("AuditoriaUsuario")
   cambios       HistorialPedido[] @relation("CambioUsuario")
+  pushSubscriptions PushSubscription[]
 
   @@map("usuarios")
 }
@@ -166,3 +167,17 @@ model ConfiguracionEmpresa {
   @@map("configuracion_empresa")
 }
 
+model PushSubscription {
+  id                 String   @id @default(uuid())
+  endpoint           String   @unique
+  p256dh             String
+  auth               String
+  userAgent          String?
+  usuarioId          String
+  fechaCreacion      DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
+  usuario            Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("push_subscriptions")
+}

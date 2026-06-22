@@ -9,6 +9,7 @@ import { companySettingsRouter } from "./modules/company-settings/company-settin
 import { materialsRouter } from "./modules/materials/materials.routes.js";
 import { optimizerSettingsRouter } from "./modules/optimizer-settings/optimizer-settings.routes.js";
 import { ordersRouter } from "./modules/orders/orders.routes.js";
+import { pushNotificationsRouter } from "./modules/push-notifications/push-notifications.routes.js";
 import { statsRouter } from "./modules/stats/stats.routes.js";
 import { usersRouter } from "./modules/users/users.routes.js";
 
@@ -42,7 +43,9 @@ app.use("/api/materiales", materialsRouter);
 app.use("/api/optimizer-settings", optimizerSettingsRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/orders", ordersRouter);
+app.use("/api/push-notifications", pushNotificationsRouter);
 app.use("/api/stats", statsRouter);
 
 app.use(errorMiddleware);
+
 

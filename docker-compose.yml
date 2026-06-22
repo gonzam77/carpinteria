@@ -35,6 +35,9 @@ services:
       WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
       WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
       WHATSAPP_NOTIFY_TO: ${WHATSAPP_NOTIFY_TO:-}
+      PUSH_VAPID_PUBLIC_KEY: ${PUSH_VAPID_PUBLIC_KEY:-}
+      PUSH_VAPID_PRIVATE_KEY: ${PUSH_VAPID_PRIVATE_KEY:-}
+      PUSH_VAPID_SUBJECT: ${PUSH_VAPID_SUBJECT:-mailto:admin@carpinteria.local}
     ports:
       - "127.0.0.1:4000:4000"
 
@@ -53,3 +56,4 @@ services:
 
 volumes:
   postgres_data:
+
