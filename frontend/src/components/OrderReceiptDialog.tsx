@@ -1,5 +1,6 @@
 import PrintIcon from "@mui/icons-material/Print";
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { useCompanySettings } from "../context/CompanySettingsContext";
 import { Material, OptimizerSettings, Order, OrderDetail } from "../types";
 
 type FreeRect = {
@@ -256,6 +257,7 @@ export function OrderReceiptDialog({
   materials: Material[];
   settings: OptimizerSettings;
 }) {
+  const { settings: companySettings } = useCompanySettings();
   if (!order) return null;
   const currentOrder = order;
 
@@ -282,8 +284,9 @@ export function OrderReceiptDialog({
       title,
       `
         <div class="card">
-          <h1 style="margin:0;">ROMA</h1>
-          <div class="muted">Telefono: 2664010101</div>
+          <h1 style="margin:0;">${companySettings.nombre}</h1>
+          <div class="muted">Telefono: ${companySettings.telefono || "-"}</div>
+          <div class="muted">Email: ${companySettings.email || "-"}</div>
           <div class="section">
             <strong>Constancia de solicitud</strong><br />
             Cliente: ${currentOrder.cliente}<br />
@@ -331,9 +334,10 @@ export function OrderReceiptDialog({
                   Constancia de solicitud
                 </Typography>
                 <Typography variant="h3" sx={{ fontWeight: 900, lineHeight: 1 }}>
-                  ROMA
+                  {companySettings.nombre}
                 </Typography>
-                <Typography color="text.secondary">Telefono: 2664010101</Typography>
+                <Typography color="text.secondary">Telefono: {companySettings.telefono || "-"}</Typography>
+                <Typography color="text.secondary">Email: {companySettings.email || "-"}</Typography>
               </Box>
               <Paper variant="outlined" sx={{ p: 2, minWidth: { md: 280 }, borderRadius: "12px" }}>
                 <Typography variant="subtitle2" color="text.secondary">

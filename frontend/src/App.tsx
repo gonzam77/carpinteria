@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./layouts/AppLayout";
+import { CompanySettingsPage } from "./pages/CompanySettingsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MaterialsPage } from "./pages/MaterialsPage";
@@ -42,6 +43,14 @@ export function App() {
           element={
             <ProtectedRoute roles={["ADMIN"]}>
               <UsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="configuracion-empresa"
+          element={
+            <ProtectedRoute roles={["ADMIN"]}>
+              <CompanySettingsPage />
             </ProtectedRoute>
           }
         />

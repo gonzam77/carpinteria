@@ -1,6 +1,7 @@
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import GroupIcon from "@mui/icons-material/Group";
+import BusinessIcon from "@mui/icons-material/Business";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -11,11 +12,13 @@ import { alpha } from "@mui/material/styles";
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useCompanySettings } from "../context/CompanySettingsContext";
 
 const drawerWidth = 236;
 
 export function AppLayout() {
   const { user, logout } = useAuth();
+  const { settings: companySettings } = useCompanySettings();
   const navigate = useNavigate();
   const location = useLocation();
   const [notification, setNotification] = useState("");
@@ -38,7 +41,8 @@ export function AppLayout() {
       ? [
           { label: "Materiales", to: "/materiales", icon: <Inventory2Icon />, match: (pathname: string) => pathname === "/materiales" },
           { label: "Optimizador", to: "/configuracion-optimizador", icon: <TuneIcon />, match: (pathname: string) => pathname === "/configuracion-optimizador" },
-          { label: "Usuarios", to: "/usuarios", icon: <GroupIcon />, match: (pathname: string) => pathname === "/usuarios" }
+          { label: "Usuarios", to: "/usuarios", icon: <GroupIcon />, match: (pathname: string) => pathname === "/usuarios" },
+          { label: "Empresa", to: "/configuracion-empresa", icon: <BusinessIcon />, match: (pathname: string) => pathname === "/configuracion-empresa" }
         ]
       : [])
   ];
@@ -55,10 +59,10 @@ export function AppLayout() {
     <>
       <Box sx={{ px: 2.25, py: 2.5 }}>
         <Typography variant="overline" sx={{ color: "rgba(255,255,255,0.72)", fontWeight: 900, letterSpacing: 1.2 }}>
-          Business
+          Empresa
         </Typography>
         <Typography variant="h6" sx={{ color: "#ffffff", fontWeight: 900, lineHeight: 1.1 }}>
-          R O M A
+          {companySettings.nombre}
         </Typography>
       </Box>
       <List sx={{ px: 1.25, py: 1 }}>
@@ -103,7 +107,7 @@ export function AppLayout() {
           </IconButton>
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             <Typography variant="overline" sx={{ color: "text.secondary", display: { xs: "none", sm: "block" }, fontWeight: 900, letterSpacing: 1.2 }}>
-              Carpinteria
+              {companySettings.nombre}
             </Typography>
             <Typography noWrap variant="h6" sx={{ color: "text.primary", fontSize: { xs: "1rem", sm: "1.25rem" }, fontWeight: 900, letterSpacing: 0, lineHeight: 1.1 }}>
               Panel de solicitudes
@@ -180,3 +184,4 @@ export function AppLayout() {
     </Box>
   );
 }
+

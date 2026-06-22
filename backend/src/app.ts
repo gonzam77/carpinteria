@@ -5,6 +5,7 @@ import morgan from "morgan";
 import { env } from "./config/env.js";
 import { errorMiddleware } from "./middlewares/error.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
+import { companySettingsRouter } from "./modules/company-settings/company-settings.routes.js";
 import { materialsRouter } from "./modules/materials/materials.routes.js";
 import { optimizerSettingsRouter } from "./modules/optimizer-settings/optimizer-settings.routes.js";
 import { ordersRouter } from "./modules/orders/orders.routes.js";
@@ -36,6 +37,7 @@ app.use(morgan("dev"));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRouter);
+app.use("/api/company-settings", companySettingsRouter);
 app.use("/api/materiales", materialsRouter);
 app.use("/api/optimizer-settings", optimizerSettingsRouter);
 app.use("/api/users", usersRouter);
@@ -43,3 +45,4 @@ app.use("/api/orders", ordersRouter);
 app.use("/api/stats", statsRouter);
 
 app.use(errorMiddleware);
+

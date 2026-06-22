@@ -153,7 +153,6 @@ export function OrderItemsTable({
                 }
               }}
             >
-              <TextField label="Codigo de barra" value={row.codigoBarra ?? ""} onChange={(event) => patchRow(index, { codigoBarra: event.target.value })} fullWidth />
               <TextField select label="Placa" value={selectedMaterialId(row)} onChange={(event) => patchMaterial(index, event.target.value)} fullWidth required>
                 {placaMaterials.map((material) => (
                   <MenuItem key={material.id} value={material.id}>

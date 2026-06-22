@@ -1,3 +1,10 @@
+export type CompanySettings = {
+  id: string;
+  nombre: string;
+  telefono: string;
+  email: string;
+  fechaActualizacion?: string;
+};
 export type Rol = "ADMIN" | "CARPINTERO" | "OPERARIO";
 export type EstadoSolicitud = "PENDIENTE" | "EN_PROCESO" | "TERMINADA" | "ENTREGADA" | "RECHAZADA";
 export type MaterialType = "PLACA" | "CANTO";
@@ -100,3 +107,4 @@ export type Order = {
     usuario: Pick<User, "nombre" | "apellido">;
   }>;
 };
+

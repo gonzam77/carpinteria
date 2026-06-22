@@ -5,6 +5,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { AuthProvider } from "./context/AuthContext";
+import { CompanySettingsProvider } from "./context/CompanySettingsContext";
 import { theme } from "./theme/theme";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -14,7 +15,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ""}>
         <BrowserRouter>
           <AuthProvider>
-            <App />
+            <CompanySettingsProvider>
+              <App />
+            </CompanySettingsProvider>
           </AuthProvider>
         </BrowserRouter>
       </GoogleOAuthProvider>
