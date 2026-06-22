@@ -1,7 +1,28 @@
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
-import { Button, Chip, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography
+} from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
@@ -18,6 +39,11 @@ type MaterialForm = {
   stockPlacas: string;
 };
 
+type BulkValueForm = {
+  percentage: string;
+  selectedIds: string[];
+};
+
 const emptyForm: MaterialForm = {
   tipo: "PLACA",
   nombre: "",
@@ -29,10 +55,18 @@ const emptyForm: MaterialForm = {
   stockPlacas: "0"
 };
 
+const emptyBulkForm: BulkValueForm = {
+  percentage: "",
+  selectedIds: []
+};
+
 export function MaterialsPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MaterialForm>(emptyForm);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkForm, setBulkForm] = useState<BulkValueForm>(emptyBulkForm);
+  const [feedback, setFeedback] = useState("");
 
   async function loadMaterials() {
     const response = await api.get<Material[]>("/materiales", { params: { incluirInactivos: true } });
@@ -62,6 +96,25 @@ export function MaterialsPage() {
     setForm(emptyForm);
   }
 
+  function closeBulkDialog() {
+    setBulkDialogOpen(false);
+    setBulkForm(emptyBulkForm);
+  }
+
+  function toggleBulkMaterial(id: string) {
+    setBulkForm((current) => ({
+      ...current,
+      selectedIds: current.selectedIds.includes(id) ? current.selectedIds.filter((item) => item !== id) : [...current.selectedIds, id]
+    }));
+  }
+
+  function toggleSelectAllBulkMaterials() {
+    setBulkForm((current) => ({
+      ...current,
+      selectedIds: current.selectedIds.length === materials.length ? [] : materials.map((material) => material.id)
+    }));
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     const payload =
@@ -87,16 +140,29 @@ export function MaterialsPage() {
 
     if (editingId) {
       await api.put(`/materiales/${editingId}`, payload);
+      setFeedback("Material actualizado correctamente.");
     } else {
       await api.post("/materiales", payload);
+      setFeedback("Material creado correctamente.");
     }
 
     resetForm();
     loadMaterials();
   }
 
+  async function submitBulkValueUpdate() {
+    await api.post("/materiales/adjust-values", {
+      materialIds: bulkForm.selectedIds,
+      percentage: Number(bulkForm.percentage)
+    });
+    closeBulkDialog();
+    setFeedback("Valores actualizados correctamente.");
+    loadMaterials();
+  }
+
   async function disableMaterial(id: string) {
     await api.delete(`/materiales/${id}`);
+    setFeedback("Material desactivado correctamente.");
     loadMaterials();
   }
 
@@ -170,6 +236,8 @@ export function MaterialsPage() {
 
   const placas = materials.filter((material) => material.tipo === "PLACA");
   const cantos = materials.filter((material) => material.tipo === "CANTO");
+  const allSelected = materials.length > 0 && bulkForm.selectedIds.length === materials.length;
+  const canSubmitBulkUpdate = bulkForm.selectedIds.length > 0 && bulkForm.percentage !== "" && !Number.isNaN(Number(bulkForm.percentage)) && Number(bulkForm.percentage) > -100;
 
   return (
     <Stack spacing={3}>
@@ -177,6 +245,11 @@ export function MaterialsPage() {
         <Typography variant="h4">Materiales</Typography>
         <Typography color="text.secondary">Administra placas y cantos con sus datos segun el tipo de material.</Typography>
       </Stack>
+      {feedback && (
+        <Alert severity="success" onClose={() => setFeedback("")}>
+          {feedback}
+        </Alert>
+      )}
       <Paper sx={{ p: { xs: 2, sm: 2.25 }, borderRadius: "8px", overflow: "hidden" }}>
         <Stack
           component="form"
@@ -224,6 +297,9 @@ export function MaterialsPage() {
           <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
             {editingId ? "Guardar" : "Crear"}
           </Button>
+          <Button type="button" variant="outlined" startIcon={<TrendingUpIcon />} onClick={() => setBulkDialogOpen(true)} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
+            Actualizar Valor
+          </Button>
           {editingId && (
             <Button type="button" variant="outlined" onClick={resetForm} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
               Cancelar
@@ -249,6 +325,50 @@ export function MaterialsPage() {
           </Paper>
         </Paper>
       </Stack>
+
+      <Dialog open={bulkDialogOpen} onClose={closeBulkDialog} fullWidth maxWidth="sm">
+        <DialogTitle>Actualizar valor de materiales</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2.5} sx={{ pt: 1 }}>
+            <Typography color="text.secondary">
+              Selecciona los materiales a afectar e indica el porcentaje que quieres aumentar o disminuir sobre el valor actual.
+            </Typography>
+            <FormControlLabel
+              control={<Checkbox checked={allSelected} indeterminate={bulkForm.selectedIds.length > 0 && !allSelected} onChange={toggleSelectAllBulkMaterials} />}
+              label="Seleccionar todos"
+            />
+            <Paper variant="outlined" sx={{ maxHeight: 320, overflowY: "auto", borderRadius: "10px" }}>
+              <List disablePadding>
+                {materials.map((material, index) => (
+                  <ListItemButton key={material.id} divider={index < materials.length - 1} onClick={() => toggleBulkMaterial(material.id)}>
+                    <Checkbox edge="start" checked={bulkForm.selectedIds.includes(material.id)} tabIndex={-1} disableRipple />
+                    <ListItemText
+                      primary={material.nombre}
+                      secondary={`${material.tipo === "PLACA" ? "Placa" : "Canto"} - Valor actual: ${Number(material.valor).toLocaleString("es-AR")}${material.tipo === "CANTO" ? " por metro" : ""}${material.activo ? "" : " - Inactivo"}`}
+                    />
+                  </ListItemButton>
+                ))}
+              </List>
+            </Paper>
+            <TextField
+              fullWidth
+              label="Porcentaje"
+              type="number"
+              value={bulkForm.percentage}
+              onChange={(event) => setBulkForm((current) => ({ ...current, percentage: event.target.value }))}
+              inputProps={{ step: "0.01" }}
+              helperText="Usa valores positivos para aumentar y negativos para disminuir. Ejemplo: 10 o -5."
+              required
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeBulkDialog}>Cancelar</Button>
+          <Button variant="contained" onClick={submitBulkValueUpdate} disabled={!canSubmitBulkUpdate}>
+            Aplicar ajuste
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

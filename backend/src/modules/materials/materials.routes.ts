@@ -29,6 +29,11 @@ const cantoSchema = z.object({
 
 const materialSchema = z.discriminatedUnion("tipo", [placaSchema, cantoSchema]);
 
+const adjustValuesSchema = z.object({
+  materialIds: z.array(z.string().min(1)).min(1),
+  percentage: z.coerce.number().refine((value) => Number.isFinite(value) && value > -100, { message: "El porcentaje debe ser mayor a -100" })
+});
+
 const filtersSchema = z.object({
   incluirInactivos: z.enum(["true", "false"]).optional(),
   tipo: z.nativeEnum(TipoMaterial).optional()
@@ -66,6 +71,48 @@ materialsRouter.post(
       data: { usuarioId: req.user.id, accion: "CREAR_MATERIAL", entidad: "Material", entidadId: material.id }
     });
     res.status(201).json(material);
+  })
+);
+
+materialsRouter.post(
+  "/adjust-values",
+  authorize(Rol.ADMIN),
+  asyncHandler(async (req: any, res: any) => {
+    const { materialIds, percentage } = adjustValuesSchema.parse(req.body);
+    const uniqueIds = [...new Set(materialIds)];
+    const factor = 1 + percentage / 100;
+
+    const updatedMaterials = await prisma.$transaction(async (tx) => {
+      const existingMaterials = await tx.material.findMany({
+        where: { id: { in: uniqueIds } }
+      });
+      const materialById = new Map(existingMaterials.map((material) => [material.id, material]));
+
+      const updates = uniqueIds
+        .map((id) => materialById.get(id))
+        .filter(Boolean)
+        .map((material) =>
+          tx.material.update({
+            where: { id: material!.id },
+            data: { valor: Math.round(material!.valor * factor * 100) / 100 }
+          })
+        );
+
+      const results = await Promise.all(updates);
+
+      await tx.auditoria.create({
+        data: {
+          usuarioId: req.user.id,
+          accion: "AJUSTAR_VALOR_MATERIALES",
+          entidad: "Material",
+          metadata: { materialIds: uniqueIds, percentage, total: results.length }
+        }
+      });
+
+      return results;
+    });
+
+    res.json({ updatedCount: updatedMaterials.length, materials: updatedMaterials });
   })
 );
 
