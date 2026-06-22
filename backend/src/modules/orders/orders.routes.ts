@@ -3,12 +3,12 @@ import { EstadoPedido, Rol, TipoMaterial, type Material } from "../../generated/
 import dayjs from "dayjs";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
-import { releaseOrderStock, reserveOrderStock, shouldReleaseStock, shouldReserveStock } from "./order-stock.service.js";
+import { calculateOrderMaterialBoards, releaseOrderStock, reserveOrderStock, shouldReleaseStock, shouldReserveStock } from "./order-stock.service.js";
 import { AppError, asyncHandler } from "../../utils/http.js";
 import { buildOrdersWorkbook } from "./excel.service.js";
 import { orderFiltersSchema, orderSchema } from "./order.schemas.js";
 import { sendNewOrderWhatsappNotification } from "./whatsapp.service.js";
-import { sendNewOrderPushNotification } from "../push-notifications/push-notifications.service.js";
+import { sendNewOrderPushNotification, sendOrderStockShortagePushNotification } from "../push-notifications/push-notifications.service.js";
 
 export const ordersRouter = Router();
 
@@ -138,11 +138,24 @@ ordersRouter.post(
     await prisma.historialPedido.create({
       data: { pedidoId: order.id, usuarioId: req.user.id, accion: "CREAR_PEDIDO" }
     });
+
+    const materialBoards = await calculateOrderMaterialBoards(prisma as any, order.detalles as any);
+    const stockShortages = materialBoards
+      .filter(({ material, boards }) => (material.stockPlacas ?? 0) < boards)
+      .map(({ material, boards }) => ({
+        materialNombre: material.nombre,
+        disponible: material.stockPlacas ?? 0,
+        requerido: boards
+      }));
+
     sendNewOrderWhatsappNotification(order).catch((error) => {
       console.error("WhatsApp notification error", error);
     });
     sendNewOrderPushNotification(order).catch((error) => {
       console.error("Push notification error", error);
+    });
+    sendOrderStockShortagePushNotification(order, stockShortages).catch((error) => {
+      console.error("Push stock shortage notification error", error);
     });
     res.status(201).json(order);
   })
@@ -278,6 +291,3 @@ ordersRouter.delete(
     res.status(204).send();
   })
 );
-
-
-

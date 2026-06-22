@@ -45,21 +45,16 @@ async function cleanupInvalidSubscription(endpoint: string) {
   await prisma.pushSubscription.deleteMany({ where: { endpoint } });
 }
 
-export async function sendNewOrderPushNotification(order: { id: string; cliente: string; numeroContacto?: string | null }) {
+async function sendPushToAdminSubscriptions(payload: { title: string; body: string; url: string }) {
   if (!isPushConfigured) return;
 
   const subscriptions = await prisma.pushSubscription.findMany({
     where: {
       usuario: { rol: Rol.ADMIN }
-    },
-    include: { usuario: true }
+    }
   });
 
-  const payload = JSON.stringify({
-    title: "Nueva solicitud recibida",
-    body: `${order.cliente}${order.numeroContacto ? ` - ${order.numeroContacto}` : ""}`,
-    url: `/pedidos/${order.id}`
-  });
+  const serializedPayload = JSON.stringify(payload);
 
   await Promise.all(
     subscriptions.map(async (subscription) => {
@@ -72,7 +67,7 @@ export async function sendNewOrderPushNotification(order: { id: string; cliente:
               auth: subscription.auth
             }
           },
-          payload
+          serializedPayload
         );
       } catch (error: any) {
         if (error?.statusCode === 404 || error?.statusCode === 410) {
@@ -83,4 +78,27 @@ export async function sendNewOrderPushNotification(order: { id: string; cliente:
       }
     })
   );
+}
+
+export async function sendNewOrderPushNotification(order: { id: string; cliente: string; numeroContacto?: string | null }) {
+  await sendPushToAdminSubscriptions({
+    title: "Nueva solicitud recibida",
+    body: `${order.cliente}${order.numeroContacto ? ` - ${order.numeroContacto}` : ""}`,
+    url: `/pedidos/${order.id}`
+  });
+}
+
+export async function sendOrderStockShortagePushNotification(order: { id: string; cliente: string }, shortages: Array<{ materialNombre: string; disponible: number; requerido: number }>) {
+  if (!shortages.length) return;
+
+  const summary = shortages
+    .slice(0, 2)
+    .map((item) => `${item.materialNombre}: ${item.disponible}/${item.requerido}`)
+    .join(" - ");
+
+  await sendPushToAdminSubscriptions({
+    title: "Alerta de stock insuficiente",
+    body: `${order.cliente} - ${summary}${shortages.length > 2 ? " - ..." : ""}`,
+    url: `/pedidos/${order.id}`
+  });
 }
