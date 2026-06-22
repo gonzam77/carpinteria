@@ -9,7 +9,10 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default("8h"),
   PORT: z.coerce.number().default(4000),
   FRONTEND_URL: z.string().default("http://127.0.0.1:5173"),
-  GOOGLE_CLIENT_ID: z.string().optional().default("")
+  GOOGLE_CLIENT_ID: z.string().optional().default(""),
+  WHATSAPP_TOKEN: z.string().optional().default(""),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default(""),
+  WHATSAPP_NOTIFY_TO: z.string().optional().default("")
 });
 
 const parsedEnv = envSchema.parse(process.env);

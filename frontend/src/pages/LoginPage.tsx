@@ -46,27 +46,28 @@ export function LoginPage() {
           </Box>
           {error && <Alert severity="error">{error}</Alert>}
           {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
-            <GoogleLogin
-              onSuccess={async (response) => {
-                if (!response.credential) return;
-                try {
-                  await loginWithGoogle(response.credential);
-                  navigate("/solicitar");
-                } catch (err) {
-                  setError(getErrorMessage(err, "Google inicio sesion correctamente, pero la API rechazo el acceso"));
-                }
-              }}
-              onError={() => setError("No se pudo ingresar con Google")}
-              width="100%"
-              text="continue_with"
-            />
+            <Box sx={{ width: "100%", display: "flex", justifyContent: "center", "& > div": { width: "100% !important" }, "& iframe": { width: "100% !important" } }}>
+              <GoogleLogin
+                onSuccess={async (response) => {
+                  if (!response.credential) return;
+                  try {
+                    await loginWithGoogle(response.credential);
+                    navigate("/solicitar");
+                  } catch (err) {
+                    setError(getErrorMessage(err, "Google inicio sesion correctamente, pero la API rechazo el acceso"));
+                  }
+                }}
+                onError={() => setError("No se pudo ingresar con Google")}
+                text="continue_with"
+              />
+            </Box>
           ) : (
             <Alert severity="warning">Configura VITE_GOOGLE_CLIENT_ID para habilitar Google Login.</Alert>
           )}
           <Divider sx={{ color: "text.secondary", fontWeight: 700 }}>Administracion</Divider>
           <Stack spacing={2} component="form" onSubmit={handleSubmit}>
-            <TextField label="Email" value={email} onChange={(event) => setEmail(event.target.value)} fullWidth />
-            <TextField label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} fullWidth />
+            <TextField label="Email" type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} fullWidth />
+            <TextField label="Password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} fullWidth />
             <Button type="submit" variant="contained" size="large" startIcon={<LoginIcon />}>
               Entrar como administrador
             </Button>

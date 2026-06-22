@@ -7,6 +7,7 @@ import { releaseOrderStock, reserveOrderStock, shouldReleaseStock, shouldReserve
 import { AppError, asyncHandler } from "../../utils/http.js";
 import { buildOrdersWorkbook } from "./excel.service.js";
 import { orderFiltersSchema, orderSchema } from "./order.schemas.js";
+import { sendNewOrderWhatsappNotification } from "./whatsapp.service.js";
 
 export const ordersRouter = Router();
 
@@ -135,6 +136,9 @@ ordersRouter.post(
     });
     await prisma.historialPedido.create({
       data: { pedidoId: order.id, usuarioId: req.user.id, accion: "CREAR_PEDIDO" }
+    });
+    sendNewOrderWhatsappNotification(order).catch((error) => {
+      console.error("WhatsApp notification error", error);
     });
     res.status(201).json(order);
   })
