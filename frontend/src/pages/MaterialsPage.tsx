@@ -24,6 +24,7 @@ import {
   Typography
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
+import axios from "axios";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { Material, MaterialType } from "../types";
@@ -67,6 +68,7 @@ export function MaterialsPage() {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState<BulkValueForm>(emptyBulkForm);
   const [feedback, setFeedback] = useState("");
+  const [feedbackSeverity, setFeedbackSeverity] = useState<"success" | "error">("success");
 
   async function loadMaterials() {
     const response = await api.get<Material[]>("/materiales", { params: { incluirInactivos: true } });
@@ -78,6 +80,7 @@ export function MaterialsPage() {
   }, []);
 
   function editMaterial(material: Material) {
+    setFeedback("");
     setEditingId(material.id);
     setForm({
       tipo: material.tipo,
@@ -94,6 +97,7 @@ export function MaterialsPage() {
   function resetForm() {
     setEditingId(null);
     setForm(emptyForm);
+    setFeedback("");
   }
 
   function closeBulkDialog() {
@@ -117,6 +121,7 @@ export function MaterialsPage() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    setFeedback("");
     const payload =
       form.tipo === "PLACA"
         ? {
@@ -138,16 +143,28 @@ export function MaterialsPage() {
             activo: true
           };
 
-    if (editingId) {
-      await api.put(`/materiales/${editingId}`, payload);
-      setFeedback("Material actualizado correctamente.");
-    } else {
-      await api.post("/materiales", payload);
-      setFeedback("Material creado correctamente.");
-    }
+    try {
+      if (editingId) {
+        await api.put(`/materiales/${editingId}`, payload);
+        setFeedbackSeverity("success");
+        setFeedback("Material actualizado correctamente.");
+      } else {
+        await api.post("/materiales", payload);
+        setFeedbackSeverity("success");
+        setFeedback("Material creado correctamente.");
+      }
 
-    resetForm();
-    loadMaterials();
+      resetForm();
+      loadMaterials();
+    } catch (error) {
+      setFeedbackSeverity("error");
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        setFeedback(error.response?.data?.message ?? "No se pudo guardar el material.");
+        return;
+      }
+
+      setFeedback("No se pudo guardar el material.");
+    }
   }
 
   async function submitBulkValueUpdate() {
@@ -156,12 +173,17 @@ export function MaterialsPage() {
       percentage: Number(bulkForm.percentage)
     });
     closeBulkDialog();
+    setFeedbackSeverity("success");
     setFeedback("Valores actualizados correctamente.");
     loadMaterials();
   }
 
   async function deleteMaterial(id: string) {
+    const confirmed = window.confirm("Seguro que queres eliminar este material de forma definitiva?");
+    if (!confirmed) return;
+
     await api.delete(`/materiales/${id}`);
+    setFeedbackSeverity("success");
     setFeedback("Material eliminado correctamente.");
     loadMaterials();
   }
@@ -246,7 +268,7 @@ export function MaterialsPage() {
         <Typography color="text.secondary">Administra placas y cantos con sus datos segun el tipo de material.</Typography>
       </Stack>
       {feedback && (
-        <Alert severity="success" onClose={() => setFeedback("")}>
+        <Alert severity={feedbackSeverity} onClose={() => setFeedback("")}>
           {feedback}
         </Alert>
       )}
