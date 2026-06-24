@@ -148,9 +148,9 @@ ordersRouter.post(
         requerido: boards
       }));
 
-    sendNewOrderWhatsappNotification(order).catch((error) => {
-      console.error("WhatsApp notification error", error);
-    });
+    // sendNewOrderWhatsappNotification(order).catch((error) => {
+    //   console.error("WhatsApp notification error", error);
+    // });
     sendNewOrderPushNotification(order).catch((error) => {
       console.error("Push notification error", error);
     });
