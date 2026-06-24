@@ -3,10 +3,10 @@ import { EstadoPedido, Rol, TipoMaterial, type Material } from "../../generated/
 import dayjs from "dayjs";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
-import { calculateOrderMaterialBoards, releaseOrderStock, reserveOrderStock, shouldReleaseStock, shouldReserveStock } from "./order-stock.service.js";
+import { calculateOrderStockShortages, releaseOrderStock, reserveOrderStock, shouldReleaseStock, shouldReserveStock } from "./order-stock.service.js";
 import { AppError, asyncHandler } from "../../utils/http.js";
 import { buildOrdersWorkbook } from "./excel.service.js";
-import { orderFiltersSchema, orderSchema } from "./order.schemas.js";
+import { orderFiltersSchema, orderSchema, orderStatusSchema } from "./order.schemas.js";
 import { sendNewOrderWhatsappNotification } from "./whatsapp.service.js";
 import { sendNewOrderPushNotification, sendOrderStockShortagePushNotification } from "../push-notifications/push-notifications.service.js";
 
@@ -139,14 +139,7 @@ ordersRouter.post(
       data: { pedidoId: order.id, usuarioId: req.user.id, accion: "CREAR_PEDIDO" }
     });
 
-    const materialBoards = await calculateOrderMaterialBoards(prisma as any, order.detalles as any);
-    const stockShortages = materialBoards
-      .filter(({ material, boards }) => (material.stockPlacas ?? 0) < boards)
-      .map(({ material, boards }) => ({
-        materialNombre: material.nombre,
-        disponible: material.stockPlacas ?? 0,
-        requerido: boards
-      }));
+    const stockShortages = await calculateOrderStockShortages(prisma as any, order.detalles as any);
 
     // sendNewOrderWhatsappNotification(order).catch((error) => {
     //   console.error("WhatsApp notification error", error);
@@ -214,7 +207,7 @@ ordersRouter.put(
     }
 
     const order = await prisma.$transaction(async (tx) => {
-      if (existing.estado === EstadoPedido.EN_PROCESO) {
+      if (existing.estado === EstadoPedido.EN_PROCESO && existing.stockReservado) {
         await releaseOrderStock(tx as any, existing.detalles as any);
       }
       await tx.detallePedido.deleteMany({ where: { pedidoId: existing.id } });
@@ -228,7 +221,7 @@ ordersRouter.put(
         },
         include: { detalles: true }
       });
-      if (existing.estado === EstadoPedido.EN_PROCESO) {
+      if (existing.estado === EstadoPedido.EN_PROCESO && existing.stockReservado) {
         await reserveOrderStock(tx as any, updated.detalles as any);
       }
       await tx.historialPedido.create({
@@ -244,18 +237,28 @@ ordersRouter.patch(
   "/:id/status",
   authorize(Rol.ADMIN),
   asyncHandler(async (req: any, res: any) => {
-    const schema = { estado: req.body.estado as EstadoPedido };
-    if (!Object.values(EstadoPedido).includes(schema.estado)) throw new AppError(400, "Estado invalido");
+    const schema = orderStatusSchema.parse(req.body);
     const previous = await prisma.pedido.findUnique({ where: { id: req.params.id }, include: { detalles: true } });
     if (!previous) throw new AppError(404, "Pedido no encontrado");
     const order = await prisma.$transaction(async (tx) => {
-      if (shouldReleaseStock(previous.estado, schema.estado)) {
+      let stockReservado = previous.stockReservado;
+
+      if (shouldReleaseStock(previous.estado, schema.estado) && previous.stockReservado) {
         await releaseOrderStock(tx as any, previous.detalles as any);
+        stockReservado = false;
       }
       if (shouldReserveStock(previous.estado, schema.estado)) {
-        await reserveOrderStock(tx as any, previous.detalles as any);
+        if (schema.forceWithoutStock) {
+          stockReservado = false;
+        } else {
+          await reserveOrderStock(tx as any, previous.detalles as any);
+          stockReservado = true;
+        }
       }
-      const updated = await tx.pedido.update({ where: { id: req.params.id }, data: { estado: schema.estado } });
+      const updated = await tx.pedido.update({
+        where: { id: req.params.id },
+        data: { estado: schema.estado, stockReservado }
+      });
       await tx.historialPedido.create({
         data: {
           pedidoId: updated.id,
@@ -283,7 +286,7 @@ ordersRouter.delete(
     });
     if (!existing) throw new AppError(404, "Pedido no encontrado");
     await prisma.$transaction(async (tx) => {
-      if (existing.estado === EstadoPedido.EN_PROCESO) {
+      if (existing.estado === EstadoPedido.EN_PROCESO && existing.stockReservado) {
         await releaseOrderStock(tx as any, existing.detalles as any);
       }
       await tx.pedido.delete({ where: { id: existing.id } });

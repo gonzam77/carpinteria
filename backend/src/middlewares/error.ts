@@ -2,7 +2,11 @@ import { AppError } from "../utils/http.js";
 
 export function errorMiddleware(error: any, _req: any, res: any, _next: any) {
   if (error instanceof AppError) {
-    return res.status(error.statusCode).json({ message: error.message });
+    return res.status(error.statusCode).json({
+      message: error.message,
+      ...(error.code ? { code: error.code } : {}),
+      ...(error.details !== undefined ? { details: error.details } : {})
+    });
   }
 
   if (error?.name === "ZodError") {

@@ -51,6 +51,7 @@ model Pedido {
   numeroContacto String?
   observaciones String?
   estado        EstadoPedido      @default(PENDIENTE)
+  stockReservado Boolean          @default(false)
   usuarioId     String
   fechaCreacion DateTime          @default(now())
   fechaActualizacion DateTime     @updatedAt
@@ -181,4 +182,3 @@ model PushSubscription {
   @@index([usuarioId])
   @@map("push_subscriptions")
 }
-

@@ -42,3 +42,8 @@ export const orderFiltersSchema = z.object({
   desde: z.string().optional(),
   hasta: z.string().optional()
 });
+
+export const orderStatusSchema = z.object({
+  estado: z.nativeEnum(EstadoPedido),
+  forceWithoutStock: z.boolean().optional().default(false)
+});

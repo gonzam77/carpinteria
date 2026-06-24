@@ -2,7 +2,28 @@ import DownloadIcon from "@mui/icons-material/Download";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { Alert, Box, Button, MenuItem, Paper, Select, Snackbar, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import {
+  Alert,
+  type AlertColor,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  MenuItem,
+  Paper,
+  Select,
+  Snackbar,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography
+} from "@mui/material";
+import axios from "axios";
 import { saveAs } from "file-saver";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -15,6 +36,22 @@ import { EstadoSolicitud, Material, Order } from "../types";
 
 const estados: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
 
+type StockShortage = {
+  materialId: string;
+  materialNombre: string;
+  disponible: number;
+  requerido: number;
+  faltante: number;
+};
+
+type StatusChangeError = {
+  message?: string;
+  code?: string;
+  details?: {
+    stockShortages?: StockShortage[];
+  };
+};
+
 function canEditOrder(estado: EstadoSolicitud) {
   return estado !== "EN_PROCESO" && estado !== "TERMINADA" && estado !== "ENTREGADA";
 }
@@ -24,8 +61,13 @@ export function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [notification, setNotification] = useState("");
+  const [notificationSeverity, setNotificationSeverity] = useState<AlertColor>("success");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
+  const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<EstadoSolicitud | null>(null);
+  const [stockShortages, setStockShortages] = useState<StockShortage[]>([]);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -50,12 +92,51 @@ export function OrderDetailPage() {
     saveAs(response.data, `${safeClientName}-${orderDate}.xlsx`);
   }
 
+  async function submitStatusChange(estado: EstadoSolicitud, forceWithoutStock = false) {
+    setChangingStatus(true);
+    try {
+      await api.patch(`/orders/${id}/status`, { estado, forceWithoutStock });
+      await loadOrder();
+      setNotificationSeverity(forceWithoutStock ? "warning" : "success");
+      setNotification(
+        forceWithoutStock && estado === "EN_PROCESO"
+          ? `Estado actualizado a ${getStatusStyle(estado).label} sin descontar stock por faltante.`
+          : `Estado actualizado a ${getStatusStyle(estado).label}.`
+      );
+      setStockDialogOpen(false);
+      setPendingStatus(null);
+      setStockShortages([]);
+    } catch (error) {
+      if (
+        !forceWithoutStock &&
+        estado === "EN_PROCESO" &&
+        axios.isAxiosError<StatusChangeError>(error) &&
+        error.response?.data?.code === "STOCK_SHORTAGE_CONFIRMATION_REQUIRED"
+      ) {
+        setPendingStatus(estado);
+        setStockShortages(error.response.data.details?.stockShortages ?? []);
+        setStockDialogOpen(true);
+        return;
+      }
+
+      const message = axios.isAxiosError<StatusChangeError>(error)
+        ? error.response?.data?.message ?? "No se pudo actualizar el estado."
+        : "No se pudo actualizar el estado.";
+      setNotificationSeverity("error");
+      setNotification(message);
+    } finally {
+      setChangingStatus(false);
+    }
+  }
+
   async function changeStatus(estado: EstadoSolicitud) {
     if (estado === order?.estado) return;
+    await submitStatusChange(estado);
+  }
 
-    await api.patch(`/orders/${id}/status`, { estado });
-    await loadOrder();
-    setNotification(`Estado actualizado a ${getStatusStyle(estado).label}.`);
+  async function confirmStatusWithoutStock() {
+    if (!pendingStatus) return;
+    await submitStatusChange(pendingStatus, true);
   }
 
   async function deleteOrder() {
@@ -109,7 +190,13 @@ export function OrderDetailPage() {
             Volver
           </Button>
           {user?.rol === "ADMIN" ? (
-            <Select size="small" value={order.estado} onChange={(event) => changeStatus(event.target.value as EstadoSolicitud)} sx={{ minWidth: { sm: 150 }, width: { xs: "100%", sm: "auto" } }}>
+            <Select
+              size="small"
+              value={order.estado}
+              disabled={changingStatus}
+              onChange={(event) => changeStatus(event.target.value as EstadoSolicitud)}
+              sx={{ minWidth: { sm: 150 }, width: { xs: "100%", sm: "auto" } }}
+            >
               {estados.map((estado) => (
                 <MenuItem key={estado} value={estado}>
                   {estado}
@@ -190,6 +277,34 @@ export function OrderDetailPage() {
           ))}
         </Stack>
       </Paper>
+      <Dialog open={stockDialogOpen} onClose={() => !changingStatus && setStockDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Stock insuficiente</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 0.5 }}>
+            <Alert severity="warning" variant="outlined">
+              No hay stock suficiente para pasar esta solicitud a En proceso. Puedes continuar de todos modos y el stock no se descontara.
+            </Alert>
+            <Stack spacing={1}>
+              {stockShortages.map((item) => (
+                <Box key={item.materialId} sx={{ p: 1.25, border: "1px solid #f3d27a", borderRadius: "8px", bgcolor: "#fff8e6" }}>
+                  <Typography variant="subtitle2">{item.materialNombre}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Disponible: {item.disponible} placas. Requerido: {item.requerido}. Faltante: {item.faltante}.
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setStockDialogOpen(false)} disabled={changingStatus}>
+            Cancelar
+          </Button>
+          <Button variant="contained" color="warning" onClick={confirmStatusWithoutStock} disabled={changingStatus}>
+            Continuar sin descontar stock
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Snackbar
         open={Boolean(notification)}
         autoHideDuration={4200}
@@ -198,14 +313,25 @@ export function OrderDetailPage() {
         sx={{ mt: 8 }}
       >
         <Alert
-          severity="success"
+          severity={notificationSeverity}
           variant="filled"
           onClose={() => setNotification("")}
           sx={{
             alignItems: "center",
-            background: "linear-gradient(135deg, #21c383 0%, #23d6c8 100%)",
+            background:
+              notificationSeverity === "success"
+                ? "linear-gradient(135deg, #21c383 0%, #23d6c8 100%)"
+                : notificationSeverity === "warning"
+                  ? "linear-gradient(135deg, #e6a117 0%, #ffcc4d 100%)"
+                  : "linear-gradient(135deg, #d84b63 0%, #f07d62 100%)",
             borderRadius: "8px",
-            boxShadow: "0 18px 42px rgba(33, 195, 131, 0.28)",
+            boxShadow:
+              notificationSeverity === "success"
+                ? "0 18px 42px rgba(33, 195, 131, 0.28)"
+                : notificationSeverity === "warning"
+                  ? "0 18px 42px rgba(230, 161, 23, 0.28)"
+                  : "0 18px 42px rgba(216, 75, 99, 0.28)",
+            color: notificationSeverity === "warning" ? "#2b1a00" : undefined,
             fontWeight: 800
           }}
         >

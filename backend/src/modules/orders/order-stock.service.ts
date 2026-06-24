@@ -168,14 +168,37 @@ export async function calculateOrderMaterialBoards(tx: PrismaClient, detalles: D
   });
 }
 
-export async function reserveOrderStock(tx: PrismaClient, detalles: DetallePedido[]) {
+export async function calculateOrderStockShortages(tx: PrismaClient, detalles: DetallePedido[]) {
   const materialBoards = await calculateOrderMaterialBoards(tx, detalles);
 
-  for (const { material, boards } of materialBoards) {
-    const currentStock = material.stockPlacas ?? 0;
-    if (currentStock < boards) {
-      throw new AppError(400, `No hay stock suficiente de ${material.nombre}. Disponible: ${currentStock}, requerido: ${boards}.`);
-    }
+  return materialBoards
+    .filter(({ material, boards }) => (material.stockPlacas ?? 0) < boards)
+    .map(({ material, boards }) => ({
+      materialId: material.id,
+      materialNombre: material.nombre,
+      disponible: material.stockPlacas ?? 0,
+      requerido: boards,
+      faltante: boards - (material.stockPlacas ?? 0)
+    }));
+}
+
+export async function reserveOrderStock(tx: PrismaClient, detalles: DetallePedido[]) {
+  const materialBoards = await calculateOrderMaterialBoards(tx, detalles);
+  const stockShortages = materialBoards
+    .filter(({ material, boards }) => (material.stockPlacas ?? 0) < boards)
+    .map(({ material, boards }) => ({
+      materialId: material.id,
+      materialNombre: material.nombre,
+      disponible: material.stockPlacas ?? 0,
+      requerido: boards,
+      faltante: boards - (material.stockPlacas ?? 0)
+    }));
+
+  if (stockShortages.length) {
+    throw new AppError(409, "No hay stock suficiente para pasar la solicitud a en proceso.", {
+      code: "STOCK_SHORTAGE_CONFIRMATION_REQUIRED",
+      details: { stockShortages }
+    });
   }
 
   for (const { material, boards } of materialBoards) {
