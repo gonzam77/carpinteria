@@ -3,6 +3,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CloseIcon from "@mui/icons-material/Close";
 import { Alert, Box, Button, Divider, Paper, Stack, Step, StepLabel, Stepper, TextField, Typography } from "@mui/material";
+import axios from "axios";
 import { FormEvent, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
@@ -72,6 +73,10 @@ export function OrderFormPage() {
         setError("Complete cliente y telefono de contacto.");
         return;
       }
+      if (telefono.trim().length < 6) {
+        setError("El telefono de contacto debe tener al menos 6 digitos.");
+        return;
+      }
       setRows((currentRows) => fillClientFields(currentRows, telefono, cliente));
     }
     if (step === 1) {
@@ -84,14 +89,13 @@ export function OrderFormPage() {
     setStep((current) => current + 1);
   }
 
-
-
   function updateRows(nextRows: OrderDetail[]) {
     setRows(nextRows);
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    setError("");
     const rowError = validateRows(rows, materials);
     if (rowError) {
       setError(rowError);
@@ -112,10 +116,21 @@ export function OrderFormPage() {
       }))
     };
 
-    const response = id ? await api.put(`/orders/${id}`, payload) : await api.post("/orders", payload);
-    navigate(user?.rol === "ADMIN" ? `/pedidos/${response.data.id}` : "/mis-solicitudes", {
-      state: { notification: id ? "Solicitud de corte actualizada correctamente." : "Solicitud de corte enviada correctamente." }
-    });
+    try {
+      const response = id ? await api.put(`/orders/${id}`, payload) : await api.post("/orders", payload);
+      navigate(user?.rol === "ADMIN" ? `/pedidos/${response.data.id}` : "/mis-solicitudes", {
+        state: { notification: id ? "Solicitud de corte actualizada correctamente." : "Solicitud de corte enviada correctamente." }
+      });
+    } catch (submitError) {
+      if (axios.isAxiosError<{ message?: string; errors?: Array<{ message?: string }> }>(submitError)) {
+        const apiMessage = submitError.response?.data?.message;
+        const firstValidationError = submitError.response?.data?.errors?.[0]?.message;
+        setError(apiMessage || firstValidationError || "No se pudo enviar la solicitud.");
+        return;
+      }
+
+      setError("No se pudo enviar la solicitud.");
+    }
   }
 
   return (
@@ -166,10 +181,7 @@ export function OrderFormPage() {
             defaultDetailValues={{ numeroCliente: telefono, nombreCliente: cliente }}
           />
           <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <CutOptimizer
-              rows={rows}
-              materials={materials}
-            />
+            <CutOptimizer rows={rows} materials={materials} />
           </Paper>
         </Stack>
       )}
@@ -187,10 +199,7 @@ export function OrderFormPage() {
               </Typography>
             </Box>
             <Paper sx={{ p: 2, borderRadius: "8px" }}>
-              <CutOptimizer
-                rows={rows}
-                materials={materials}
-              />
+              <CutOptimizer rows={rows} materials={materials} />
             </Paper>
             {observaciones && <Typography color="text.secondary">{observaciones}</Typography>}
           </Stack>
@@ -209,14 +218,15 @@ export function OrderFormPage() {
         )}
         {step < 2 ? (
           <Button type="button" variant="contained" endIcon={<ArrowForwardIcon />} onClick={nextStep} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Enviar
+            Siguiente
           </Button>
         ) : (
           <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Enviando...
+            {id ? "Guardar cambios" : "Enviar solicitud"}
           </Button>
         )}
       </Stack>
     </Stack>
   );
 }
+
