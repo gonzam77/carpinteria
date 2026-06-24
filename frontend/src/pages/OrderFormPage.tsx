@@ -37,7 +37,7 @@ export function OrderFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [cliente, setCliente] = useState(`${user?.nombre ?? ""} ${user?.apellido ?? ""}`.trim());
   const [telefono, setTelefono] = useState(user?.telefono ?? "");
   const [observaciones, setObservaciones] = useState("");
@@ -118,6 +118,15 @@ export function OrderFormPage() {
 
     try {
       const response = id ? await api.put(`/orders/${id}`, payload) : await api.post("/orders", payload);
+
+      if (user && user.rol !== "ADMIN" && telefono !== (user.telefono ?? "")) {
+        await updateProfile({
+          nombre: user.nombre,
+          apellido: user.apellido,
+          telefono
+        });
+      }
+
       navigate(user?.rol === "ADMIN" ? `/pedidos/${response.data.id}` : "/mis-solicitudes", {
         state: { notification: id ? "Solicitud de corte actualizada correctamente." : "Solicitud de corte enviada correctamente." }
       });
@@ -229,4 +238,5 @@ export function OrderFormPage() {
     </Stack>
   );
 }
+
 
