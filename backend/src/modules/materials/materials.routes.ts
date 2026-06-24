@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
 import { Rol, TipoMaterial } from "../../generated/prisma/client.js";
-import { asyncHandler } from "../../utils/http.js";
+import { AppError, asyncHandler } from "../../utils/http.js";
 
 export const materialsRouter = Router();
 
@@ -39,6 +39,20 @@ const filtersSchema = z.object({
   tipo: z.nativeEnum(TipoMaterial).optional()
 });
 
+async function ensureMaterialNameAvailable(nombre: string, currentId?: string) {
+  const existingMaterial = await prisma.material.findFirst({
+    where: {
+      nombre,
+      ...(currentId ? { id: { not: currentId } } : {})
+    },
+    select: { id: true }
+  });
+
+  if (existingMaterial) {
+    throw new AppError(400, "Ya existe un material con ese nombre.");
+  }
+}
+
 materialsRouter.use(authenticate);
 
 materialsRouter.get(
@@ -62,6 +76,7 @@ materialsRouter.post(
   authorize(Rol.ADMIN),
   asyncHandler(async (req: any, res: any) => {
     const parsed = materialSchema.parse(req.body);
+    await ensureMaterialNameAvailable(parsed.nombre);
     const data =
       parsed.tipo === TipoMaterial.PLACA
         ? { ...parsed, colorCanto: null, stockPlacas: parsed.stockPlacas ?? 0 }
@@ -121,6 +136,7 @@ materialsRouter.put(
   authorize(Rol.ADMIN),
   asyncHandler(async (req: any, res: any) => {
     const parsed = materialSchema.parse(req.body);
+    await ensureMaterialNameAvailable(parsed.nombre, req.params.id);
     const data =
       parsed.tipo === TipoMaterial.PLACA
         ? { ...parsed, colorCanto: null, stockPlacas: parsed.stockPlacas ?? 0 }
@@ -140,13 +156,16 @@ materialsRouter.delete(
   "/:id",
   authorize(Rol.ADMIN),
   asyncHandler(async (req: any, res: any) => {
-    const material = await prisma.material.update({
-      where: { id: req.params.id },
-      data: { activo: false }
+    await prisma.$transaction(async (tx) => {
+      const deletedMaterial = await tx.material.delete({
+        where: { id: req.params.id }
+      });
+
+      await tx.auditoria.create({
+        data: { usuarioId: req.user.id, accion: "ELIMINAR_MATERIAL", entidad: "Material", entidadId: deletedMaterial.id }
+      });
     });
-    await prisma.auditoria.create({
-      data: { usuarioId: req.user.id, accion: "DESACTIVAR_MATERIAL", entidad: "Material", entidadId: material.id }
-    });
+
     res.status(204).send();
   })
 );

@@ -9,6 +9,10 @@ type PushConfig = {
   publicKey: string;
 };
 
+type PushNotificationsCardProps = {
+  compact?: boolean;
+};
+
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -21,7 +25,7 @@ async function getBrowserSubscription() {
   return registration.pushManager.getSubscription();
 }
 
-export function PushNotificationsCard() {
+export function PushNotificationsCard({ compact = false }: PushNotificationsCardProps) {
   const [config, setConfig] = useState<PushConfig | null>(null);
   const [supported, setSupported] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
@@ -94,19 +98,21 @@ export function PushNotificationsCard() {
   }
 
   return (
-    <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: "8px" }}>
-      <Stack spacing={2}>
+    <Paper sx={{ p: compact ? { xs: 1.5, sm: 2 } : { xs: 2, sm: 3 }, borderRadius: "8px" }}>
+      <Stack spacing={compact ? 1.5 : 2}>
         <Stack spacing={0.5}>
-          <Typography variant="h6">Notificaciones en este dispositivo</Typography>
-          <Typography color="text.secondary">Activa Web Push para recibir avisos cuando ingrese una nueva solicitud.</Typography>
+          <Typography variant={compact ? "subtitle1" : "h6"}>Notificaciones en este dispositivo</Typography>
+          <Typography color="text.secondary" variant={compact ? "body2" : "body1"}>
+            Activa Web Push para recibir avisos cuando ingrese una nueva solicitud.
+          </Typography>
         </Stack>
         {message && <Alert severity="success">{message}</Alert>}
         {!config?.enabled && <Alert severity="warning">Faltan configurar las claves VAPID del backend para habilitar las notificaciones push.</Alert>}
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-          <Button variant="contained" startIcon={<NotificationsActiveIcon />} onClick={enableNotifications} disabled={loading || subscribed || !config?.enabled}>
+        <Stack direction={{ xs: "column", sm: compact ? "column" : "row" }} spacing={1.5}>
+          <Button variant="contained" size={compact ? "small" : "medium"} startIcon={<NotificationsActiveIcon />} onClick={enableNotifications} disabled={loading || subscribed || !config?.enabled}>
             Activar notificaciones
           </Button>
-          <Button variant="outlined" startIcon={<NotificationsOffIcon />} onClick={disableNotifications} disabled={loading || !subscribed}>
+          <Button variant="outlined" size={compact ? "small" : "medium"} startIcon={<NotificationsOffIcon />} onClick={disableNotifications} disabled={loading || !subscribed}>
             Desactivar
           </Button>
         </Stack>

@@ -160,9 +160,9 @@ export function MaterialsPage() {
     loadMaterials();
   }
 
-  async function disableMaterial(id: string) {
+  async function deleteMaterial(id: string) {
     await api.delete(`/materiales/${id}`);
-    setFeedback("Material desactivado correctamente.");
+    setFeedback("Material eliminado correctamente.");
     loadMaterials();
   }
 
@@ -187,9 +187,9 @@ export function MaterialsPage() {
                 <EditIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Desactivar">
+            <Tooltip title="Eliminar definitivamente">
               <span>
-                <IconButton disabled={!row.activo} onClick={() => disableMaterial(row.id)}>
+                <IconButton onClick={() => deleteMaterial(row.id)}>
                   <DeleteIcon />
                 </IconButton>
               </span>
@@ -220,9 +220,9 @@ export function MaterialsPage() {
                 <EditIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Desactivar">
+            <Tooltip title="Eliminar definitivamente">
               <span>
-                <IconButton disabled={!row.activo} onClick={() => disableMaterial(row.id)}>
+                <IconButton onClick={() => deleteMaterial(row.id)}>
                   <DeleteIcon />
                 </IconButton>
               </span>
@@ -372,3 +372,4 @@ export function MaterialsPage() {
     </Stack>
   );
 }
+

@@ -39,11 +39,15 @@ export function DashboardPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack spacing={0.5}>
-        <Typography variant="h4">Dashboard de solicitudes</Typography>
-        <Typography color="text.secondary">Vista general de actividad, volumen y avance de trabajos.</Typography>
+      <Stack direction={{ xs: "column", xl: "row" }} spacing={2} justifyContent="space-between" alignItems={{ xs: "stretch", xl: "flex-start" }}>
+        <Stack spacing={0.5} sx={{ maxWidth: 560 }}>
+          <Typography variant="h4">Dashboard de solicitudes</Typography>
+          <Typography color="text.secondary">Vista general de actividad, volumen y avance de trabajos.</Typography>
+        </Stack>
+        <Box sx={{ width: { xs: "100%", xl: 420 }, flexShrink: 0 }}>
+          <PushNotificationsCard compact />
+        </Box>
       </Stack>
-      <PushNotificationsCard />
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 2.25 }}>
         {cards.map((card) => (
           <Paper key={card.label} sx={{ p: { xs: 2.5, sm: 3 }, border: 0, borderRadius: "8px", color: "#ffffff", background: card.gradient, boxShadow: `0 20px 42px ${card.shadow}`, overflow: "hidden", position: "relative" }}>
@@ -143,5 +147,3 @@ export function DashboardPage() {
     </Stack>
   );
 }
-
-
