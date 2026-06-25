@@ -1,4 +1,4 @@
-import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+﻿import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import PeopleIcon from "@mui/icons-material/People";
 import StraightenIcon from "@mui/icons-material/Straighten";
@@ -8,7 +8,6 @@ import { alpha } from "@mui/material/styles";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
-import { PushNotificationsCard } from "../components/PushNotificationsCard";
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
 import { DashboardStats, EstadoSolicitud } from "../types";
@@ -39,14 +38,9 @@ export function DashboardPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction={{ xs: "column", xl: "row" }} spacing={2} justifyContent="space-between" alignItems={{ xs: "stretch", xl: "flex-start" }}>
-        <Stack spacing={0.5} sx={{ maxWidth: 560 }}>
-          <Typography variant="h4">Dashboard de solicitudes</Typography>
-          <Typography color="text.secondary">Vista general de actividad, volumen y avance de trabajos.</Typography>
-        </Stack>
-        <Box sx={{ width: { xs: "100%", xl: 420 }, flexShrink: 0 }}>
-          <PushNotificationsCard compact />
-        </Box>
+      <Stack spacing={0.5} sx={{ maxWidth: 560 }}>
+        <Typography variant="h4">Dashboard de solicitudes</Typography>
+        <Typography color="text.secondary">Vista general de actividad, volumen y avance de trabajos.</Typography>
       </Stack>
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 2.25 }}>
         {cards.map((card) => (
