@@ -1,3 +1,5 @@
+﻿import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import GroupIcon from "@mui/icons-material/Group";
@@ -6,11 +8,13 @@ import Inventory2Icon from "@mui/icons-material/Inventory2";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import PostAddIcon from "@mui/icons-material/PostAdd";
+import SettingsIcon from "@mui/icons-material/Settings";
 import TuneIcon from "@mui/icons-material/Tune";
-import { Alert, AppBar, Avatar, Box, Button, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Snackbar, Toolbar, Typography } from "@mui/material";
+import { Alert, AppBar, Avatar, Box, Button, Collapse, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Snackbar, Toolbar, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { PushNotificationsControl } from "../components/PushNotificationsControl";
 import { useAuth } from "../context/AuthContext";
 import { useCompanySettings } from "../context/CompanySettingsContext";
 
@@ -23,7 +27,8 @@ export function AppLayout() {
   const location = useLocation();
   const [notification, setNotification] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const navItems = [
+
+  const mainNavItems = [
     { label: "Dashboard", to: "/", icon: <AssessmentIcon />, match: (pathname: string) => pathname === "/" },
     {
       label: user?.rol === "ADMIN" ? "Solicitudes" : "Mis solicitudes",
@@ -36,16 +41,30 @@ export function AppLayout() {
       to: user?.rol === "ADMIN" ? "/pedidos/nuevo" : "/solicitar",
       icon: <PostAddIcon />,
       match: (pathname: string) => pathname === "/pedidos/nuevo" || pathname === "/solicitar"
-    },
-    ...(user?.rol === "ADMIN"
-      ? [
-          { label: "Materiales", to: "/materiales", icon: <Inventory2Icon />, match: (pathname: string) => pathname === "/materiales" },
-          { label: "Optimizador", to: "/configuracion-optimizador", icon: <TuneIcon />, match: (pathname: string) => pathname === "/configuracion-optimizador" },
-          { label: "Usuarios", to: "/usuarios", icon: <GroupIcon />, match: (pathname: string) => pathname === "/usuarios" },
-          { label: "Empresa", to: "/configuracion-empresa", icon: <BusinessIcon />, match: (pathname: string) => pathname === "/configuracion-empresa" }
-        ]
-      : [])
+    }
   ];
+
+  const settingsNavItems = useMemo(
+    () =>
+      user?.rol === "ADMIN"
+        ? [
+            { label: "Optimizador", to: "/configuracion-optimizador", icon: <TuneIcon />, match: (pathname: string) => pathname === "/configuracion-optimizador" },
+            { label: "Materiales", to: "/materiales", icon: <Inventory2Icon />, match: (pathname: string) => pathname === "/materiales" },
+            { label: "Empresa", to: "/configuracion-empresa", icon: <BusinessIcon />, match: (pathname: string) => pathname === "/configuracion-empresa" },
+            { label: "Usuarios", to: "/usuarios", icon: <GroupIcon />, match: (pathname: string) => pathname === "/usuarios" }
+          ]
+        : [],
+    [user?.rol]
+  );
+
+  const settingsSectionActive = settingsNavItems.some((item) => item.match(location.pathname));
+  const [settingsOpen, setSettingsOpen] = useState(settingsSectionActive);
+
+  useEffect(() => {
+    if (settingsSectionActive) {
+      setSettingsOpen(true);
+    }
+  }, [settingsSectionActive]);
 
   useEffect(() => {
     const state = location.state as { notification?: string } | null;
@@ -54,6 +73,23 @@ export function AppLayout() {
     setNotification(state.notification);
     navigate(location.pathname + location.search, { replace: true, state: {} });
   }, [location, navigate]);
+
+  const navItemSx = {
+    borderRadius: "8px",
+    mb: 0.75,
+    minHeight: 46,
+    color: "rgba(255,255,255,0.78)",
+    "& .MuiListItemIcon-root": { color: "inherit", minWidth: 38 },
+    "&:hover": { bgcolor: alpha("#ffffff", 0.14), color: "#ffffff" },
+    "&.Mui-selected": {
+      bgcolor: alpha("#ffffff", 0.22),
+      background: "rgba(255,255,255,0.22)",
+      boxShadow: "inset 3px 0 0 #ffffff, 0 12px 28px rgba(22, 76, 170, 0.18)",
+      color: "#ffffff",
+      "& .MuiListItemIcon-root": { color: "inherit" }
+    },
+    "&.Mui-selected:hover": { bgcolor: alpha("#ffffff", 0.24) }
+  };
 
   const drawerContent = (
     <>
@@ -66,34 +102,67 @@ export function AppLayout() {
         </Typography>
       </Box>
       <List sx={{ px: 1.25, py: 1 }}>
-        {navItems.map((item) => (
+        {mainNavItems.map((item) => (
           <ListItemButton
             key={item.to}
             component={Link}
             to={item.to}
             selected={item.match(location.pathname)}
             onClick={() => setMobileOpen(false)}
-            sx={{
-              borderRadius: "8px",
-              mb: 0.75,
-              minHeight: 46,
-              color: "rgba(255,255,255,0.78)",
-              "& .MuiListItemIcon-root": { color: "inherit", minWidth: 38 },
-              "&:hover": { bgcolor: alpha("#ffffff", 0.14), color: "#ffffff" },
-              "&.Mui-selected": {
-                bgcolor: alpha("#ffffff", 0.22),
-                background: "rgba(255,255,255,0.22)",
-                boxShadow: "inset 3px 0 0 #ffffff, 0 12px 28px rgba(22, 76, 170, 0.18)",
-                color: "#ffffff",
-                "& .MuiListItemIcon-root": { color: "inherit" }
-              },
-              "&.Mui-selected:hover": { bgcolor: alpha("#ffffff", 0.24) }
-            }}
+            sx={navItemSx}
           >
             <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.label} />
           </ListItemButton>
         ))}
+
+        {settingsNavItems.length > 0 && (
+          <>
+            <ListItemButton
+              onClick={() => setSettingsOpen((current) => !current)}
+              selected={settingsSectionActive}
+              sx={{
+                ...navItemSx,
+                mt: 0.5,
+                mb: settingsOpen ? 0.25 : 0.75
+              }}
+            >
+              <ListItemIcon>
+                <SettingsIcon />
+              </ListItemIcon>
+              <ListItemText primary="Configuracion" />
+              {settingsOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+            </ListItemButton>
+
+            <Collapse in={settingsOpen} timeout="auto" unmountOnExit>
+              <List disablePadding sx={{ pl: 1 }}>
+                {settingsNavItems.map((item) => (
+                  <ListItemButton
+                    key={item.to}
+                    component={Link}
+                    to={item.to}
+                    selected={item.match(location.pathname)}
+                    onClick={() => setMobileOpen(false)}
+                    sx={{
+                      ...navItemSx,
+                      minHeight: 42,
+                      ml: 1,
+                      pl: 1.25,
+                      pr: 1,
+                      background: item.match(location.pathname) ? undefined : alpha("#ffffff", 0.06)
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 34 }}>{item.icon}</ListItemIcon>
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{ fontSize: 14, fontWeight: item.match(location.pathname) ? 800 : 700 }}
+                    />
+                  </ListItemButton>
+                ))}
+              </List>
+            </Collapse>
+          </>
+        )}
       </List>
     </>
   );
@@ -113,6 +182,7 @@ export function AppLayout() {
               Panel de solicitudes
             </Typography>
           </Box>
+          <PushNotificationsControl />
           <Avatar sx={{ width: { xs: 34, sm: 38 }, height: { xs: 34, sm: 38 }, background: "linear-gradient(135deg, #4f7cff, #23d6c8)", flexShrink: 0, fontWeight: 900 }}>
             {user?.nombre?.[0] ?? "U"}
           </Avatar>
@@ -184,4 +254,3 @@ export function AppLayout() {
     </Box>
   );
 }
-
