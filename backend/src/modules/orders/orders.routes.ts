@@ -9,6 +9,7 @@ import { buildOrdersWorkbook } from "./excel.service.js";
 import { orderFiltersSchema, orderSchema, orderStatusSchema } from "./order.schemas.js";
 import { sendNewOrderWhatsappNotification } from "./whatsapp.service.js";
 import { sendNewOrderPushNotification, sendOrderStockShortagePushNotification } from "../push-notifications/push-notifications.service.js";
+import { buildOrderEstimateSnapshot } from "./order-estimate.service.js";
 
 export const ordersRouter = Router();
 
@@ -125,18 +126,23 @@ ordersRouter.post(
   asyncHandler(async (req: any, res: any) => {
     const data = orderSchema.parse(req.body);
     const detalles = await normalizeDetails(data.detalles, data.cliente, data.numeroContacto);
-    const order = await prisma.pedido.create({
-      data: {
-        cliente: data.cliente,
-        numeroContacto: data.numeroContacto,
-        observaciones: data.observaciones,
-        usuarioId: req.user.id,
-        detalles: { create: detalles }
-      },
-      include: { detalles: true }
-    });
-    await prisma.historialPedido.create({
-      data: { pedidoId: order.id, usuarioId: req.user.id, accion: "CREAR_PEDIDO" }
+    const order = await prisma.$transaction(async (tx) => {
+      const estimateSnapshot = await buildOrderEstimateSnapshot(tx as any, detalles as any);
+      const created = await tx.pedido.create({
+        data: {
+          cliente: data.cliente,
+          numeroContacto: data.numeroContacto,
+          observaciones: data.observaciones,
+          usuarioId: req.user.id,
+          ...estimateSnapshot,
+          detalles: { create: detalles }
+        },
+        include: { detalles: true }
+      });
+      await tx.historialPedido.create({
+        data: { pedidoId: created.id, usuarioId: req.user.id, accion: "CREAR_PEDIDO" }
+      });
+      return created;
     });
 
     const stockShortages = await calculateOrderStockShortages(prisma as any, order.detalles as any);
@@ -210,6 +216,7 @@ ordersRouter.put(
       if (existing.estado === EstadoPedido.EN_PROCESO && existing.stockReservado) {
         await releaseOrderStock(tx as any, existing.detalles as any);
       }
+      const estimateSnapshot = await buildOrderEstimateSnapshot(tx as any, detalles as any);
       await tx.detallePedido.deleteMany({ where: { pedidoId: existing.id } });
       const updated = await tx.pedido.update({
         where: { id: existing.id },
@@ -217,6 +224,7 @@ ordersRouter.put(
           cliente: data.cliente,
           numeroContacto: data.numeroContacto,
           observaciones: data.observaciones,
+          ...estimateSnapshot,
           detalles: { create: detalles }
         },
         include: { detalles: true }
@@ -294,3 +302,5 @@ ordersRouter.delete(
     res.status(204).send();
   })
 );
+
+

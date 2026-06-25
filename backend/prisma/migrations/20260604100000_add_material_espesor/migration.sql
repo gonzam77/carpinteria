@@ -1,1 +1,0 @@
-ALTER TABLE "materiales" ADD COLUMN "espesorMm" INTEGER NOT NULL DEFAULT 18;

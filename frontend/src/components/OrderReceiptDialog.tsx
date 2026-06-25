@@ -1,215 +1,12 @@
-import PrintIcon from "@mui/icons-material/Print";
+﻿import PrintIcon from "@mui/icons-material/Print";
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+import { api } from "../api/client";
 import { useCompanySettings } from "../context/CompanySettingsContext";
-import { Material, OptimizerSettings, Order, OrderDetail } from "../types";
-
-type FreeRect = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
-
-type BoardPlan = {
-  freeRects: FreeRect[];
-};
+import { Order, OrderDetail } from "../types";
 
 function formatMoney(value: number) {
   return value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
-}
-
-function materialBoardWidthMm(material: Material) {
-  return material.anchoPlaca ?? 0;
-}
-
-function materialBoardHeightMm(material: Material) {
-  return material.altoPlaca ?? 0;
-}
-
-function usableBoardWidthMm(material: Material, settings: OptimizerSettings) {
-  return Math.max(0, materialBoardWidthMm(material) - settings.perfiladoBordeMm * 2);
-}
-
-function usableBoardHeightMm(material: Material, settings: OptimizerSettings) {
-  return Math.max(0, materialBoardHeightMm(material) - settings.perfiladoBordeMm * 2);
-}
-
-function createBoard(material: Material, settings: OptimizerSettings): BoardPlan {
-  return {
-    freeRects: [{ x: 0, y: 0, width: usableBoardWidthMm(material, settings), height: usableBoardHeightMm(material, settings) }]
-  };
-}
-
-function intersects(a: FreeRect, b: FreeRect) {
-  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
-}
-
-function splitFreeRect(rect: FreeRect, used: FreeRect) {
-  if (!intersects(rect, used)) return [rect];
-
-  const nextRects: FreeRect[] = [];
-  const rectRight = rect.x + rect.width;
-  const rectBottom = rect.y + rect.height;
-  const usedRight = used.x + used.width;
-  const usedBottom = used.y + used.height;
-
-  if (used.y > rect.y) nextRects.push({ x: rect.x, y: rect.y, width: rect.width, height: used.y - rect.y });
-  if (usedBottom < rectBottom) nextRects.push({ x: rect.x, y: usedBottom, width: rect.width, height: rectBottom - usedBottom });
-  if (used.x > rect.x) nextRects.push({ x: rect.x, y: rect.y, width: used.x - rect.x, height: rect.height });
-  if (usedRight < rectRight) nextRects.push({ x: usedRight, y: rect.y, width: rectRight - usedRight, height: rect.height });
-
-  return nextRects.filter((nextRect) => nextRect.width > 0 && nextRect.height > 0);
-}
-
-function containsRect(outer: FreeRect, inner: FreeRect) {
-  return inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.width <= outer.x + outer.width && inner.y + inner.height <= outer.y + outer.height;
-}
-
-function pruneFreeRects(rects: FreeRect[]) {
-  return rects.filter((rect, index) => !rects.some((other, otherIndex) => index !== otherIndex && containsRect(other, rect))).sort((a, b) => a.y - b.y || a.x - b.x);
-}
-
-function tryPlaceInBoard(board: BoardPlan, piece: { width: number; height: number; canRotate: boolean }, settings: OptimizerSettings) {
-  const orientations = [
-    { width: piece.width, height: piece.height },
-    ...(piece.canRotate ? [{ width: piece.height, height: piece.width }] : [])
-  ];
-
-  const placements = board.freeRects.flatMap((rect) =>
-    orientations
-      .filter((orientation) => orientation.width <= rect.width && orientation.height <= rect.height)
-      .map((orientation) => ({
-        rect,
-        ...orientation,
-        waste: rect.width * rect.height - orientation.width * orientation.height,
-        shortSideWaste: Math.min(rect.width - orientation.width, rect.height - orientation.height)
-      }))
-  );
-  const placement = [...placements].sort((a, b) => a.waste - b.waste || a.shortSideWaste - b.shortSideWaste)[0];
-
-  if (!placement) return false;
-
-  const usedRect = {
-    x: placement.rect.x,
-    y: placement.rect.y,
-    width: placement.width + (placement.rect.width > placement.width ? settings.espesorSierraMm : 0),
-    height: placement.height + (placement.rect.height > placement.height ? settings.espesorSierraMm : 0)
-  };
-  board.freeRects = pruneFreeRects(board.freeRects.flatMap((rect) => splitFreeRect(rect, usedRect)));
-  return true;
-}
-
-function calculateBoardsForMaterial(rows: OrderDetail[], material: Material, settings: OptimizerSettings) {
-  const pieces = rows
-    .flatMap((row) =>
-      Array.from({ length: Number(row.cantidad || 0) }, () => ({
-        width: Number(row.ancho),
-        height: Number(row.largo),
-        canRotate: Boolean(row.permiteRotar)
-      }))
-    )
-    .sort((a, b) => b.width * b.height - a.width * a.height);
-
-  if (!pieces.length) return 0;
-  if (!usableBoardWidthMm(material, settings) || !usableBoardHeightMm(material, settings)) return Number.POSITIVE_INFINITY;
-
-  const boards: BoardPlan[] = [];
-
-  for (const piece of pieces) {
-    const placed = boards.some((board) => tryPlaceInBoard(board, piece, settings));
-    if (placed) continue;
-
-    const board = createBoard(material, settings);
-    if (tryPlaceInBoard(board, piece, settings)) {
-      boards.push(board);
-    } else {
-      return Number.POSITIVE_INFINITY;
-    }
-  }
-
-  return boards.length;
-}
-
-function calculateEdgeCost(row: OrderDetail, cantoById: Map<string, Material>) {
-  const largoMeters = Number(row.largo || 0) / 1000;
-  const anchoMeters = Number(row.ancho || 0) / 1000;
-  const cantidad = Number(row.cantidad || 0);
-
-  return [
-    { id: row.cantoLargo1Id, meters: largoMeters },
-    { id: row.cantoLargo2Id, meters: largoMeters },
-    { id: row.cantoAncho1Id, meters: anchoMeters },
-    { id: row.cantoAncho2Id, meters: anchoMeters }
-  ].reduce(
-    (total, edge) => {
-      if (!edge.id) return total;
-      const canto = cantoById.get(edge.id);
-      if (!canto) return total;
-      return {
-        cost: total.cost + edge.meters * cantidad * canto.valor,
-        meters: total.meters + edge.meters * cantidad
-      };
-    },
-    { cost: 0, meters: 0 }
-  );
-}
-
-function buildEstimate(order: Order, materials: Material[], settings: OptimizerSettings) {
-  const placaMaterials = materials.filter((material) => material.tipo === "PLACA");
-  const cantoById = new Map(materials.filter((material) => material.tipo === "CANTO").map((material) => [material.id, material]));
-
-  const byMaterial = placaMaterials
-    .map((material) => {
-      const rows = order.detalles.filter((detail) => {
-        const resolvedId = detail.materialId || placaMaterials.find((item) => item.nombre === detail.material)?.id;
-        return resolvedId === material.id;
-      });
-
-      if (!rows.length) return null;
-
-      const boards = calculateBoardsForMaterial(rows, material, settings);
-      const edgeTotals = rows.reduce(
-        (total, row) => {
-          const current = calculateEdgeCost(row, cantoById);
-          return { cost: total.cost + current.cost, meters: total.meters + current.meters };
-        },
-        { cost: 0, meters: 0 }
-      );
-
-      return {
-        material,
-        boards,
-        boardCost: Number.isFinite(boards) ? boards * material.valor : 0,
-        edgeCost: edgeTotals.cost,
-        edgeMeters: edgeTotals.meters
-      };
-    })
-    .filter(Boolean) as Array<{ material: Material; boards: number; boardCost: number; edgeCost: number; edgeMeters: number }>;
-
-  const totalBoards = byMaterial.reduce((total, item) => total + (Number.isFinite(item.boards) ? item.boards : 0), 0);
-  const totalBoardCost = byMaterial.reduce((total, item) => total + item.boardCost, 0);
-  const totalEdgeCost = byMaterial.reduce((total, item) => total + item.edgeCost, 0);
-  const totalEdgeMeters = byMaterial.reduce((total, item) => total + item.edgeMeters, 0);
-
-  const shortages = byMaterial
-    .filter((item) => Number.isFinite(item.boards) && (item.material.stockPlacas ?? 0) < item.boards)
-    .map((item) => ({
-      materialNombre: item.material.nombre,
-      requerido: item.boards,
-      disponible: item.material.stockPlacas ?? 0,
-      faltante: item.boards - (item.material.stockPlacas ?? 0)
-    }));
-
-  return {
-    byMaterial,
-    totalBoards,
-    totalBoardCost,
-    totalEdgeCost,
-    totalEdgeMeters,
-    totalCost: totalBoardCost + totalEdgeCost,
-    shortages,
-    hasShortage: shortages.length > 0
-  };
 }
 
 function cantoNames(row: OrderDetail) {
@@ -247,26 +44,58 @@ function openPrintWindow(title: string, html: string) {
 export function OrderReceiptDialog({
   order,
   open,
-  onClose,
-  materials,
-  settings
+  onClose
 }: {
   order: Order | null;
   open: boolean;
   onClose: () => void;
-  materials: Material[];
-  settings: OptimizerSettings;
 }) {
   const { settings: companySettings } = useCompanySettings();
-  if (!order) return null;
-  const currentOrder = order;
+  const [loadedOrder, setLoadedOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
-  const estimate = buildEstimate(currentOrder, materials, settings);
+  useEffect(() => {
+    if (!open || !order?.id) {
+      setLoadedOrder(null);
+      setLoadError("");
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setLoadError("");
+
+    api
+      .get<Order>(`/orders/${order.id}`)
+      .then((response) => {
+        if (cancelled) return;
+        setLoadedOrder(response.data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoadError("No se pudo cargar la constancia actualizada de la solicitud.");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, order?.id]);
+
+  const currentOrder = loadedOrder ?? order;
+  if (!currentOrder) return null;
 
   function handlePrint() {
-    const title = `Constancia - ${currentOrder.cliente}`;
-    const date = new Date(currentOrder.fechaCreacion).toLocaleDateString();
-    const rowsHtml = currentOrder.detalles
+    if (!loadedOrder) return;
+
+    const title = `Constancia - ${loadedOrder.cliente}`;
+    const date = new Date(loadedOrder.fechaCreacion).toLocaleDateString();
+    const rowsHtml = loadedOrder.detalles
       .map(
         (detail) => `
           <tr>
@@ -289,8 +118,8 @@ export function OrderReceiptDialog({
           <div class="muted">Email: ${companySettings.email || "-"}</div>
           <div class="section">
             <strong>Constancia de solicitud</strong><br />
-            Cliente: ${currentOrder.cliente}<br />
-            Contacto: ${currentOrder.numeroContacto ?? "-"}<br />
+            Cliente: ${loadedOrder.cliente}<br />
+            Contacto: ${loadedOrder.numeroContacto ?? "-"}<br />
             Fecha: ${date}
           </div>
           <div class="section">
@@ -308,11 +137,11 @@ export function OrderReceiptDialog({
             </table>
           </div>
           <div class="section">
-            <strong>Presupuesto estimado:</strong> ${formatMoney(estimate.totalCost)}<br />
-            <span class="muted">Placas: ${formatMoney(estimate.totalBoardCost)} - Cantos: ${formatMoney(estimate.totalEdgeCost)} (${estimate.totalEdgeMeters.toFixed(2)} m)</span>
+            <strong>Presupuesto estimado:</strong> ${formatMoney(loadedOrder.presupuestoEstimado)}<br />
+            <span class="muted">Placas: ${formatMoney(loadedOrder.costoPlacas)} - Cantos: ${formatMoney(loadedOrder.costoCantos)} (${loadedOrder.metrosCanto.toFixed(2)} m)</span>
           </div>
           <div class="section">
-            <strong>Entrega estimada:</strong> ${estimate.hasShortage ? "Por faltante de stock, anticipe una demora de 3 a 5 dias habiles." : "Con stock disponible, el plazo estimado es de 24 a 48 hs habiles."}
+            <strong>Entrega estimada:</strong> ${loadedOrder.faltanteStock ? "Por faltante de stock, anticipe una demora de 3 a 5 dias habiles." : "Con stock disponible, el plazo estimado es de 24 a 48 hs habiles."}
           </div>
           <div class="section">
             <strong>Condicion de pago:</strong> El pago se realizara en el momento de la entrega.
@@ -328,6 +157,8 @@ export function OrderReceiptDialog({
       <DialogContent>
         <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: "12px", background: "linear-gradient(180deg, #fffef9 0%, #ffffff 100%)", border: "1px solid", borderColor: "divider" }}>
           <Stack spacing={3}>
+            {loadError && <Alert severity="error">{loadError}</Alert>}
+            {loading && <Alert severity="info">Actualizando constancia desde la base de datos...</Alert>}
             <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
               <Box>
                 <Typography variant="overline" sx={{ color: "#8b5e3c", fontWeight: 900, letterSpacing: 1.2 }}>
@@ -392,13 +223,13 @@ export function OrderReceiptDialog({
                   Presupuesto estimado
                 </Typography>
                 <Stack spacing={1}>
-                  <Typography>Placas estimadas: {estimate.totalBoards}</Typography>
-                  <Typography>Costo placas: {formatMoney(estimate.totalBoardCost)}</Typography>
-                  <Typography>Costo cantos: {formatMoney(estimate.totalEdgeCost)}</Typography>
-                  <Typography color="text.secondary">Metros de canto estimados: {estimate.totalEdgeMeters.toFixed(2)} m</Typography>
+                  <Typography>Placas estimadas: {currentOrder.placasEstimadas}</Typography>
+                  <Typography>Costo placas: {formatMoney(currentOrder.costoPlacas)}</Typography>
+                  <Typography>Costo cantos: {formatMoney(currentOrder.costoCantos)}</Typography>
+                  <Typography color="text.secondary">Metros de canto estimados: {currentOrder.metrosCanto.toFixed(2)} m</Typography>
                   <Divider sx={{ my: 0.5 }} />
                   <Typography variant="h5" fontWeight={900}>
-                    {formatMoney(estimate.totalCost)}
+                    {formatMoney(currentOrder.presupuestoEstimado)}
                   </Typography>
                 </Stack>
               </Paper>
@@ -408,7 +239,7 @@ export function OrderReceiptDialog({
                   <Typography variant="h6" sx={{ mb: 1 }}>
                     Entrega estimada
                   </Typography>
-                  {estimate.hasShortage ? (
+                  {currentOrder.faltanteStock ? (
                     <Alert severity="warning" sx={{ alignItems: "flex-start" }}>
                       Hay faltante de stock para algunos materiales. Anticipe una demora estimada de 3 a 5 dias habiles.
                     </Alert>
@@ -417,7 +248,7 @@ export function OrderReceiptDialog({
                       Hay stock disponible para esta solicitud. El plazo estimado es de 24 a 48 hs habiles.
                     </Alert>
                   )}
-                  {estimate.shortages.length > 0 && (
+                  {currentOrder.faltanteStock && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
                       Observacion: la entrega puede demorar algunos dias adicionales segun disponibilidad del material al momento de procesar la solicitud.
                     </Typography>
@@ -437,7 +268,7 @@ export function OrderReceiptDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cerrar</Button>
-        <Button variant="contained" startIcon={<PrintIcon />} onClick={handlePrint}>
+        <Button variant="contained" startIcon={<PrintIcon />} onClick={handlePrint} disabled={!loadedOrder || loading}>
           Imprimir / Guardar PDF
         </Button>
       </DialogActions>

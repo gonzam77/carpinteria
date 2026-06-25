@@ -93,6 +93,12 @@ export type Order = {
   numeroContacto?: string;
   observaciones?: string;
   estado: EstadoSolicitud;
+  placasEstimadas: number;
+  costoPlacas: number;
+  costoCantos: number;
+  metrosCanto: number;
+  presupuestoEstimado: number;
+  faltanteStock: boolean;
   usuarioId: string;
   fechaCreacion: string;
   fechaActualizacion: string;
@@ -107,4 +113,5 @@ export type Order = {
     usuario: Pick<User, "nombre" | "apellido">;
   }>;
 };
+
 

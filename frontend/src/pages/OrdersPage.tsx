@@ -13,7 +13,7 @@ import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
 import { OrderReceiptDialog } from "../components/OrderReceiptDialog";
 import { StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
-import { EstadoSolicitud, Material, OptimizerSettings, Order } from "../types";
+import { EstadoSolicitud, Order } from "../types";
 
 const statusOptions: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
 
@@ -36,8 +36,6 @@ export function OrdersPage() {
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [orderToPreview, setOrderToPreview] = useState<Order | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [materials, setMaterials] = useState<Material[]>([]);
-  const [optimizerSettings, setOptimizerSettings] = useState<OptimizerSettings>({ id: "default", espesorSierraMm: 4.3, perfiladoBordeMm: 10 });
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -51,11 +49,6 @@ export function OrdersPage() {
     setStatus(nextStatus);
     loadOrders(nextStatus);
   }, [searchParams]);
-
-  useEffect(() => {
-    api.get<Material[]>("/materiales").then((response) => setMaterials(response.data));
-    api.get<OptimizerSettings>("/optimizer-settings").then((response) => setOptimizerSettings(response.data));
-  }, []);
 
   function applyFilters() {
     const nextParams = new URLSearchParams(searchParams);
@@ -172,7 +165,7 @@ export function OrdersPage() {
         <DataGrid rows={orders} columns={columns} checkboxSelection onRowSelectionModelChange={setSelection} disableRowSelectionOnClick sx={{ minWidth: { xs: 760, md: "100%" } }} />
       </Paper>
       <DeleteOrderDialog order={orderToDelete} open={Boolean(orderToDelete)} loading={deleting} onCancel={() => setOrderToDelete(null)} onConfirm={() => orderToDelete && deleteOrder(orderToDelete)} />
-      <OrderReceiptDialog order={orderToPreview} open={Boolean(orderToPreview)} onClose={() => setOrderToPreview(null)} materials={materials} settings={optimizerSettings} />
+      <OrderReceiptDialog order={orderToPreview} open={Boolean(orderToPreview)} onClose={() => setOrderToPreview(null)} />
     </Stack>
   );
 }

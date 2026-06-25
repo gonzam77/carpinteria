@@ -82,7 +82,7 @@ export function OrderDetailPage() {
 
   useEffect(() => {
     if (user?.rol !== "ADMIN") return;
-    api.get<Material[]>("/materiales", { params: { incluirInactivos: true, tipo: "PLACA" } }).then((response) => setMaterials(response.data));
+    api.get<Material[]>("/materiales", { params: { incluirInactivos: true } }).then((response) => setMaterials(response.data));
   }, [user]);
 
   async function exportOrder() {

@@ -52,6 +52,12 @@ model Pedido {
   observaciones String?
   estado        EstadoPedido      @default(PENDIENTE)
   stockReservado Boolean          @default(false)
+  placasEstimadas Int             @default(0)
+  costoPlacas   Float             @default(0)
+  costoCantos   Float             @default(0)
+  metrosCanto   Float             @default(0)
+  presupuestoEstimado Float       @default(0)
+  faltanteStock Boolean           @default(false)
   usuarioId     String
   fechaCreacion DateTime          @default(now())
   fechaActualizacion DateTime     @updatedAt
@@ -182,3 +188,4 @@ model PushSubscription {
   @@index([usuarioId])
   @@map("push_subscriptions")
 }
+
