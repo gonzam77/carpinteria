@@ -1,88 +1,158 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/config/prisma.js";
-import { Rol } from "../src/generated/prisma/client.js";
+import { Rol, TipoMaterial } from "../src/generated/prisma/client.js";
 
 async function main() {
-  const adminPassword = await bcrypt.hash("admin123", 10);
-  const carpenterPassword = await bcrypt.hash("carp123", 10);
+  console.log("🌱 Ejecutando seed...");
 
-  const admin = await prisma.usuario.upsert({
+  // =========================
+  // Usuarios iniciales
+  // =========================
+
+  const adminPassword = await bcrypt.hash("admin123", 10);
+  const carpinteroPassword = await bcrypt.hash("carp123", 10);
+
+  await prisma.usuario.upsert({
     where: { email: "admin@carpinteria.local" },
     update: {
-      nombre: "Juan",
-      apellido: "Administrador",
+      nombre: "Administrador",
+      apellido: "Sistema",
       password: adminPassword,
       rol: Rol.ADMIN
     },
     create: {
-      nombre: "Juan",
-      apellido: "Administrador",
+      nombre: "Administrador",
+      apellido: "Sistema",
       email: "admin@carpinteria.local",
       password: adminPassword,
       rol: Rol.ADMIN
     }
   });
 
-  const carpintero = await prisma.usuario.upsert({
+  await prisma.usuario.upsert({
     where: { email: "carpintero@carpinteria.local" },
     update: {
       nombre: "Pedro",
       apellido: "Carpintero",
-      password: carpenterPassword,
+      password: carpinteroPassword,
       rol: Rol.CARPINTERO
     },
     create: {
       nombre: "Pedro",
       apellido: "Carpintero",
       email: "carpintero@carpinteria.local",
-      password: carpenterPassword,
+      password: carpinteroPassword,
       rol: Rol.CARPINTERO
     }
   });
 
-  const existing = await prisma.pedido.findFirst({ where: { cliente: "Muebles Norte" } });
-  if (!existing) {
-    await prisma.pedido.create({
-      data: {
-        cliente: "Muebles Norte",
-        numeroContacto: "5491123456789",
-        observaciones: "Proyecto cocina melamina blanca",
-        usuarioId: carpintero.id,
-        detalles: {
-          create: [
-            {
-              codigoBarra: "CB-001",
-              material: "Melamina blanca 18mm",
-              largo: 1200,
-              ancho: 600,
-              cantidad: 4,
-              cantoLargo1: true,
-              cantoLargo2: true,
-              codigoBarraCentro: "CENTRO-001",
-              remark: "Frente bajo mesada",
-              numeroCliente: "1001",
-              nombreCliente: "Muebles Norte",
-              nombreProducto: "Cocina Linea Blanca"
-            },
-            {
-              codigoBarra: "CB-002",
-              material: "Melamina nogal 18mm",
-              largo: 800,
-              ancho: 450,
-              cantidad: 2,
-              cantoAncho1: true,
-              remark: "Estantes",
-              numeroCliente: "1001",
-              nombreCliente: "Muebles Norte",
-              nombreProducto: "Cocina Linea Blanca"
-            }
-          ]
-        }
-      }
+  // =========================
+  // Configuración empresa
+  // =========================
+
+  await prisma.configuracionEmpresa.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      nombre: "ROMA",
+      telefono: "",
+      email: ""
+    }
+  });
+
+  // =========================
+  // Configuración optimizador
+  // =========================
+
+  await prisma.configuracionOptimizador.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      espesorSierraMm: 4.3,
+      perfiladoBordeMm: 10
+    }
+  });
+
+  // =========================
+  // Materiales iniciales
+  // =========================
+
+  const materiales = [
+    {
+      nombre: "Melamina Blanca 18mm",
+      tipo: TipoMaterial.PLACA,
+      valor: 85000,
+      espesorMm: 18,
+      anchoPlaca: 1830,
+      altoPlaca: 2750,
+      stockPlacas: 20
+    },
+    {
+      nombre: "Melamina Negra 18mm",
+      tipo: TipoMaterial.PLACA,
+      valor: 90000,
+      espesorMm: 18,
+      anchoPlaca: 1830,
+      altoPlaca: 2750,
+      stockPlacas: 10
+    },
+    {
+      nombre: "Melamina Roble Dakar 18mm",
+      tipo: TipoMaterial.PLACA,
+      valor: 98000,
+      espesorMm: 18,
+      anchoPlaca: 1830,
+      altoPlaca: 2750,
+      stockPlacas: 8
+    },
+    {
+      nombre: "Melamina Ceniza 18mm",
+      tipo: TipoMaterial.PLACA,
+      valor: 94000,
+      espesorMm: 18,
+      anchoPlaca: 1830,
+      altoPlaca: 2750,
+      stockPlacas: 12
+    },
+    {
+      nombre: "Canto Blanco PVC 22mm",
+      tipo: TipoMaterial.CANTO,
+      valor: 850,
+      colorCanto: "Blanco"
+    },
+    {
+      nombre: "Canto Negro PVC 22mm",
+      tipo: TipoMaterial.CANTO,
+      valor: 900,
+      colorCanto: "Negro"
+    },
+    {
+      nombre: "Canto Roble Dakar PVC 22mm",
+      tipo: TipoMaterial.CANTO,
+      valor: 950,
+      colorCanto: "Roble Dakar"
+    },
+    {
+      nombre: "Canto Ceniza PVC 22mm",
+      tipo: TipoMaterial.CANTO,
+      valor: 900,
+      colorCanto: "Ceniza"
+    }
+  ];
+
+  for (const material of materiales) {
+    await prisma.material.upsert({
+      where: {
+        nombre: material.nombre
+      },
+      update: material,
+      create: material
     });
   }
 
-  console.log({ admin: admin.email, carpintero: carpintero.email });
+  console.log("✅ Seed ejecutado correctamente");
 }
 
 main()

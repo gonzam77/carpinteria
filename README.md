@@ -33,8 +33,26 @@ Luego abrir:
 Para cargar datos de ejemplo en Docker:
 
 ```bash
+```bash
 docker compose exec api npm run prisma:seed:prod
 ```
+
+
+## Reset de la base de datos y migraciones (MODO DESARROLLO)
+
+```bash --Eliminar volumen
+docker compose down -v 
+```
+```bash --Eliminar migraciones
+rm -rf prisma/migrations
+```
+```bash --Crear migracion inicial
+npx prisma migrate dev --name init
+```
+```bash --Recrear base de datos(Borra base - Ejecuta migraciones - Ejecuta seed)
+npx prsima migrate reset
+```
+
 
 Para habilitar Google Login, crear un OAuth Client ID web en Google Cloud y configurar en `.env`:
 
