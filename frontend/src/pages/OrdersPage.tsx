@@ -25,6 +25,10 @@ function getValidStatus(value: string | null): EstadoSolicitud | "" {
   return statusOptions.includes(value as EstadoSolicitud) ? (value as EstadoSolicitud) : "";
 }
 
+function formatMoney(value: number) {
+  return value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+}
+
 export function OrdersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -58,6 +62,14 @@ export function OrdersPage() {
     loadOrders();
   }
 
+  function handleStatusChange(nextStatus: EstadoSolicitud | "") {
+    setStatus(nextStatus);
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextStatus) nextParams.set("estado", nextStatus);
+    else nextParams.delete("estado");
+    setSearchParams(nextParams);
+  }
+
   async function exportOrders(ids: string[]) {
     const response = await api.get("/orders/export", { params: { ids: ids.join(",") }, responseType: "blob" });
     saveAs(response.data, "pedidos-carpinteria.xlsx");
@@ -80,6 +92,7 @@ export function OrdersPage() {
       { field: "estado", headerName: "Estado", width: 150, renderCell: ({ value }) => <StatusChip size="small" status={value as EstadoSolicitud} /> },
       { field: "fechaCreacion", headerName: "Fecha", width: 150, valueGetter: (_, row) => new Date(row.fechaCreacion).toLocaleDateString() },
       { field: "piezas", headerName: "Piezas", width: 100, valueGetter: (_, row) => row.detalles.reduce((total, detail) => total + Number(detail.cantidad || 0), 0) },
+      { field: "presupuestoEstimado", headerName: "Total estimado", width: 170, valueFormatter: (value) => formatMoney(Number(value ?? 0)) },
       { field: "usuario", headerName: "Carpintero", width: 180, valueGetter: (_, row) => (row.usuario ? `${row.usuario.nombre} ${row.usuario.apellido}` : "") },
       {
         field: "acciones",
@@ -141,7 +154,7 @@ export function OrdersPage() {
           }}
         >
           <TextField fullWidth label="Buscar" value={search} onChange={(event) => setSearch(event.target.value)} sx={{ flex: { lg: "2 1 220px" } }} />
-          <TextField fullWidth select label="Estado" value={status} onChange={(event) => setStatus(event.target.value as EstadoSolicitud | "")} sx={{ minWidth: { lg: 160 } }}>
+          <TextField fullWidth select label="Estado" value={status} onChange={(event) => handleStatusChange(event.target.value as EstadoSolicitud | "")} sx={{ minWidth: { lg: 160 } }}>
             <MenuItem value="">Todos</MenuItem>
             {statusOptions.map((option) => (
               <MenuItem key={option} value={option}>
@@ -162,10 +175,12 @@ export function OrdersPage() {
         </Stack>
       </Paper>
       <Paper sx={{ height: { xs: 520, md: 560 }, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
-        <DataGrid rows={orders} columns={columns} checkboxSelection onRowSelectionModelChange={setSelection} disableRowSelectionOnClick sx={{ minWidth: { xs: 760, md: "100%" } }} />
+        <DataGrid rows={orders} columns={columns} checkboxSelection onRowSelectionModelChange={setSelection} disableRowSelectionOnClick sx={{ minWidth: { xs: 930, md: "100%" } }} />
       </Paper>
       <DeleteOrderDialog order={orderToDelete} open={Boolean(orderToDelete)} loading={deleting} onCancel={() => setOrderToDelete(null)} onConfirm={() => orderToDelete && deleteOrder(orderToDelete)} />
       <OrderReceiptDialog order={orderToPreview} open={Boolean(orderToPreview)} onClose={() => setOrderToPreview(null)} />
     </Stack>
   );
 }
+
+
