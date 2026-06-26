@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/config/prisma.js";
-import { Rol, TipoMaterial } from "../src/generated/prisma/client.js";
+import { Rol, TipoMaterial } from "../src/generated/prisma/enums.js";
 
 type SeedMaterial =
   | {
@@ -221,3 +221,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

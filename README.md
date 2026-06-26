@@ -43,6 +43,9 @@ docker compose exec api npm run prisma:seed:prod
 ```bash --Eliminar volumen
 docker compose down -v 
 ```
+```bash --Crear base
+docker compose up -d db 
+```
 ```bash --Eliminar migraciones
 rm -rf prisma/migrations
 ```
