@@ -1,4 +1,4 @@
-﻿import PrintIcon from "@mui/icons-material/Print";
+import PrintIcon from "@mui/icons-material/Print";
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -44,11 +44,17 @@ function openPrintWindow(title: string, html: string) {
 export function OrderReceiptDialog({
   order,
   open,
-  onClose
+  onClose,
+  onConfirm,
+  confirmLabel,
+  confirmLoading = false
 }: {
   order: Order | null;
   open: boolean;
   onClose: () => void;
+  onConfirm?: () => void | Promise<void>;
+  confirmLabel?: string;
+  confirmLoading?: boolean;
 }) {
   const { settings: companySettings } = useCompanySettings();
   const [loadedOrder, setLoadedOrder] = useState<Order | null>(null);
@@ -58,6 +64,13 @@ export function OrderReceiptDialog({
   useEffect(() => {
     if (!open || !order?.id) {
       setLoadedOrder(null);
+      setLoadError("");
+      setLoading(false);
+      return;
+    }
+
+    if (order.id === "preview") {
+      setLoadedOrder(order);
       setLoadError("");
       setLoading(false);
       return;
@@ -85,17 +98,17 @@ export function OrderReceiptDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, order?.id]);
+  }, [open, order]);
 
   const currentOrder = loadedOrder ?? order;
   if (!currentOrder) return null;
 
   function handlePrint() {
-    if (!loadedOrder) return;
-
-    const title = `Constancia - ${loadedOrder.cliente}`;
-    const date = new Date(loadedOrder.fechaCreacion).toLocaleDateString();
-    const rowsHtml = loadedOrder.detalles
+    if (!currentOrder) return;
+    const printableOrder = currentOrder;
+    const title = `Constancia - ${printableOrder.cliente}`;
+    const date = new Date(printableOrder.fechaCreacion).toLocaleDateString();
+    const rowsHtml = printableOrder.detalles
       .map(
         (detail) => `
           <tr>
@@ -118,8 +131,8 @@ export function OrderReceiptDialog({
           <div class="muted">Email: ${companySettings.email || "-"}</div>
           <div class="section">
             <strong>Constancia de solicitud</strong><br />
-            Cliente: ${loadedOrder.cliente}<br />
-            Contacto: ${loadedOrder.numeroContacto ?? "-"}<br />
+            Cliente: ${printableOrder.cliente}<br />
+            Contacto: ${printableOrder.numeroContacto ?? "-"}<br />
             Fecha: ${date}
           </div>
           <div class="section">
@@ -137,11 +150,11 @@ export function OrderReceiptDialog({
             </table>
           </div>
           <div class="section">
-            <strong>Presupuesto estimado:</strong> ${formatMoney(loadedOrder.presupuestoEstimado)}<br />
-            <span class="muted">Placas: ${formatMoney(loadedOrder.costoPlacas)} - Cantos: ${formatMoney(loadedOrder.costoCantos)} (${loadedOrder.metrosCanto.toFixed(2)} m)</span>
+            <strong>Presupuesto estimado:</strong> ${formatMoney(printableOrder.presupuestoEstimado)}<br />
+            <span class="muted">Placas: ${formatMoney(printableOrder.costoPlacas)} - Cantos: ${formatMoney(printableOrder.costoCantos)} (${printableOrder.metrosCanto.toFixed(2)} m)</span>
           </div>
           <div class="section">
-            <strong>Entrega estimada:</strong> ${loadedOrder.faltanteStock ? "Por faltante de stock, anticipe una demora de 3 a 5 dias habiles." : "Con stock disponible, el plazo estimado es de 24 a 48 hs habiles."}
+            <strong>Entrega estimada:</strong> ${printableOrder.faltanteStock ? "Por faltante de stock, anticipe una demora de 3 a 5 dias habiles." : "Con stock disponible, el plazo estimado es de 24 a 48 hs habiles."}
           </div>
           <div class="section">
             <strong>Condicion de pago:</strong> El pago se realizara en el momento de la entrega.
@@ -152,7 +165,7 @@ export function OrderReceiptDialog({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
+    <Dialog open={open} onClose={confirmLoading ? undefined : onClose} fullWidth maxWidth="lg">
       <DialogTitle>Constancia de solicitud</DialogTitle>
       <DialogContent>
         <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: "12px", background: "linear-gradient(180deg, #fffef9 0%, #ffffff 100%)", border: "1px solid", borderColor: "divider" }}>
@@ -217,6 +230,15 @@ export function OrderReceiptDialog({
               </Paper>
             </Box>
 
+            {currentOrder.observaciones && (
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: "12px" }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Observaciones
+                </Typography>
+                <Typography color="text.secondary">{currentOrder.observaciones}</Typography>
+              </Paper>
+            )}
+
             <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "1.3fr 1fr" } }}>
               <Paper variant="outlined" sx={{ p: 2, borderRadius: "12px" }}>
                 <Typography variant="h6" sx={{ mb: 1.5 }}>
@@ -267,11 +289,17 @@ export function OrderReceiptDialog({
         </Paper>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cerrar</Button>
-        <Button variant="contained" startIcon={<PrintIcon />} onClick={handlePrint} disabled={!loadedOrder || loading}>
+        <Button onClick={onClose} disabled={confirmLoading}>Cerrar</Button>
+        <Button variant="outlined" startIcon={<PrintIcon />} onClick={handlePrint} disabled={loading || Boolean(loadError)}>
           Imprimir / Guardar PDF
         </Button>
+        {onConfirm && confirmLabel ? (
+          <Button variant="contained" onClick={onConfirm} disabled={loading || Boolean(loadError) || confirmLoading}>
+            {confirmLoading ? "Enviando..." : confirmLabel}
+          </Button>
+        ) : null}
       </DialogActions>
     </Dialog>
   );
 }
+
