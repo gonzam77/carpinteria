@@ -2,12 +2,13 @@ import SaveIcon from "@mui/icons-material/Save";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CloseIcon from "@mui/icons-material/Close";
-import { Alert, Box, Button, Divider, Paper, Stack, Step, StepLabel, Stepper, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Paper, Stack, Step, StepLabel, Stepper, TextField, Typography } from "@mui/material";
 import axios from "axios";
 import { FormEvent, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { createEmptyDetail, OrderItemsTable } from "../components/OrderItemsTable";
+import { OrderReceiptDialog } from "../components/OrderReceiptDialog";
 import { useAuth } from "../context/AuthContext";
 import { Material, Order, OrderDetail } from "../types";
 import { CutOptimizer } from "../components/CutOptimizer";
@@ -45,6 +46,9 @@ export function OrderFormPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [error, setError] = useState("");
   const [step, setStep] = useState(0);
+  const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? (id ? `/pedidos/${id}` : user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes");
 
   useEffect(() => {
@@ -93,16 +97,8 @@ export function OrderFormPage() {
     setRows(nextRows);
   }
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    setError("");
-    const rowError = validateRows(rows, materials);
-    if (rowError) {
-      setError(rowError);
-      return;
-    }
-
-    const payload = {
+  function buildPayload() {
+    return {
       cliente,
       numeroContacto: telefono,
       observaciones,
@@ -115,8 +111,44 @@ export function OrderFormPage() {
         cantidad: Number(row.cantidad)
       }))
     };
+  }
+
+  function resolveApiError(submitError: unknown, fallback: string) {
+    if (axios.isAxiosError<{ message?: string; errors?: Array<{ message?: string }> }>(submitError)) {
+      const apiMessage = submitError.response?.data?.message;
+      const firstValidationError = submitError.response?.data?.errors?.[0]?.message;
+      return apiMessage || firstValidationError || fallback;
+    }
+
+    return fallback;
+  }
+
+  async function openPreview(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+    const rowError = validateRows(rows, materials);
+    if (rowError) {
+      setError(rowError);
+      return;
+    }
+
+    setPreviewLoading(true);
+    try {
+      const response = await api.post<Order>("/orders/preview", buildPayload());
+      setPreviewOrder(response.data);
+    } catch (previewError) {
+      setError(resolveApiError(previewError, "No se pudo generar el comprobante de la solicitud."));
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  async function handleConfirmSubmit() {
+    setError("");
+    setSubmitLoading(true);
 
     try {
+      const payload = buildPayload();
       const response = id ? await api.put(`/orders/${id}`, payload) : await api.post("/orders", payload);
 
       if (user && user.rol !== "ADMIN" && telefono !== (user.telefono ?? "")) {
@@ -127,116 +159,122 @@ export function OrderFormPage() {
         });
       }
 
+      setPreviewOrder(null);
       navigate(user?.rol === "ADMIN" ? `/pedidos/${response.data.id}` : "/mis-solicitudes", {
         state: { notification: id ? "Solicitud de corte actualizada correctamente." : "Solicitud de corte enviada correctamente." }
       });
     } catch (submitError) {
-      if (axios.isAxiosError<{ message?: string; errors?: Array<{ message?: string }> }>(submitError)) {
-        const apiMessage = submitError.response?.data?.message;
-        const firstValidationError = submitError.response?.data?.errors?.[0]?.message;
-        setError(apiMessage || firstValidationError || "No se pudo enviar la solicitud.");
-        return;
-      }
-
-      setError("No se pudo enviar la solicitud.");
+      setError(resolveApiError(submitError, "No se pudo enviar la solicitud."));
+      setPreviewOrder(null);
+    } finally {
+      setSubmitLoading(false);
     }
   }
 
   return (
-    <Stack spacing={3} component="form" onSubmit={handleSubmit}>
-      <Stack spacing={0.5}>
-        <Typography variant="h4">{id ? "Editar solicitud" : "Nueva solicitud de corte"}</Typography>
-        <Typography color="text.secondary">Carga los datos del cliente, define las piezas y revisa el resumen antes de enviar.</Typography>
-      </Stack>
-      {error && <Alert severity="error">{error}</Alert>}
-      <Stepper
-        activeStep={step}
-        sx={{
-          maxWidth: 760,
-          overflowX: "auto",
-          pb: 0.5,
-          width: "100%",
-          "& .MuiStepLabel-label": { fontSize: { xs: 12, sm: 14 } }
-        }}
-      >
-        {["Datos", "Cortes", "Resumen"].map((label) => (
-          <Step key={label}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
-      {step === 0 && (
-        <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "8px" }}>
-          <Stack spacing={2}>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <TextField label="Cliente" value={cliente} onChange={(event) => setCliente(event.target.value)} required fullWidth />
-              <TextField label="Telefono de contacto" value={telefono} onChange={(event) => setTelefono(event.target.value)} required fullWidth />
-            </Stack>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <TextField label="Observaciones" value={observaciones} onChange={(event) => setObservaciones(event.target.value)} fullWidth />
-            </Stack>
-          </Stack>
-        </Paper>
-      )}
-      {step === 1 && (
-        <Stack spacing={2}>
-          <OrderItemsTable
-            rows={rows}
-            setRows={updateRows}
-            materials={materials}
-            clientName={cliente}
-            clientPhone={telefono}
-            onClientPhoneChange={setTelefono}
-            defaultDetailValues={{ numeroCliente: telefono, nombreCliente: cliente }}
-          />
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <CutOptimizer rows={rows} materials={materials} />
-          </Paper>
+    <>
+      <Stack spacing={3} component="form" onSubmit={openPreview}>
+        <Stack spacing={0.5}>
+          <Typography variant="h4">{id ? "Editar solicitud" : "Nueva solicitud de corte"}</Typography>
+          <Typography color="text.secondary">Carga los datos del cliente, define las piezas y revisa el resumen antes de enviar.</Typography>
         </Stack>
-      )}
-      {step === 2 && (
-        <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: "8px", overflow: "hidden" }}>
+        {error && <Alert severity="error">{error}</Alert>}
+        <Stepper
+          activeStep={step}
+          sx={{
+            maxWidth: 760,
+            overflowX: "auto",
+            pb: 0.5,
+            width: "100%",
+            "& .MuiStepLabel-label": { fontSize: { xs: 12, sm: 14 } }
+          }}
+        >
+          {["Datos", "Cortes", "Resumen"].map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+        {step === 0 && (
+          <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "8px" }}>
+            <Stack spacing={2}>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField label="Cliente" value={cliente} onChange={(event) => setCliente(event.target.value)} required fullWidth />
+                <TextField label="Telefono de contacto" value={telefono} onChange={(event) => setTelefono(event.target.value)} required fullWidth />
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField label="Observaciones" value={observaciones} onChange={(event) => setObservaciones(event.target.value)} fullWidth />
+              </Stack>
+            </Stack>
+          </Paper>
+        )}
+        {step === 1 && (
           <Stack spacing={2}>
-            <Box>
-              <Typography variant="h6">Datos de contacto</Typography>
-              <Typography>{cliente} - {telefono}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="h6">Cortes solicitados</Typography>
-              <Typography>
-                {rows.length} piezas cargadas, {rows.reduce((total, row) => total + Number(row.cantidad || 0), 0)} unidades en total
-              </Typography>
-            </Box>
+            <OrderItemsTable
+              rows={rows}
+              setRows={updateRows}
+              materials={materials}
+              clientName={cliente}
+              clientPhone={telefono}
+              onClientPhoneChange={setTelefono}
+              defaultDetailValues={{ numeroCliente: telefono, nombreCliente: cliente }}
+            />
             <Paper sx={{ p: 2, borderRadius: "8px" }}>
               <CutOptimizer rows={rows} materials={materials} />
             </Paper>
-            {observaciones && <Typography color="text.secondary">{observaciones}</Typography>}
           </Stack>
-        </Paper>
-      )}
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-        {id && (
-          <Button variant="outlined" startIcon={<CloseIcon />} onClick={() => navigate(returnTo)} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Cancelar
-          </Button>
         )}
-        {step > 0 && (
-          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => setStep((current) => current - 1)} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Volver
-          </Button>
+        {step === 2 && (
+          <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: "8px", overflow: "hidden" }}>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="h6">Datos de contacto</Typography>
+                <Typography>{cliente} - {telefono}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="h6">Cortes solicitados</Typography>
+                <Typography>
+                  {rows.length} piezas cargadas, {rows.reduce((total, row) => total + Number(row.cantidad || 0), 0)} unidades en total
+                </Typography>
+              </Box>
+              <Paper sx={{ p: 2, borderRadius: "8px" }}>
+                <CutOptimizer rows={rows} materials={materials} />
+              </Paper>
+              {observaciones && <Typography color="text.secondary">{observaciones}</Typography>}
+            </Stack>
+          </Paper>
         )}
-        {step < 2 ? (
-          <Button type="button" variant="contained" endIcon={<ArrowForwardIcon />} onClick={nextStep} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Siguiente
-          </Button>
-        ) : (
-          <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            {id ? "Guardar cambios" : "Enviar solicitud"}
-          </Button>
-        )}
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+          {id && (
+            <Button variant="outlined" startIcon={<CloseIcon />} onClick={() => navigate(returnTo)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              Cancelar
+            </Button>
+          )}
+          {step > 0 && (
+            <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => setStep((current) => current - 1)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              Volver
+            </Button>
+          )}
+          {step < 2 ? (
+            <Button type="button" variant="contained" endIcon={<ArrowForwardIcon />} onClick={nextStep} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              Siguiente
+            </Button>
+          ) : (
+            <Button type="submit" variant="contained" startIcon={<SaveIcon />} disabled={previewLoading} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              {previewLoading ? "Generando comprobante..." : id ? "Revisar y guardar" : "Revisar y enviar"}
+            </Button>
+          )}
+        </Stack>
       </Stack>
-    </Stack>
+
+      <OrderReceiptDialog
+        order={previewOrder}
+        open={Boolean(previewOrder)}
+        onClose={() => !submitLoading && setPreviewOrder(null)}
+        onConfirm={handleConfirmSubmit}
+        confirmLabel={id ? "Confirmar cambios" : "Confirmar solicitud"}
+        confirmLoading={submitLoading}
+      />
+    </>
   );
 }
-
-

@@ -122,6 +122,28 @@ ordersRouter.get(
 );
 
 ordersRouter.post(
+  "/preview",
+  asyncHandler(async (req: any, res: any) => {
+    const data = orderSchema.parse(req.body);
+    const detalles = await normalizeDetails(data.detalles, data.cliente, data.numeroContacto);
+    const estimateSnapshot = await buildOrderEstimateSnapshot(prisma as any, detalles as any);
+    const now = new Date();
+
+    res.json({
+      id: "preview",
+      cliente: data.cliente,
+      numeroContacto: data.numeroContacto,
+      observaciones: data.observaciones,
+      estado: EstadoPedido.PENDIENTE,
+      usuarioId: req.user.id,
+      fechaCreacion: now.toISOString(),
+      fechaActualizacion: now.toISOString(),
+      detalles,
+      ...estimateSnapshot
+    });
+  })
+);
+ordersRouter.post(
   "/",
   asyncHandler(async (req: any, res: any) => {
     const data = orderSchema.parse(req.body);
@@ -302,5 +324,7 @@ ordersRouter.delete(
     res.status(204).send();
   })
 );
+
+
 
 
