@@ -1,56 +1,137 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/config/prisma.js";
-import { Rol } from "../src/generated/prisma/enums.js";
+import { Rol, TipoMaterial } from "../src/generated/prisma/enums.js";
 
+type SeedPlateMaterial = {
+  nombre: string;
+  tipo: typeof TipoMaterial.PLACA;
+  valor: number;
+  espesorMm: number;
+  anchoPlaca: number;
+  altoPlaca: number;
+  stockPlacas: number;
+  colorCanto: null;
+  activo: boolean;
+};
 
-const seedUsers = [
+type SeedEdgeMaterial = {
+  nombre: string;
+  tipo: typeof TipoMaterial.CANTO;
+  valor: number;
+  espesorMm: number;
+  colorCanto: string;
+  anchoPlaca: null;
+  altoPlaca: null;
+  stockPlacas: null;
+  activo: boolean;
+};
+
+type SeedMaterial = SeedPlateMaterial | SeedEdgeMaterial;
+
+const adminUser = {
+  email: "admin@carpinteria.local",
+  nombre: "Administrador",
+  apellido: "Sistema",
+  telefono: "1130000000",
+  password: "admin123",
+  rol: Rol.ADMIN
+} as const;
+
+const seedMaterials: SeedMaterial[] = [
   {
-    email: "admin@carpinteria.local",
-    nombre: "Administrador",
-    apellido: "Sistema",
-    telefono: "1130000000",
-    password: "admin123",
-    rol: Rol.ADMIN
+    nombre: "Melamina Blanca 18mm",
+    tipo: TipoMaterial.PLACA,
+    valor: 85000,
+    espesorMm: 18,
+    anchoPlaca: 1830,
+    altoPlaca: 2750,
+    stockPlacas: 20,
+    colorCanto: null,
+    activo: true
   },
   {
-    email: "carpintero@carpinteria.local",
-    nombre: "Pedro",
-    apellido: "Carpintero",
-    telefono: "1130000001",
-    password: "carp123",
-    rol: Rol.CARPINTERO
+    nombre: "Melamina Negra 18mm",
+    tipo: TipoMaterial.PLACA,
+    valor: 90000,
+    espesorMm: 18,
+    anchoPlaca: 1830,
+    altoPlaca: 2750,
+    stockPlacas: 10,
+    colorCanto: null,
+    activo: true
+  },
+  {
+    nombre: "Melamina Roble Dakar 18mm",
+    tipo: TipoMaterial.PLACA,
+    valor: 98000,
+    espesorMm: 18,
+    anchoPlaca: 1830,
+    altoPlaca: 2750,
+    stockPlacas: 8,
+    colorCanto: null,
+    activo: true
+  },
+  {
+    nombre: "Canto Blanco PVC 22mm",
+    tipo: TipoMaterial.CANTO,
+    valor: 850,
+    espesorMm: 0.4,
+    colorCanto: "Blanco",
+    anchoPlaca: null,
+    altoPlaca: null,
+    stockPlacas: null,
+    activo: true
+  },
+  {
+    nombre: "Canto Negro PVC 22mm",
+    tipo: TipoMaterial.CANTO,
+    valor: 900,
+    espesorMm: 0.4,
+    colorCanto: "Negro",
+    anchoPlaca: null,
+    altoPlaca: null,
+    stockPlacas: null,
+    activo: true
+  },
+  {
+    nombre: "Canto Roble Dakar PVC 22mm",
+    tipo: TipoMaterial.CANTO,
+    valor: 950,
+    espesorMm: 0.4,
+    colorCanto: "Roble Dakar",
+    anchoPlaca: null,
+    altoPlaca: null,
+    stockPlacas: null,
+    activo: true
   }
-] as const;
+];
 
+async function seedAdminUser() {
+  const passwordHash = await bcrypt.hash(adminUser.password, 10);
 
-async function seedUsersData() {
-  for (const user of seedUsers) {
-    const password = await bcrypt.hash(user.password, 10);
-
-    await prisma.usuario.upsert({
-      where: { email: user.email },
-      update: {
-        nombre: user.nombre,
-        apellido: user.apellido,
-        telefono: user.telefono,
-        password,
-        rol: user.rol,
-        googleId: null
-      },
-      create: {
-        nombre: user.nombre,
-        apellido: user.apellido,
-        email: user.email,
-        telefono: user.telefono,
-        password,
-        rol: user.rol,
-        googleId: null
-      }
-    });
-  }
+  await prisma.usuario.upsert({
+    where: { email: adminUser.email },
+    update: {
+      nombre: adminUser.nombre,
+      apellido: adminUser.apellido,
+      telefono: adminUser.telefono,
+      password: passwordHash,
+      rol: adminUser.rol,
+      googleId: null
+    },
+    create: {
+      nombre: adminUser.nombre,
+      apellido: adminUser.apellido,
+      email: adminUser.email,
+      telefono: adminUser.telefono,
+      password: passwordHash,
+      rol: adminUser.rol,
+      googleId: null
+    }
+  });
 }
 
-async function seedSettings() {
+async function seedCompanySettings() {
   await prisma.configuracionEmpresa.upsert({
     where: { id: "default" },
     update: {
@@ -65,7 +146,9 @@ async function seedSettings() {
       email: ""
     }
   });
+}
 
+async function seedOptimizerSettings() {
   await prisma.configuracionOptimizador.upsert({
     where: { id: "default" },
     update: {
@@ -80,23 +163,32 @@ async function seedSettings() {
   });
 }
 
-
+async function seedMaterialsData() {
+  for (const material of seedMaterials) {
+    await prisma.material.upsert({
+      where: { nombre: material.nombre },
+      update: material,
+      create: material
+    });
+  }
+}
 
 async function main() {
-  console.log("[seed] Ejecutando seed...");
+  console.log("[seed] Iniciando carga de datos base...");
 
-  await seedUsersData();
-  await seedSettings();
+  await seedAdminUser();
+  await seedCompanySettings();
+  await seedOptimizerSettings();
+  await seedMaterialsData();
 
-  console.log("[seed] Seed ejecutado correctamente");
+  console.log("[seed] Seed completado correctamente.");
 }
 
 main()
   .catch((error) => {
-    console.error("[seed] Error ejecutando seed", error);
+    console.error("[seed] Error al ejecutar el seed", error);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
-
