@@ -39,6 +39,10 @@ const filtersSchema = z.object({
   tipo: z.nativeEnum(TipoMaterial).optional()
 });
 
+const activeStatusSchema = z.object({
+  activo: z.boolean()
+});
+
 async function ensureMaterialNameAvailable(nombre: string, currentId?: string) {
   const existingMaterial = await prisma.material.findFirst({
     where: {
@@ -51,6 +55,29 @@ async function ensureMaterialNameAvailable(nombre: string, currentId?: string) {
   if (existingMaterial) {
     throw new AppError(400, "Ya existe un material con ese nombre.");
   }
+}
+
+async function countMaterialLinks(materialId: string) {
+  return prisma.detallePedido.count({
+    where: {
+      OR: [{ materialId }, { cantoLargo1Id: materialId }, { cantoLargo2Id: materialId }, { cantoAncho1Id: materialId }, { cantoAncho2Id: materialId }]
+    }
+  });
+}
+
+async function serializeMaterials(materials: Array<any>) {
+  const materialsWithUsage = await Promise.all(
+    materials.map(async (material) => {
+      const linkedOrdersCount = await countMaterialLinks(material.id);
+      return {
+        ...material,
+        linkedOrdersCount,
+        canDeletePermanently: linkedOrdersCount === 0
+      };
+    })
+  );
+
+  return materialsWithUsage;
 }
 
 materialsRouter.use(authenticate);
@@ -67,7 +94,8 @@ materialsRouter.get(
       },
       orderBy: [{ tipo: "asc" }, { activo: "desc" }, { nombre: "asc" }]
     });
-    res.json(materials);
+
+    res.json(await serializeMaterials(materials));
   })
 );
 
@@ -137,10 +165,13 @@ materialsRouter.put(
   asyncHandler(async (req: any, res: any) => {
     const parsed = materialSchema.parse(req.body);
     await ensureMaterialNameAvailable(parsed.nombre, req.params.id);
+    const existing = await prisma.material.findUnique({ where: { id: req.params.id }, select: { activo: true } });
+    if (!existing) throw new AppError(404, "Material no encontrado.");
+
     const data =
       parsed.tipo === TipoMaterial.PLACA
-        ? { ...parsed, colorCanto: null, stockPlacas: parsed.stockPlacas ?? 0 }
-        : { ...parsed, anchoPlaca: null, altoPlaca: null, stockPlacas: null };
+        ? { ...parsed, colorCanto: null, stockPlacas: parsed.stockPlacas ?? 0, activo: existing.activo }
+        : { ...parsed, anchoPlaca: null, altoPlaca: null, stockPlacas: null, activo: existing.activo };
     const material = await prisma.material.update({
       where: { id: req.params.id },
       data
@@ -152,10 +183,55 @@ materialsRouter.put(
   })
 );
 
+materialsRouter.patch(
+  "/:id/active",
+  authorize(Rol.ADMIN),
+  asyncHandler(async (req: any, res: any) => {
+    const { activo } = activeStatusSchema.parse(req.body);
+    const material = await prisma.material.update({
+      where: { id: req.params.id },
+      data: { activo }
+    });
+
+    await prisma.auditoria.create({
+      data: {
+        usuarioId: req.user.id,
+        accion: activo ? "REACTIVAR_MATERIAL" : "DESACTIVAR_MATERIAL",
+        entidad: "Material",
+        entidadId: material.id
+      }
+    });
+
+    res.json(material);
+  })
+);
+
 materialsRouter.delete(
   "/:id",
   authorize(Rol.ADMIN),
   asyncHandler(async (req: any, res: any) => {
+    const material = await prisma.material.update({
+      where: { id: req.params.id },
+      data: { activo: false }
+    });
+
+    await prisma.auditoria.create({
+      data: { usuarioId: req.user.id, accion: "DESACTIVAR_MATERIAL", entidad: "Material", entidadId: material.id }
+    });
+
+    res.status(204).send();
+  })
+);
+
+materialsRouter.delete(
+  "/:id/permanent",
+  authorize(Rol.ADMIN),
+  asyncHandler(async (req: any, res: any) => {
+    const linkedOrdersCount = await countMaterialLinks(req.params.id);
+    if (linkedOrdersCount > 0) {
+      throw new AppError(400, "No se puede eliminar definitivamente un material vinculado a solicitudes.");
+    }
+
     await prisma.$transaction(async (tx) => {
       const deletedMaterial = await tx.material.delete({
         where: { id: req.params.id }

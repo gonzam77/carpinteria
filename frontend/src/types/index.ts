@@ -45,6 +45,8 @@ export type Material = {
   colorCanto: string | null;
   stockPlacas: number | null;
   activo: boolean;
+  linkedOrdersCount?: number;
+  canDeletePermanently?: boolean;
   fechaCreacion?: string;
   fechaActualizacion?: string;
 };
@@ -113,5 +115,6 @@ export type Order = {
     usuario: Pick<User, "nombre" | "apellido">;
   }>;
 };
+
 
 

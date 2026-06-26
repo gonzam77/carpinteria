@@ -1,7 +1,10 @@
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import HistoryIcon from "@mui/icons-material/History";
+import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
 import SaveIcon from "@mui/icons-material/Save";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import ViewListIcon from "@mui/icons-material/ViewList";
 import {
   Alert,
   Button,
@@ -19,8 +22,10 @@ import {
   MenuItem,
   Paper,
   Stack,
-  TextField,
+  Tab,
+  Tabs,
   Tooltip,
+  TextField,
   Typography
 } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
@@ -61,6 +66,14 @@ const emptyBulkForm: BulkValueForm = {
   selectedIds: []
 };
 
+function resolveErrorMessage(error: unknown, fallback: string) {
+  if (axios.isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message ?? fallback;
+  }
+
+  return fallback;
+}
+
 export function MaterialsPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -69,6 +82,7 @@ export function MaterialsPage() {
   const [bulkForm, setBulkForm] = useState<BulkValueForm>(emptyBulkForm);
   const [feedback, setFeedback] = useState("");
   const [feedbackSeverity, setFeedbackSeverity] = useState<"success" | "error">("success");
+  const [view, setView] = useState<"activos" | "historial">("activos");
 
   async function loadMaterials() {
     const response = await api.get<Material[]>("/materiales", { params: { incluirInactivos: true } });
@@ -115,7 +129,7 @@ export function MaterialsPage() {
   function toggleSelectAllBulkMaterials() {
     setBulkForm((current) => ({
       ...current,
-      selectedIds: current.selectedIds.length === materials.length ? [] : materials.map((material) => material.id)
+      selectedIds: current.selectedIds.length === activeMaterials.length ? [] : activeMaterials.map((material) => material.id)
     }));
   }
 
@@ -158,37 +172,119 @@ export function MaterialsPage() {
       loadMaterials();
     } catch (error) {
       setFeedbackSeverity("error");
-      if (axios.isAxiosError<{ message?: string }>(error)) {
-        setFeedback(error.response?.data?.message ?? "No se pudo guardar el material.");
-        return;
-      }
-
-      setFeedback("No se pudo guardar el material.");
+      setFeedback(resolveErrorMessage(error, "No se pudo guardar el material."));
     }
   }
 
   async function submitBulkValueUpdate() {
-    await api.post("/materiales/adjust-values", {
-      materialIds: bulkForm.selectedIds,
-      percentage: Number(bulkForm.percentage)
-    });
-    closeBulkDialog();
-    setFeedbackSeverity("success");
-    setFeedback("Valores actualizados correctamente.");
-    loadMaterials();
+    try {
+      await api.post("/materiales/adjust-values", {
+        materialIds: bulkForm.selectedIds,
+        percentage: Number(bulkForm.percentage)
+      });
+      closeBulkDialog();
+      setFeedbackSeverity("success");
+      setFeedback("Valores actualizados correctamente.");
+      loadMaterials();
+    } catch (error) {
+      setFeedbackSeverity("error");
+      setFeedback(resolveErrorMessage(error, "No se pudieron actualizar los valores."));
+    }
   }
 
-  async function deleteMaterial(id: string) {
-    const confirmed = window.confirm("Seguro que queres eliminar este material de forma definitiva?");
+  async function deactivateMaterial(material: Material) {
+    const confirmed = window.confirm(`Seguro que queres quitar "${material.nombre}" del listado activo?`);
     if (!confirmed) return;
 
-    await api.delete(`/materiales/${id}`);
-    setFeedbackSeverity("success");
-    setFeedback("Material eliminado correctamente.");
-    loadMaterials();
+    try {
+      await api.delete(`/materiales/${material.id}`);
+      if (editingId === material.id) resetForm();
+      setFeedbackSeverity("success");
+      setFeedback("Material movido al historial correctamente.");
+      loadMaterials();
+    } catch (error) {
+      setFeedbackSeverity("error");
+      setFeedback(resolveErrorMessage(error, "No se pudo desactivar el material."));
+    }
   }
 
-  const placaColumns = useMemo<GridColDef<Material>[]>(
+  async function reactivateMaterial(material: Material) {
+    try {
+      await api.patch(`/materiales/${material.id}/active`, { activo: true });
+      setFeedbackSeverity("success");
+      setFeedback("Material reactivado correctamente.");
+      loadMaterials();
+    } catch (error) {
+      setFeedbackSeverity("error");
+      setFeedback(resolveErrorMessage(error, "No se pudo reactivar el material."));
+    }
+  }
+
+  async function deleteMaterialPermanently(material: Material) {
+    const confirmed = window.confirm(`Seguro que queres eliminar definitivamente "${material.nombre}"? Esta accion no se puede deshacer.`);
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/materiales/${material.id}/permanent`);
+      if (editingId === material.id) resetForm();
+      setFeedbackSeverity("success");
+      setFeedback("Material eliminado definitivamente.");
+      loadMaterials();
+    } catch (error) {
+      setFeedbackSeverity("error");
+      setFeedback(resolveErrorMessage(error, "No se pudo eliminar definitivamente el material."));
+    }
+  }
+
+  function buildActionColumn(isHistoryView: boolean): GridColDef<Material> {
+    return {
+      field: "acciones",
+      headerName: "",
+      width: isHistoryView ? 180 : 220,
+      sortable: false,
+      renderCell: ({ row }) => (
+        <>
+          {!isHistoryView ? (
+            <Tooltip title="Editar">
+              <IconButton onClick={() => editMaterial(row)}>
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+          ) : null}
+          {isHistoryView ? (
+            <Tooltip title="Reactivar">
+              <IconButton color="primary" onClick={() => reactivateMaterial(row)}>
+                <RestoreFromTrashIcon />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Tooltip title="Quitar del listado">
+              <IconButton color="warning" onClick={() => deactivateMaterial(row)}>
+                <HistoryIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+          {row.canDeletePermanently ? (
+            <Tooltip title="Eliminar definitivamente">
+              <IconButton color="error" onClick={() => deleteMaterialPermanently(row)}>
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Tooltip title="No se puede eliminar definitivamente porque esta vinculado a solicitudes">
+              <span>
+                <IconButton color="error" disabled>
+                  <DeleteIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+        </>
+      )
+    };
+  }
+
+  const activePlacaColumns = useMemo<GridColDef<Material>[]>(
     () => [
       { field: "nombre", headerName: "Material", flex: 1, minWidth: 180 },
       { field: "valor", headerName: "Valor", width: 130, valueFormatter: (value) => Number(value).toLocaleString() },
@@ -196,76 +292,62 @@ export function MaterialsPage() {
       { field: "altoPlaca", headerName: "Largo placa mm", width: 150 },
       { field: "anchoPlaca", headerName: "Ancho placa mm", width: 150 },
       { field: "stockPlacas", headerName: "Stock placas", width: 130, valueGetter: (_value, row) => row.stockPlacas ?? 0 },
-      { field: "activo", headerName: "Estado", width: 120, renderCell: ({ value }) => <Chip size="small" label={value ? "Activo" : "Inactivo"} color={value ? "success" : "default"} /> },
-      {
-        field: "acciones",
-        headerName: "",
-        width: 120,
-        sortable: false,
-        renderCell: ({ row }) => (
-          <>
-            <Tooltip title="Editar">
-              <IconButton onClick={() => editMaterial(row)}>
-                <EditIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Eliminar definitivamente">
-              <span>
-                <IconButton onClick={() => deleteMaterial(row.id)}>
-                  <DeleteIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </>
-        )
-      }
+      { field: "linkedOrdersCount", headerName: "Solicitudes", width: 120, valueGetter: (_value, row) => row.linkedOrdersCount ?? 0 },
+      buildActionColumn(false)
     ],
     []
   );
 
-  const cantoColumns = useMemo<GridColDef<Material>[]>(
+  const activeCantoColumns = useMemo<GridColDef<Material>[]>(
     () => [
       { field: "nombre", headerName: "Canto", flex: 1, minWidth: 180 },
       { field: "colorCanto", headerName: "Color", flex: 1, minWidth: 160, valueGetter: (_value, row) => row.colorCanto ?? "-" },
       { field: "espesorMm", headerName: "Espesor", width: 110, valueFormatter: (value) => `${value} mm` },
       { field: "valor", headerName: "Valor por metro", width: 150, valueFormatter: (value) => Number(value).toLocaleString() },
-      { field: "activo", headerName: "Estado", width: 120, renderCell: ({ value }) => <Chip size="small" label={value ? "Activo" : "Inactivo"} color={value ? "success" : "default"} /> },
-      {
-        field: "acciones",
-        headerName: "",
-        width: 120,
-        sortable: false,
-        renderCell: ({ row }) => (
-          <>
-            <Tooltip title="Editar">
-              <IconButton onClick={() => editMaterial(row)}>
-                <EditIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Eliminar definitivamente">
-              <span>
-                <IconButton onClick={() => deleteMaterial(row.id)}>
-                  <DeleteIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </>
-        )
-      }
+      { field: "linkedOrdersCount", headerName: "Solicitudes", width: 120, valueGetter: (_value, row) => row.linkedOrdersCount ?? 0 },
+      buildActionColumn(false)
     ],
     []
   );
 
-  const placas = materials.filter((material) => material.tipo === "PLACA");
-  const cantos = materials.filter((material) => material.tipo === "CANTO");
-  const allSelected = materials.length > 0 && bulkForm.selectedIds.length === materials.length;
+  const historyPlacaColumns = useMemo<GridColDef<Material>[]>(
+    () => [
+      { field: "nombre", headerName: "Material", flex: 1, minWidth: 180 },
+      { field: "valor", headerName: "Valor", width: 130, valueFormatter: (value) => Number(value).toLocaleString() },
+      { field: "espesorMm", headerName: "Espesor", width: 110, valueFormatter: (value) => `${value} mm` },
+      { field: "linkedOrdersCount", headerName: "Solicitudes", width: 120, valueGetter: (_value, row) => row.linkedOrdersCount ?? 0 },
+      { field: "fechaActualizacion", headerName: "Ult. cambio", width: 130, valueGetter: (_value, row) => (row.fechaActualizacion ? new Date(row.fechaActualizacion).toLocaleDateString() : "-") },
+      buildActionColumn(true)
+    ],
+    []
+  );
+
+  const historyCantoColumns = useMemo<GridColDef<Material>[]>(
+    () => [
+      { field: "nombre", headerName: "Canto", flex: 1, minWidth: 180 },
+      { field: "colorCanto", headerName: "Color", flex: 1, minWidth: 160, valueGetter: (_value, row) => row.colorCanto ?? "-" },
+      { field: "valor", headerName: "Valor por metro", width: 150, valueFormatter: (value) => Number(value).toLocaleString() },
+      { field: "linkedOrdersCount", headerName: "Solicitudes", width: 120, valueGetter: (_value, row) => row.linkedOrdersCount ?? 0 },
+      { field: "fechaActualizacion", headerName: "Ult. cambio", width: 130, valueGetter: (_value, row) => (row.fechaActualizacion ? new Date(row.fechaActualizacion).toLocaleDateString() : "-") },
+      buildActionColumn(true)
+    ],
+    []
+  );
+
+  const activeMaterials = materials.filter((material) => material.activo);
+  const inactiveMaterials = materials.filter((material) => !material.activo);
+  const placas = activeMaterials.filter((material) => material.tipo === "PLACA");
+  const cantos = activeMaterials.filter((material) => material.tipo === "CANTO");
+  const historialPlacas = inactiveMaterials.filter((material) => material.tipo === "PLACA");
+  const historialCantos = inactiveMaterials.filter((material) => material.tipo === "CANTO");
+  const allSelected = activeMaterials.length > 0 && bulkForm.selectedIds.length === activeMaterials.length;
   const canSubmitBulkUpdate = bulkForm.selectedIds.length > 0 && bulkForm.percentage !== "" && !Number.isNaN(Number(bulkForm.percentage)) && Number(bulkForm.percentage) > -100;
 
   return (
     <Stack spacing={3}>
       <Stack spacing={0.5}>
         <Typography variant="h4">Materiales</Typography>
-        <Typography color="text.secondary">Administra placas y cantos con sus datos segun el tipo de material.</Typography>
+        <Typography color="text.secondary">Administra placas y cantos activos, y conserva un historial de materiales fuera de uso sin romper solicitudes anteriores.</Typography>
       </Stack>
       {feedback && (
         <Alert severity={feedbackSeverity} onClose={() => setFeedback("")}>
@@ -329,31 +411,66 @@ export function MaterialsPage() {
           )}
         </Stack>
       </Paper>
-      <Stack spacing={2}>
-        <Paper sx={{ p: 2, borderRadius: "8px", overflow: "hidden" }}>
-          <Typography variant="h6" sx={{ mb: 1.5 }}>
-            Placas
-          </Typography>
-          <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
-            <DataGrid rows={placas} columns={placaColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 900, md: "100%" } }} />
+
+      <Paper sx={{ borderRadius: "8px", overflow: "hidden" }}>
+        <Tabs value={view} onChange={(_event, nextValue) => setView(nextValue)} sx={{ px: 2, pt: 1 }}>
+          <Tab value="activos" icon={<ViewListIcon />} iconPosition="start" label={`Materiales activos (${activeMaterials.length})`} />
+          <Tab value="historial" icon={<HistoryIcon />} iconPosition="start" label={`Historial de materiales (${inactiveMaterials.length})`} />
+        </Tabs>
+      </Paper>
+
+      {view === "activos" ? (
+        <Stack spacing={2}>
+          <Paper sx={{ p: 2, borderRadius: "8px", overflow: "hidden" }}>
+            <Typography variant="h6" sx={{ mb: 1.5 }}>
+              Placas activas
+            </Typography>
+            <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
+              <DataGrid rows={placas} columns={activePlacaColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 1020, md: "100%" } }} />
+            </Paper>
           </Paper>
-        </Paper>
-        <Paper sx={{ p: 2, borderRadius: "8px", overflow: "hidden" }}>
-          <Typography variant="h6" sx={{ mb: 1.5 }}>
-            Cantos
-          </Typography>
-          <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
-            <DataGrid rows={cantos} columns={cantoColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 760, md: "100%" } }} />
+          <Paper sx={{ p: 2, borderRadius: "8px", overflow: "hidden" }}>
+            <Typography variant="h6" sx={{ mb: 1.5 }}>
+              Cantos activos
+            </Typography>
+            <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
+              <DataGrid rows={cantos} columns={activeCantoColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 920, md: "100%" } }} />
+            </Paper>
           </Paper>
-        </Paper>
-      </Stack>
+        </Stack>
+      ) : (
+        <Stack spacing={2}>
+          <Paper sx={{ p: 2, borderRadius: "8px", overflow: "hidden" }}>
+            <Typography variant="h6" sx={{ mb: 0.75 }}>
+              Historial de placas
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 1.5 }}>
+              Estos materiales ya no aparecen al cargar nuevas solicitudes, pero siguen preservados para mantener consistencia historica.
+            </Typography>
+            <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
+              <DataGrid rows={historialPlacas} columns={historyPlacaColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 920, md: "100%" } }} />
+            </Paper>
+          </Paper>
+          <Paper sx={{ p: 2, borderRadius: "8px", overflow: "hidden" }}>
+            <Typography variant="h6" sx={{ mb: 0.75 }}>
+              Historial de cantos
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 1.5 }}>
+              Puedes reactivar un material cuando vuelva a usarse o eliminarlo definitivamente solo si nunca quedo vinculado a solicitudes.
+            </Typography>
+            <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
+              <DataGrid rows={historialCantos} columns={historyCantoColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 920, md: "100%" } }} />
+            </Paper>
+          </Paper>
+        </Stack>
+      )}
 
       <Dialog open={bulkDialogOpen} onClose={closeBulkDialog} fullWidth maxWidth="sm">
         <DialogTitle>Actualizar valor de materiales</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ pt: 1 }}>
             <Typography color="text.secondary">
-              Selecciona los materiales a afectar e indica el porcentaje que quieres aumentar o disminuir sobre el valor actual.
+              Selecciona los materiales activos a afectar e indica el porcentaje que quieres aumentar o disminuir sobre el valor actual.
             </Typography>
             <FormControlLabel
               control={<Checkbox checked={allSelected} indeterminate={bulkForm.selectedIds.length > 0 && !allSelected} onChange={toggleSelectAllBulkMaterials} />}
@@ -361,12 +478,12 @@ export function MaterialsPage() {
             />
             <Paper variant="outlined" sx={{ maxHeight: 320, overflowY: "auto", borderRadius: "10px" }}>
               <List disablePadding>
-                {materials.map((material, index) => (
-                  <ListItemButton key={material.id} divider={index < materials.length - 1} onClick={() => toggleBulkMaterial(material.id)}>
+                {activeMaterials.map((material, index) => (
+                  <ListItemButton key={material.id} divider={index < activeMaterials.length - 1} onClick={() => toggleBulkMaterial(material.id)}>
                     <Checkbox edge="start" checked={bulkForm.selectedIds.includes(material.id)} tabIndex={-1} disableRipple />
                     <ListItemText
                       primary={material.nombre}
-                      secondary={`${material.tipo === "PLACA" ? "Placa" : "Canto"} - Valor actual: ${Number(material.valor).toLocaleString("es-AR")}${material.tipo === "CANTO" ? " por metro" : ""}${material.activo ? "" : " - Inactivo"}`}
+                      secondary={`${material.tipo === "PLACA" ? "Placa" : "Canto"} - Valor actual: ${Number(material.valor).toLocaleString("es-AR")}${material.tipo === "CANTO" ? " por metro" : ""} - Solicitudes vinculadas: ${material.linkedOrdersCount ?? 0}`}
                     />
                   </ListItemButton>
                 ))}
@@ -394,4 +511,3 @@ export function MaterialsPage() {
     </Stack>
   );
 }
-
