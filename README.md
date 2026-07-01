@@ -28,7 +28,7 @@ docker compose up --build
 Luego abrir:
 
 - Web: `http://127.0.0.1:5173`
-- API: `http://localhost:4000/health`
+- API: `http://127.0.0.1:4000/health`
 
 Para cargar datos de ejemplo en Docker:
 
@@ -53,7 +53,13 @@ rm -rf prisma/migrations
 npx prisma migrate dev --name init
 ```
 ```bash --Recrear base de datos(Borra base - Ejecuta migraciones - Ejecuta seed)
-npx prsima migrate reset
+npx prisma migrate reset
+```
+```bash --Correr seed prod
+docker compose run --rm api npx prisma db seed
+```
+```bash --Acceder a la base de datos
+docker exec -it carpinteria-db psql -U carpinteria -d carpinteria
 ```
 
 
