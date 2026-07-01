@@ -23,7 +23,7 @@ app.use(
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || env.FRONTEND_URLS.includes(origin)) {
+      if (!origin || env.FRONTEND_URL.includes(origin)) {
         callback(null, true);
         return;
       }
