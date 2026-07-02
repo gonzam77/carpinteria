@@ -12,6 +12,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   FormControlLabel,
   IconButton,
@@ -50,6 +51,13 @@ type BulkValueForm = {
   selectedIds: string[];
 };
 
+type MaterialDeleteMode = "deactivate" | "permanent";
+
+type MaterialDeleteDialogState = {
+  material: Material;
+  mode: MaterialDeleteMode;
+} | null;
+
 const emptyForm: MaterialForm = {
   tipo: "PLACA",
   nombre: "",
@@ -84,6 +92,8 @@ export function MaterialsPage() {
   const [feedback, setFeedback] = useState("");
   const [feedbackSeverity, setFeedbackSeverity] = useState<"success" | "error">("success");
   const [view, setView] = useState<"activos" | "historial">("activos");
+  const [deleteDialog, setDeleteDialog] = useState<MaterialDeleteDialogState>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const loadMaterials = useCallback(async () => {
     const response = await api.get<Material[]>("/materiales", { params: { incluirInactivos: true } });
@@ -206,9 +216,6 @@ export function MaterialsPage() {
   }
 
   async function deactivateMaterial(material: Material) {
-    const confirmed = window.confirm(`Seguro que queres quitar "${material.nombre}" del listado activo?`);
-    if (!confirmed) return;
-
     try {
       await api.delete(`/materiales/${material.id}`);
       if (editingId === material.id) resetForm();
@@ -234,9 +241,6 @@ export function MaterialsPage() {
   }
 
   async function deleteMaterialPermanently(material: Material) {
-    const confirmed = window.confirm(`Seguro que queres eliminar definitivamente "${material.nombre}"? Esta accion no se puede deshacer.`);
-    if (!confirmed) return;
-
     try {
       await api.delete(`/materiales/${material.id}/permanent`);
       if (editingId === material.id) resetForm();
@@ -246,6 +250,22 @@ export function MaterialsPage() {
     } catch (error) {
       setFeedbackSeverity("error");
       setFeedback(resolveErrorMessage(error, "No se pudo eliminar definitivamente el material."));
+    }
+  }
+
+  async function confirmDeleteMaterial() {
+    if (!deleteDialog) return;
+
+    setDeleteLoading(true);
+    try {
+      if (deleteDialog.mode === "deactivate") {
+        await deactivateMaterial(deleteDialog.material);
+      } else {
+        await deleteMaterialPermanently(deleteDialog.material);
+      }
+      setDeleteDialog(null);
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -272,14 +292,14 @@ export function MaterialsPage() {
             </Tooltip>
           ) : (
             <Tooltip title="Quitar del listado">
-              <IconButton color="warning" onClick={() => deactivateMaterial(row)}>
+              <IconButton color="warning" onClick={() => setDeleteDialog({ material: row, mode: "deactivate" })}>
                 <HistoryIcon />
               </IconButton>
             </Tooltip>
           )}
           {row.canDeletePermanently ? (
             <Tooltip title="Eliminar definitivamente">
-              <IconButton color="error" onClick={() => deleteMaterialPermanently(row)}>
+              <IconButton color="error" onClick={() => setDeleteDialog({ material: row, mode: "permanent" })}>
                 <DeleteIcon />
               </IconButton>
             </Tooltip>
@@ -533,6 +553,35 @@ export function MaterialsPage() {
           <Button onClick={closeBulkDialog}>Cancelar</Button>
           <Button variant="contained" onClick={submitBulkValueUpdate} disabled={!canSubmitBulkUpdate}>
             Aplicar ajuste
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={Boolean(deleteDialog)} onClose={deleteLoading ? undefined : () => setDeleteDialog(null)} fullWidth maxWidth="xs">
+        <DialogTitle>{deleteDialog?.mode === "permanent" ? "Eliminar material definitivamente" : "Quitar material del listado"}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ pt: 0.5 }}>
+            <DialogContentText>
+              {deleteDialog?.mode === "permanent"
+                ? `Vas a eliminar definitivamente "${deleteDialog.material.nombre}".`
+                : `Vas a quitar "${deleteDialog?.material.nombre}" del listado de materiales activos.`}
+            </DialogContentText>
+            {deleteDialog?.mode === "permanent" ? (
+              <Alert severity="warning" variant="outlined">
+                Esta accion no se puede deshacer. Solo elimina el material si estas seguro de que ya no debe existir en el sistema.
+              </Alert>
+            ) : (
+              <Alert severity="info" variant="outlined">
+                El material pasara al historial y podras reactivarlo mas adelante si vuelve a usarse.
+              </Alert>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog(null)} disabled={deleteLoading}>
+            Cancelar
+          </Button>
+          <Button variant="contained" color={deleteDialog?.mode === "permanent" ? "error" : "warning"} onClick={confirmDeleteMaterial} disabled={deleteLoading}>
+            {deleteLoading ? "Procesando..." : deleteDialog?.mode === "permanent" ? "Si, eliminar" : "Si, quitar"}
           </Button>
         </DialogActions>
       </Dialog>
