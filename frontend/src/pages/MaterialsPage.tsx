@@ -402,12 +402,11 @@ export function MaterialsPage() {
             <TextField select fullWidth label="Material de placa" value={form.placaMaterialId} onChange={(event) => setForm({ ...form, placaMaterialId: event.target.value })} required sx={{ flex: { lg: "2 1 220px" } }}>
               {placas.map((material) => (
                 <MenuItem key={material.id} value={material.id}>
-                  {material.nombre}
+                  {material.nombre} {material.espesorMm}mm
                 </MenuItem>
               ))}
             </TextField>
           )}
-          <TextField fullWidth label={form.tipo === "PLACA" ? "Valor placa" : "Valor por metro"} type="number" value={form.valor} onChange={(event) => setForm({ ...form, valor: event.target.value })} required />
           <TextField
             fullWidth
             label="Espesor mm"
@@ -417,6 +416,7 @@ export function MaterialsPage() {
             inputProps={{ step: "0.01", min: 0 }}
             required
           />
+          <TextField fullWidth label={form.tipo === "PLACA" ? "Valor placa" : "Valor por metro"} type="number" value={form.valor} onChange={(event) => setForm({ ...form, valor: event.target.value })} required />
           {form.tipo === "PLACA" ? (
             <>
               <TextField fullWidth label="Largo placa mm" type="number" value={form.altoPlaca} onChange={(event) => setForm({ ...form, altoPlaca: event.target.value })} required />
