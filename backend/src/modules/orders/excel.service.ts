@@ -53,7 +53,7 @@ export async function buildOrdersWorkbook(orders: any[]) {
         "canto largo 2": canto(detail.cantoLargo2, detail.cantoLargo2Nombre),
         "canto ancho 1": canto(detail.cantoAncho1, detail.cantoAncho1Nombre),
         "canto ancho 2": canto(detail.cantoAncho2, detail.cantoAncho2Nombre),
-        "permite rotar": detail.permiteRotar ? "Si" : "No",
+        "permite rotar": detail.permiteRotar ? "true" : "false",
         "codigo barra centro p": detail.codigoBarraCentro ?? "",
         Remark: detail.remark ?? "",
         "numero cliente": detail.numeroCliente ?? "",
