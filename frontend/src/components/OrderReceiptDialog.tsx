@@ -154,7 +154,7 @@ export function OrderReceiptDialog({
             <span class="muted">Placas: ${formatMoney(printableOrder.costoPlacas)} - Cantos: ${formatMoney(printableOrder.costoCantos)} (${printableOrder.metrosCanto.toFixed(2)} m)</span>
           </div>
           <div class="section">
-            <strong>Entrega estimada:</strong> ${printableOrder.faltanteStock ? "Por faltante de stock, anticipe una demora de 3 a 5 dias habiles." : "Con stock disponible, el plazo estimado es de 24 a 48 hs habiles."}
+            <strong>Entrega estimada:</strong> "Observacion: la entrega puede demorar algunos dias adicionales segun disponibilidad del material al momento de procesar la solicitud."
           </div>
           <div class="section">
             <strong>Condicion de pago:</strong> El pago se realizara en el momento de la entrega.
@@ -261,20 +261,9 @@ export function OrderReceiptDialog({
                   <Typography variant="h6" sx={{ mb: 1 }}>
                     Entrega estimada
                   </Typography>
-                  {currentOrder.faltanteStock ? (
-                    <Alert severity="warning" sx={{ alignItems: "flex-start" }}>
-                      Hay faltante de stock para algunos materiales. Anticipe una demora estimada de 3 a 5 dias habiles.
-                    </Alert>
-                  ) : (
-                    <Alert severity="success" sx={{ alignItems: "flex-start" }}>
-                      Hay stock disponible para esta solicitud. El plazo estimado es de 24 a 48 hs habiles.
-                    </Alert>
-                  )}
-                  {currentOrder.faltanteStock && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-                      Observacion: la entrega puede demorar algunos dias adicionales segun disponibilidad del material al momento de procesar la solicitud.
-                    </Typography>
-                  )}
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+                    Observacion: la entrega puede demorar algunos dias adicionales segun disponibilidad del material al momento de procesar la solicitud.
+                  </Typography>
                 </Paper>
 
                 <Paper variant="outlined" sx={{ p: 2, borderRadius: "12px" }}>
