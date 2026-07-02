@@ -6,11 +6,13 @@ type SeedPlateMaterial = {
   nombre: string;
   tipo: typeof TipoMaterial.PLACA;
   valor: number;
+  valorManoObra: number;
   espesorMm: number;
   anchoPlaca: number;
   altoPlaca: number;
   stockPlacas: number;
   colorCanto: null;
+  placaMaterialId: null;
   activo: boolean;
 };
 
@@ -18,8 +20,10 @@ type SeedEdgeMaterial = {
   nombre: string;
   tipo: typeof TipoMaterial.CANTO;
   valor: number;
+  valorManoObra: number;
   espesorMm: number;
   colorCanto: string;
+  placaNombre: string;
   anchoPlaca: null;
   altoPlaca: null;
   stockPlacas: null;
@@ -42,41 +46,49 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Melamina Blanca 18mm",
     tipo: TipoMaterial.PLACA,
     valor: 85000,
+    valorManoObra: 0,
     espesorMm: 18,
     anchoPlaca: 1830,
     altoPlaca: 2750,
     stockPlacas: 20,
     colorCanto: null,
+    placaMaterialId: null,
     activo: true
   },
   {
     nombre: "Melamina Negra 18mm",
     tipo: TipoMaterial.PLACA,
     valor: 90000,
+    valorManoObra: 0,
     espesorMm: 18,
     anchoPlaca: 1830,
     altoPlaca: 2750,
     stockPlacas: 10,
     colorCanto: null,
+    placaMaterialId: null,
     activo: true
   },
   {
     nombre: "Melamina Roble Dakar 18mm",
     tipo: TipoMaterial.PLACA,
     valor: 98000,
+    valorManoObra: 0,
     espesorMm: 18,
     anchoPlaca: 1830,
     altoPlaca: 2750,
     stockPlacas: 8,
     colorCanto: null,
+    placaMaterialId: null,
     activo: true
   },
   {
     nombre: "Canto Blanco PVC 22mm",
     tipo: TipoMaterial.CANTO,
     valor: 850,
+    valorManoObra: 0,
     espesorMm: 0.4,
     colorCanto: "Blanco",
+    placaNombre: "Melamina Blanca 18mm",
     anchoPlaca: null,
     altoPlaca: null,
     stockPlacas: null,
@@ -86,8 +98,10 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Canto Negro PVC 22mm",
     tipo: TipoMaterial.CANTO,
     valor: 900,
+    valorManoObra: 0,
     espesorMm: 0.4,
     colorCanto: "Negro",
+    placaNombre: "Melamina Negra 18mm",
     anchoPlaca: null,
     altoPlaca: null,
     stockPlacas: null,
@@ -97,8 +111,10 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Canto Roble Dakar PVC 22mm",
     tipo: TipoMaterial.CANTO,
     valor: 950,
+    valorManoObra: 0,
     espesorMm: 0.4,
     colorCanto: "Roble Dakar",
+    placaNombre: "Melamina Roble Dakar 18mm",
     anchoPlaca: null,
     altoPlaca: null,
     stockPlacas: null,
@@ -164,11 +180,23 @@ async function seedOptimizerSettings() {
 }
 
 async function seedMaterialsData() {
-  for (const material of seedMaterials) {
-    await prisma.material.upsert({
+  const platesByName = new Map<string, string>();
+  for (const material of seedMaterials.filter((item): item is SeedPlateMaterial => item.tipo === TipoMaterial.PLACA)) {
+    const plate = await prisma.material.upsert({
       where: { nombre: material.nombre },
       update: material,
       create: material
+    });
+    platesByName.set(plate.nombre, plate.id);
+  }
+
+  for (const material of seedMaterials.filter((item): item is SeedEdgeMaterial => item.tipo === TipoMaterial.CANTO)) {
+    const { placaNombre, ...canto } = material;
+    const placaMaterialId = platesByName.get(placaNombre) ?? null;
+    await prisma.material.upsert({
+      where: { nombre: canto.nombre },
+      update: { ...canto, placaMaterialId },
+      create: { ...canto, placaMaterialId }
     });
   }
 }

@@ -39,13 +39,17 @@ export type Material = {
   nombre: string;
   tipo: MaterialType;
   valor: number;
+  valorManoObra: number;
   espesorMm: number;
   anchoPlaca: number | null;
   altoPlaca: number | null;
   colorCanto: string | null;
+  placaMaterialId: string | null;
+  placaMaterial?: Pick<Material, "id" | "nombre" | "activo"> | null;
   stockPlacas: number | null;
   activo: boolean;
   linkedOrdersCount?: number;
+  linkedCantosCount?: number;
   canDeletePermanently?: boolean;
   fechaCreacion?: string;
   fechaActualizacion?: string;

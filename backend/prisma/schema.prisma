@@ -76,18 +76,23 @@ model Material {
   nombre             String          @unique
   tipo               TipoMaterial    @default(PLACA)
   valor              Float
+  valorManoObra      Float           @default(0)
   espesorMm          Float           @default(18)
   anchoPlaca         Int?
   altoPlaca          Int?
   colorCanto         String?
+  placaMaterialId    String?
   stockPlacas        Int?
   activo             Boolean         @default(true)
   fechaCreacion      DateTime        @default(now())
   fechaActualizacion DateTime        @updatedAt
   detalles           DetallePedido[]
+  placaMaterial      Material?       @relation("CantoPlaca", fields: [placaMaterialId], references: [id], onDelete: SetNull)
+  cantos             Material[]      @relation("CantoPlaca")
 
   @@index([tipo])
   @@index([activo])
+  @@index([placaMaterialId])
   @@map("materiales")
 }
 

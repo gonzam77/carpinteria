@@ -234,7 +234,7 @@ function calculateRowEdgeCost(row: OrderDetail, cantoById: Map<string, Material>
       const canto = cantoById.get(edge.id);
       if (!canto) return total;
       return {
-        cost: total.cost + edge.meters * cantidad * canto.valor,
+        cost: total.cost + edge.meters * cantidad * (canto.valor + canto.valorManoObra),
         meters: total.meters + edge.meters * cantidad
       };
     },

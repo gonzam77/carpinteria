@@ -189,7 +189,7 @@ export function OrderFormPage() {
             "& .MuiStepLabel-label": { fontSize: { xs: 12, sm: 14 } }
           }}
         >
-          {["Datos", "Cortes", "Resumen"].map((label) => (
+          {["Datos", "Cortes", "Cantos", "Resumen"].map((label) => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
             </Step>
@@ -219,12 +219,26 @@ export function OrderFormPage() {
               onClientPhoneChange={setTelefono}
               defaultDetailValues={{ numeroCliente: telefono, nombreCliente: cliente }}
             />
+          </Stack>
+        )}
+        {step === 2 && (
+          <Stack spacing={2}>
+            <OrderItemsTable
+              rows={rows}
+              setRows={updateRows}
+              materials={materials}
+              clientName={cliente}
+              clientPhone={telefono}
+              onClientPhoneChange={setTelefono}
+              defaultDetailValues={{ numeroCliente: telefono, nombreCliente: cliente }}
+              mode="edges"
+            />
             <Paper sx={{ p: 2, borderRadius: "8px" }}>
               <CutOptimizer rows={rows} materials={materials} />
             </Paper>
           </Stack>
         )}
-        {step === 2 && (
+        {step === 3 && (
           <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: "8px", overflow: "hidden" }}>
             <Stack spacing={2}>
               <Box>
@@ -255,7 +269,7 @@ export function OrderFormPage() {
               Volver
             </Button>
           )}
-          {step < 2 ? (
+          {step < 3 ? (
             <Button type="button" variant="contained" endIcon={<ArrowForwardIcon />} onClick={nextStep} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Siguiente
             </Button>

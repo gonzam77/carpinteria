@@ -155,7 +155,7 @@ function calculateEdgeTotals(detail: DetallePedido, cantoById: Map<string, Mater
       const canto = cantoById.get(edge.id);
       if (!canto) return total;
       return {
-        costo: total.costo + edge.meters * cantidad * canto.valor,
+        costo: total.costo + edge.meters * cantidad * (canto.valor + canto.valorManoObra),
         metros: total.metros + edge.meters * cantidad
       };
     },

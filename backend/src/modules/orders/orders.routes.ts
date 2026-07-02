@@ -23,6 +23,23 @@ function orderAccessWhere(user: any) {
   return user.rol === Rol.ADMIN ? {} : { usuarioId: user.id };
 }
 
+type CantoWithPlate = Material & {
+  placaMaterial?: Pick<Material, "nombre"> | null;
+};
+
+function formatThickness(value: number) {
+  return Number(value.toFixed(2)).toLocaleString("es-AR", { maximumFractionDigits: 2 });
+}
+
+function buildCantoName(placaNombre: string, espesorMm: number) {
+  return `Canto ${placaNombre} ${formatThickness(espesorMm)}mm`;
+}
+
+function resolveCantoName(canto?: CantoWithPlate | null) {
+  if (!canto) return null;
+  return canto.placaMaterial?.nombre ? buildCantoName(canto.placaMaterial.nombre, canto.espesorMm) : canto.nombre;
+}
+
 async function normalizeDetails(detalles: any[], cliente: string, numeroContacto: string) {
   const materialIds = [...new Set(detalles.map((detail) => detail.materialId))];
   const cantoIds = [
@@ -37,9 +54,10 @@ async function normalizeDetails(detalles: any[], cliente: string, numeroContacto
     where: { id: { in: materialIds }, activo: true, tipo: TipoMaterial.PLACA }
   });
   const materialById = new Map(materials.map((material) => [material.id, material]));
-  const cantos: Material[] = cantoIds.length
+  const cantos: CantoWithPlate[] = cantoIds.length
     ? await prisma.material.findMany({
-        where: { id: { in: cantoIds }, activo: true, tipo: TipoMaterial.CANTO }
+        where: { id: { in: cantoIds }, activo: true, tipo: TipoMaterial.CANTO },
+        include: { placaMaterial: { select: { nombre: true } } }
       })
     : [];
   const cantoById = new Map(cantos.map((canto) => [canto.id, canto]));
@@ -57,6 +75,11 @@ async function normalizeDetails(detalles: any[], cliente: string, numeroContacto
     const cantoLargo2 = detail.cantoLargo2Id ? cantoById.get(detail.cantoLargo2Id) : null;
     const cantoAncho1 = detail.cantoAncho1Id ? cantoById.get(detail.cantoAncho1Id) : null;
     const cantoAncho2 = detail.cantoAncho2Id ? cantoById.get(detail.cantoAncho2Id) : null;
+    const selectedCantos = [cantoLargo1, cantoLargo2, cantoAncho1, cantoAncho2].filter(Boolean) as CantoWithPlate[];
+
+    if (selectedCantos.some((canto) => canto.placaMaterialId && canto.placaMaterialId !== material.id)) {
+      throw new AppError(400, `Los cantos de la pieza ${detail.nombreProducto || material.nombre} deben corresponder a la placa seleccionada.`);
+    }
 
     return {
       materialId: material.id,
@@ -66,16 +89,16 @@ async function normalizeDetails(detalles: any[], cliente: string, numeroContacto
       ancho: detail.ancho,
       cantidad: detail.cantidad,
       cantoLargo1Id: cantoLargo1?.id ?? null,
-      cantoLargo1Nombre: cantoLargo1?.nombre ?? null,
+      cantoLargo1Nombre: resolveCantoName(cantoLargo1),
       cantoLargo1: Boolean(cantoLargo1),
       cantoLargo2Id: cantoLargo2?.id ?? null,
-      cantoLargo2Nombre: cantoLargo2?.nombre ?? null,
+      cantoLargo2Nombre: resolveCantoName(cantoLargo2),
       cantoLargo2: Boolean(cantoLargo2),
       cantoAncho1Id: cantoAncho1?.id ?? null,
-      cantoAncho1Nombre: cantoAncho1?.nombre ?? null,
+      cantoAncho1Nombre: resolveCantoName(cantoAncho1),
       cantoAncho1: Boolean(cantoAncho1),
       cantoAncho2Id: cantoAncho2?.id ?? null,
-      cantoAncho2Nombre: cantoAncho2?.nombre ?? null,
+      cantoAncho2Nombre: resolveCantoName(cantoAncho2),
       cantoAncho2: Boolean(cantoAncho2),
       permiteRotar: detail.permiteRotar,
       codigoBarraCentro: detail.codigoBarraCentro,
