@@ -59,7 +59,7 @@ usersRouter.put(
         rol: data.rol,
         ...(data.password ? { password: await bcrypt.hash(data.password, 10) } : {})
       },
-      select: { id: true, nombre: true, apellido: true, email: true, rol: true, fechaCreacion: true }
+      select: { id: true, nombre: true, apellido: true, email: true, telefono: true, rol: true, fechaCreacion: true }
     });
     await prisma.auditoria.create({
       data: { usuarioId: req.user.id, accion: "EDITAR_USUARIO", entidad: "Usuario", entidadId: user.id }
