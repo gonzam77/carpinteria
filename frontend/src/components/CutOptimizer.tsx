@@ -48,7 +48,6 @@ type MaterialCutResult = {
   edgeCost: number;
   edgeMeters: number;
   cost: number;
-  usagePercent: number;
   wastePercent: number;
   unplaced: string[];
 };
@@ -286,7 +285,6 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
       }
 
       const optimizedArea = boards.length * boardArea;
-      const usagePercent = optimizedArea ? (totalArea / optimizedArea) * 100 : 0;
       const boardCost = boards.length * material.valor;
       const edgeSummary = materialRows.reduce(
         (total, row) => {
@@ -312,8 +310,6 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
         edgeCost: edgeSummary.cost,
         edgeMeters: edgeSummary.meters,
         cost: boardCost + edgeSummary.cost,
-        usagePercent,
-        wastePercent: optimizedArea ? 100 - usagePercent : 0,
         unplaced
       };
     })
@@ -433,7 +429,6 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
   const totalCost = results.reduce((total, result) => total + result.cost, 0);
   const totalArea = results.reduce((total, result) => total + result.totalArea, 0);
   const totalBoardArea = results.reduce((total, result) => total + result.optimizedBoards.length * result.usableBoardWidthMm * result.usableBoardHeightMm, 0);
-  const totalUsage = totalBoardArea ? (totalArea / totalBoardArea) * 100 : 0;
 
   return (
     <Paper sx={{ p: { xs: 2, sm: 2.5 }, overflow: "hidden" }}>
@@ -441,7 +436,7 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
         <Box>
           <Typography variant="h6">Optimizador de cortes</Typography>
           <Typography color="text.secondary">
-            Placas necesarias: {totalBoards} - Costo material: {formatMoney(totalCost)} - Aprovechamiento: {totalUsage.toFixed(1)}% - Desperdicio: {(100 - totalUsage).toFixed(1)}%
+            Placas necesarias: {totalBoards} - Costo material: {formatMoney(totalCost)}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Perfilado: {settings.perfiladoBordeMm} mm por lado - Sierra: {settings.espesorSierraMm} mm por pasada
@@ -454,7 +449,7 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
               {result.material.nombre} {result.material.espesorMm}mm - Placa {result.material.anchoPlaca}x{result.material.altoPlaca} mm
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Area util placa: {result.usableBoardWidthMm}x{result.usableBoardHeightMm} mm - Placas estimadas por area: {result.areaEstimatedBoards} - Placas optimizadas: {result.optimizedBoards.length} - Costo placas: {formatMoney(result.boardCost)} - Costo cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - Total: {formatMoney(result.cost)} - Aprovechamiento: {result.usagePercent.toFixed(1)}% - Desperdicio: {result.wastePercent.toFixed(1)}%
+              Area util placa: {result.usableBoardWidthMm}x{result.usableBoardHeightMm} mm - Costo placas: {formatMoney(result.boardCost)} - Costo cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - Total: {formatMoney(result.cost)}
             </Typography>
             {result.unplaced.length > 0 && (
               <Alert severity="warning" sx={{ mt: 1 }}>
