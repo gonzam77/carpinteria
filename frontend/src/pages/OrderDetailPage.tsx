@@ -224,10 +224,10 @@ export function OrderDetailPage() {
         </Stack>
       </Stack>
       <Paper sx={{ overflowX: "auto", borderRadius: "8px" }}>
-        <Table size="small" sx={{ minWidth: 1180 }}>
+        <Table size="small" sx={{ minWidth: 920 }}>
           <TableHead>
             <TableRow>
-              {["Codigo barra", "Material", "Largo", "Ancho", "Cantidad", "CL1", "CL2", "CA1", "CA2", "Rotar", "Centro", "Remark", "Cliente", "Producto"].map((header) => (
+              {["Material", "Largo", "Ancho", "Cantidad", "CL1", "CL2", "CA1", "CA2", "Rotar", "Cliente", "Producto"].map((header) => (
                 <TableCell key={header} sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
                   {header}
                 </TableCell>
@@ -237,7 +237,6 @@ export function OrderDetailPage() {
           <TableBody>
             {order.detalles.map((detail) => (
               <TableRow key={detail.id}>
-                <TableCell>{detail.codigoBarra}</TableCell>
                 <TableCell>{detail.material}</TableCell>
                 <TableCell>
                   <DimensionCell value={detail.largo} count={Number(Boolean(detail.cantoLargo1)) + Number(Boolean(detail.cantoLargo2))} />
@@ -251,8 +250,6 @@ export function OrderDetailPage() {
                 <TableCell>{cantoLabel(detail.cantoAncho1, detail.cantoAncho1Nombre)}</TableCell>
                 <TableCell>{cantoLabel(detail.cantoAncho2, detail.cantoAncho2Nombre)}</TableCell>
                 <TableCell>{detail.permiteRotar ? "Si" : "No"}</TableCell>
-                <TableCell>{detail.codigoBarraCentro}</TableCell>
-                <TableCell>{detail.remark}</TableCell>
                 <TableCell>{detail.nombreCliente || order.cliente}</TableCell>
                 <TableCell>{detail.nombreProducto}</TableCell>
               </TableRow>
