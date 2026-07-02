@@ -136,7 +136,18 @@ export const theme = createTheme({
         }
       }
     },
+    MuiTablePagination: {
+      defaultProps: {
+        labelRowsPerPage: "Filas por pagina:"
+      }
+    },
     MuiDataGrid: {
+      defaultProps: {
+        localeText: {
+          noRowsLabel: "Sin registros",
+          noResultsOverlayLabel: "Sin resultados"
+        }
+      },
       styleOverrides: {
         root: {
           border: 0,
