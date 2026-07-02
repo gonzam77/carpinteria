@@ -75,11 +75,6 @@ async function normalizeDetails(detalles: any[], cliente: string, numeroContacto
     const cantoLargo2 = detail.cantoLargo2Id ? cantoById.get(detail.cantoLargo2Id) : null;
     const cantoAncho1 = detail.cantoAncho1Id ? cantoById.get(detail.cantoAncho1Id) : null;
     const cantoAncho2 = detail.cantoAncho2Id ? cantoById.get(detail.cantoAncho2Id) : null;
-    const selectedCantos = [cantoLargo1, cantoLargo2, cantoAncho1, cantoAncho2].filter(Boolean) as CantoWithPlate[];
-
-    if (selectedCantos.some((canto) => canto.placaMaterialId && canto.placaMaterialId !== material.id)) {
-      throw new AppError(400, `Los cantos de la pieza ${detail.nombreProducto || material.nombre} deben corresponder a la placa seleccionada.`);
-    }
 
     return {
       materialId: material.id,

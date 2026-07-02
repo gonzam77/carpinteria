@@ -12,6 +12,7 @@ type PlacedPiece = {
   requestedWidth: number;
   requestedHeight: number;
   label: string;
+  colorIndex: number;
   rotated: boolean;
   edges: {
     top?: string | null;
@@ -57,6 +58,21 @@ const DEFAULT_OPTIMIZER_SETTINGS: OptimizerSettings = {
   espesorSierraMm: 4.3,
   perfiladoBordeMm: 10
 };
+
+const pieceColors = [
+  { background: "#dbeafe", border: "#93c5fd" },
+  { background: "#dcfce7", border: "#86efac" },
+  { background: "#fef3c7", border: "#fcd34d" },
+  { background: "#fce7f3", border: "#f9a8d4" },
+  { background: "#ede9fe", border: "#c4b5fd" },
+  { background: "#ccfbf1", border: "#5eead4" },
+  { background: "#ffedd5", border: "#fdba74" },
+  { background: "#e0f2fe", border: "#7dd3fc" },
+  { background: "#f3e8ff", border: "#d8b4fe" },
+  { background: "#ecfccb", border: "#bef264" },
+  { background: "#fee2e2", border: "#fca5a5" },
+  { background: "#e2e8f0", border: "#94a3b8" }
+];
 
 function resolveMaterialId(row: OrderDetail, materials: Material[]) {
   return row.materialId || materials.find((material) => material.nombre === row.material)?.id || "";
@@ -136,7 +152,7 @@ function sortPlacements<T extends { waste: number; shortSideWaste: number; rect:
 
 function tryPlaceInBoard(
   board: BoardPlan,
-  piece: { width: number; height: number; label: string; canRotate: boolean; edges: PlacedPiece["edges"] },
+  piece: { width: number; height: number; label: string; colorIndex: number; canRotate: boolean; edges: PlacedPiece["edges"] },
   variant: number,
   settings: OptimizerSettings
 ) {
@@ -188,6 +204,7 @@ function tryPlaceInBoard(
     requestedWidth: piece.width,
     requestedHeight: piece.height,
     label: piece.label,
+    colorIndex: piece.colorIndex,
     rotated: placement.rotated,
     edges: placement.edges
   });
@@ -254,6 +271,7 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
             width: Number(row.ancho),
             height: Number(row.largo),
             label: pieceLabel(row, rowIndex, copyIndex),
+            colorIndex: rowIndex,
             canRotate: Boolean(row.permiteRotar),
             edges: resolvePieceEdges(row)
           }))
@@ -365,60 +383,64 @@ function BoardPreview({ board, material }: { board: BoardPlan; material: Materia
       <Box sx={{ border: "1px solid", borderColor: "divider", width: { xs: 340, sm: 420, lg: 500 }, maxWidth: "100%", aspectRatio: `${boardWidthMm} / ${boardHeightMm}`, position: "relative", bgcolor: "background.default", mt: 0.5 }}>
         <Box sx={{ position: "absolute", top: 4, right: 6, fontSize: 10, color: "text.secondary", bgcolor: "rgba(255,255,255,0.75)", px: 0.5 }}>{boardWidthMm} mm</Box>
         <Box sx={{ position: "absolute", bottom: 4, left: 6, fontSize: 10, color: "text.secondary", bgcolor: "rgba(255,255,255,0.75)", px: 0.5 }}>{boardHeightMm} mm</Box>
-        {board.pieces.map((piece, index) => (
-          <Box
-            key={`${piece.label}-${index}`}
-            sx={{
+        {board.pieces.map((piece, index) => {
+          const color = pieceColors[piece.colorIndex % pieceColors.length];
+
+          return (
+            <Box
+              key={`${piece.label}-${index}`}
+              sx={{
               position: "absolute",
               left: `${(piece.x / boardWidthMm) * 100}%`,
               top: `${(piece.y / boardHeightMm) * 100}%`,
               width: `${(piece.width / boardWidthMm) * 100}%`,
               height: `${(piece.height / boardHeightMm) * 100}%`,
               border: "1px solid",
-              borderColor: "primary.dark",
-              bgcolor: "primary.light",
+              borderColor: color.border,
+              bgcolor: color.background,
               color: "#000000",
               overflow: "hidden",
               p: 0.5,
               fontSize: 8,
               lineHeight: 1.05
             }}
-          >
-            {(["top", "right", "bottom", "left"] as const).map((side) =>
-              piece.edges[side] ? <Box key={`${side}-line`} sx={edgeLineStyle(side)} /> : null
-            )}
-            {(["top", "right", "bottom", "left"] as const).map((side) =>
-              piece.edges[side] ? (
-                <Box key={`${side}-label`} sx={edgeLabelStyle(side)}>
-                  {piece.edges[side]}
-                </Box>
-              ) : null
-            )}
-            <Box
-              sx={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textAlign: "center",
-                px: 1.25,
-                py: 1.5,
-                zIndex: 1
-              }}
             >
-              <Box>
-                <Box sx={{ fontSize: 8, fontWeight: 700, lineHeight: 1.05 }}>
-                  {piece.label}
-                  {piece.rotated ? " (R)" : ""}
-                </Box>
-                <Box sx={{ fontSize: 7, lineHeight: 1.05 }}>
-                  {piece.requestedHeight}x{piece.requestedWidth} mm
+              {(["top", "right", "bottom", "left"] as const).map((side) =>
+                piece.edges[side] ? <Box key={`${side}-line`} sx={edgeLineStyle(side)} /> : null
+              )}
+              {(["top", "right", "bottom", "left"] as const).map((side) =>
+                piece.edges[side] ? (
+                  <Box key={`${side}-label`} sx={edgeLabelStyle(side)}>
+                    {piece.edges[side]}
+                  </Box>
+                ) : null
+              )}
+              <Box
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  px: 1.25,
+                  py: 1.5,
+                  zIndex: 1
+                }}
+              >
+                <Box>
+                  <Box sx={{ fontSize: 8, fontWeight: 700, lineHeight: 1.05 }}>
+                    {piece.label}
+                    {piece.rotated ? " (R)" : ""}
+                  </Box>
+                  <Box sx={{ fontSize: 7, lineHeight: 1.05 }}>
+                    {piece.requestedHeight}x{piece.requestedWidth} mm
+                  </Box>
                 </Box>
               </Box>
             </Box>
-          </Box>
-        ))}
+          );
+        })}
       </Box>
     </Box>
   );

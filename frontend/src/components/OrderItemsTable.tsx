@@ -1,8 +1,10 @@
 import AddIcon from "@mui/icons-material/Add";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
+import RemoveIcon from "@mui/icons-material/Remove";
 import StraightenIcon from "@mui/icons-material/Straighten";
 import { Box, Button, Checkbox, IconButton, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from "@mui/material";
+import { useState } from "react";
 import { Material, OrderDetail } from "../types";
 
 const emptyRow: OrderDetail = {
@@ -59,6 +61,7 @@ const edgeFields: EdgeFieldConfig[] = [
 
 const largoEdgeFlags: EdgeFlagField[] = ["cantoLargo1", "cantoLargo2"];
 const anchoEdgeFlags: EdgeFlagField[] = ["cantoAncho1", "cantoAncho2"];
+const maxEdgeTypeRows = 4;
 
 export function createEmptyDetail(defaults: Partial<Pick<OrderDetail, "numeroCliente" | "nombreCliente">> = {}): OrderDetail {
   return { ...emptyRow, ...defaults };
@@ -134,6 +137,8 @@ export function OrderItemsTable({
   defaultDetailValues?: Partial<Pick<OrderDetail, "numeroCliente" | "nombreCliente">>;
   mode?: OrderItemsMode;
 }) {
+  const [edgeTypeSelections, setEdgeTypeSelections] = useState<Record<string, string>>({});
+  const [edgeTypeRowCounts, setEdgeTypeRowCounts] = useState<Record<string, number>>({});
   const placaMaterials = materials.filter((material) => material.tipo === "PLACA");
   const cantoMaterials = materials.filter((material) => material.tipo === "CANTO");
   const cantoOptions: EdgeOption[] = cantoMaterials.map((material) => ({
@@ -163,6 +168,10 @@ export function OrderItemsTable({
     } as Partial<OrderDetail>);
   }
 
+  function patchEdges(index: number, patches: Partial<OrderDetail>) {
+    patchRow(index, patches);
+  }
+
   function selectedMaterialId(row: OrderDetail) {
     return row.materialId || placaMaterials.find((material) => material.nombre === row.material)?.id || "";
   }
@@ -189,7 +198,11 @@ export function OrderItemsTable({
 
   function cantoOptionsForRow(row: OrderDetail) {
     const materialId = selectedMaterialId(row);
-    const options = cantoOptions.filter((option) => option.placaMaterialId === materialId);
+    const options = [...cantoOptions].sort((a, b) => {
+      const aMatchesMaterial = a.placaMaterialId === materialId ? 0 : 1;
+      const bMatchesMaterial = b.placaMaterialId === materialId ? 0 : 1;
+      return aMatchesMaterial - bMatchesMaterial || formatCantoOption(a).localeCompare(formatCantoOption(b), "es");
+    });
     const seen = new Set(options.map((option) => option.id));
 
     edgeFields.forEach((config) => {
@@ -210,8 +223,141 @@ export function OrderItemsTable({
     return options;
   }
 
+  function rowKey(row: OrderDetail, index: number) {
+    return row.id ?? String(index);
+  }
+
+  function edgeTypeKey(row: OrderDetail, index: number, typeIndex: number) {
+    return `${rowKey(row, index)}-${typeIndex}`;
+  }
+
+  function selectedCantoIdsForRow(row: OrderDetail) {
+    const ids: string[] = [];
+    edgeFields.forEach((config) => {
+      const cantoId = row[config.idField];
+      if (cantoId && !ids.includes(cantoId)) ids.push(cantoId);
+    });
+    return ids;
+  }
+
+  function defaultCantoIdForRow(row: OrderDetail) {
+    const materialId = selectedMaterialId(row);
+    return cantoOptions.find((option) => option.placaMaterialId === materialId)?.id ?? "";
+  }
+
+  function edgeTypeRowsForRow(row: OrderDetail, rowIndex: number) {
+    const selectedCount = selectedCantoIdsForRow(row).length;
+    const configuredCount = edgeTypeRowCounts[rowKey(row, rowIndex)] ?? 0;
+    return Math.min(maxEdgeTypeRows, Math.max(1, selectedCount, configuredCount));
+  }
+
+  function edgeTypeValue(row: OrderDetail, rowIndex: number, typeIndex: number) {
+    const key = edgeTypeKey(row, rowIndex, typeIndex);
+    if (edgeTypeSelections[key] !== undefined) return edgeTypeSelections[key];
+    return selectedCantoIdsForRow(row)[typeIndex] ?? (typeIndex === 0 ? defaultCantoIdForRow(row) : "");
+  }
+
+  function cantoByIdForRow(row: OrderDetail, cantoId: string) {
+    return cantoOptionsForRow(row).find((option) => option.id === cantoId) ?? null;
+  }
+
+  function setEdgeTypeValue(row: OrderDetail, rowIndex: number, typeIndex: number, nextCantoId: string) {
+    const previousCantoId = edgeTypeValue(row, rowIndex, typeIndex);
+    setEdgeTypeSelections((current) => ({
+      ...current,
+      [edgeTypeKey(row, rowIndex, typeIndex)]: nextCantoId
+    }));
+
+    if (!previousCantoId || previousCantoId === nextCantoId) return;
+
+    const nextCanto = cantoByIdForRow(row, nextCantoId);
+    const patches = edgeFields.reduce((currentPatch, config) => {
+      if (row[config.idField] !== previousCantoId) return currentPatch;
+      return {
+        ...currentPatch,
+        [config.idField]: nextCanto?.id ?? null,
+        [config.nameField]: nextCanto?.nombre ?? null,
+        [config.flagField]: Boolean(nextCanto)
+      };
+    }, {} as Partial<OrderDetail>);
+
+    if (Object.keys(patches).length) patchEdges(rowIndex, patches);
+  }
+
+  function addEdgeTypeRow(row: OrderDetail, rowIndex: number) {
+    const currentCount = edgeTypeRowsForRow(row, rowIndex);
+    setEdgeTypeRowCounts((current) => ({
+      ...current,
+      [rowKey(row, rowIndex)]: Math.min(maxEdgeTypeRows, currentCount + 1)
+    }));
+  }
+
+  function removeLastEdgeTypeRow(row: OrderDetail, rowIndex: number) {
+    const currentCount = edgeTypeRowsForRow(row, rowIndex);
+    if (currentCount <= 1) return;
+
+    const typeIndex = currentCount - 1;
+    const removedCantoId = edgeTypeValue(row, rowIndex, typeIndex);
+    const key = rowKey(row, rowIndex);
+
+    setEdgeTypeRowCounts((current) => ({
+      ...current,
+      [key]: Math.max(1, currentCount - 1)
+    }));
+    setEdgeTypeSelections((current) => {
+      const next = { ...current };
+      delete next[edgeTypeKey(row, rowIndex, typeIndex)];
+      return next;
+    });
+
+    if (!removedCantoId) return;
+
+    const patches = edgeFields.reduce((currentPatch, config) => {
+      if (row[config.idField] !== removedCantoId) return currentPatch;
+      return {
+        ...currentPatch,
+        [config.idField]: null,
+        [config.nameField]: null,
+        [config.flagField]: false
+      };
+    }, {} as Partial<OrderDetail>);
+
+    if (Object.keys(patches).length) patchEdges(rowIndex, patches);
+  }
+
+  function allEdgesMatch(row: OrderDetail, cantoId: string) {
+    return Boolean(cantoId) && edgeFields.every((config) => Boolean(row[config.flagField]) && row[config.idField] === cantoId);
+  }
+
+  function someEdgesMatch(row: OrderDetail, cantoId: string) {
+    return Boolean(cantoId) && edgeFields.some((config) => Boolean(row[config.flagField]) && row[config.idField] === cantoId);
+  }
+
+  function patchAllEdges(index: number, row: OrderDetail, canto: EdgeOption | null, checked: boolean) {
+    const patches = edgeFields.reduce((currentPatch, config) => {
+      if (checked) {
+        return {
+          ...currentPatch,
+          [config.idField]: canto?.id ?? null,
+          [config.nameField]: canto?.nombre ?? null,
+          [config.flagField]: Boolean(canto)
+        };
+      }
+
+      if (!canto || row[config.idField] !== canto.id) return currentPatch;
+      return {
+        ...currentPatch,
+        [config.idField]: null,
+        [config.nameField]: null,
+        [config.flagField]: false
+      };
+    }, {} as Partial<OrderDetail>);
+
+    if (Object.keys(patches).length) patchEdges(index, patches);
+  }
+
   function edgeMatches(row: OrderDetail, config: EdgeFieldConfig, cantoId: string) {
-    return Boolean(row[config.flagField]) && row[config.idField] === cantoId;
+    return Boolean(cantoId) && Boolean(row[config.flagField]) && row[config.idField] === cantoId;
   }
 
   if (mode === "edges") {
@@ -259,8 +405,11 @@ export function OrderItemsTable({
                   <TableCell rowSpan={2} sx={{ width: 330, verticalAlign: "middle" }}>
                     Partes
                   </TableCell>
-                  <TableCell rowSpan={2} sx={{ minWidth: 260, verticalAlign: "middle" }}>
+                  <TableCell rowSpan={2} sx={{ minWidth: 280, verticalAlign: "middle" }}>
                     Tipo
+                  </TableCell>
+                  <TableCell rowSpan={2} align="center" sx={{ width: 88, verticalAlign: "middle" }}>
+                    Todos
                   </TableCell>
                   <TableCell align="center" colSpan={2}>
                     Largo
@@ -287,34 +436,87 @@ export function OrderItemsTable({
                         <TableCell sx={{ bgcolor: "background.default" }}>
                           <PartSummary row={row} index={index} />
                         </TableCell>
-                        <TableCell colSpan={5} sx={{ color: "text.secondary" }}>
+                        <TableCell colSpan={6} sx={{ color: "text.secondary" }}>
                           No hay cantos cargados.
                         </TableCell>
                       </TableRow>
                     );
                   }
 
-                  return options.map((option, optionIndex) => (
-                    <TableRow key={`${index}-${option.id}`}>
-                      {optionIndex === 0 && (
-                        <TableCell rowSpan={options.length} sx={{ bgcolor: "background.default", verticalAlign: "top" }}>
-                          <PartSummary row={row} index={index} />
+                  const edgeTypeRows = edgeTypeRowsForRow(row, index);
+
+                  return Array.from({ length: edgeTypeRows }, (_item, typeIndex) => {
+                    const selectedCantoId = edgeTypeValue(row, index, typeIndex);
+                    const selectedCanto = options.find((option) => option.id === selectedCantoId) ?? null;
+                    const canAddEdgeType = typeIndex === 0 && edgeTypeRows < maxEdgeTypeRows;
+                    const canRemoveEdgeType = typeIndex === 0 && edgeTypeRows > 1;
+                    const selectedIdsInOtherRows = Array.from({ length: edgeTypeRows }, (_otherItem, otherIndex) => (otherIndex === typeIndex ? "" : edgeTypeValue(row, index, otherIndex))).filter(Boolean);
+
+                    return (
+                      <TableRow key={`${index}-${typeIndex}`}>
+                        {typeIndex === 0 && (
+                          <TableCell rowSpan={edgeTypeRows} sx={{ bgcolor: "background.default", verticalAlign: "top" }}>
+                            <PartSummary row={row} index={index} />
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1.25 }}>
+                              {canAddEdgeType && (
+                                <Button type="button" size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => addEdgeTypeRow(row, index)}>
+                                  Agregar canto
+                                </Button>
+                              )}
+                              {canRemoveEdgeType && (
+                                <Button type="button" size="small" variant="outlined" color="warning" startIcon={<RemoveIcon />} onClick={() => removeLastEdgeTypeRow(row, index)}>
+                                  Quitar canto
+                                </Button>
+                              )}
+                            </Stack>
+                          </TableCell>
+                        )}
+                        <TableCell sx={{ minWidth: 280 }}>
+                          <TextField
+                            select
+                            size="small"
+                            value={selectedCantoId}
+                            onChange={(event) => setEdgeTypeValue(row, index, typeIndex, event.target.value)}
+                            fullWidth
+                          >
+                            <MenuItem value="">Seleccionar canto</MenuItem>
+                            {options.map((option) => (
+                              <MenuItem key={option.id} value={option.id} disabled={selectedIdsInOtherRows.includes(option.id)}>
+                                {formatCantoOption(option)}
+                              </MenuItem>
+                            ))}
+                          </TextField>
                         </TableCell>
-                      )}
-                      <TableCell sx={{ fontWeight: 700 }}>{formatCantoOption(option)}</TableCell>
-                      {edgeFields.map((config) => (
-                        <TableCell key={config.idField} align="center">
-                          <Tooltip title={config.label}>
-                            <Checkbox
-                              checked={edgeMatches(row, config, option.id)}
-                              onChange={(event) => patchEdge(index, config, event.target.checked ? option : null)}
-                              inputProps={{ "aria-label": `${config.label} ${formatCantoOption(option)}` }}
-                            />
+                        <TableCell align="center">
+                          <Tooltip title={selectedCanto ? "Marcar o quitar todos los lados" : "Seleccione un canto"}>
+                            <span>
+                              <Checkbox
+                                checked={allEdgesMatch(row, selectedCantoId)}
+                                indeterminate={!allEdgesMatch(row, selectedCantoId) && someEdgesMatch(row, selectedCantoId)}
+                                disabled={!selectedCanto}
+                                onChange={(event) => patchAllEdges(index, row, selectedCanto, event.target.checked)}
+                                inputProps={{ "aria-label": `Todos ${selectedCanto ? formatCantoOption(selectedCanto) : "sin canto"}` }}
+                              />
+                            </span>
                           </Tooltip>
                         </TableCell>
-                      ))}
-                    </TableRow>
-                  ));
+                        {edgeFields.map((config) => (
+                          <TableCell key={config.idField} align="center">
+                            <Tooltip title={selectedCanto ? config.label : "Seleccione un canto"}>
+                              <span>
+                                <Checkbox
+                                  checked={edgeMatches(row, config, selectedCantoId)}
+                                  disabled={!selectedCanto}
+                                  onChange={(event) => patchEdge(index, config, event.target.checked ? selectedCanto : null)}
+                                  inputProps={{ "aria-label": `${config.label} ${selectedCanto ? formatCantoOption(selectedCanto) : "sin canto"}` }}
+                                />
+                              </span>
+                            </Tooltip>
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  });
                 })}
               </TableBody>
             </Table>
