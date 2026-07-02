@@ -390,20 +390,20 @@ function BoardPreview({ board, material }: { board: BoardPlan; material: Materia
             <Box
               key={`${piece.label}-${index}`}
               sx={{
-              position: "absolute",
-              left: `${(piece.x / boardWidthMm) * 100}%`,
-              top: `${(piece.y / boardHeightMm) * 100}%`,
-              width: `${(piece.width / boardWidthMm) * 100}%`,
-              height: `${(piece.height / boardHeightMm) * 100}%`,
-              border: "1px solid",
-              borderColor: color.border,
-              bgcolor: color.background,
-              color: "#000000",
-              overflow: "hidden",
-              p: 0.5,
-              fontSize: 8,
-              lineHeight: 1.05
-            }}
+                position: "absolute",
+                left: `${(piece.x / boardWidthMm) * 100}%`,
+                top: `${(piece.y / boardHeightMm) * 100}%`,
+                width: `${(piece.width / boardWidthMm) * 100}%`,
+                height: `${(piece.height / boardHeightMm) * 100}%`,
+                border: "1px solid",
+                borderColor: color.border,
+                bgcolor: color.background,
+                color: "#000000",
+                overflow: "hidden",
+                p: 0.5,
+                fontSize: 8,
+                lineHeight: 1.05
+              }}
             >
               {(["top", "right", "bottom", "left"] as const).map((side) =>
                 piece.edges[side] ? <Box key={`${side}-line`} sx={edgeLineStyle(side)} /> : null
