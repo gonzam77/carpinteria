@@ -43,7 +43,7 @@ const adminUser = {
 
 const seedMaterials: SeedMaterial[] = [
   {
-    nombre: "Melamina Blanca 18mm",
+    nombre: "Melamina Blanca",
     tipo: TipoMaterial.PLACA,
     valor: 85000,
     valorManoObra: 0,
@@ -56,7 +56,7 @@ const seedMaterials: SeedMaterial[] = [
     activo: true
   },
   {
-    nombre: "Melamina Negra 18mm",
+    nombre: "Melamina Negra",
     tipo: TipoMaterial.PLACA,
     valor: 90000,
     valorManoObra: 0,
@@ -69,7 +69,7 @@ const seedMaterials: SeedMaterial[] = [
     activo: true
   },
   {
-    nombre: "Melamina Roble Dakar 18mm",
+    nombre: "Melamina Roble Dakar",
     tipo: TipoMaterial.PLACA,
     valor: 98000,
     valorManoObra: 0,
@@ -82,39 +82,39 @@ const seedMaterials: SeedMaterial[] = [
     activo: true
   },
   {
-    nombre: "Canto Blanco PVC 22mm",
+    nombre: "Canto Blanco PVC",
     tipo: TipoMaterial.CANTO,
     valor: 850,
     valorManoObra: 0,
     espesorMm: 0.4,
     colorCanto: "Blanco",
-    placaNombre: "Melamina Blanca 18mm",
+    placaNombre: "Melamina Blanca",
     anchoPlaca: null,
     altoPlaca: null,
     stockPlacas: null,
     activo: true
   },
   {
-    nombre: "Canto Negro PVC 22mm",
+    nombre: "Canto Negro PVC",
     tipo: TipoMaterial.CANTO,
     valor: 900,
     valorManoObra: 0,
     espesorMm: 0.4,
     colorCanto: "Negro",
-    placaNombre: "Melamina Negra 18mm",
+    placaNombre: "Melamina Negra",
     anchoPlaca: null,
     altoPlaca: null,
     stockPlacas: null,
     activo: true
   },
   {
-    nombre: "Canto Roble Dakar PVC 22mm",
+    nombre: "Canto Roble Dakar PVC",
     tipo: TipoMaterial.CANTO,
     valor: 950,
     valorManoObra: 0,
     espesorMm: 0.4,
     colorCanto: "Roble Dakar",
-    placaNombre: "Melamina Roble Dakar 18mm",
+    placaNombre: "Melamina Roble Dakar",
     anchoPlaca: null,
     altoPlaca: null,
     stockPlacas: null,
