@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./layouts/AppLayout";
+import { BudgetSettingsPage } from "./pages/BudgetSettingsPage";
 import { CompanySettingsPage } from "./pages/CompanySettingsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -59,6 +60,14 @@ export function App() {
           element={
             <ProtectedRoute roles={["ADMIN"]}>
               <OptimizerSettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="configuracion-presupuesto"
+          element={
+            <ProtectedRoute roles={["ADMIN"]}>
+              <BudgetSettingsPage />
             </ProtectedRoute>
           }
         />

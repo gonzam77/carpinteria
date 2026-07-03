@@ -22,7 +22,6 @@ const cantoSchema = z.object({
   tipo: z.literal(TipoMaterial.CANTO),
   placaMaterialId: z.string().uuid(),
   valor: z.coerce.number().nonnegative(),
-  valorManoObra: z.coerce.number().nonnegative(),
   espesorMm: z.coerce.number().positive(),
   activo: z.boolean().optional()
 });
@@ -207,7 +206,7 @@ materialsRouter.post(
       parsed.tipo === TipoMaterial.PLACA
         ? await (async () => {
             await ensureMaterialNameAvailable(parsed.nombre);
-            return { ...parsed, colorCanto: null, placaMaterialId: null, valorManoObra: 0, stockPlacas: parsed.stockPlacas ?? 0 };
+            return { ...parsed, colorCanto: null, placaMaterialId: null, stockPlacas: parsed.stockPlacas ?? 0 };
           })()
         : await (async () => {
             const placa = await findCantoPlate(parsed.placaMaterialId);
@@ -218,7 +217,6 @@ materialsRouter.post(
               tipo: parsed.tipo,
               nombre,
               valor: parsed.valor,
-              valorManoObra: parsed.valorManoObra,
               espesorMm: parsed.espesorMm,
               colorCanto: null,
               placaMaterialId: parsed.placaMaterialId,
@@ -290,7 +288,7 @@ materialsRouter.put(
       parsed.tipo === TipoMaterial.PLACA
         ? await (async () => {
             await ensureMaterialNameAvailable(parsed.nombre, req.params.id);
-            return { ...parsed, colorCanto: null, placaMaterialId: null, valorManoObra: 0, stockPlacas: parsed.stockPlacas ?? 0, activo: existing.activo };
+            return { ...parsed, colorCanto: null, placaMaterialId: null, stockPlacas: parsed.stockPlacas ?? 0, activo: existing.activo };
           })()
         : await (async () => {
             const placa = await findCantoPlate(parsed.placaMaterialId);
@@ -301,7 +299,6 @@ materialsRouter.put(
               tipo: parsed.tipo,
               nombre,
               valor: parsed.valor,
-              valorManoObra: parsed.valorManoObra,
               espesorMm: parsed.espesorMm,
               colorCanto: null,
               placaMaterialId: parsed.placaMaterialId,

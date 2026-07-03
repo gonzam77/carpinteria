@@ -139,7 +139,7 @@ function calculateBoardsForMaterial(details: DetallePedido[], material: Material
   return boards.length;
 }
 
-function calculateEdgeTotals(detail: DetallePedido, cantoById: Map<string, Material>) {
+function calculateEdgeTotals(detail: DetallePedido, cantoById: Map<string, Material>, manoObraCantoPorMetro: number) {
   const largoMeters = detail.largo / 1000;
   const anchoMeters = detail.ancho / 1000;
   const cantidad = detail.cantidad;
@@ -154,9 +154,10 @@ function calculateEdgeTotals(detail: DetallePedido, cantoById: Map<string, Mater
       if (!edge.id) return total;
       const canto = cantoById.get(edge.id);
       if (!canto) return total;
+      const metros = edge.meters * cantidad;
       return {
-        costo: total.costo + edge.meters * cantidad * (canto.valor + canto.valorManoObra),
-        metros: total.metros + edge.meters * cantidad
+        costo: total.costo + metros * (canto.valor + manoObraCantoPorMetro),
+        metros: total.metros + metros
       };
     },
     { costo: 0, metros: 0 }
@@ -165,6 +166,14 @@ function calculateEdgeTotals(detail: DetallePedido, cantoById: Map<string, Mater
 
 async function getOptimizerSettings(tx: PrismaClient) {
   return tx.configuracionOptimizador.upsert({
+    where: { id: "default" },
+    update: {},
+    create: { id: "default" }
+  });
+}
+
+async function getBudgetSettings(tx: PrismaClient) {
+  return tx.configuracionPresupuesto.upsert({
     where: { id: "default" },
     update: {},
     create: { id: "default" }
@@ -192,8 +201,9 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
     };
   }
 
-  const [settings, materials, cantos] = await Promise.all([
+  const [settings, budgetSettings, materials, cantos] = await Promise.all([
     getOptimizerSettings(tx),
+    getBudgetSettings(tx),
     tx.material.findMany({ where: { id: { in: materialIds }, tipo: TipoMaterial.PLACA } }),
     cantoIds.length ? tx.material.findMany({ where: { id: { in: cantoIds }, tipo: TipoMaterial.CANTO } }) : Promise.resolve([])
   ]);
@@ -206,6 +216,7 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
   let costoCantos = 0;
   let metrosCanto = 0;
   let faltanteStock = false;
+  let cantidadPiezas = 0;
 
   for (const materialId of materialIds) {
     const material = materialsById.get(materialId);
@@ -225,17 +236,20 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
   }
 
   for (const detail of detalles) {
-    const edgeTotals = calculateEdgeTotals(detail, cantoById);
+    cantidadPiezas += detail.cantidad;
+    const edgeTotals = calculateEdgeTotals(detail, cantoById, budgetSettings.manoObraCantoPorMetro);
     costoCantos += edgeTotals.costo;
     metrosCanto += edgeTotals.metros;
   }
+
+  const costoCorte = cantidadPiezas * budgetSettings.manoObraCortePorPieza;
 
   return {
     placasEstimadas,
     costoPlacas,
     costoCantos,
     metrosCanto,
-    presupuestoEstimado: costoPlacas + costoCantos,
+    presupuestoEstimado: costoPlacas + costoCantos + costoCorte,
     faltanteStock
   };
 }

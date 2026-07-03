@@ -6,7 +6,6 @@ type SeedPlateMaterial = {
   nombre: string;
   tipo: typeof TipoMaterial.PLACA;
   valor: number;
-  valorManoObra: number;
   espesorMm: number;
   anchoPlaca: number;
   altoPlaca: number;
@@ -20,7 +19,6 @@ type SeedEdgeMaterial = {
   nombre: string;
   tipo: typeof TipoMaterial.CANTO;
   valor: number;
-  valorManoObra: number;
   espesorMm: number;
   colorCanto: string;
   placaNombre: string;
@@ -46,7 +44,6 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Melamina Blanca",
     tipo: TipoMaterial.PLACA,
     valor: 85000,
-    valorManoObra: 0,
     espesorMm: 18,
     anchoPlaca: 1830,
     altoPlaca: 2750,
@@ -59,7 +56,6 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Melamina Negra",
     tipo: TipoMaterial.PLACA,
     valor: 90000,
-    valorManoObra: 0,
     espesorMm: 18,
     anchoPlaca: 1830,
     altoPlaca: 2750,
@@ -72,7 +68,6 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Melamina Roble Dakar",
     tipo: TipoMaterial.PLACA,
     valor: 98000,
-    valorManoObra: 0,
     espesorMm: 18,
     anchoPlaca: 1830,
     altoPlaca: 2750,
@@ -85,7 +80,6 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Canto Blanco PVC",
     tipo: TipoMaterial.CANTO,
     valor: 850,
-    valorManoObra: 0,
     espesorMm: 0.4,
     colorCanto: "Blanco",
     placaNombre: "Melamina Blanca",
@@ -98,7 +92,6 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Canto Negro PVC",
     tipo: TipoMaterial.CANTO,
     valor: 900,
-    valorManoObra: 0,
     espesorMm: 0.4,
     colorCanto: "Negro",
     placaNombre: "Melamina Negra",
@@ -111,7 +104,6 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Canto Roble Dakar PVC",
     tipo: TipoMaterial.CANTO,
     valor: 950,
-    valorManoObra: 0,
     espesorMm: 0.4,
     colorCanto: "Roble Dakar",
     placaNombre: "Melamina Roble Dakar",
@@ -179,6 +171,21 @@ async function seedOptimizerSettings() {
   });
 }
 
+async function seedBudgetSettings() {
+  await prisma.configuracionPresupuesto.upsert({
+    where: { id: "default" },
+    update: {
+      manoObraCantoPorMetro: 0,
+      manoObraCortePorPieza: 0
+    },
+    create: {
+      id: "default",
+      manoObraCantoPorMetro: 0,
+      manoObraCortePorPieza: 0
+    }
+  });
+}
+
 async function seedMaterialsData() {
   const platesByName = new Map<string, string>();
   for (const material of seedMaterials.filter((item): item is SeedPlateMaterial => item.tipo === TipoMaterial.PLACA)) {
@@ -207,6 +214,7 @@ async function main() {
   await seedAdminUser();
   await seedCompanySettings();
   await seedOptimizerSettings();
+  await seedBudgetSettings();
   await seedMaterialsData();
 
   console.log("[seed] Seed completado correctamente.");

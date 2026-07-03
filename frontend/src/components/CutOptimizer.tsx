@@ -2,7 +2,7 @@ import CalculateIcon from "@mui/icons-material/Calculate";
 import { Alert, Box, Button, Divider, Paper, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import { Material, OptimizerSettings, OrderDetail } from "../types";
+import { BudgetSettings, Material, OptimizerSettings, OrderDetail } from "../types";
 
 type PlacedPiece = {
   x: number;
@@ -48,6 +48,7 @@ type MaterialCutResult = {
   boardCost: number;
   edgeCost: number;
   edgeMeters: number;
+  cutCost: number;
   cost: number;
   wastePercent: number;
   unplaced: string[];
@@ -57,6 +58,12 @@ const DEFAULT_OPTIMIZER_SETTINGS: OptimizerSettings = {
   id: "default",
   espesorSierraMm: 4.3,
   perfiladoBordeMm: 10
+};
+
+const DEFAULT_BUDGET_SETTINGS: BudgetSettings = {
+  id: "default",
+  manoObraCantoPorMetro: 0,
+  manoObraCortePorPieza: 0
 };
 
 const pieceColors = [
@@ -223,16 +230,15 @@ function sortPieces<T extends { width: number; height: number }>(pieces: T[], va
 }
 
 function resolvePieceEdges(row: OrderDetail) {
-  const originalEdges = {
+  return {
     top: row.cantoAncho1Nombre || (row.cantoAncho1 ? "Canto" : null),
     right: row.cantoLargo2Nombre || (row.cantoLargo2 ? "Canto" : null),
     bottom: row.cantoAncho2Nombre || (row.cantoAncho2 ? "Canto" : null),
     left: row.cantoLargo1Nombre || (row.cantoLargo1 ? "Canto" : null)
   };
-  return originalEdges;
 }
 
-function calculateRowEdgeCost(row: OrderDetail, cantoById: Map<string, Material>) {
+function calculateRowEdgeCost(row: OrderDetail, cantoById: Map<string, Material>, budgetSettings: BudgetSettings) {
   const largoMeters = Number(row.largo || 0) / 1000;
   const anchoMeters = Number(row.ancho || 0) / 1000;
   const cantidad = Number(row.cantidad || 0);
@@ -250,7 +256,7 @@ function calculateRowEdgeCost(row: OrderDetail, cantoById: Map<string, Material>
       const canto = cantoById.get(edge.id);
       if (!canto) return total;
       return {
-        cost: total.cost + edge.meters * cantidad * (canto.valor + canto.valorManoObra),
+        cost: total.cost + edge.meters * cantidad * (canto.valor + budgetSettings.manoObraCantoPorMetro),
         meters: total.meters + edge.meters * cantidad
       };
     },
@@ -258,7 +264,7 @@ function calculateRowEdgeCost(row: OrderDetail, cantoById: Map<string, Material>
   );
 }
 
-function calculateCuts(rows: OrderDetail[], materials: Material[], variant: number, settings: OptimizerSettings) {
+function calculateCuts(rows: OrderDetail[], materials: Material[], variant: number, settings: OptimizerSettings, budgetSettings: BudgetSettings) {
   const cantoById = new Map(materials.filter((material) => material.tipo === "CANTO").map((material) => [material.id, material]));
 
   return materials
@@ -304,9 +310,10 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
 
       const optimizedArea = boards.length * boardArea;
       const boardCost = boards.length * material.valor;
+      const pieceCount = materialRows.reduce((total, row) => total + Number(row.cantidad || 0), 0);
       const edgeSummary = materialRows.reduce(
         (total, row) => {
-          const edgeTotals = calculateRowEdgeCost(row, cantoById);
+          const edgeTotals = calculateRowEdgeCost(row, cantoById, budgetSettings);
           return {
             cost: total.cost + edgeTotals.cost,
             meters: total.meters + edgeTotals.meters
@@ -314,6 +321,7 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
         },
         { cost: 0, meters: 0 }
       );
+      const cutCost = pieceCount * budgetSettings.manoObraCortePorPieza;
 
       return {
         material,
@@ -327,7 +335,9 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
         boardCost,
         edgeCost: edgeSummary.cost,
         edgeMeters: edgeSummary.meters,
-        cost: boardCost + edgeSummary.cost,
+        cutCost,
+        cost: boardCost + edgeSummary.cost + cutCost,
+        wastePercent: optimizedArea ? Math.max(0, 100 - (totalArea / optimizedArea) * 100) : 0,
         unplaced
       };
     })
@@ -449,8 +459,6 @@ function BoardPreview({ board, material }: { board: BoardPlan; material: Materia
 function CutResults({ results, settings }: { results: MaterialCutResult[]; settings: OptimizerSettings }) {
   const totalBoards = results.reduce((total, result) => total + result.optimizedBoards.length, 0);
   const totalCost = results.reduce((total, result) => total + result.cost, 0);
-  const totalArea = results.reduce((total, result) => total + result.totalArea, 0);
-  const totalBoardArea = results.reduce((total, result) => total + result.optimizedBoards.length * result.usableBoardWidthMm * result.usableBoardHeightMm, 0);
 
   return (
     <Paper sx={{ p: { xs: 2, sm: 2.5 }, overflow: "hidden" }}>
@@ -458,7 +466,7 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
         <Box>
           <Typography variant="h6">Optimizador de cortes</Typography>
           <Typography color="text.secondary">
-            Placas necesarias: {totalBoards} - Costo material: {formatMoney(totalCost)}
+            Placas necesarias: {totalBoards} - Costo estimado: {formatMoney(totalCost)}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Perfilado: {settings.perfiladoBordeMm} mm por lado - Sierra: {settings.espesorSierraMm} mm por pasada
@@ -471,7 +479,7 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
               {result.material.nombre} {result.material.espesorMm}mm - Placa {result.material.anchoPlaca}x{result.material.altoPlaca} mm
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Area util placa: {result.usableBoardWidthMm}x{result.usableBoardHeightMm} mm - Costo placas: {formatMoney(result.boardCost)} - Costo cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - Total: {formatMoney(result.cost)}
+              Area util placa: {result.usableBoardWidthMm}x{result.usableBoardHeightMm} mm - Costo placas: {formatMoney(result.boardCost)} - Costo cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - Mano de obra corte: {formatMoney(result.cutCost)} - Desperdicio: {result.wastePercent.toFixed(1)}% - Total: {formatMoney(result.cost)}
             </Typography>
             {result.unplaced.length > 0 && (
               <Alert severity="warning" sx={{ mt: 1 }}>
@@ -499,26 +507,32 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
   const [results, setResults] = useState<MaterialCutResult[]>([]);
   const [variant, setVariant] = useState(0);
   const [settings, setSettings] = useState<OptimizerSettings>(DEFAULT_OPTIMIZER_SETTINGS);
+  const [budgetSettings, setBudgetSettings] = useState<BudgetSettings>(DEFAULT_BUDGET_SETTINGS);
 
   useEffect(() => {
     api
       .get<OptimizerSettings>("/optimizer-settings")
       .then((response) => setSettings(response.data))
       .catch(() => setSettings(DEFAULT_OPTIMIZER_SETTINGS));
+
+    api
+      .get<BudgetSettings>("/budget-settings")
+      .then((response) => setBudgetSettings(response.data))
+      .catch(() => setBudgetSettings(DEFAULT_BUDGET_SETTINGS));
   }, []);
 
   function calculate(nextVariant = 0) {
     setVariant(nextVariant);
-    setResults(calculateCuts(rows, materials, nextVariant, settings));
+    setResults(calculateCuts(rows, materials, nextVariant, settings, budgetSettings));
   }
 
   useEffect(() => {
     setResults([]);
     setVariant(0);
     if (autoCalculate && rows.length && materials.length) {
-      setResults(calculateCuts(rows, materials, 0, settings));
+      setResults(calculateCuts(rows, materials, 0, settings, budgetSettings));
     }
-  }, [autoCalculate, rows, materials, settings]);
+  }, [autoCalculate, rows, materials, settings, budgetSettings]);
 
   return (
     <Stack spacing={2}>

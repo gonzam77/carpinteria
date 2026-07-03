@@ -39,7 +39,6 @@ type MaterialForm = {
   nombre: string;
   placaMaterialId: string;
   valor: string;
-  valorManoObra: string;
   espesorMm: string;
   anchoPlaca: string;
   altoPlaca: string;
@@ -63,7 +62,6 @@ const emptyForm: MaterialForm = {
   nombre: "",
   placaMaterialId: "",
   valor: "",
-  valorManoObra: "",
   espesorMm: "18",
   anchoPlaca: "",
   altoPlaca: "",
@@ -124,7 +122,6 @@ export function MaterialsPage() {
       nombre: material.nombre,
       placaMaterialId: material.placaMaterialId ?? "",
       valor: String(material.valor),
-      valorManoObra: String(material.valorManoObra ?? 0),
       espesorMm: String(material.espesorMm),
       anchoPlaca: material.anchoPlaca ? String(material.anchoPlaca) : "",
       altoPlaca: material.altoPlaca ? String(material.altoPlaca) : "",
@@ -176,10 +173,9 @@ export function MaterialsPage() {
             tipo: form.tipo,
             placaMaterialId: form.placaMaterialId,
             valor: Number(form.valor),
-            valorManoObra: Number(form.valorManoObra),
             espesorMm: Number(form.espesorMm),
             activo: true
-    };
+          };
 
     try {
       const successMessage = editingId ? "Material actualizado correctamente." : "Material creado correctamente.";
@@ -336,8 +332,6 @@ export function MaterialsPage() {
       { field: "placaMaterial", headerName: "Material", flex: 1, minWidth: 190, valueGetter: (_value, row) => row.placaMaterial?.nombre ?? row.nombre },
       { field: "espesorMm", headerName: "Espesor", width: 110, valueFormatter: (value) => `${value} mm` },
       { field: "valor", headerName: "Valor por metro", width: 150, valueFormatter: (value) => Number(value).toLocaleString() },
-      { field: "valorManoObra", headerName: "Mano de obra/m", width: 150, valueFormatter: (value) => Number(value).toLocaleString() },
-      { field: "valorTotalMetro", headerName: "Total por metro", width: 150, valueGetter: (_value, row) => row.valor + row.valorManoObra, valueFormatter: (value) => Number(value).toLocaleString() },
       { field: "linkedOrdersCount", headerName: "Solicitudes", width: 120, valueGetter: (_value, row) => row.linkedOrdersCount ?? 0 },
       buildActionColumn(false)
     ],
@@ -361,7 +355,6 @@ export function MaterialsPage() {
       { field: "placaMaterial", headerName: "Material", flex: 1, minWidth: 190, valueGetter: (_value, row) => row.placaMaterial?.nombre ?? row.nombre },
       { field: "espesorMm", headerName: "Espesor", width: 110, valueFormatter: (value) => `${value} mm` },
       { field: "valor", headerName: "Valor por metro", width: 150, valueFormatter: (value) => Number(value).toLocaleString() },
-      { field: "valorManoObra", headerName: "Mano de obra/m", width: 150, valueFormatter: (value) => Number(value).toLocaleString() },
       { field: "linkedOrdersCount", headerName: "Solicitudes", width: 120, valueGetter: (_value, row) => row.linkedOrdersCount ?? 0 },
       { field: "fechaActualizacion", headerName: "Ult. cambio", width: 130, valueGetter: (_value, row) => (row.fechaActualizacion ? new Date(row.fechaActualizacion).toLocaleDateString() : "-") },
       buildActionColumn(true)
@@ -382,7 +375,7 @@ export function MaterialsPage() {
     <Stack spacing={3}>
       <Stack spacing={0.5}>
         <Typography variant="h4">Materiales</Typography>
-        <Typography color="text.secondary">Administra placas y cantos activos, y conserva un historial de materiales fuera de uso sin romper solicitudes anteriores.</Typography>
+        <Typography color="text.secondary">Administra placas y cantos activos. La mano de obra de cantos y de corte ahora se define desde Configuracion de presupuesto.</Typography>
       </Stack>
       {feedback && (
         <Alert severity={feedbackSeverity} onClose={() => setFeedback("")}>
@@ -436,16 +429,14 @@ export function MaterialsPage() {
             inputProps={{ step: "0.01", min: 0 }}
             required
           />
-          <TextField fullWidth label={form.tipo === "PLACA" ? "Valor placa" : "Valor por metro"} type="number" value={form.valor} onChange={(event) => setForm({ ...form, valor: event.target.value })} required />
+          <TextField fullWidth label={form.tipo === "PLACA" ? "Valor placa" : "Valor material por metro"} type="number" value={form.valor} onChange={(event) => setForm({ ...form, valor: event.target.value })} required />
           {form.tipo === "PLACA" ? (
             <>
               <TextField fullWidth label="Largo placa mm" type="number" value={form.altoPlaca} onChange={(event) => setForm({ ...form, altoPlaca: event.target.value })} required />
               <TextField fullWidth label="Ancho placa mm" type="number" value={form.anchoPlaca} onChange={(event) => setForm({ ...form, anchoPlaca: event.target.value })} required />
               <TextField fullWidth label="Stock placas" type="number" value={form.stockPlacas} onChange={(event) => setForm({ ...form, stockPlacas: event.target.value })} inputProps={{ min: 0, step: 1 }} required />
             </>
-          ) : (
-            <TextField fullWidth label="Mano de obra por metro" type="number" value={form.valorManoObra} onChange={(event) => setForm({ ...form, valorManoObra: event.target.value })} inputProps={{ step: "0.01", min: 0 }} required />
-          )}
+          ) : null}
           <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
             {editingId ? "Guardar" : "Crear"}
           </Button>
@@ -482,7 +473,7 @@ export function MaterialsPage() {
               Cantos activos
             </Typography>
             <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
-              <DataGrid rows={cantos} columns={activeCantoColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 1120, md: "100%" } }} />
+              <DataGrid rows={cantos} columns={activeCantoColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 960, md: "100%" } }} />
             </Paper>
           </Paper>
         </Stack>
@@ -507,7 +498,7 @@ export function MaterialsPage() {
               Puedes reactivar un material cuando vuelva a usarse o eliminarlo definitivamente solo si nunca quedo vinculado a solicitudes.
             </Typography>
             <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
-              <DataGrid rows={historialCantos} columns={historyCantoColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 1120, md: "100%" } }} />
+              <DataGrid rows={historialCantos} columns={historyCantoColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 960, md: "100%" } }} />
             </Paper>
           </Paper>
         </Stack>
@@ -531,7 +522,7 @@ export function MaterialsPage() {
                     <Checkbox edge="start" checked={bulkForm.selectedIds.includes(material.id)} tabIndex={-1} disableRipple />
                     <ListItemText
                       primary={material.nombre}
-                      secondary={`${material.tipo === "PLACA" ? "Placa" : "Canto"} - Valor actual: ${Number(material.valor).toLocaleString("es-AR")}${material.tipo === "CANTO" ? ` por metro + mano de obra ${Number(material.valorManoObra || 0).toLocaleString("es-AR")}` : ""} - Solicitudes vinculadas: ${material.linkedOrdersCount ?? 0}`}
+                      secondary={`${material.tipo === "PLACA" ? "Placa" : "Canto"} - Valor actual: ${Number(material.valor).toLocaleString("es-AR")} - Solicitudes vinculadas: ${material.linkedOrdersCount ?? 0}`}
                     />
                   </ListItemButton>
                 ))}

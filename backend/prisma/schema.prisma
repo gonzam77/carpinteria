@@ -76,7 +76,6 @@ model Material {
   nombre             String          @unique
   tipo               TipoMaterial    @default(PLACA)
   valor              Float
-  valorManoObra      Float           @default(0)
   espesorMm          Float           @default(18)
   anchoPlaca         Int?
   altoPlaca          Int?
@@ -179,6 +178,15 @@ model ConfiguracionEmpresa {
   @@map("configuracion_empresa")
 }
 
+model ConfiguracionPresupuesto {
+  id                 String   @id @default("default")
+  manoObraCantoPorMetro Float @default(0)
+  manoObraCortePorPieza Float @default(0)
+  fechaActualizacion DateTime @updatedAt
+
+  @@map("configuracion_presupuesto")
+}
+
 model PushSubscription {
   id                 String   @id @default(uuid())
   endpoint           String   @unique
@@ -193,4 +201,3 @@ model PushSubscription {
   @@index([usuarioId])
   @@map("push_subscriptions")
 }
-

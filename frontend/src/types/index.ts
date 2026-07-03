@@ -16,6 +16,13 @@ export type OptimizerSettings = {
   fechaActualizacion?: string;
 };
 
+export type BudgetSettings = {
+  id: string;
+  manoObraCantoPorMetro: number;
+  manoObraCortePorPieza: number;
+  fechaActualizacion?: string;
+};
+
 export type StockAlert = {
   materialId: string;
   materialNombre: string;
@@ -39,7 +46,6 @@ export type Material = {
   nombre: string;
   tipo: MaterialType;
   valor: number;
-  valorManoObra: number;
   espesorMm: number;
   anchoPlaca: number | null;
   altoPlaca: number | null;
@@ -119,6 +125,3 @@ export type Order = {
     usuario: Pick<User, "nombre" | "apellido">;
   }>;
 };
-
-
-

@@ -1,4 +1,4 @@
-﻿import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import AssignmentIcon from "@mui/icons-material/Assignment";
@@ -8,6 +8,7 @@ import Inventory2Icon from "@mui/icons-material/Inventory2";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import PostAddIcon from "@mui/icons-material/PostAdd";
+import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
 import SettingsIcon from "@mui/icons-material/Settings";
 import TuneIcon from "@mui/icons-material/Tune";
 import { Alert, AppBar, Avatar, Box, Button, Collapse, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Snackbar, Toolbar, Typography } from "@mui/material";
@@ -49,6 +50,7 @@ export function AppLayout() {
       user?.rol === "ADMIN"
         ? [
             { label: "Optimizador", to: "/configuracion-optimizador", icon: <TuneIcon />, match: (pathname: string) => pathname === "/configuracion-optimizador" },
+            { label: "Presupuesto", to: "/configuracion-presupuesto", icon: <RequestQuoteIcon />, match: (pathname: string) => pathname === "/configuracion-presupuesto" },
             { label: "Materiales", to: "/materiales", icon: <Inventory2Icon />, match: (pathname: string) => pathname === "/materiales" },
             { label: "Empresa", to: "/configuracion-empresa", icon: <BusinessIcon />, match: (pathname: string) => pathname === "/configuracion-empresa" },
             { label: "Usuarios", to: "/usuarios", icon: <GroupIcon />, match: (pathname: string) => pathname === "/usuarios" }
