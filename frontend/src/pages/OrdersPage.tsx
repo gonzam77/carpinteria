@@ -3,6 +3,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import DescriptionIcon from "@mui/icons-material/Description";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { Box, Button, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { DataGrid, GridColDef, GridRowSelectionModel } from "@mui/x-data-grid";
 import { saveAs } from "file-saver";
@@ -27,6 +28,27 @@ function getValidStatus(value: string | null): EstadoSolicitud | "" {
 
 function formatMoney(value: number) {
   return value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+}
+
+function normalizeWhatsappPhone(phone?: string | null) {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("549")) return digits;
+  if (digits.startsWith("54")) {
+    const rest = digits.slice(2);
+    return rest.startsWith("9") ? digits : `549${rest}`;
+  }
+  const withoutLeadingZero = digits.replace(/^0+/, "");
+  return `549${withoutLeadingZero}`;
+}
+
+function buildWhatsappLink(order: Order) {
+  const phone = normalizeWhatsappPhone(order.numeroContacto);
+  if (!phone) return "";
+
+  const orderLabel = order.id.slice(0, 8).toUpperCase();
+  const message = `Hola ${order.cliente}, te avisamos que tu pedido ${orderLabel} ya esta listo para retirar. Cuando quieras podes pasar a buscarlo. Si necesitas coordinar horario o tenes alguna consulta, escribinos por este medio.`;
+  return `https://api.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
 }
 
 export function OrdersPage() {
@@ -97,40 +119,59 @@ export function OrdersPage() {
       {
         field: "acciones",
         headerName: "",
-        width: 210,
+        width: 260,
         sortable: false,
-        renderCell: ({ row }) => (
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", gap: 0.5 }}>
-            <Tooltip title="Ver">
-              <IconButton onClick={() => navigate(`/pedidos/${row.id}`)}>
-                <VisibilityIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Comprobante">
-              <IconButton onClick={() => setOrderToPreview(row)}>
-                <DescriptionIcon />
-              </IconButton>
-            </Tooltip>
-            <Box sx={{ width: 40, display: "flex", justifyContent: "center" }}>
-              {canEditOrder(row.estado) ? (
-                <Tooltip title="Editar">
-                  <IconButton onClick={() => navigate(`/pedidos/${row.id}/editar`, { state: { returnTo: user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes" } })}>
-                    <EditIcon />
+        renderCell: ({ row }) => {
+          const whatsappLink = buildWhatsappLink(row);
+          const canNotifyByWhatsapp = Boolean(whatsappLink);
+
+          return (
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", gap: 0.5 }}>
+              <Tooltip title="Ver">
+                <IconButton onClick={() => navigate(`/pedidos/${row.id}`)}>
+                  <VisibilityIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Comprobante">
+                <IconButton onClick={() => setOrderToPreview(row)}>
+                  <DescriptionIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={canNotifyByWhatsapp ? "Avisar por WhatsApp" : "La solicitud no tiene telefono de contacto"}>
+                <span>
+                  <IconButton
+                    sx={{ color: canNotifyByWhatsapp ? "#25D366" : undefined }}
+                    disabled={!canNotifyByWhatsapp}
+                    onClick={() => {
+                      if (!whatsappLink) return;
+                      window.open(whatsappLink, "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    <WhatsAppIcon />
                   </IconButton>
-                </Tooltip>
-              ) : null}
+                </span>
+              </Tooltip>
+              <Box sx={{ width: 40, display: "flex", justifyContent: "center" }}>
+                {canEditOrder(row.estado) ? (
+                  <Tooltip title="Editar">
+                    <IconButton onClick={() => navigate(`/pedidos/${row.id}/editar`, { state: { returnTo: user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes" } })}>
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+              </Box>
+              <Box sx={{ width: 40, display: "flex", justifyContent: "center" }}>
+                {user?.rol === "ADMIN" ? (
+                  <Tooltip title="Eliminar">
+                    <IconButton color="error" onClick={() => setOrderToDelete(row)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+              </Box>
             </Box>
-            <Box sx={{ width: 40, display: "flex", justifyContent: "center" }}>
-              {user?.rol === "ADMIN" ? (
-                <Tooltip title="Eliminar">
-                  <IconButton color="error" onClick={() => setOrderToDelete(row)}>
-                    <DeleteIcon />
-                  </IconButton>
-                </Tooltip>
-              ) : null}
-            </Box>
-          </Box>
-        )
+          );
+        }
       }
     ],
     [navigate, user]
@@ -175,12 +216,10 @@ export function OrdersPage() {
         </Stack>
       </Paper>
       <Paper sx={{ height: { xs: 520, md: 560 }, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
-        <DataGrid rows={orders} columns={columns} checkboxSelection onRowSelectionModelChange={setSelection} disableRowSelectionOnClick sx={{ minWidth: { xs: 930, md: "100%" } }} />
+        <DataGrid rows={orders} columns={columns} checkboxSelection onRowSelectionModelChange={setSelection} disableRowSelectionOnClick sx={{ minWidth: { xs: 980, md: "100%" } }} />
       </Paper>
       <DeleteOrderDialog order={orderToDelete} open={Boolean(orderToDelete)} loading={deleting} onCancel={() => setOrderToDelete(null)} onConfirm={() => orderToDelete && deleteOrder(orderToDelete)} />
       <OrderReceiptDialog order={orderToPreview} open={Boolean(orderToPreview)} onClose={() => setOrderToPreview(null)} />
     </Stack>
   );
 }
-
-
