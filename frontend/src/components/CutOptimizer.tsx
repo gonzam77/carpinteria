@@ -468,9 +468,9 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
           <Typography color="text.secondary">
             Placas necesarias: {totalBoards} - Costo estimado: {formatMoney(totalCost)}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          {/* <Typography variant="body2" color="text.secondary">
             Perfilado: {settings.perfiladoBordeMm} mm por lado - Sierra: {settings.espesorSierraMm} mm por pasada
-          </Typography>
+          </Typography> */}
         </Box>
         {results.map((result) => (
           <Box key={result.material.id}>
@@ -479,7 +479,7 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
               {result.material.nombre} {result.material.espesorMm}mm - Placa {result.material.anchoPlaca}x{result.material.altoPlaca} mm
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Area util placa: {result.usableBoardWidthMm}x{result.usableBoardHeightMm} mm - Costo placas: {formatMoney(result.boardCost)} - Costo cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - Mano de obra corte: {formatMoney(result.cutCost)} - Desperdicio: {result.wastePercent.toFixed(1)}% - Total: {formatMoney(result.cost)}
+              Area util placa: {result.usableBoardWidthMm}x{result.usableBoardHeightMm} mm - Costo placas: {formatMoney(result.boardCost)} - Costo cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - Mano de obra corte: {formatMoney(result.cutCost)} - Total: {formatMoney(result.cost)}
             </Typography>
             {result.unplaced.length > 0 && (
               <Alert severity="warning" sx={{ mt: 1 }}>
