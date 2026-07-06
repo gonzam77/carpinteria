@@ -15,7 +15,8 @@ import { UsersPage } from "./pages/UsersPage";
 export function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<LoginPage mode="google" />} />
+      <Route path="/admin" element={<LoginPage mode="admin" />} />
       <Route
         path="/"
         element={
