@@ -82,21 +82,21 @@ export function AppLayout() {
     minHeight: 46,
     color: "rgba(255,255,255,0.78)",
     "& .MuiListItemIcon-root": { color: "inherit", minWidth: 38 },
-    "&:hover": { bgcolor: alpha("#ffffff", 0.14), color: "#ffffff" },
+    "&:hover": { bgcolor: alpha("#f28c28", 0.18), color: "#ffffff" },
     "&.Mui-selected": {
-      bgcolor: alpha("#ffffff", 0.22),
-      background: "rgba(255,255,255,0.22)",
-      boxShadow: "inset 3px 0 0 #ffffff, 0 12px 28px rgba(22, 76, 170, 0.18)",
+      bgcolor: alpha("#f28c28", 0.24),
+      background: "linear-gradient(135deg, rgba(242,140,40,0.28) 0%, rgba(255,255,255,0.08) 100%)",
+      boxShadow: "inset 3px 0 0 #f6aa57, 0 12px 28px rgba(0, 0, 0, 0.22)",
       color: "#ffffff",
       "& .MuiListItemIcon-root": { color: "inherit" }
     },
-    "&.Mui-selected:hover": { bgcolor: alpha("#ffffff", 0.24) }
+    "&.Mui-selected:hover": { bgcolor: alpha("#f28c28", 0.28) }
   };
 
   const drawerContent = (
     <>
       <Box sx={{ px: 2.25, py: 2.5 }}>
-        <Typography variant="overline" sx={{ color: "rgba(255,255,255,0.72)", fontWeight: 900, letterSpacing: 1.2 }}>
+        <Typography variant="overline" sx={{ color: "rgba(255,255,255,0.58)", fontWeight: 900, letterSpacing: 1.2 }}>
           Empresa
         </Typography>
         <Typography variant="h6" sx={{ color: "#ffffff", fontWeight: 900, lineHeight: 1.1 }}>
@@ -151,7 +151,7 @@ export function AppLayout() {
                       ml: 1,
                       pl: 1.25,
                       pr: 1,
-                      background: item.match(location.pathname) ? undefined : alpha("#ffffff", 0.06)
+                      background: item.match(location.pathname) ? undefined : alpha("#ffffff", 0.04)
                     }}
                   >
                     <ListItemIcon sx={{ minWidth: 34 }}>{item.icon}</ListItemIcon>
@@ -185,7 +185,7 @@ export function AppLayout() {
             </Typography>
           </Box>
           <PushNotificationsControl />
-          <Avatar sx={{ width: { xs: 34, sm: 38 }, height: { xs: 34, sm: 38 }, background: "linear-gradient(135deg, #4f7cff, #23d6c8)", flexShrink: 0, fontWeight: 900 }}>
+          <Avatar sx={{ width: { xs: 34, sm: 38 }, height: { xs: 34, sm: 38 }, background: "linear-gradient(135deg, #f6a145, #2b2723)", flexShrink: 0, fontWeight: 900 }}>
             {user?.nombre?.[0] ?? "U"}
           </Avatar>
           <Typography noWrap variant="body2" sx={{ color: "text.secondary", display: { xs: "none", md: "block" }, fontWeight: 800, maxWidth: 260 }}>
@@ -198,8 +198,7 @@ export function AppLayout() {
               logout();
               navigate("/login");
             }}
-            sx={{ px: { xs: 1.25, sm: 2.25 }, flexShrink: 0, minWidth: { xs: 0, sm: 64 } }}
-          >
+            sx={{ px: { xs: 1.25, sm: 2.25 }, flexShrink: 0, minWidth: { xs: 0, sm: 64 } }}>
             Salir
           </Button>
         </Toolbar>
@@ -212,8 +211,7 @@ export function AppLayout() {
         sx={{
           display: { xs: "block", md: "none" },
           [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: "border-box" }
-        }}
-      >
+        }}>
         {drawerContent}
       </Drawer>
       <Drawer
@@ -223,8 +221,7 @@ export function AppLayout() {
           width: drawerWidth,
           flexShrink: 0,
           [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: "border-box" }
-        }}
-      >
+        }}>
         {drawerContent}
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, maxWidth: "100%", overflowX: "hidden", p: { xs: 2, sm: 2.5, md: 3.5 }, width: { xs: "100%", md: `calc(100% - ${drawerWidth}px)` } }}>
@@ -236,20 +233,18 @@ export function AppLayout() {
         autoHideDuration={4200}
         onClose={() => setNotification("")}
         anchorOrigin={{ vertical: "top", horizontal: "right" }}
-        sx={{ mt: 8 }}
-      >
+        sx={{ mt: 8 }}>
         <Alert
           severity="success"
           variant="filled"
           onClose={() => setNotification("")}
           sx={{
             alignItems: "center",
-            background: "linear-gradient(135deg, #21c383 0%, #23d6c8 100%)",
+            background: "linear-gradient(135deg, #f28c28 0%, #cf6d14 60%, #302923 100%)",
             borderRadius: "8px",
-            boxShadow: "0 18px 42px rgba(33, 195, 131, 0.28)",
+            boxShadow: "0 18px 42px rgba(161, 87, 18, 0.28)",
             fontWeight: 800
-          }}
-        >
+          }}>
           {notification}
         </Alert>
       </Snackbar>

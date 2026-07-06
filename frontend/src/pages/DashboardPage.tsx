@@ -1,4 +1,4 @@
-﻿import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import PeopleIcon from "@mui/icons-material/People";
 import StraightenIcon from "@mui/icons-material/Straighten";
@@ -31,9 +31,33 @@ export function DashboardPage() {
   }
 
   const cards = [
-    { label: "Pedidos", value: stats?.totalOrders ?? 0, icon: <AssignmentTurnedInIcon />, gradient: "linear-gradient(135deg, #7c62ff 0%, #9f7cff 100%)", shadow: "rgba(124,98,255,0.32)" },
-    { label: "Usuarios", value: stats?.totalUsers ?? 0, icon: <PeopleIcon />, gradient: "linear-gradient(135deg, #23d6c8 0%, #44e5b6 100%)", shadow: "rgba(35,214,200,0.3)" },
-    { label: "Piezas", value: stats?.totalPieces ?? 0, icon: <StraightenIcon />, gradient: "linear-gradient(135deg, #4f7cff 0%, #4aa7ff 100%)", shadow: "rgba(79,124,255,0.32)" }
+    {
+      label: "Pedidos",
+      subtitle: "Pedidos activos",
+      value: stats?.totalOrders ?? 0,
+      icon: <AssignmentTurnedInIcon fontSize="small" />,
+      accent: "#f29a3c",
+      halo: alpha("#f29a3c", 0.2),
+      badge: alpha("#f29a3c", 0.14)
+    },
+    {
+      label: "Usuarios",
+      subtitle: "Usuarios registrados",
+      value: stats?.totalUsers ?? 0,
+      icon: <PeopleIcon fontSize="small" />,
+      accent: "#8d7f72",
+      halo: alpha("#8d7f72", 0.18),
+      badge: alpha("#8d7f72", 0.14)
+    },
+    {
+      label: "Piezas",
+      subtitle: "Piezas cargadas",
+      value: stats?.totalPieces ?? 0,
+      icon: <StraightenIcon fontSize="small" />,
+      accent: "#cf6d14",
+      halo: alpha("#cf6d14", 0.18),
+      badge: alpha("#cf6d14", 0.14)
+    }
   ];
 
   return (
@@ -44,16 +68,54 @@ export function DashboardPage() {
       </Stack>
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 2.25 }}>
         {cards.map((card) => (
-          <Paper key={card.label} sx={{ p: { xs: 2.5, sm: 3 }, border: 0, borderRadius: "8px", color: "#ffffff", background: card.gradient, boxShadow: `0 20px 42px ${card.shadow}`, overflow: "hidden", position: "relative" }}>
-            <Box sx={{ position: "absolute", right: -24, top: -28, width: 112, height: 112, borderRadius: "50%", bgcolor: "rgba(255,255,255,0.18)" }} />
-            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-              <Box sx={{ zIndex: 1 }}>
-                <Typography variant="h4" sx={{ color: "#ffffff", lineHeight: 1 }}>
-                  {card.value}
-                </Typography>
-                <Typography sx={{ color: "rgba(255,255,255,0.82)", fontWeight: 800 }}>{card.label}</Typography>
+          <Paper
+            key={card.label}
+            sx={{
+              p: { xs: 2.5, sm: 3 },
+              minHeight: 148,
+              borderRadius: "18px",
+              color: "#221d19",
+              background: "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,251,247,0.96) 100%)",
+              boxShadow: "0 18px 34px rgba(94, 74, 52, 0.11)",
+              overflow: "hidden",
+              position: "relative"
+            }}
+          >
+            <Box
+              sx={{
+                position: "absolute",
+                top: -30,
+                right: -26,
+                width: 112,
+                height: 112,
+                borderRadius: "50%",
+                bgcolor: card.halo
+              }}
+            />
+            <Box
+              sx={{
+                position: "absolute",
+                top: 18,
+                right: 18,
+                width: 42,
+                height: 42,
+                borderRadius: "12px",
+                bgcolor: card.badge,
+                color: card.accent,
+                display: "grid",
+                placeItems: "center"
+              }}
+            >
+              {card.icon}
+            </Box>
+            <Stack spacing={1.1} sx={{ position: "relative", zIndex: 1 }}>
+              <Box>
+                <Typography sx={{ fontSize: 24, fontWeight: 900, lineHeight: 1, letterSpacing: 0, color: "#231f1b" }}>{card.label}</Typography>
+                <Typography sx={{ mt: 0.55, color: "#8b8177", fontWeight: 700 }}>{card.subtitle}</Typography>
               </Box>
-              <Box sx={{ color: "#ffffff", bgcolor: "rgba(255,255,255,0.18)", borderRadius: "8px", display: "grid", height: 48, placeItems: "center", width: 48, zIndex: 1 }}>{card.icon}</Box>
+              <Typography variant="h4" sx={{ mt: 1.5, color: "#181512", lineHeight: 1 }}>
+                {card.value}
+              </Typography>
             </Stack>
           </Paper>
         ))}
@@ -79,8 +141,7 @@ export function DashboardPage() {
                 textAlign: "left",
                 width: { xs: "100%", md: "auto" },
                 "&:hover": { boxShadow: `0 14px 28px ${alpha(getStatusStyle(item.estado as EstadoSolicitud).fg, 0.14)}` }
-              }}
-            >
+              }}>
               <Box>
                 <Typography variant="h6">{item.total}</Typography>
                 <StatusChip size="small" status={item.estado as EstadoSolicitud} />
@@ -105,14 +166,13 @@ export function DashboardPage() {
                   sx={{
                     alignItems: "stretch",
                     border: "1px solid",
-                    borderColor: alpha("#d36b00", 0.28),
+                    borderColor: alpha("#cf6d14", 0.24),
                     borderRadius: "8px",
                     display: "block",
                     overflow: "hidden",
                     textAlign: "left",
                     width: "100%"
-                  }}
-                >
+                  }}>
                   <Alert
                     severity="warning"
                     sx={{
@@ -120,8 +180,7 @@ export function DashboardPage() {
                       borderRadius: 0,
                       height: "100%",
                       "& .MuiAlert-message": { width: "100%" }
-                    }}
-                  >
+                    }}>
                     <Typography fontWeight={800}>{alert.materialNombre}</Typography>
                     <Typography variant="body2">
                       Stock disponible: {alert.stockDisponible} placas - Solicitudes pendientes: {alert.placasPendientes} placas - Faltante: {alert.faltantePlacas} placas

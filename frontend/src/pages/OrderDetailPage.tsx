@@ -2,6 +2,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import {
   Alert,
   type AlertColor,
@@ -56,6 +57,27 @@ function canEditOrder(estado: EstadoSolicitud) {
   return estado !== "EN_PROCESO" && estado !== "TERMINADA" && estado !== "ENTREGADA";
 }
 
+function normalizeWhatsappPhone(phone?: string | null) {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("549")) return digits;
+  if (digits.startsWith("54")) {
+    const rest = digits.slice(2);
+    return rest.startsWith("9") ? digits : `549${rest}`;
+  }
+  const withoutLeadingZero = digits.replace(/^0+/, "");
+  return `549${withoutLeadingZero}`;
+}
+
+function buildWhatsappLink(order: Order) {
+  const phone = normalizeWhatsappPhone(order.numeroContacto ?? order.usuario?.telefono);
+  if (!phone) return "";
+
+  const orderLabel = order.id.slice(0, 8).toUpperCase();
+  const message = `Hola ${order.cliente}, te avisamos que tu pedido ${orderLabel} ya esta listo para retirar. Cuando quieras podes pasar a buscarlo. Si necesitas coordinar horario o tenes alguna consulta, escribinos por este medio.`;
+  return `https://api.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
+}
+
 export function OrderDetailPage() {
   const { id } = useParams();
   const [order, setOrder] = useState<Order | null>(null);
@@ -68,6 +90,7 @@ export function OrderDetailPage() {
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<EstadoSolicitud | null>(null);
   const [stockShortages, setStockShortages] = useState<StockShortage[]>([]);
+  const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -95,6 +118,7 @@ export function OrderDetailPage() {
   async function submitStatusChange(estado: EstadoSolicitud, forceWithoutStock = false) {
     setChangingStatus(true);
     try {
+      const shouldPromptCompletion = estado === "TERMINADA" && order?.estado !== "TERMINADA";
       await api.patch(`/orders/${id}/status`, { estado, forceWithoutStock });
       await loadOrder();
       setNotificationSeverity(forceWithoutStock ? "warning" : "success");
@@ -106,6 +130,9 @@ export function OrderDetailPage() {
       setStockDialogOpen(false);
       setPendingStatus(null);
       setStockShortages([]);
+      if (shouldPromptCompletion) {
+        setCompletionDialogOpen(true);
+      }
     } catch (error) {
       if (
         !forceWithoutStock &&
@@ -154,6 +181,9 @@ export function OrderDetailPage() {
   }
 
   if (!order) return null;
+
+  const whatsappLink = buildWhatsappLink(order);
+  const canNotifyByWhatsapp = Boolean(whatsappLink);
 
   function cantoLabel(active: boolean, name?: string | null) {
     return active ? name || "Canto" : "";
@@ -299,6 +329,59 @@ export function OrderDetailPage() {
           </Button>
           <Button variant="contained" color="warning" onClick={confirmStatusWithoutStock} disabled={changingStatus}>
             Continuar sin descontar stock
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={completionDialogOpen} onClose={() => setCompletionDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Pedido terminado</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 0.5 }}>
+            <Alert severity="success" variant="outlined">
+              La solicitud ya fue marcada como terminada.
+            </Alert>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: "10px",
+                border: "1px solid rgba(33, 195, 131, 0.2)",
+                background: "linear-gradient(135deg, rgba(33, 195, 131, 0.08) 0%, rgba(35, 214, 200, 0.12) 100%)"
+              }}
+            >
+              <Typography variant="subtitle1" fontWeight={800}>
+                Avisar al cliente
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                Puedes enviarle un WhatsApp para avisarle que el pedido ya esta terminado y lo puede pasar a retirar.
+              </Typography>
+              {!canNotifyByWhatsapp && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25 }}>
+                  Esta solicitud no tiene un telefono de contacto disponible.
+                </Typography>
+              )}
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setCompletionDialogOpen(false)}>Cerrar</Button>
+          <Button
+            variant="contained"
+            startIcon={<WhatsAppIcon />}
+            disabled={!canNotifyByWhatsapp}
+            onClick={() => {
+              if (!whatsappLink) return;
+              window.open(whatsappLink, "_blank", "noopener,noreferrer");
+            }}
+            sx={{
+              bgcolor: "#25D366",
+              color: "#fff",
+              "&:hover": { bgcolor: "#1ebe5a" },
+              "&.Mui-disabled": {
+                bgcolor: "rgba(37, 211, 102, 0.28)",
+                color: "rgba(255, 255, 255, 0.8)"
+              }
+            }}
+          >
+            Avisar por WhatsApp
           </Button>
         </DialogActions>
       </Dialog>

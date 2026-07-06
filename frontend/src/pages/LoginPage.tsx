@@ -38,7 +38,13 @@ export function LoginPage() {
   return (
     <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", bgcolor: "transparent", p: 2 }}>
       <Paper sx={{ width: "100%", maxWidth: 440, p: { xs: 2.5, sm: 4 }, borderRadius: "8px", position: "relative", overflow: "hidden" }}>
-        <Box sx={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${alpha("#4f7cff", 0.15)}, transparent 48%), linear-gradient(315deg, ${alpha("#23d6c8", 0.2)}, transparent 44%)` }} />
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            background: `linear-gradient(135deg, ${alpha("#f28c28", 0.16)}, transparent 44%), linear-gradient(315deg, ${alpha("#2f2a25", 0.16)}, transparent 42%)`
+          }}
+        />
         <Stack spacing={3} sx={{ position: "relative" }}>
           <Box>
             <Typography variant="h4">Solicitar cortes</Typography>
