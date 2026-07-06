@@ -207,18 +207,18 @@ export function OrderDetailPage() {
             <StatusChip status={order.estado} />
           )}
           {user?.rol === "ADMIN" && (
-            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportOrder} sx={{ width: { xs: "100%", sm: "auto" } }}>
-              Exportar
-            </Button>
-          )}
-          {user?.rol === "ADMIN" && (
             <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => setDeleteOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Eliminar
             </Button>
           )}
           {canEditOrder(order.estado) && (
-            <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            <Button variant="outlined" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Editar
+            </Button>
+          )}
+          {user?.rol === "ADMIN" && (
+            <Button variant="contained" startIcon={<DownloadIcon />} onClick={exportOrder} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              Exportar
             </Button>
           )}
         </Stack>
