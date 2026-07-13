@@ -575,7 +575,7 @@ export function OrderItemsTable({
           <Table
             size="small"
             sx={{
-              minWidth: 880,
+              minWidth: 1040,
               "& .MuiTableCell-root": {
                 borderRight: "1px solid",
                 borderColor: "divider",
@@ -616,7 +616,7 @@ export function OrderItemsTable({
               {rows.map((row, index) => (
                 <TableRow key={index}>
                   <TableCell sx={{ width: 48, fontWeight: 900 }}>{index + 1}</TableCell>
-                  <TableCell sx={{ minWidth: 210 }}>
+                  <TableCell sx={{ width: 280, minWidth: 280 }}>
                     <TextField select value={selectedMaterialId(row)} onChange={(event) => patchMaterial(index, event.target.value)} fullWidth required>
                       <MenuItem value="">Seleccionar</MenuItem>
                       {placaMaterials.map((material) => (
@@ -626,13 +626,13 @@ export function OrderItemsTable({
                       ))}
                     </TextField>
                   </TableCell>
-                  <TableCell sx={{ width: 132 }}>
-                    <TextField label="mm" type="number" value={row.largo ?? ""} onChange={(event) => patchRow(index, { largo: event.target.value })} inputProps={{ min: 1, step: 1 }} fullWidth required />
+                  <TableCell sx={{ width: 170, minWidth: 170 }}>
+                    <TextField label="mm" type="number" value={row.largo ?? ""} onChange={(event) => patchRow(index, { largo: event.target.value })} inputProps={{ min: 1, step: 1 }} fullWidth required sx={{ minWidth: 154 }} />
                   </TableCell>
-                  <TableCell sx={{ width: 132 }}>
-                    <TextField label="mm" type="number" value={row.ancho ?? ""} onChange={(event) => patchRow(index, { ancho: event.target.value })} inputProps={{ min: 1, step: 1 }} fullWidth required />
+                  <TableCell sx={{ width: 170, minWidth: 170 }}>
+                    <TextField label="mm" type="number" value={row.ancho ?? ""} onChange={(event) => patchRow(index, { ancho: event.target.value })} inputProps={{ min: 1, step: 1 }} fullWidth required sx={{ minWidth: 154 }} />
                   </TableCell>
-                  <TableCell sx={{ width: 112 }}>
+                  <TableCell sx={{ width: 120, minWidth: 120 }}>
                     <TextField type="number" value={row.cantidad ?? ""} onChange={(event) => patchRow(index, { cantidad: event.target.value })} inputProps={{ min: 1, step: 1 }} fullWidth required />
                   </TableCell>
                   <TableCell sx={{ minWidth: 210 }}>
@@ -670,3 +670,7 @@ export function OrderItemsTable({
     </Stack>
   );
 }
+
+
+
+
