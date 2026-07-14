@@ -107,6 +107,8 @@ export type Order = {
   estado: EstadoSolicitud;
   placasEstimadas: number;
   costoPlacas: number;
+  costoMaterialCantos: number;
+  costoPegadoCantos: number;
   costoCantos: number;
   metrosCanto: number;
   presupuestoEstimado: number;
@@ -125,3 +127,4 @@ export type Order = {
     usuario: Pick<User, "nombre" | "apellido">;
   }>;
 };
+

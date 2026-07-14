@@ -54,6 +54,8 @@ model Pedido {
   stockReservado Boolean          @default(false)
   placasEstimadas Int             @default(0)
   costoPlacas   Float             @default(0)
+  costoMaterialCantos Float       @default(0)
+  costoPegadoCantos Float         @default(0)
   costoCantos   Float             @default(0)
   metrosCanto   Float             @default(0)
   presupuestoEstimado Float       @default(0)
@@ -201,3 +203,4 @@ model PushSubscription {
   @@index([usuarioId])
   @@map("push_subscriptions")
 }
+

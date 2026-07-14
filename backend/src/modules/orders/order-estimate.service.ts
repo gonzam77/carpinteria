@@ -4,6 +4,8 @@ import { AppError } from "../../utils/http.js";
 type EstimateSnapshot = {
   placasEstimadas: number;
   costoPlacas: number;
+  costoMaterialCantos: number;
+  costoPegadoCantos: number;
   costoCantos: number;
   metrosCanto: number;
   presupuestoEstimado: number;
@@ -156,11 +158,12 @@ function calculateEdgeTotals(detail: DetallePedido, cantoById: Map<string, Mater
       if (!canto) return total;
       const metros = edge.meters * cantidad;
       return {
-        costo: total.costo + metros * (canto.valor + manoObraCantoPorMetro),
+        costoMaterial: total.costoMaterial + metros * canto.valor,
+        costoPegado: total.costoPegado + metros * manoObraCantoPorMetro,
         metros: total.metros + metros
       };
     },
-    { costo: 0, metros: 0 }
+    { costoMaterial: 0, costoPegado: 0, metros: 0 }
   );
 }
 
@@ -194,6 +197,8 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
     return {
       placasEstimadas: 0,
       costoPlacas: 0,
+      costoMaterialCantos: 0,
+      costoPegadoCantos: 0,
       costoCantos: 0,
       metrosCanto: 0,
       presupuestoEstimado: 0,
@@ -213,6 +218,8 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
 
   let placasEstimadas = 0;
   let costoPlacas = 0;
+  let costoMaterialCantos = 0;
+  let costoPegadoCantos = 0;
   let costoCantos = 0;
   let metrosCanto = 0;
   let faltanteStock = false;
@@ -238,7 +245,9 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
   for (const detail of detalles) {
     cantidadPiezas += detail.cantidad;
     const edgeTotals = calculateEdgeTotals(detail, cantoById, budgetSettings.manoObraCantoPorMetro);
-    costoCantos += edgeTotals.costo;
+    costoMaterialCantos += edgeTotals.costoMaterial;
+    costoPegadoCantos += edgeTotals.costoPegado;
+    costoCantos += edgeTotals.costoMaterial + edgeTotals.costoPegado;
     metrosCanto += edgeTotals.metros;
   }
 
@@ -247,9 +256,12 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
   return {
     placasEstimadas,
     costoPlacas,
+    costoMaterialCantos,
+    costoPegadoCantos,
     costoCantos,
     metrosCanto,
     presupuestoEstimado: costoPlacas + costoCantos + costoCorte,
     faltanteStock
   };
 }
+
