@@ -19,7 +19,7 @@ export type OptimizerSettings = {
 export type BudgetSettings = {
   id: string;
   manoObraCantoPorMetro: number;
-  manoObraCortePorPieza: number;
+  manoObraPlacaPorPlaca: number;
   fechaActualizacion?: string;
 };
 
@@ -127,4 +127,5 @@ export type Order = {
     usuario: Pick<User, "nombre" | "apellido">;
   }>;
 };
+
 

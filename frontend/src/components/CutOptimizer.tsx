@@ -36,6 +36,26 @@ type BoardPlan = {
   usedArea: number;
 };
 
+type PieceInput = {
+  width: number;
+  height: number;
+  label: string;
+  colorIndex: number;
+  canRotate: boolean;
+  edges: PlacedPiece["edges"];
+};
+
+type PlacementOption = {
+  boardIndex: number;
+  rect: FreeRect;
+  width: number;
+  height: number;
+  rotated: boolean;
+  edges: PlacedPiece["edges"];
+  waste: number;
+  shortSideWaste: number;
+};
+
 type MaterialCutResult = {
   material: Material;
   boardWidthMm: number;
@@ -65,7 +85,7 @@ const DEFAULT_OPTIMIZER_SETTINGS: OptimizerSettings = {
 const DEFAULT_BUDGET_SETTINGS: BudgetSettings = {
   id: "default",
   manoObraCantoPorMetro: 0,
-  manoObraCortePorPieza: 0
+  manoObraPlacaPorPlaca: 0
 };
 
 const pieceColors = [
@@ -159,12 +179,7 @@ function sortPlacements<T extends { waste: number; shortSideWaste: number; rect:
   });
 }
 
-function tryPlaceInBoard(
-  board: BoardPlan,
-  piece: { width: number; height: number; label: string; colorIndex: number; canRotate: boolean; edges: PlacedPiece["edges"] },
-  variant: number,
-  settings: OptimizerSettings
-) {
+function collectPlacementOptions(board: BoardPlan, piece: PieceInput, boardIndex: number) {
   const orientations = [
     { width: piece.width, height: piece.height, rotated: false, edges: piece.edges },
     ...(piece.canRotate
@@ -184,21 +199,26 @@ function tryPlaceInBoard(
       : [])
   ];
 
-  const placements = board.freeRects.flatMap((rect, rectIndex) =>
+  return board.freeRects.flatMap((rect) =>
     orientations
       .filter((orientation) => orientation.width <= rect.width && orientation.height <= rect.height)
       .map((orientation) => ({
+        boardIndex,
         rect,
-        rectIndex,
         ...orientation,
         waste: rect.width * rect.height - orientation.width * orientation.height,
         shortSideWaste: Math.min(rect.width - orientation.width, rect.height - orientation.height)
       }))
   );
+}
+
+function tryPlaceInBoards(boards: BoardPlan[], piece: PieceInput, variant: number, settings: OptimizerSettings) {
+  const placements = boards.flatMap((board, boardIndex) => collectPlacementOptions(board, piece, boardIndex));
   const placement = sortPlacements(placements, variant)[0];
 
   if (!placement) return false;
 
+  const board = boards[placement.boardIndex];
   const usedRect = {
     x: placement.rect.x,
     y: placement.rect.y,
@@ -229,6 +249,13 @@ function sortPieces<T extends { width: number; height: number }>(pieces: T[], va
     if (mode === 2) return b.height - a.height || b.width - a.width;
     return b.width * b.height - a.width * a.height;
   });
+}
+
+function scoreBoards(boards: BoardPlan[], boardArea: number) {
+  const boardCount = boards.length;
+  const usedArea = boards.reduce((total, board) => total + board.usedArea, 0);
+  const wastePercent = boardCount && boardArea ? Math.max(0, 100 - (usedArea / (boardCount * boardArea)) * 100) : 0;
+  return { boardCount, usedArea, wastePercent };
 }
 
 function resolvePieceEdges(row: OrderDetail) {
@@ -274,46 +301,55 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
     .filter((material) => material.tipo === "PLACA" && material.anchoPlaca && material.altoPlaca)
     .map((material) => {
       const materialRows = rows.filter((row) => resolveMaterialId(row, materials) === material.id);
-      const pieces = sortPieces(
-        materialRows.flatMap((row, rowIndex) =>
-          Array.from({ length: Number(row.cantidad) }, (_, copyIndex) => ({
-            width: Number(row.ancho),
-            height: Number(row.largo),
-            label: pieceLabel(row, rowIndex, copyIndex),
-            colorIndex: rowIndex,
-            canRotate: Boolean(row.permiteRotar),
-            edges: resolvePieceEdges(row)
-          }))
-        ),
-        variant
+      const basePieces = materialRows.flatMap((row, rowIndex) =>
+        Array.from({ length: Number(row.cantidad) }, (_, copyIndex) => ({
+          width: Number(row.ancho),
+          height: Number(row.largo),
+          label: pieceLabel(row, rowIndex, copyIndex),
+          colorIndex: rowIndex,
+          canRotate: Boolean(row.permiteRotar),
+          edges: resolvePieceEdges(row)
+        }))
       );
 
-      if (!pieces.length) return null;
+      if (!basePieces.length) return null;
 
       const boardWidthMm = materialBoardWidthMm(material);
       const boardHeightMm = materialBoardHeightMm(material);
       const usableWidthMm = usableBoardWidthMm(material, settings);
       const usableHeightMm = usableBoardHeightMm(material, settings);
       const boardArea = usableWidthMm * usableHeightMm;
-      const totalArea = pieces.reduce((total, piece) => total + piece.width * piece.height, 0);
-      const boards: BoardPlan[] = [];
-      const unplaced: string[] = [];
+      const totalArea = basePieces.reduce((total, piece) => total + piece.width * piece.height, 0);
+      const attempts = Array.from({ length: 12 }, (_, attemptVariant) => {
+        const pieces = sortPieces(basePieces, attemptVariant);
+        const boards: BoardPlan[] = [];
+        const unplaced: string[] = [];
 
-      for (const piece of pieces) {
-        const placed = boards.some((board) => tryPlaceInBoard(board, piece, variant, settings));
-        if (placed) continue;
+        for (const piece of pieces) {
+          if (tryPlaceInBoards(boards, piece, attemptVariant, settings)) continue;
 
-        const board = createBoard(boards.length + 1, material, settings);
-        if (tryPlaceInBoard(board, piece, variant, settings)) {
-          boards.push(board);
-        } else {
-          unplaced.push(`${piece.label} (${piece.height}x${piece.width})`);
+          const board = createBoard(boards.length + 1, material, settings);
+          if (tryPlaceInBoards([board], piece, attemptVariant, settings)) {
+            boards.push(board);
+          } else {
+            unplaced.push(`${piece.label} (${piece.height}x${piece.width})`);
+          }
         }
-      }
 
+        const score = scoreBoards(boards, boardArea);
+        return { variant: attemptVariant, boards, unplaced, score };
+      }).sort((a, b) => {
+        if (a.unplaced.length !== b.unplaced.length) return a.unplaced.length - b.unplaced.length;
+        if (a.score.boardCount !== b.score.boardCount) return a.score.boardCount - b.score.boardCount;
+        if (a.score.wastePercent !== b.score.wastePercent) return a.score.wastePercent - b.score.wastePercent;
+        return b.score.usedArea - a.score.usedArea;
+      });
+
+      const selectedAttempt = attempts[variant % attempts.length];
+      const boards = selectedAttempt.boards;
+      const unplaced = selectedAttempt.unplaced;
       const optimizedArea = boards.length * boardArea;
       const boardCost = boards.length * material.valor;
-      const pieceCount = materialRows.reduce((total, row) => total + Number(row.cantidad || 0), 0);
       const edgeSummary = materialRows.reduce(
         (total, row) => {
           const edgeTotals = calculateRowEdgeCost(row, cantoById, budgetSettings);
@@ -325,7 +361,7 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
         },
         { materialCost: 0, laborCost: 0, meters: 0 }
       );
-      const cutCost = pieceCount * budgetSettings.manoObraCortePorPieza;
+      const cutCost = boards.length * budgetSettings.manoObraPlacaPorPlaca;
 
       return {
         material,
@@ -474,9 +510,6 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
           <Typography color="text.secondary">
             Placas necesarias: {totalBoards} - Costo estimado: {formatMoney(totalCost)}
           </Typography>
-          {/* <Typography variant="body2" color="text.secondary">
-            Perfilado: {settings.perfiladoBordeMm} mm por lado - Sierra: {settings.espesorSierraMm} mm por pasada
-          </Typography> */}
         </Box>
         {results.map((result) => (
           <Box key={result.material.id}>
@@ -485,7 +518,7 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
               {result.material.nombre} {result.material.espesorMm}mm - Placa {result.material.anchoPlaca}x{result.material.altoPlaca} mm
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Area util placa: {result.usableBoardWidthMm}x{result.usableBoardHeightMm} mm - Costo placas: {formatMoney(result.boardCost)} - Material canto: {formatMoney(result.edgeMaterialCost)} - Pegado canto: {formatMoney(result.edgeLaborCost)} - Total cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - Mano de obra corte: {formatMoney(result.cutCost)} - Total: {formatMoney(result.cost)}
+              Area util placa: {result.usableBoardWidthMm}x{result.usableBoardHeightMm} mm - Costo placas: {formatMoney(result.boardCost)} - Material canto: {formatMoney(result.edgeMaterialCost)} - Pegado canto: {formatMoney(result.edgeLaborCost)} - Total cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - Mano de obra placas: {formatMoney(result.cutCost)} - Total: {formatMoney(result.cost)}
             </Typography>
             {result.unplaced.length > 0 && (
               <Alert severity="warning" sx={{ mt: 1 }}>
@@ -556,4 +589,3 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
     </Stack>
   );
 }
-

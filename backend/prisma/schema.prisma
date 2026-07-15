@@ -183,7 +183,7 @@ model ConfiguracionEmpresa {
 model ConfiguracionPresupuesto {
   id                 String   @id @default("default")
   manoObraCantoPorMetro Float @default(0)
-  manoObraCortePorPieza Float @default(0)
+  manoObraPlacaPorPlaca Float @default(0)
   fechaActualizacion DateTime @updatedAt
 
   @@map("configuracion_presupuesto")
@@ -203,4 +203,5 @@ model PushSubscription {
   @@index([usuarioId])
   @@map("push_subscriptions")
 }
+
 

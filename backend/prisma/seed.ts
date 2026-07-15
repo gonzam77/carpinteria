@@ -176,12 +176,12 @@ async function seedBudgetSettings() {
     where: { id: "default" },
     update: {
       manoObraCantoPorMetro: 0,
-      manoObraCortePorPieza: 0
+      manoObraPlacaPorPlaca: 0
     },
     create: {
       id: "default",
       manoObraCantoPorMetro: 0,
-      manoObraCortePorPieza: 0
+      manoObraPlacaPorPlaca: 0
     }
   });
 }
@@ -228,3 +228,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

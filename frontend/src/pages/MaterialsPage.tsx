@@ -375,7 +375,7 @@ export function MaterialsPage() {
     <Stack spacing={3}>
       <Stack spacing={0.5}>
         <Typography variant="h4">Materiales</Typography>
-        <Typography color="text.secondary">Administra placas y cantos activos. La mano de obra de cantos y de corte ahora se define desde Configuracion de presupuesto.</Typography>
+        <Typography color="text.secondary">Administra placas y cantos activos. La mano de obra de cantos y por placa ahora se define desde Configuracion de presupuesto.</Typography>
       </Stack>
       {feedback && (
         <Alert severity={feedbackSeverity} onClose={() => setFeedback("")}>
@@ -579,3 +579,4 @@ export function MaterialsPage() {
     </Stack>
   );
 }
+

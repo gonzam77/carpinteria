@@ -29,6 +29,15 @@ type Piece = {
   canRotate: boolean;
 };
 
+type PlacementOption = {
+  boardIndex: number;
+  rect: FreeRect;
+  width: number;
+  height: number;
+  waste: number;
+  shortSideWaste: number;
+};
+
 function materialBoardWidthMm(material: Material) {
   return material.anchoPlaca ?? 0;
 }
@@ -80,26 +89,42 @@ function pruneFreeRects(rects: FreeRect[]) {
   return rects.filter((rect, index) => !rects.some((other, otherIndex) => index !== otherIndex && containsRect(other, rect))).sort((a, b) => a.y - b.y || a.x - b.x);
 }
 
-function tryPlaceInBoard(board: BoardPlan, piece: Piece, settings: ConfiguracionOptimizador) {
+function sortPlacements(placements: PlacementOption[], variant: number) {
+  const mode = variant % 4;
+  return [...placements].sort((a, b) => {
+    if (mode === 1) return a.rect.y - b.rect.y || a.rect.x - b.rect.x || a.shortSideWaste - b.shortSideWaste;
+    if (mode === 2) return a.shortSideWaste - b.shortSideWaste || a.waste - b.waste;
+    if (mode === 3) return b.width - a.width || b.height - a.height || a.waste - b.waste;
+    return a.waste - b.waste || a.shortSideWaste - b.shortSideWaste;
+  });
+}
+
+function collectPlacementOptions(board: BoardPlan, piece: Piece, boardIndex: number) {
   const orientations = [
     { width: piece.width, height: piece.height },
     ...(piece.canRotate ? [{ width: piece.height, height: piece.width }] : [])
   ];
 
-  const placements = board.freeRects.flatMap((rect) =>
+  return board.freeRects.flatMap((rect) =>
     orientations
       .filter((orientation) => orientation.width <= rect.width && orientation.height <= rect.height)
       .map((orientation) => ({
+        boardIndex,
         rect,
         ...orientation,
         waste: rect.width * rect.height - orientation.width * orientation.height,
         shortSideWaste: Math.min(rect.width - orientation.width, rect.height - orientation.height)
       }))
   );
-  const placement = [...placements].sort((a, b) => a.waste - b.waste || a.shortSideWaste - b.shortSideWaste)[0];
+}
+
+function tryPlaceInBoards(boards: BoardPlan[], piece: Piece, settings: ConfiguracionOptimizador, variant: number) {
+  const placements = boards.flatMap((board, boardIndex) => collectPlacementOptions(board, piece, boardIndex));
+  const placement = sortPlacements(placements, variant)[0];
 
   if (!placement) return false;
 
+  const board = boards[placement.boardIndex];
   const usedRect = {
     x: placement.rect.x,
     y: placement.rect.y,
@@ -110,35 +135,52 @@ function tryPlaceInBoard(board: BoardPlan, piece: Piece, settings: Configuracion
   return true;
 }
 
-function calculateBoardsForMaterial(details: DetallePedido[], material: Material, settings: ConfiguracionOptimizador) {
-  const pieces = details
-    .flatMap((detail) =>
-      Array.from({ length: detail.cantidad }, () => ({
-        width: detail.ancho,
-        height: detail.largo,
-        canRotate: detail.permiteRotar
-      }))
-    )
-    .sort((a, b) => b.width * b.height - a.width * a.height);
+function sortPieces<T extends { width: number; height: number }>(pieces: T[], variant: number) {
+  const mode = variant % 3;
+  return [...pieces].sort((a, b) => {
+    if (mode === 1) return Math.max(b.width, b.height) - Math.max(a.width, a.height) || b.width * b.height - a.width * a.height;
+    if (mode === 2) return b.height - a.height || b.width - a.width;
+    return b.width * b.height - a.width * a.height;
+  });
+}
 
-  if (!pieces.length) return 0;
+function calculateBoardsForMaterial(details: DetallePedido[], material: Material, settings: ConfiguracionOptimizador) {
+  const basePieces = details.flatMap((detail) =>
+    Array.from({ length: detail.cantidad }, () => ({
+      width: detail.ancho,
+      height: detail.largo,
+      canRotate: detail.permiteRotar
+    }))
+  );
+
+  if (!basePieces.length) return 0;
   if (!usableBoardWidthMm(material, settings) || !usableBoardHeightMm(material, settings)) return Number.POSITIVE_INFINITY;
 
-  const boards: BoardPlan[] = [];
+  let bestBoardCount = Number.POSITIVE_INFINITY;
 
-  for (const piece of pieces) {
-    const placed = boards.some((board) => tryPlaceInBoard(board, piece, settings));
-    if (placed) continue;
+  for (let variant = 0; variant < 12; variant += 1) {
+    const pieces = sortPieces(basePieces, variant);
+    const boards: BoardPlan[] = [];
+    let failed = false;
 
-    const board = createBoard(material, settings);
-    if (tryPlaceInBoard(board, piece, settings)) {
-      boards.push(board);
-    } else {
-      return Number.POSITIVE_INFINITY;
+    for (const piece of pieces) {
+      if (tryPlaceInBoards(boards, piece, settings, variant)) continue;
+
+      const board = createBoard(material, settings);
+      if (tryPlaceInBoards([board], piece, settings, variant)) {
+        boards.push(board);
+      } else {
+        failed = true;
+        break;
+      }
+    }
+
+    if (!failed) {
+      bestBoardCount = Math.min(bestBoardCount, boards.length);
     }
   }
 
-  return boards.length;
+  return bestBoardCount;
 }
 
 function calculateEdgeTotals(detail: DetallePedido, cantoById: Map<string, Material>, manoObraCantoPorMetro: number) {
@@ -223,7 +265,7 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
   let costoCantos = 0;
   let metrosCanto = 0;
   let faltanteStock = false;
-  let cantidadPiezas = 0;
+  let costoManoObraPlacas = 0;
 
   for (const materialId of materialIds) {
     const material = materialsById.get(materialId);
@@ -237,21 +279,19 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
 
     placasEstimadas += boards;
     costoPlacas += boards * material.valor;
+    costoManoObraPlacas += boards * budgetSettings.manoObraPlacaPorPlaca;
     if ((material.stockPlacas ?? 0) < boards) {
       faltanteStock = true;
     }
   }
 
   for (const detail of detalles) {
-    cantidadPiezas += detail.cantidad;
     const edgeTotals = calculateEdgeTotals(detail, cantoById, budgetSettings.manoObraCantoPorMetro);
     costoMaterialCantos += edgeTotals.costoMaterial;
     costoPegadoCantos += edgeTotals.costoPegado;
     costoCantos += edgeTotals.costoMaterial + edgeTotals.costoPegado;
     metrosCanto += edgeTotals.metros;
   }
-
-  const costoCorte = cantidadPiezas * budgetSettings.manoObraCortePorPieza;
 
   return {
     placasEstimadas,
@@ -260,8 +300,7 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
     costoPegadoCantos,
     costoCantos,
     metrosCanto,
-    presupuestoEstimado: costoPlacas + costoCantos + costoCorte,
+    presupuestoEstimado: costoPlacas + costoCantos + costoManoObraPlacas,
     faltanteStock
   };
 }
-

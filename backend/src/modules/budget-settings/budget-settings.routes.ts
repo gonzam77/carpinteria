@@ -9,7 +9,7 @@ export const budgetSettingsRouter = Router();
 
 const settingsSchema = z.object({
   manoObraCantoPorMetro: z.coerce.number().nonnegative(),
-  manoObraCortePorPieza: z.coerce.number().nonnegative()
+  manoObraPlacaPorPlaca: z.coerce.number().nonnegative()
 });
 
 function upsertBudgetSettings(data?: z.infer<typeof settingsSchema>) {
@@ -19,7 +19,7 @@ function upsertBudgetSettings(data?: z.infer<typeof settingsSchema>) {
     create: {
       id: "default",
       manoObraCantoPorMetro: 0,
-      manoObraCortePorPieza: 0,
+      manoObraPlacaPorPlaca: 0,
       ...data
     }
   });
@@ -47,3 +47,4 @@ budgetSettingsRouter.put(
     res.json(settings);
   })
 );
+
