@@ -52,6 +52,12 @@ type BulkValueForm = {
 
 type MaterialDeleteMode = "deactivate" | "permanent";
 
+const CANTO_MEASURE_OPTIONS = [
+  { value: "0.45", label: "0.45 mm" },
+  { value: "1", label: "1 mm" },
+  { value: "2", label: "2 mm" }
+] as const;
+
 type MaterialDeleteDialogState = {
   material: Material;
   mode: MaterialDeleteMode;
@@ -420,15 +426,32 @@ export function MaterialsPage() {
               ))}
             </TextField>
           )}
-          <TextField
-            fullWidth
-            label="Espesor mm"
-            type="number"
-            value={form.espesorMm}
-            onChange={(event) => setForm({ ...form, espesorMm: event.target.value })}
-            inputProps={{ step: "0.01", min: 0 }}
-            required
-          />
+          {form.tipo === "PLACA" ? (
+            <TextField
+              fullWidth
+              label="Espesor mm"
+              type="number"
+              value={form.espesorMm}
+              onChange={(event) => setForm({ ...form, espesorMm: event.target.value })}
+              inputProps={{ step: "0.01", min: 0 }}
+              required
+            />
+          ) : (
+            <TextField
+              select
+              fullWidth
+              label="Medida del canto"
+              value={form.espesorMm}
+              onChange={(event) => setForm({ ...form, espesorMm: event.target.value })}
+              required
+            >
+              {CANTO_MEASURE_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
           <TextField fullWidth label={form.tipo === "PLACA" ? "Valor placa" : "Valor material por metro"} type="number" value={form.valor} onChange={(event) => setForm({ ...form, valor: event.target.value })} required />
           {form.tipo === "PLACA" ? (
             <>

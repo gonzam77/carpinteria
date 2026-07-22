@@ -84,7 +84,9 @@ const DEFAULT_OPTIMIZER_SETTINGS: OptimizerSettings = {
 
 const DEFAULT_BUDGET_SETTINGS: BudgetSettings = {
   id: "default",
-  manoObraCantoPorMetro: 0,
+  manoObraCanto045Mm: 0,
+  manoObraCanto1Mm: 0,
+  manoObraCanto2Mm: 0,
   manoObraPlacaPorPlaca: 0
 };
 
@@ -284,9 +286,11 @@ function calculateRowEdgeCost(row: OrderDetail, cantoById: Map<string, Material>
       if (!edge.id) return total;
       const canto = cantoById.get(edge.id);
       if (!canto) return total;
+      const laborCostPerMeter =
+        canto.espesorMm === 0.45 ? budgetSettings.manoObraCanto045Mm : canto.espesorMm === 1 ? budgetSettings.manoObraCanto1Mm : canto.espesorMm === 2 ? budgetSettings.manoObraCanto2Mm : 0;
       return {
         materialCost: total.materialCost + edge.meters * cantidad * canto.valor,
-        laborCost: total.laborCost + edge.meters * cantidad * budgetSettings.manoObraCantoPorMetro,
+        laborCost: total.laborCost + edge.meters * cantidad * laborCostPerMeter,
         meters: total.meters + edge.meters * cantidad
       };
     },

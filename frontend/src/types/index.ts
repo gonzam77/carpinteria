@@ -18,7 +18,9 @@ export type OptimizerSettings = {
 
 export type BudgetSettings = {
   id: string;
-  manoObraCantoPorMetro: number;
+  manoObraCanto045Mm: number;
+  manoObraCanto1Mm: number;
+  manoObraCanto2Mm: number;
   manoObraPlacaPorPlaca: number;
   fechaActualizacion?: string;
 };
