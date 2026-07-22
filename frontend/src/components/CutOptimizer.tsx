@@ -429,17 +429,23 @@ function edgeLabelStyle(side: "top" | "right" | "bottom" | "left") {
 }
 
 function BoardPreview({ board, material }: { board: BoardPlan; material: Material }) {
-  const boardWidthMm = materialBoardWidthMm(material);
-  const boardHeightMm = materialBoardHeightMm(material);
+  const boardWidthMm = materialBoardHeightMm(material);
+  const boardHeightMm = materialBoardWidthMm(material);
 
   return (
-    <Box>
-      <Typography variant="caption" color="text.secondary">
-        Placa {material.anchoPlaca}x{material.altoPlaca} mm
+    <Box sx={{ px: 3, pt: 2, pb: 1 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.75, textAlign: "center" }}>
+        {boardWidthMm} mm
       </Typography>
-      <Box sx={{ border: "1px solid", borderColor: "divider", width: { xs: 340, sm: 420, lg: 500 }, maxWidth: "100%", aspectRatio: `${boardWidthMm} / ${boardHeightMm}`, position: "relative", bgcolor: "background.default", mt: 0.5 }}>
-        <Box sx={{ position: "absolute", top: 4, right: 6, fontSize: 10, color: "text.secondary", bgcolor: "rgba(255,255,255,0.75)", px: 0.5 }}>{boardWidthMm} mm</Box>
-        <Box sx={{ position: "absolute", bottom: 4, left: 6, fontSize: 10, color: "text.secondary", bgcolor: "rgba(255,255,255,0.75)", px: 0.5 }}>{boardHeightMm} mm</Box>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ writingMode: "vertical-rl", transform: "rotate(180deg)", flexShrink: 0 }}
+        >
+          {boardHeightMm} mm
+        </Typography>
+        <Box sx={{ border: "1px solid", borderColor: "divider", width: { xs: 340, sm: 420, lg: 500 }, maxWidth: "100%", aspectRatio: `${boardWidthMm} / ${boardHeightMm}`, position: "relative", bgcolor: "background.default" }}>
         {board.pieces.map((piece, index) => {
           const color = pieceColors[piece.colorIndex % pieceColors.length];
 
@@ -498,6 +504,7 @@ function BoardPreview({ board, material }: { board: BoardPlan; material: Materia
             </Box>
           );
         })}
+        </Box>
       </Box>
     </Box>
   );
