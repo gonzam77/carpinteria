@@ -8,7 +8,9 @@ import { asyncHandler } from "../../utils/http.js";
 export const budgetSettingsRouter = Router();
 
 const settingsSchema = z.object({
-  manoObraCantoPorMetro: z.coerce.number().nonnegative(),
+  manoObraCanto045Mm: z.coerce.number().nonnegative(),
+  manoObraCanto1Mm: z.coerce.number().nonnegative(),
+  manoObraCanto2Mm: z.coerce.number().nonnegative(),
   manoObraPlacaPorPlaca: z.coerce.number().nonnegative()
 });
 
@@ -18,7 +20,9 @@ function upsertBudgetSettings(data?: z.infer<typeof settingsSchema>) {
     update: data ?? {},
     create: {
       id: "default",
-      manoObraCantoPorMetro: 0,
+      manoObraCanto045Mm: 0,
+      manoObraCanto1Mm: 0,
+      manoObraCanto2Mm: 0,
       manoObraPlacaPorPlaca: 0,
       ...data
     }

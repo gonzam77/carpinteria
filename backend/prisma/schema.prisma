@@ -182,7 +182,9 @@ model ConfiguracionEmpresa {
 
 model ConfiguracionPresupuesto {
   id                 String   @id @default("default")
-  manoObraCantoPorMetro Float @default(0)
+  manoObraCanto045Mm Float @default(0)
+  manoObraCanto1Mm   Float @default(0)
+  manoObraCanto2Mm   Float @default(0)
   manoObraPlacaPorPlaca Float @default(0)
   fechaActualizacion DateTime @updatedAt
 

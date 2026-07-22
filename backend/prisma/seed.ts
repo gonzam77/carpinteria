@@ -80,7 +80,7 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Canto Blanco PVC",
     tipo: TipoMaterial.CANTO,
     valor: 850,
-    espesorMm: 0.4,
+    espesorMm: 0.45,
     colorCanto: "Blanco",
     placaNombre: "Melamina Blanca",
     anchoPlaca: null,
@@ -92,7 +92,7 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Canto Negro PVC",
     tipo: TipoMaterial.CANTO,
     valor: 900,
-    espesorMm: 0.4,
+    espesorMm: 0.45,
     colorCanto: "Negro",
     placaNombre: "Melamina Negra",
     anchoPlaca: null,
@@ -104,7 +104,7 @@ const seedMaterials: SeedMaterial[] = [
     nombre: "Canto Roble Dakar PVC",
     tipo: TipoMaterial.CANTO,
     valor: 950,
-    espesorMm: 0.4,
+    espesorMm: 0.45,
     colorCanto: "Roble Dakar",
     placaNombre: "Melamina Roble Dakar",
     anchoPlaca: null,
@@ -175,12 +175,16 @@ async function seedBudgetSettings() {
   await prisma.configuracionPresupuesto.upsert({
     where: { id: "default" },
     update: {
-      manoObraCantoPorMetro: 0,
+      manoObraCanto045Mm: 0,
+      manoObraCanto1Mm: 0,
+      manoObraCanto2Mm: 0,
       manoObraPlacaPorPlaca: 0
     },
     create: {
       id: "default",
-      manoObraCantoPorMetro: 0,
+      manoObraCanto045Mm: 0,
+      manoObraCanto1Mm: 0,
+      manoObraCanto2Mm: 0,
       manoObraPlacaPorPlaca: 0
     }
   });

@@ -23,6 +23,13 @@ type BoardPlan = {
   freeRects: FreeRect[];
 };
 
+type BudgetSettingsSnapshot = {
+  manoObraCanto045Mm: number;
+  manoObraCanto1Mm: number;
+  manoObraCanto2Mm: number;
+  manoObraPlacaPorPlaca: number;
+};
+
 type Piece = {
   width: number;
   height: number;
@@ -183,7 +190,14 @@ function calculateBoardsForMaterial(details: DetallePedido[], material: Material
   return bestBoardCount;
 }
 
-function calculateEdgeTotals(detail: DetallePedido, cantoById: Map<string, Material>, manoObraCantoPorMetro: number) {
+function resolveEdgeLaborCostPerMeter(espesorMm: number, budgetSettings: BudgetSettingsSnapshot) {
+  if (espesorMm === 0.45) return budgetSettings.manoObraCanto045Mm;
+  if (espesorMm === 1) return budgetSettings.manoObraCanto1Mm;
+  if (espesorMm === 2) return budgetSettings.manoObraCanto2Mm;
+  return 0;
+}
+
+function calculateEdgeTotals(detail: DetallePedido, cantoById: Map<string, Material>, budgetSettings: BudgetSettingsSnapshot) {
   const largoMeters = detail.largo / 1000;
   const anchoMeters = detail.ancho / 1000;
   const cantidad = detail.cantidad;
@@ -199,9 +213,10 @@ function calculateEdgeTotals(detail: DetallePedido, cantoById: Map<string, Mater
       const canto = cantoById.get(edge.id);
       if (!canto) return total;
       const metros = edge.meters * cantidad;
+      const laborCostPerMeter = resolveEdgeLaborCostPerMeter(canto.espesorMm, budgetSettings);
       return {
         costoMaterial: total.costoMaterial + metros * canto.valor,
-        costoPegado: total.costoPegado + metros * manoObraCantoPorMetro,
+        costoPegado: total.costoPegado + metros * laborCostPerMeter,
         metros: total.metros + metros
       };
     },
@@ -286,7 +301,7 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
   }
 
   for (const detail of detalles) {
-    const edgeTotals = calculateEdgeTotals(detail, cantoById, budgetSettings.manoObraCantoPorMetro);
+    const edgeTotals = calculateEdgeTotals(detail, cantoById, budgetSettings);
     costoMaterialCantos += edgeTotals.costoMaterial;
     costoPegadoCantos += edgeTotals.costoPegado;
     costoCantos += edgeTotals.costoMaterial + edgeTotals.costoPegado;

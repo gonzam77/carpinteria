@@ -7,6 +7,9 @@ import { AppError, asyncHandler } from "../../utils/http.js";
 
 export const materialsRouter = Router();
 
+const ALLOWED_CANTO_THICKNESSES = [0.45, 1, 2] as const;
+const allowedCantoThicknessSet = new Set<number>(ALLOWED_CANTO_THICKNESSES);
+
 const placaSchema = z.object({
   tipo: z.literal(TipoMaterial.PLACA),
   nombre: z.string().min(1),
@@ -22,7 +25,9 @@ const cantoSchema = z.object({
   tipo: z.literal(TipoMaterial.CANTO),
   placaMaterialId: z.string().uuid(),
   valor: z.coerce.number().nonnegative(),
-  espesorMm: z.coerce.number().positive(),
+  espesorMm: z.coerce.number().refine((value) => allowedCantoThicknessSet.has(value), {
+    message: "La medida del canto debe ser 0.45mm, 1mm o 2mm."
+  }),
   activo: z.boolean().optional()
 });
 
