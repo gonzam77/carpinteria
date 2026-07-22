@@ -1,4 +1,5 @@
 import CalculateIcon from "@mui/icons-material/Calculate";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import { Alert, Box, Button, Divider, Paper, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -529,16 +530,41 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
                 Hay piezas que no entran en una placa: {result.unplaced.join(", ")}
               </Alert>
             )}
-            <Stack direction="row" spacing={2} sx={{ mt: 2, overflowX: "auto", pb: 1, width: "100%" }}>
-              {result.optimizedBoards.map((board) => (
-                <Box key={board.index} sx={{ minWidth: { xs: 340, sm: 420, lg: 500 } }}>
-                  <Typography variant="body2" fontWeight={700} gutterBottom>
-                    Placa {board.index}
-                  </Typography>
-                  <BoardPreview board={board} material={result.material} />
+            <Box sx={{ mt: 2, position: "relative" }}>
+              {result.optimizedBoards.length > 1 && (
+                <Box
+                  sx={{
+                    display: { xs: "flex", sm: "none" },
+                    alignItems: "center",
+                    gap: 0.25,
+                    position: "absolute",
+                    top: 6,
+                    right: 0,
+                    zIndex: 2,
+                    px: 0.75,
+                    py: 0.25,
+                    borderRadius: "999px",
+                    bgcolor: "rgba(23, 32, 58, 0.88)",
+                    color: "#fff",
+                    fontSize: 11,
+                    fontWeight: 700
+                  }}
+                >
+                  Mas placas
+                  <KeyboardArrowRightIcon sx={{ fontSize: 16 }} />
                 </Box>
-              ))}
-            </Stack>
+              )}
+              <Stack direction="row" spacing={2} sx={{ overflowX: "auto", pb: 1, width: "100%" }}>
+                {result.optimizedBoards.map((board, boardIndex) => (
+                  <Box key={board.index} sx={{ minWidth: { xs: 340, sm: 420, lg: 500 } }}>
+                    <Typography variant="body2" fontWeight={700} gutterBottom>
+                      Placa {boardIndex + 1} de {result.optimizedBoards.length}
+                    </Typography>
+                    <BoardPreview board={board} material={result.material} />
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
           </Box>
         ))}
       </Stack>
