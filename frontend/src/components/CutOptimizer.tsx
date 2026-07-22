@@ -547,14 +547,26 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
                     bgcolor: "rgba(23, 32, 58, 0.88)",
                     color: "#fff",
                     fontSize: 11,
-                    fontWeight: 700
+                    fontWeight: 700,
+                    pointerEvents: "none"
                   }}
                 >
-                  Mas placas
+                  Desliza para ver 
                   <KeyboardArrowRightIcon sx={{ fontSize: 16 }} />
                 </Box>
               )}
-              <Stack direction="row" spacing={2} sx={{ overflowX: "auto", pb: 1, width: "100%" }}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  overflowX: "auto",
+                  overflowY: "hidden",
+                  pb: 1,
+                  width: "100%",
+                  touchAction: "pan-x",
+                  WebkitOverflowScrolling: "touch"
+                }}
+              >
                 {result.optimizedBoards.map((board, boardIndex) => (
                   <Box key={board.index} sx={{ minWidth: { xs: 340, sm: 420, lg: 500 } }}>
                     <Typography variant="body2" fontWeight={700} gutterBottom>
