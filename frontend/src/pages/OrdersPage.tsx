@@ -121,6 +121,8 @@ export function OrdersPage() {
         headerName: "",
         width: 260,
         sortable: false,
+        headerClassName: "orders-actions-column",
+        cellClassName: "orders-actions-column",
         renderCell: ({ row }) => {
           const whatsappLink = buildWhatsappLink(row);
           const canNotifyByWhatsapp = Boolean(whatsappLink);
@@ -216,7 +218,28 @@ export function OrdersPage() {
         </Stack>
       </Paper>
       <Paper sx={{ height: { xs: 520, md: 560 }, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
-        <DataGrid rows={orders} columns={columns} checkboxSelection onRowSelectionModelChange={setSelection} disableRowSelectionOnClick sx={{ minWidth: { xs: 980, md: "100%" } }} />
+        <DataGrid
+          rows={orders}
+          columns={columns}
+          checkboxSelection
+          onRowSelectionModelChange={setSelection}
+          disableRowSelectionOnClick
+          sx={{
+            minWidth: { xs: 980, md: "100%" },
+            "& .orders-actions-column": {
+              position: "sticky",
+              right: 0,
+              zIndex: 2,
+              bgcolor: "background.paper"
+            },
+            "& .MuiDataGrid-columnHeader.orders-actions-column": {
+              zIndex: 4
+            },
+            "& .MuiDataGrid-cell.orders-actions-column": {
+              zIndex: 3
+            }
+          }}
+        />
       </Paper>
       <DeleteOrderDialog order={orderToDelete} open={Boolean(orderToDelete)} loading={deleting} onCancel={() => setOrderToDelete(null)} onConfirm={() => orderToDelete && deleteOrder(orderToDelete)} />
       <OrderReceiptDialog order={orderToPreview} open={Boolean(orderToPreview)} onClose={() => setOrderToPreview(null)} />

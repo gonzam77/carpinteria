@@ -1,4 +1,5 @@
 import AddIcon from "@mui/icons-material/Add";
+import Autocomplete from "@mui/material/Autocomplete";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -77,6 +78,10 @@ function formatCantoOption(canto: EdgeOption) {
   if (canto.espesorMm) parts.push(`${canto.espesorMm}mm`);
   if (canto.activo === false) parts.push("inactivo");
   return parts.join(" - ");
+}
+
+function formatPlacaOption(material: Material) {
+  return `${material.nombre} ${material.espesorMm}mm`;
 }
 
 function DimensionPreview({ label, value, count }: { label: string; value: number | string; count: number }) {
@@ -617,14 +622,21 @@ export function OrderItemsTable({
                 <TableRow key={index}>
                   <TableCell sx={{ width: 48, fontWeight: 900 }}>{index + 1}</TableCell>
                   <TableCell sx={{ width: 280, minWidth: 280 }}>
-                    <TextField select value={selectedMaterialId(row)} onChange={(event) => patchMaterial(index, event.target.value)} fullWidth required>
-                      <MenuItem value="">Seleccionar</MenuItem>
-                      {placaMaterials.map((material) => (
-                        <MenuItem key={material.id} value={material.id}>
-                          {material.nombre} {material.espesorMm}mm
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                    <Autocomplete
+                      fullWidth
+                      size="small"
+                      options={placaMaterials}
+                      value={placaMaterials.find((material) => material.id === selectedMaterialId(row)) ?? null}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      getOptionLabel={formatPlacaOption}
+                      filterOptions={(options, state) => {
+                        const query = state.inputValue.trim().toLocaleLowerCase("es");
+                        if (query.length < 3) return options;
+                        return options.filter((option) => option.nombre.toLocaleLowerCase("es").includes(query));
+                      }}
+                      onChange={(_event, material) => patchMaterial(index, material?.id ?? "")}
+                      renderInput={(params) => <TextField {...params} placeholder="Buscar material" required />}
+                    />
                   </TableCell>
                   <TableCell sx={{ width: 90, minWidth: 90 }}>
                     <TextField label="mm" type="number" value={row.largo ?? ""} onChange={(event) => patchRow(index, { largo: event.target.value })} inputProps={{ min: 1, step: 1 }} fullWidth required sx={{ minWidth: 85 }} />
