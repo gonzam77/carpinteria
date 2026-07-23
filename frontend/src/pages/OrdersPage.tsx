@@ -110,12 +110,6 @@ export function OrdersPage() {
 
   const columns = useMemo<GridColDef<Order>[]>(
     () => [
-      { field: "cliente", headerName: "Cliente", flex: 1, minWidth: 180 },
-      { field: "estado", headerName: "Estado", width: 150, renderCell: ({ value }) => <StatusChip size="small" status={value as EstadoSolicitud} /> },
-      { field: "fechaCreacion", headerName: "Fecha", width: 150, valueGetter: (_, row) => new Date(row.fechaCreacion).toLocaleDateString() },
-      { field: "piezas", headerName: "Piezas", width: 100, valueGetter: (_, row) => row.detalles.reduce((total, detail) => total + Number(detail.cantidad || 0), 0) },
-      { field: "presupuestoEstimado", headerName: "Total estimado", width: 170, valueFormatter: (value) => formatMoney(Number(value ?? 0)) },
-      { field: "usuario", headerName: "Carpintero", width: 180, valueGetter: (_, row) => (row.usuario ? `${row.usuario.nombre} ${row.usuario.apellido}` : "") },
       {
         field: "acciones",
         headerName: "",
@@ -174,7 +168,13 @@ export function OrdersPage() {
             </Box>
           );
         }
-      }
+      },
+      { field: "cliente", headerName: "Cliente", flex:1, minWidth: 190 },
+      { field: "estado", headerName: "Estado", width: 150, renderCell: ({ value }) => <StatusChip size="small" status={value as EstadoSolicitud} /> },
+      { field: "fechaCreacion", headerName: "Fecha", width: 190, valueGetter: (_, row) => new Date(row.fechaCreacion).toLocaleDateString("es-AR", {day:"2-digit",month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit",}) },
+      { field: "piezas", headerName: "Piezas", width: 100, valueGetter: (_, row) => row.detalles.reduce((total, detail) => total + Number(detail.cantidad || 0), 0) },
+      { field: "presupuestoEstimado", headerName: "Total estimado", width: 170, valueFormatter: (value) => formatMoney(Number(value ?? 0)) },
+      // { field: "usuario", headerName: "Carpintero", width: 180, valueGetter: (_, row) => (row.usuario ? `${row.usuario.nombre} ${row.usuario.apellido}` : "") }
     ],
     [navigate, user]
   );
