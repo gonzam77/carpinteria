@@ -112,7 +112,7 @@ export function OrdersPage() {
     () => [
       {
         field: "acciones",
-        headerName: "",
+        headerName: "Acciones",
         width: 260,
         sortable: false,
         headerClassName: "orders-actions-column",
