@@ -1,4 +1,5 @@
 import { alpha, createTheme } from "@mui/material/styles";
+import { esES } from "@mui/x-data-grid/locales";
 import type {} from "@mui/x-data-grid/themeAugmentation";
 
 const brandOrange = "#f28c28";
@@ -152,6 +153,7 @@ export const theme = createTheme({
     MuiDataGrid: {
       defaultProps: {
         localeText: {
+          ...esES.components.MuiDataGrid.defaultProps.localeText,
           noRowsLabel: "Sin registros",
           noResultsOverlayLabel: "Sin resultados"
         }
