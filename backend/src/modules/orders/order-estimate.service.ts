@@ -219,6 +219,164 @@ function candidateOrientations(piece: Piece) {
   ];
 }
 
+function chooseAnchorOrientation(
+  piece: Piece,
+  axis: GuillotineAxis,
+  availablePrimary: number,
+  availableSecondary: number
+) {
+  const orientations = candidateOrientations(piece).filter((orientation) =>
+    axis === "rows"
+      ? orientation.width <= availablePrimary && orientation.height <= availableSecondary
+      : orientation.height <= availablePrimary && orientation.width <= availableSecondary
+  );
+
+  return orientations.sort((a, b) => Number(a.rotated) - Number(b.rotated) || b.width * b.height - a.width * a.height)[0] ?? null;
+}
+
+function selectAnchorCandidate(
+  pieces: Piece[],
+  axis: GuillotineAxis,
+  availablePrimary: number,
+  availableSecondary: number
+) {
+  const candidates = pieces
+    .map((piece, index) => {
+      const orientation = chooseAnchorOrientation(piece, axis, availablePrimary, availableSecondary);
+      if (!orientation) return null;
+      const primary = axis === "rows" ? orientation.width : orientation.height;
+      const secondary = axis === "rows" ? orientation.height : orientation.width;
+      return {
+        index,
+        orientation,
+        primary,
+        secondary,
+        area: orientation.width * orientation.height,
+        primaryWaste: availablePrimary - primary
+      };
+    })
+    .filter(Boolean);
+
+  return (
+    candidates.sort((a, b) => {
+      if (!a || !b) return 0;
+      return (
+        b.secondary - a.secondary ||
+        Number(a.orientation.rotated) - Number(b.orientation.rotated) ||
+        a.primaryWaste - b.primaryWaste ||
+        b.primary - a.primary ||
+        b.area - a.area
+      );
+    })[0] ?? null
+  );
+}
+
+function chooseStripeFillerOrientation(
+  piece: Piece,
+  axis: GuillotineAxis,
+  stripeSize: number,
+  remainingPrimary: number
+) {
+  const orientations = candidateOrientations(piece).filter((orientation) =>
+    axis === "rows"
+      ? orientation.height <= stripeSize && orientation.width <= remainingPrimary
+      : orientation.width <= stripeSize && orientation.height <= remainingPrimary
+  );
+
+  return (
+    orientations.sort((a, b) => {
+      const aSecondary = axis === "rows" ? a.height : a.width;
+      const bSecondary = axis === "rows" ? b.height : b.width;
+      const aPrimary = axis === "rows" ? a.width : a.height;
+      const bPrimary = axis === "rows" ? b.width : b.height;
+
+      return (
+        (stripeSize - aSecondary) - (stripeSize - bSecondary) ||
+        Number(a.rotated) - Number(b.rotated) ||
+        bPrimary - aPrimary
+      );
+    })[0] ?? null
+  );
+}
+
+function createStripeBoard(pieces: Piece[], material: Material, settings: ConfiguracionOptimizador, axis: GuillotineAxis) {
+  const board = createGuillotineBoard();
+  const boardWidth = usableBoardWidthMm(material, settings);
+  const boardHeight = usableBoardHeightMm(material, settings);
+  const kerf = settings.espesorSierraMm;
+  let consumedSecondary = 0;
+  let remaining = [...pieces];
+
+  while (remaining.length) {
+    const availableSecondary = (axis === "rows" ? boardHeight : boardWidth) - consumedSecondary;
+    if (availableSecondary <= 0) break;
+
+    const availablePrimary = axis === "rows" ? boardWidth : boardHeight;
+    const anchorCandidate = selectAnchorCandidate(remaining, axis, availablePrimary, availableSecondary);
+    if (!anchorCandidate) break;
+
+    const anchorIndex = anchorCandidate.index;
+    const anchorPiece = remaining[anchorIndex];
+    const anchorOrientation = anchorCandidate.orientation;
+
+    const stripeSize = axis === "rows" ? anchorOrientation.height : anchorOrientation.width;
+    let usedPrimary = 0;
+    const placedIndexes: number[] = [];
+
+    const placePiece = (orientation: NonNullable<ReturnType<typeof chooseStripeFillerOrientation>>) => {
+      board.usedArea += orientation.width * orientation.height;
+      board.rotatedCount += Number(orientation.rotated);
+      usedPrimary += (axis === "rows" ? orientation.width : orientation.height) + kerf;
+    };
+
+    placePiece(anchorOrientation);
+    placedIndexes.push(anchorIndex);
+
+    while (true) {
+      const remainingPrimary = availablePrimary - usedPrimary;
+      if (remainingPrimary <= 0) break;
+
+      let bestIndex = -1;
+      let bestOrientation: ReturnType<typeof chooseStripeFillerOrientation> | null = null;
+
+      remaining.forEach((piece, pieceIndex) => {
+        if (placedIndexes.includes(pieceIndex)) return;
+        const orientation = chooseStripeFillerOrientation(piece, axis, stripeSize, remainingPrimary);
+        if (!orientation) return;
+
+        if (!bestOrientation) {
+          bestIndex = pieceIndex;
+          bestOrientation = orientation;
+          return;
+        }
+
+        const currentSecondary = axis === "rows" ? orientation.height : orientation.width;
+        const bestSecondary = axis === "rows" ? bestOrientation.height : bestOrientation.width;
+        const currentPrimary = axis === "rows" ? orientation.width : orientation.height;
+        const bestPrimary = axis === "rows" ? bestOrientation.width : bestOrientation.height;
+
+        if (
+          stripeSize - currentSecondary < stripeSize - bestSecondary ||
+          (stripeSize - currentSecondary === stripeSize - bestSecondary &&
+            (Number(orientation.rotated) < Number(bestOrientation.rotated) || currentPrimary > bestPrimary))
+        ) {
+          bestIndex = pieceIndex;
+          bestOrientation = orientation;
+        }
+      });
+
+      if (bestIndex === -1 || !bestOrientation) break;
+      placePiece(bestOrientation);
+      placedIndexes.push(bestIndex);
+    }
+
+    remaining = remaining.filter((_piece, pieceIndex) => !placedIndexes.includes(pieceIndex));
+    consumedSecondary += stripeSize + kerf;
+  }
+
+  return { board, remaining };
+}
+
 function chooseRowPlacement(board: GuillotineBoard, piece: Piece, boardWidth: number, boardHeight: number, kerf: number) {
   const placements = candidateOrientations(piece).flatMap((orientation) => {
     const existingRows = board.rowStrips.flatMap((row, rowIndex) => {
@@ -293,17 +451,16 @@ function calculateBoardsForMaterial(details: DetallePedido[], material: Material
     Array.from({ length: 6 }, (_, variant) => {
       const pieces = sortPieces(basePieces, variant);
       const boards: GuillotineBoard[] = [];
-      const unplaced: Piece[] = [];
+      let remaining = [...pieces];
 
-      for (const piece of pieces) {
-        const placed = boards.some((board) => placePieceGuillotine(board, piece, axis as GuillotineAxis, boardWidth, boardHeight, settings.espesorSierraMm));
-        if (placed) continue;
-
-        const board = createGuillotineBoard();
-        if (placePieceGuillotine(board, piece, axis as GuillotineAxis, boardWidth, boardHeight, settings.espesorSierraMm)) boards.push(board);
-        else unplaced.push(piece);
+      while (remaining.length) {
+        const { board, remaining: nextRemaining } = createStripeBoard(remaining, material, settings, axis as GuillotineAxis);
+        if (!board.usedArea) break;
+        boards.push(board);
+        remaining = nextRemaining;
       }
 
+      const unplaced = remaining;
       const usedArea = boards.reduce((total, board) => total + board.usedArea, 0);
       const rotatedCount = boards.reduce((total, board) => total + board.rotatedCount, 0);
       const wastePercent = boards.length ? Math.max(0, 100 - usedArea / (boards.length * boardArea) * 100) : 0;
