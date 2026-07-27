@@ -325,6 +325,41 @@ function scoreBoards(boards: BoardPlan[], boardArea: number) {
   return { boardCount, usedArea, wastePercent, rotatedCount };
 }
 
+function layoutSignature(boards: BoardPlan[], unplaced: string[]) {
+  const boardSignatures = boards
+    .map((board) =>
+      board.pieces
+        .map((piece) =>
+          [
+            piece.label,
+            piece.x,
+            piece.y,
+            piece.width,
+            piece.height,
+            Number(piece.rotated),
+            piece.requestedWidth,
+            piece.requestedHeight
+          ].join(":")
+        )
+        .sort()
+        .join("|")
+    )
+    .sort()
+    .join("||");
+
+  return `${boardSignatures}###${[...unplaced].sort().join("|")}`;
+}
+
+function uniqueLayoutsBySignature<T extends { boards: BoardPlan[]; unplaced: string[] }>(attempts: T[]) {
+  const seen = new Set<string>();
+  return attempts.filter((attempt) => {
+    const signature = layoutSignature(attempt.boards, attempt.unplaced);
+    if (seen.has(signature)) return false;
+    seen.add(signature);
+    return true;
+  });
+}
+
 function createGuillotineBoard(index: number): GuillotineBoard {
   return {
     index,
@@ -786,7 +821,8 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
 
       const validAttempts = attempts.filter((attempt) => !attempt.invalidBoardLayout && attempt.unplaced.length === 0);
       const rankedAttempts = validAttempts.length ? validAttempts : attempts.filter((attempt) => !attempt.invalidBoardLayout);
-      const selectedAttempt = rankedAttempts.length ? rankedAttempts[variant % rankedAttempts.length] : attempts[0];
+      const uniqueRankedAttempts = uniqueLayoutsBySignature(rankedAttempts);
+      const selectedAttempt = uniqueRankedAttempts.length ? uniqueRankedAttempts[variant % uniqueRankedAttempts.length] : attempts[0];
       const boards = selectedAttempt.boards;
       const unplaced = selectedAttempt.unplaced;
       const optimizedArea = boards.length * boardArea;
