@@ -8,7 +8,8 @@ import { asyncHandler } from "../../utils/http.js";
 export const optimizerSettingsRouter = Router();
 
 const settingsSchema = z.object({
-  espesorSierraMm: z.coerce.number().positive()
+  espesorSierraMm: z.coerce.number().positive(),
+  perfiladoBordeMm: z.coerce.number().min(0)
 });
 
 optimizerSettingsRouter.use(authenticate);
