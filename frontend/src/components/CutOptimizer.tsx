@@ -1379,6 +1379,26 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
             Placas necesarias: {totalBoards} - Costo estimado: {formatMoney(totalCost)}
           </Typography>
         </Box>
+        <Alert
+          severity="warning"
+          variant="filled"
+          sx={{
+            alignItems: "flex-start",
+            borderRadius: 2,
+            boxShadow: "0 10px 24px rgba(228, 185, 55, 0.22)",
+            "& .MuiAlert-icon": { mt: 0.25 }
+          }}
+        >
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, letterSpacing: 0.2 }}>
+              Plano de cortes estimativo
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.35 }}>
+              Este plano tiene un fin informativo y se utiliza para estimar la cantidad de tableros y los metros de tapacantos necesarios en cada optimizacion de cortes.
+              La optimizacion final puede variar al ingresar la solicitud en la maquina de cortes.
+            </Typography>
+          </Box>
+        </Alert>
         {results.map((result) => (
           <Box key={result.material.id}>
             <Divider sx={{ mb: 2 }} />
