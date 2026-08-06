@@ -38,12 +38,14 @@ type BoardPlan = {
 };
 
 type PieceInput = {
+  id: string;
   width: number;
   height: number;
   label: string;
   colorIndex: number;
   canRotate: boolean;
   edges: PlacedPiece["edges"];
+  area: number;
 };
 
 type PlacementOption = {
@@ -86,7 +88,7 @@ type MaterialCutResult = {
   usableBoardWidthMm: number;
   usableBoardHeightMm: number;
   totalArea: number;
-  areaEstimatedBoards: number;
+  optimizedArea: number;
   optimizedBoards: BoardPlan[];
   boardCost: number;
   edgeMaterialCost: number;
@@ -771,6 +773,327 @@ function calculateRowEdgeCost(row: OrderDetail, cantoById: Map<string, Material>
   );
 }
 
+type SolverPlacementOption = {
+  boardIndex: number;
+  rect: FreeRect;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotated: boolean;
+  edges: PlacedPiece["edges"];
+  shortSideWaste: number;
+  longSideWaste: number;
+  areaWaste: number;
+  exactEdgeMatches: number;
+};
+
+const MAX_SEARCH_PIECES = 24;
+const MAX_SEARCH_NODES = 25000;
+const GREEDY_VARIANTS = 8;
+const SEARCH_VARIANTS = 6;
+const SEARCH_CANDIDATE_LIMIT = 18;
+const BEAM_WIDTH = 96;
+const BEAM_BRANCHES = 10;
+
+function buildOrientations(piece: PieceInput) {
+  if (!piece.canRotate || piece.width === piece.height) {
+    return [{ width: piece.width, height: piece.height, rotated: false, edges: piece.edges }];
+  }
+
+  return [
+    { width: piece.width, height: piece.height, rotated: false, edges: piece.edges },
+    {
+      width: piece.height,
+      height: piece.width,
+      rotated: true,
+      edges: {
+        top: piece.edges.left,
+        right: piece.edges.top,
+        bottom: piece.edges.right,
+        left: piece.edges.bottom
+      }
+    }
+  ];
+}
+
+function cloneSolverBoards(boards: BoardPlan[]) {
+  return boards.map((board) => ({
+    index: board.index,
+    pieces: board.pieces.map((piece) => ({ ...piece, edges: { ...piece.edges } })),
+    freeRects: board.freeRects.map((rect) => ({ ...rect })),
+    usedArea: board.usedArea
+  }));
+}
+
+function createSolverBoard(index: number, boardWidth: number, boardHeight: number): BoardPlan {
+  return {
+    index,
+    pieces: [],
+    freeRects: [{ x: 0, y: 0, width: boardWidth, height: boardHeight }],
+    usedArea: 0
+  };
+}
+
+function collectSolverPlacements(boards: BoardPlan[], piece: PieceInput) {
+  const placements: SolverPlacementOption[] = [];
+
+  boards.forEach((board, boardIndex) => {
+    board.freeRects.forEach((rect) => {
+      buildOrientations(piece).forEach((orientation) => {
+        if (orientation.width > rect.width || orientation.height > rect.height) return;
+
+        const anchors = [
+          { x: rect.x, y: rect.y },
+          { x: rect.x + rect.width - orientation.width, y: rect.y },
+          { x: rect.x, y: rect.y + rect.height - orientation.height },
+          { x: rect.x + rect.width - orientation.width, y: rect.y + rect.height - orientation.height }
+        ];
+        const seenAnchors = new Set<string>();
+
+        anchors.forEach((anchor) => {
+          const anchorKey = `${anchor.x}:${anchor.y}`;
+          if (seenAnchors.has(anchorKey)) return;
+          seenAnchors.add(anchorKey);
+
+          placements.push({
+            boardIndex,
+            rect,
+            x: anchor.x,
+            y: anchor.y,
+            width: orientation.width,
+            height: orientation.height,
+            rotated: orientation.rotated,
+            edges: orientation.edges,
+            shortSideWaste: Math.min(rect.width - orientation.width, rect.height - orientation.height),
+            longSideWaste: Math.max(rect.width - orientation.width, rect.height - orientation.height),
+            areaWaste: rect.width * rect.height - orientation.width * orientation.height,
+            exactEdgeMatches:
+              Number(anchor.x === rect.x || anchor.x + orientation.width === rect.x + rect.width) +
+              Number(anchor.y === rect.y || anchor.y + orientation.height === rect.y + rect.height)
+          });
+        });
+      });
+    });
+  });
+
+  return placements;
+}
+
+function sortSolverPlacements(placements: SolverPlacementOption[], variant: number) {
+  const mode = variant % 8;
+  return [...placements].sort((a, b) => {
+    const byTightFit =
+      a.shortSideWaste - b.shortSideWaste ||
+      a.longSideWaste - b.longSideWaste ||
+      a.areaWaste - b.areaWaste ||
+      b.exactEdgeMatches - a.exactEdgeMatches ||
+      a.boardIndex - b.boardIndex ||
+      a.rect.y - b.rect.y ||
+      a.rect.x - b.rect.x ||
+      a.y - b.y ||
+      a.x - b.x ||
+      Number(a.rotated) - Number(b.rotated);
+    const byAreaWaste =
+      a.areaWaste - b.areaWaste ||
+      a.shortSideWaste - b.shortSideWaste ||
+      b.exactEdgeMatches - a.exactEdgeMatches ||
+      a.boardIndex - b.boardIndex ||
+      a.rect.y - b.rect.y ||
+      a.rect.x - b.rect.x ||
+      a.y - b.y ||
+      a.x - b.x ||
+      Number(a.rotated) - Number(b.rotated);
+    const byEdges =
+      b.exactEdgeMatches - a.exactEdgeMatches ||
+      a.shortSideWaste - b.shortSideWaste ||
+      a.areaWaste - b.areaWaste ||
+      a.boardIndex - b.boardIndex ||
+      a.rect.y - b.rect.y ||
+      a.rect.x - b.rect.x ||
+      a.y - b.y ||
+      a.x - b.x ||
+      Number(a.rotated) - Number(b.rotated);
+
+    if (mode === 1) return byAreaWaste;
+    if (mode === 2) return byEdges;
+    if (mode === 3) return a.boardIndex - b.boardIndex || byTightFit;
+    if (mode === 4) return byTightFit || Number(a.rotated) - Number(b.rotated);
+    if (mode === 5) return a.y - b.y || a.x - b.x || byTightFit;
+    if (mode === 6) return a.longSideWaste - b.longSideWaste || byTightFit;
+    if (mode === 7) return b.width * b.height - a.width * a.height || byTightFit;
+    return byTightFit;
+  });
+}
+
+function sortSolverPieces(pieces: PieceInput[], variant: number) {
+  const mode = variant % 8;
+  return [...pieces].sort((a, b) => {
+    if (mode === 1) return Math.max(b.width, b.height) - Math.max(a.width, a.height) || b.area - a.area;
+    if (mode === 2) return b.height - a.height || b.width - a.width || b.area - a.area;
+    if (mode === 3) return b.width - a.width || b.height - a.height || b.area - a.area;
+    if (mode === 4) return b.width + b.height - (a.width + a.height) || b.area - a.area;
+    if (mode === 5) return Math.min(b.width, b.height) - Math.min(a.width, a.height) || b.area - a.area;
+    if (mode === 6) return Number(b.width === b.height) - Number(a.width === a.height) || b.area - a.area;
+    if (mode === 7) return b.area - a.area || Math.max(b.width, b.height) - Math.max(a.width, a.height);
+    return b.area - a.area || Math.max(b.width, b.height) - Math.max(a.width, a.height);
+  });
+}
+
+function applySolverPlacement(board: BoardPlan, placement: SolverPlacementOption, piece: PieceInput, settings: OptimizerSettings) {
+  const usedRect = {
+    x: placement.x,
+    y: placement.y,
+    width: placement.width + (placement.rect.width > placement.width ? settings.espesorSierraMm : 0),
+    height: placement.height + (placement.rect.height > placement.height ? settings.espesorSierraMm : 0)
+  };
+
+  board.pieces.push({
+    x: placement.x,
+    y: placement.y,
+    width: placement.width,
+    height: placement.height,
+    requestedWidth: piece.width,
+    requestedHeight: piece.height,
+    label: piece.label,
+    colorIndex: piece.colorIndex,
+    rotated: placement.rotated,
+    edges: placement.edges
+  });
+  board.usedArea += placement.width * placement.height;
+  board.freeRects = pruneFreeRects(board.freeRects.flatMap((rect) => splitFreeRect(rect, usedRect)));
+}
+
+function scoreSolverBoards(boards: BoardPlan[], boardArea: number) {
+  const boardCount = boards.filter((board) => board.usedArea > 0).length;
+  const usedArea = boards.reduce((total, board) => total + board.usedArea, 0);
+  const rotatedCount = boards.reduce((total, board) => total + board.pieces.reduce((pieceTotal, piece) => pieceTotal + Number(piece.rotated), 0), 0);
+  const wastePercent = boardCount && boardArea ? Math.max(0, 100 - (usedArea / (boardCount * boardArea)) * 100) : 0;
+  return { boardCount, usedArea, wastePercent, rotatedCount };
+}
+
+function solverBoardStateSignature(boards: BoardPlan[]) {
+  return boards
+    .map((board) =>
+      board.freeRects
+        .map((rect) => `${rect.x}:${rect.y}:${rect.width}:${rect.height}`)
+        .sort()
+        .join("|")
+    )
+    .join("||");
+}
+
+function compareSolverBoardStates(a: BoardPlan[], b: BoardPlan[], boardArea: number) {
+  const scoreA = scoreSolverBoards(a, boardArea);
+  const scoreB = scoreSolverBoards(b, boardArea);
+  if (scoreA.boardCount !== scoreB.boardCount) return scoreA.boardCount - scoreB.boardCount;
+  if (scoreA.rotatedCount !== scoreB.rotatedCount) return scoreA.rotatedCount - scoreB.rotatedCount;
+  if (scoreA.wastePercent !== scoreB.wastePercent) return scoreA.wastePercent - scoreB.wastePercent;
+  const freeRectsA = a.reduce((total, board) => total + board.freeRects.length, 0);
+  const freeRectsB = b.reduce((total, board) => total + board.freeRects.length, 0);
+  return freeRectsA - freeRectsB;
+}
+
+function chooseMostConstrainedSolverPiece(remaining: PieceInput[], boards: BoardPlan[], variant: number) {
+  const candidates = remaining.map((piece) => {
+    const placements = sortSolverPlacements(collectSolverPlacements(boards, piece), variant);
+    return { piece, placements };
+  });
+
+  candidates.sort((a, b) => {
+    if (a.placements.length !== b.placements.length) return a.placements.length - b.placements.length;
+    return b.piece.area - a.piece.area || Math.max(b.piece.width, b.piece.height) - Math.max(a.piece.width, a.piece.height);
+  });
+
+  return candidates[0] ?? null;
+}
+
+function greedySolveBoards(pieces: PieceInput[], boardCount: number, boardWidth: number, boardHeight: number, settings: OptimizerSettings, variant: number) {
+  const boards = Array.from({ length: boardCount }, (_, index) => createSolverBoard(index + 1, boardWidth, boardHeight));
+  const orderedPieces = sortSolverPieces(pieces, variant);
+
+  for (const piece of orderedPieces) {
+    const placement = sortSolverPlacements(collectSolverPlacements(boards, piece), variant)[0];
+    if (!placement) {
+      return { success: false, boards, unplaced: orderedPieces.filter((candidate) => !boards.some((board) => board.pieces.some((placed) => placed.label === candidate.label))) };
+    }
+    applySolverPlacement(boards[placement.boardIndex], placement, piece, settings);
+  }
+
+  return { success: true, boards, unplaced: [] as PieceInput[] };
+}
+
+function beamSolveBoards(pieces: PieceInput[], boardCount: number, boardWidth: number, boardHeight: number, settings: OptimizerSettings, variant: number) {
+  const orderedPieces = sortSolverPieces(pieces, variant);
+  const boardArea = boardWidth * boardHeight;
+  let frontier: BoardPlan[][] = [Array.from({ length: boardCount }, (_, index) => createSolverBoard(index + 1, boardWidth, boardHeight))];
+
+  for (const piece of orderedPieces) {
+    const nextStates: BoardPlan[][] = [];
+
+    for (const state of frontier) {
+      const placements = sortSolverPlacements(collectSolverPlacements(state, piece), variant).slice(0, BEAM_BRANCHES);
+      for (const placement of placements) {
+        const nextBoards = cloneSolverBoards(state);
+        applySolverPlacement(nextBoards[placement.boardIndex], placement, piece, settings);
+        nextStates.push(nextBoards);
+      }
+    }
+
+    if (!nextStates.length) return { success: false, boards: frontier[0] ?? [] };
+
+    const uniqueStates = new Map<string, BoardPlan[]>();
+    for (const state of nextStates) {
+      const signature = solverBoardStateSignature(state);
+      const existing = uniqueStates.get(signature);
+      if (!existing || compareSolverBoardStates(state, existing, boardArea) < 0) {
+        uniqueStates.set(signature, state);
+      }
+    }
+
+    frontier = [...uniqueStates.values()]
+      .sort((a, b) => compareSolverBoardStates(a, b, boardArea))
+      .slice(0, BEAM_WIDTH);
+  }
+
+  return frontier.length ? { success: true, boards: frontier[0] } : { success: false, boards: [] };
+}
+
+function searchSolveBoards(pieces: PieceInput[], boardCount: number, boardWidth: number, boardHeight: number, settings: OptimizerSettings, variant: number) {
+  const boards = Array.from({ length: boardCount }, (_, index) => createSolverBoard(index + 1, boardWidth, boardHeight));
+  const orderedPieces = sortSolverPieces(pieces, variant);
+  let exploredNodes = 0;
+  const failedStates = new Set<string>();
+
+  const visit = (currentBoards: BoardPlan[], remaining: PieceInput[]): BoardPlan[] | null => {
+    if (!remaining.length) return currentBoards;
+    if (exploredNodes >= MAX_SEARCH_NODES) return null;
+    exploredNodes += 1;
+
+    const stateKey = `${remaining.map((piece) => piece.id).sort().join(",")}###${solverBoardStateSignature(currentBoards)}`;
+    if (failedStates.has(stateKey)) return null;
+
+    const selected = chooseMostConstrainedSolverPiece(remaining, currentBoards, variant);
+    if (!selected || !selected.placements.length) return null;
+
+    const nextRemaining = remaining.filter((piece) => piece.id !== selected.piece.id);
+    const candidates = selected.placements.slice(0, SEARCH_CANDIDATE_LIMIT);
+
+    for (const placement of candidates) {
+      const nextBoards = cloneSolverBoards(currentBoards);
+      applySolverPlacement(nextBoards[placement.boardIndex], placement, selected.piece, settings);
+      const solved = visit(nextBoards, nextRemaining);
+      if (solved) return solved;
+    }
+
+    failedStates.add(stateKey);
+    return null;
+  };
+
+  const solvedBoards = visit(boards, orderedPieces);
+  return { success: Boolean(solvedBoards), boards: solvedBoards ?? boards };
+}
+
 function calculateCuts(rows: OrderDetail[], materials: Material[], variant: number, settings: OptimizerSettings, budgetSettings: BudgetSettings) {
   const cantoById = new Map(materials.filter((material) => material.tipo === "CANTO").map((material) => [material.id, material]));
 
@@ -780,12 +1103,14 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
       const materialRows = rows.filter((row) => resolveMaterialId(row, materials) === material.id);
       const basePieces = materialRows.flatMap((row, rowIndex) =>
         Array.from({ length: Number(row.cantidad) }, (_, copyIndex) => ({
+          id: `${rowIndex}-${copyIndex}-${row.nombreProducto || row.remark || "pieza"}`,
           width: Number(row.ancho),
           height: Number(row.largo),
           label: pieceLabel(row, rowIndex, copyIndex),
           colorIndex: rowIndex,
           canRotate: Boolean(row.permiteRotar),
-          edges: resolvePieceEdges(row)
+          edges: resolvePieceEdges(row),
+          area: Number(row.ancho) * Number(row.largo)
         }))
       );
 
@@ -797,34 +1122,77 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
       const usableHeightMm = usableBoardHeightMm(material, settings);
       const boardArea = usableWidthMm * usableHeightMm;
       const totalArea = basePieces.reduce((total, piece) => total + piece.width * piece.height, 0);
-      const attempts = ["rows", "columns"].flatMap((axis) =>
-        Array.from({ length: 6 }, (_, attemptVariant) => {
-          const result = runGuillotineLayout(basePieces, material, settings, axis as GuillotineAxis, attemptVariant);
-          const invalidBoardLayout = result.boards.some((board) => !piecesFitBoard(board, usableWidthMm, usableHeightMm));
-          return {
-            axis,
-            variant: attemptVariant,
-            boards: result.boards,
-            unplaced: invalidBoardLayout ? basePieces.map((piece) => `${piece.label} (${piece.height}x${piece.width})`) : result.unplaced,
-            score: result.score,
-            invalidBoardLayout
-          };
-        })
-      ).sort((a, b) => {
-        if (a.invalidBoardLayout !== b.invalidBoardLayout) return Number(a.invalidBoardLayout) - Number(b.invalidBoardLayout);
-        if (a.unplaced.length !== b.unplaced.length) return a.unplaced.length - b.unplaced.length;
-        if (a.score.boardCount !== b.score.boardCount) return a.score.boardCount - b.score.boardCount;
-        if (a.score.rotatedCount !== b.score.rotatedCount) return a.score.rotatedCount - b.score.rotatedCount;
-        if (a.score.wastePercent !== b.score.wastePercent) return a.score.wastePercent - b.score.wastePercent;
-        return b.score.usedArea - a.score.usedArea;
-      });
+      const pieceTooLarge = basePieces.some((piece) => !buildOrientations(piece).some((orientation) => orientation.width <= usableWidthMm && orientation.height <= usableHeightMm));
 
-      const validAttempts = attempts.filter((attempt) => !attempt.invalidBoardLayout && attempt.unplaced.length === 0);
-      const rankedAttempts = validAttempts.length ? validAttempts : attempts.filter((attempt) => !attempt.invalidBoardLayout);
-      const uniqueRankedAttempts = uniqueLayoutsBySignature(rankedAttempts);
-      const selectedAttempt = uniqueRankedAttempts.length ? uniqueRankedAttempts[variant % uniqueRankedAttempts.length] : attempts[0];
-      const boards = selectedAttempt.boards;
-      const unplaced = selectedAttempt.unplaced;
+      let solvedBoards: BoardPlan[] = [];
+      let unplaced: string[] = [];
+
+      if (pieceTooLarge || !boardArea) {
+        unplaced = basePieces.map((piece) => `${piece.label} (${piece.height}x${piece.width})`);
+      } else {
+        const minBoardsByArea = Math.max(1, Math.ceil(totalArea / boardArea));
+        const solvedAttempts: Array<{ boards: BoardPlan[]; score: ReturnType<typeof scoreSolverBoards> }> = [];
+
+        for (let boardCount = minBoardsByArea; boardCount <= basePieces.length; boardCount += 1) {
+          const greedyAttempts = Array.from({ length: GREEDY_VARIANTS }, (_, attemptVariant) =>
+            greedySolveBoards(basePieces, boardCount, usableWidthMm, usableHeightMm, settings, attemptVariant)
+          )
+            .filter((attempt) => attempt.success)
+            .map((attempt) => ({ boards: attempt.boards, score: scoreSolverBoards(attempt.boards, boardArea) }));
+
+          if (greedyAttempts.length) {
+            solvedAttempts.push(...greedyAttempts);
+            break;
+          }
+
+          const beamAttempts = Array.from({ length: GREEDY_VARIANTS }, (_, attemptVariant) =>
+            beamSolveBoards(basePieces, boardCount, usableWidthMm, usableHeightMm, settings, attemptVariant)
+          )
+            .filter((attempt) => attempt.success)
+            .map((attempt) => ({ boards: attempt.boards, score: scoreSolverBoards(attempt.boards, boardArea) }));
+
+          if (beamAttempts.length) {
+            solvedAttempts.push(...beamAttempts);
+            break;
+          }
+
+          if (basePieces.length > MAX_SEARCH_PIECES) continue;
+
+          const searched = Array.from({ length: SEARCH_VARIANTS }, (_, attemptVariant) =>
+            searchSolveBoards(basePieces, boardCount, usableWidthMm, usableHeightMm, settings, attemptVariant)
+          )
+            .filter((attempt) => attempt.success)
+            .map((attempt) => ({ boards: attempt.boards, score: scoreSolverBoards(attempt.boards, boardArea) }));
+
+          if (searched.length) {
+            solvedAttempts.push(...searched);
+            break;
+          }
+        }
+
+        const rankedAttempts = uniqueLayoutsBySignature(
+          solvedAttempts
+            .map((attempt) => ({
+              boards: attempt.boards.filter((board) => board.usedArea > 0),
+              unplaced: [],
+              score: attempt.score
+            }))
+            .sort((a, b) => {
+              if (a.score.boardCount !== b.score.boardCount) return a.score.boardCount - b.score.boardCount;
+              if (a.score.rotatedCount !== b.score.rotatedCount) return a.score.rotatedCount - b.score.rotatedCount;
+              if (a.score.wastePercent !== b.score.wastePercent) return a.score.wastePercent - b.score.wastePercent;
+              return b.score.usedArea - a.score.usedArea;
+            })
+        );
+
+        const selectedAttempt = rankedAttempts.length ? rankedAttempts[variant % rankedAttempts.length] : null;
+        solvedBoards = selectedAttempt?.boards ?? [];
+        if (!solvedBoards.length) {
+          unplaced = basePieces.map((piece) => `${piece.label} (${piece.height}x${piece.width})`);
+        }
+      }
+
+      const boards = solvedBoards;
       const optimizedArea = boards.length * boardArea;
       const boardCost = boards.length * material.valor;
       const edgeSummary = materialRows.reduce(
@@ -847,7 +1215,7 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
         usableBoardWidthMm: usableWidthMm,
         usableBoardHeightMm: usableHeightMm,
         totalArea,
-        areaEstimatedBoards: Math.ceil(totalArea / boardArea),
+        optimizedArea,
         optimizedBoards: boards,
         boardCost,
         edgeMaterialCost: edgeSummary.materialCost,
@@ -1018,7 +1386,7 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
               {result.material.nombre} {result.material.espesorMm}mm - Placa {result.material.anchoPlaca}x{result.material.altoPlaca} mm
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Area util placa: {result.usableBoardWidthMm}x{result.usableBoardHeightMm} mm - Costo placas: {formatMoney(result.boardCost)} ({result.optimizedBoards.length} placas) - Mano de obra por cortes: {formatMoney(result.cutCost)} - Material canto: {formatMoney(result.edgeMaterialCost)} - Pegado canto: {formatMoney(result.edgeLaborCost)} - Total cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - TOTAL: {formatMoney(result.cost)}
+              Area util placa: {result.usableBoardWidthMm}x{result.usableBoardHeightMm} mm - Superficie piezas: {(result.totalArea / 1000000).toFixed(2)} m2 - Superficie placas usadas: {(result.optimizedArea / 1000000).toFixed(2)} m2 - Desperdicio: {result.wastePercent.toFixed(1)}% - Costo placas: {formatMoney(result.boardCost)} ({result.optimizedBoards.length} placas) - Mano de obra por cortes: {formatMoney(result.cutCost)} - Material canto: {formatMoney(result.edgeMaterialCost)} - Pegado canto: {formatMoney(result.edgeLaborCost)} - Total cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - TOTAL: {formatMoney(result.cost)}
             </Typography>
             {result.unplaced.length > 0 && (
               <Alert severity="warning" sx={{ mt: 1 }}>

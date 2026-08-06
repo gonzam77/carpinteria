@@ -21,6 +21,8 @@ type FreeRect = {
 
 type BoardPlan = {
   freeRects: FreeRect[];
+  usedArea: number;
+  rotatedCount: number;
 };
 
 type BudgetSettingsSnapshot = {
@@ -31,43 +33,46 @@ type BudgetSettingsSnapshot = {
 };
 
 type Piece = {
+  id: string;
   width: number;
   height: number;
   canRotate: boolean;
+  area: number;
 };
 
-type GuillotineAxis = "rows" | "columns";
-
-type RowStrip = {
-  y: number;
-  height: number;
-  usedWidth: number;
-};
-
-type ColumnStrip = {
-  x: number;
+type PieceOrientation = {
   width: number;
-  usedHeight: number;
-};
-
-type GuillotineBoard = {
-  rowStrips: RowStrip[];
-  columnStrips: ColumnStrip[];
-  usedArea: number;
-  rotatedCount: number;
+  height: number;
+  rotated: boolean;
 };
 
 type PlacementOption = {
   boardIndex: number;
   rect: FreeRect;
+  x: number;
+  y: number;
   width: number;
   height: number;
-  waste: number;
+  rotated: boolean;
+  areaFit: number;
   shortSideWaste: number;
-  rotationPenalty: number;
-  guillotinePenalty: number;
-  axisPriority: number;
+  longSideWaste: number;
+  areaWaste: number;
+  exactEdgeMatches: number;
 };
+
+type SearchResult = {
+  boards: BoardPlan[];
+  success: boolean;
+};
+
+const MAX_SEARCH_PIECES = 24;
+const MAX_SEARCH_NODES = 25000;
+const GREEDY_VARIANTS = 8;
+const SEARCH_VARIANTS = 6;
+const SEARCH_CANDIDATE_LIMIT = 18;
+const BEAM_WIDTH = 96;
+const BEAM_BRANCHES = 10;
 
 function materialBoardWidthMm(material: Material) {
   return material.anchoPlaca ?? 0;
@@ -85,10 +90,20 @@ function usableBoardHeightMm(material: Material, settings: ConfiguracionOptimiza
   return Math.max(0, materialBoardHeightMm(material) - settings.perfiladoBordeMm * 2);
 }
 
-function createBoard(material: Material, settings: ConfiguracionOptimizador): BoardPlan {
+function createBoard(boardWidth: number, boardHeight: number): BoardPlan {
   return {
-    freeRects: [{ x: 0, y: 0, width: usableBoardWidthMm(material, settings), height: usableBoardHeightMm(material, settings) }]
+    freeRects: [{ x: 0, y: 0, width: boardWidth, height: boardHeight }],
+    usedArea: 0,
+    rotatedCount: 0
   };
+}
+
+function cloneBoards(boards: BoardPlan[]) {
+  return boards.map((board) => ({
+    freeRects: board.freeRects.map((rect) => ({ ...rect })),
+    usedArea: board.usedArea,
+    rotatedCount: board.rotatedCount
+  }));
 }
 
 function intersects(a: FreeRect, b: FreeRect) {
@@ -117,365 +132,339 @@ function containsRect(outer: FreeRect, inner: FreeRect) {
 }
 
 function pruneFreeRects(rects: FreeRect[]) {
-  return rects.filter((rect, index) => !rects.some((other, otherIndex) => index !== otherIndex && containsRect(other, rect))).sort((a, b) => a.y - b.y || a.x - b.x);
+  return rects
+    .filter((rect, index) => !rects.some((other, otherIndex) => index !== otherIndex && containsRect(other, rect)))
+    .sort((a, b) => a.y - b.y || a.x - b.x || a.width * a.height - b.width * b.height);
+}
+
+function candidateOrientations(piece: Piece): PieceOrientation[] {
+  if (!piece.canRotate || piece.width === piece.height) return [{ width: piece.width, height: piece.height, rotated: false }];
+  return [
+    { width: piece.width, height: piece.height, rotated: false },
+    { width: piece.height, height: piece.width, rotated: true }
+  ];
+}
+
+function collectPlacementOptions(boards: BoardPlan[], piece: Piece) {
+  const placements: PlacementOption[] = [];
+
+  boards.forEach((board, boardIndex) => {
+    board.freeRects.forEach((rect) => {
+      candidateOrientations(piece).forEach((orientation) => {
+        if (orientation.width > rect.width || orientation.height > rect.height) return;
+
+        const anchors = [
+          { x: rect.x, y: rect.y },
+          { x: rect.x + rect.width - orientation.width, y: rect.y },
+          { x: rect.x, y: rect.y + rect.height - orientation.height },
+          { x: rect.x + rect.width - orientation.width, y: rect.y + rect.height - orientation.height }
+        ];
+        const seenAnchors = new Set<string>();
+
+        anchors.forEach((anchor) => {
+          const anchorKey = `${anchor.x}:${anchor.y}`;
+          if (seenAnchors.has(anchorKey)) return;
+          seenAnchors.add(anchorKey);
+
+          placements.push({
+            boardIndex,
+            rect,
+            x: anchor.x,
+            y: anchor.y,
+            width: orientation.width,
+            height: orientation.height,
+            rotated: orientation.rotated,
+            areaFit: orientation.width * orientation.height,
+            shortSideWaste: Math.min(rect.width - orientation.width, rect.height - orientation.height),
+            longSideWaste: Math.max(rect.width - orientation.width, rect.height - orientation.height),
+            areaWaste: rect.width * rect.height - orientation.width * orientation.height,
+            exactEdgeMatches:
+              Number(anchor.x === rect.x || anchor.x + orientation.width === rect.x + rect.width) +
+              Number(anchor.y === rect.y || anchor.y + orientation.height === rect.y + rect.height)
+          });
+        });
+      });
+    });
+  });
+
+  return placements;
 }
 
 function sortPlacements(placements: PlacementOption[], variant: number) {
-  const mode = variant % 10;
+  const mode = variant % 8;
   return [...placements].sort((a, b) => {
-    const compareProductionFirst =
-      a.guillotinePenalty - b.guillotinePenalty ||
-      a.axisPriority - b.axisPriority ||
-      a.rotationPenalty - b.rotationPenalty ||
-      a.waste - b.waste ||
+    const byTightFit =
       a.shortSideWaste - b.shortSideWaste ||
-      a.rect.y - b.rect.y ||
-      a.rect.x - b.rect.x;
-    const compareCurrentHeuristic =
-      a.waste - b.waste ||
-      a.shortSideWaste - b.shortSideWaste ||
-      a.guillotinePenalty - b.guillotinePenalty ||
-      a.axisPriority - b.axisPriority ||
+      a.longSideWaste - b.longSideWaste ||
+      a.areaWaste - b.areaWaste ||
+      b.exactEdgeMatches - a.exactEdgeMatches ||
+      a.boardIndex - b.boardIndex ||
       a.rect.y - b.rect.y ||
       a.rect.x - b.rect.x ||
-      a.rotationPenalty - b.rotationPenalty;
+      a.y - b.y ||
+      a.x - b.x ||
+      Number(a.rotated) - Number(b.rotated);
+    const byAreaWaste =
+      a.areaWaste - b.areaWaste ||
+      a.shortSideWaste - b.shortSideWaste ||
+      b.exactEdgeMatches - a.exactEdgeMatches ||
+      a.boardIndex - b.boardIndex ||
+      a.rect.y - b.rect.y ||
+      a.rect.x - b.rect.x ||
+      a.y - b.y ||
+      a.x - b.x ||
+      Number(a.rotated) - Number(b.rotated);
+    const byEdges =
+      b.exactEdgeMatches - a.exactEdgeMatches ||
+      a.shortSideWaste - b.shortSideWaste ||
+      a.areaWaste - b.areaWaste ||
+      a.boardIndex - b.boardIndex ||
+      a.rect.y - b.rect.y ||
+      a.rect.x - b.rect.x ||
+      a.y - b.y ||
+      a.x - b.x ||
+      Number(a.rotated) - Number(b.rotated);
 
-    if (mode === 1) return a.rect.y - b.rect.y || a.rect.x - b.rect.x || a.guillotinePenalty - b.guillotinePenalty || a.axisPriority - b.axisPriority || a.rotationPenalty - b.rotationPenalty;
-    if (mode === 2) return a.guillotinePenalty - b.guillotinePenalty || a.shortSideWaste - b.shortSideWaste || a.axisPriority - b.axisPriority || a.waste - b.waste;
-    if (mode === 3) return a.axisPriority - b.axisPriority || a.guillotinePenalty - b.guillotinePenalty || a.rotationPenalty - b.rotationPenalty || a.waste - b.waste;
-    if (mode === 4) return compareCurrentHeuristic;
-    if (mode === 5) return a.rect.y - b.rect.y || a.rect.x - b.rect.x || a.shortSideWaste - b.shortSideWaste || a.guillotinePenalty - b.guillotinePenalty;
-    if (mode === 6) return a.shortSideWaste - b.shortSideWaste || a.guillotinePenalty - b.guillotinePenalty || a.waste - b.waste || a.axisPriority - b.axisPriority;
-    if (mode === 7) return a.axisPriority - b.axisPriority || a.waste - b.waste || a.guillotinePenalty - b.guillotinePenalty || a.rotationPenalty - b.rotationPenalty;
-    if (mode === 8) return a.guillotinePenalty - b.guillotinePenalty || a.rect.y - b.rect.y || a.rect.x - b.rect.x || a.waste - b.waste;
-    if (mode === 9) return a.axisPriority - b.axisPriority || a.rect.y - b.rect.y || a.rect.x - b.rect.x || a.shortSideWaste - b.shortSideWaste;
-    return compareProductionFirst;
+    if (mode === 1) return byAreaWaste;
+    if (mode === 2) return byEdges;
+    if (mode === 3) return a.boardIndex - b.boardIndex || byTightFit;
+    if (mode === 4) return byTightFit || Number(a.rotated) - Number(b.rotated);
+    if (mode === 5) return a.y - b.y || a.x - b.x || byTightFit;
+    if (mode === 6) return a.longSideWaste - b.longSideWaste || byTightFit;
+    if (mode === 7) return b.areaFit - a.areaFit || byTightFit;
+    return byTightFit;
   });
 }
 
-function collectPlacementOptions(board: BoardPlan, piece: Piece, boardIndex: number) {
-  const orientations = [
-    { width: piece.width, height: piece.height, rotationPenalty: 0 },
-    ...(piece.canRotate ? [{ width: piece.height, height: piece.width, rotationPenalty: 1 }] : [])
-  ];
-
-  return board.freeRects.flatMap((rect) =>
-    orientations
-      .filter((orientation) => orientation.width <= rect.width && orientation.height <= rect.height)
-      .map((orientation) => ({
-        boardIndex,
-        rect,
-        ...orientation,
-        waste: rect.width * rect.height - orientation.width * orientation.height,
-        shortSideWaste: Math.min(rect.width - orientation.width, rect.height - orientation.height),
-        guillotinePenalty: Number(orientation.width !== rect.width) + Number(orientation.height !== rect.height),
-        axisPriority: Math.min(rect.width - orientation.width, rect.height - orientation.height)
-      }))
-  );
-}
-
-function tryPlaceInBoards(boards: BoardPlan[], piece: Piece, settings: ConfiguracionOptimizador, variant: number) {
-  const placements = boards.flatMap((board, boardIndex) => collectPlacementOptions(board, piece, boardIndex));
-  const placement = sortPlacements(placements, variant)[0];
-
-  if (!placement) return false;
-
-  const board = boards[placement.boardIndex];
-  const usedRect = {
-    x: placement.rect.x,
-    y: placement.rect.y,
-    width: placement.width + (placement.rect.width > placement.width ? settings.espesorSierraMm : 0),
-    height: placement.height + (placement.rect.height > placement.height ? settings.espesorSierraMm : 0)
-  };
-  board.freeRects = pruneFreeRects(board.freeRects.flatMap((rect) => splitFreeRect(rect, usedRect)));
-  return true;
-}
-
-function sortPieces<T extends { width: number; height: number }>(pieces: T[], variant: number) {
-  const mode = variant % 6;
+function sortPieces<T extends { width: number; height: number; area: number }>(pieces: T[], variant: number) {
+  const mode = variant % 8;
   return [...pieces].sort((a, b) => {
-    if (mode === 1) return Math.max(b.width, b.height) - Math.max(a.width, a.height) || b.width * b.height - a.width * a.height;
-    if (mode === 2) return b.height - a.height || b.width - a.width;
-    if (mode === 3) return b.width - a.width || b.height - a.height;
-    if (mode === 4) return Math.min(b.width, b.height) - Math.min(a.width, a.height) || b.width * b.height - a.width * a.height;
-    if (mode === 5) return b.width + b.height - (a.width + a.height) || b.width * b.height - a.width * a.height;
-    return b.width * b.height - a.width * a.height;
+    if (mode === 1) return Math.max(b.width, b.height) - Math.max(a.width, a.height) || b.area - a.area;
+    if (mode === 2) return b.height - a.height || b.width - a.width || b.area - a.area;
+    if (mode === 3) return b.width - a.width || b.height - a.height || b.area - a.area;
+    if (mode === 4) return b.width + b.height - (a.width + a.height) || b.area - a.area;
+    if (mode === 5) return Math.min(b.width, b.height) - Math.min(a.width, a.height) || b.area - a.area;
+    if (mode === 6) return Number(b.width === b.height) - Number(a.width === a.height) || b.area - a.area;
+    if (mode === 7) return b.area - a.area || Math.max(b.width, b.height) - Math.max(a.width, a.height);
+    return b.area - a.area || Math.max(b.width, b.height) - Math.max(a.width, a.height);
   });
 }
 
-function createGuillotineBoard(): GuillotineBoard {
-  return {
-    rowStrips: [],
-    columnStrips: [],
-    usedArea: 0,
-    rotatedCount: 0
+function applyPlacement(board: BoardPlan, placement: PlacementOption, kerf: number) {
+  const usedRect = {
+    x: placement.x,
+    y: placement.y,
+    width: placement.width + (placement.rect.width > placement.width ? kerf : 0),
+    height: placement.height + (placement.rect.height > placement.height ? kerf : 0)
   };
-}
-
-function candidateOrientations(piece: Piece) {
-  return [
-    { width: piece.width, height: piece.height, rotated: false },
-    ...(piece.canRotate ? [{ width: piece.height, height: piece.width, rotated: true }] : [])
-  ];
-}
-
-function chooseAnchorOrientation(
-  piece: Piece,
-  axis: GuillotineAxis,
-  availablePrimary: number,
-  availableSecondary: number
-) {
-  const orientations = candidateOrientations(piece).filter((orientation) =>
-    axis === "rows"
-      ? orientation.width <= availablePrimary && orientation.height <= availableSecondary
-      : orientation.height <= availablePrimary && orientation.width <= availableSecondary
-  );
-
-  return orientations.sort((a, b) => Number(a.rotated) - Number(b.rotated) || b.width * b.height - a.width * a.height)[0] ?? null;
-}
-
-function selectAnchorCandidate(
-  pieces: Piece[],
-  axis: GuillotineAxis,
-  availablePrimary: number,
-  availableSecondary: number
-) {
-  const candidates = pieces
-    .map((piece, index) => {
-      const orientation = chooseAnchorOrientation(piece, axis, availablePrimary, availableSecondary);
-      if (!orientation) return null;
-      const primary = axis === "rows" ? orientation.width : orientation.height;
-      const secondary = axis === "rows" ? orientation.height : orientation.width;
-      return {
-        index,
-        orientation,
-        primary,
-        secondary,
-        area: orientation.width * orientation.height,
-        primaryWaste: availablePrimary - primary
-      };
-    })
-    .filter(Boolean);
-
-  return (
-    candidates.sort((a, b) => {
-      if (!a || !b) return 0;
-      return (
-        b.secondary - a.secondary ||
-        Number(a.orientation.rotated) - Number(b.orientation.rotated) ||
-        a.primaryWaste - b.primaryWaste ||
-        b.primary - a.primary ||
-        b.area - a.area
-      );
-    })[0] ?? null
-  );
-}
-
-function chooseStripeFillerOrientation(
-  piece: Piece,
-  axis: GuillotineAxis,
-  stripeSize: number,
-  remainingPrimary: number
-) {
-  const orientations = candidateOrientations(piece).filter((orientation) =>
-    axis === "rows"
-      ? orientation.height <= stripeSize && orientation.width <= remainingPrimary
-      : orientation.width <= stripeSize && orientation.height <= remainingPrimary
-  );
-
-  return (
-    orientations.sort((a, b) => {
-      const aSecondary = axis === "rows" ? a.height : a.width;
-      const bSecondary = axis === "rows" ? b.height : b.width;
-      const aPrimary = axis === "rows" ? a.width : a.height;
-      const bPrimary = axis === "rows" ? b.width : b.height;
-
-      return (
-        (stripeSize - aSecondary) - (stripeSize - bSecondary) ||
-        Number(a.rotated) - Number(b.rotated) ||
-        bPrimary - aPrimary
-      );
-    })[0] ?? null
-  );
-}
-
-function createStripeBoard(pieces: Piece[], material: Material, settings: ConfiguracionOptimizador, axis: GuillotineAxis) {
-  const board = createGuillotineBoard();
-  const boardWidth = usableBoardWidthMm(material, settings);
-  const boardHeight = usableBoardHeightMm(material, settings);
-  const kerf = settings.espesorSierraMm;
-  let consumedSecondary = 0;
-  let remaining = [...pieces];
-
-  while (remaining.length) {
-    const availableSecondary = (axis === "rows" ? boardHeight : boardWidth) - consumedSecondary;
-    if (availableSecondary <= 0) break;
-
-    const availablePrimary = axis === "rows" ? boardWidth : boardHeight;
-    const anchorCandidate = selectAnchorCandidate(remaining, axis, availablePrimary, availableSecondary);
-    if (!anchorCandidate) break;
-
-    const anchorIndex = anchorCandidate.index;
-    const anchorPiece = remaining[anchorIndex];
-    const anchorOrientation = anchorCandidate.orientation;
-
-    const stripeSize = axis === "rows" ? anchorOrientation.height : anchorOrientation.width;
-    let usedPrimary = 0;
-    const placedIndexes: number[] = [];
-
-    const placePiece = (orientation: NonNullable<ReturnType<typeof chooseStripeFillerOrientation>>) => {
-      board.usedArea += orientation.width * orientation.height;
-      board.rotatedCount += Number(orientation.rotated);
-      usedPrimary += (axis === "rows" ? orientation.width : orientation.height) + kerf;
-    };
-
-    placePiece(anchorOrientation);
-    placedIndexes.push(anchorIndex);
-
-    while (true) {
-      const remainingPrimary = availablePrimary - usedPrimary;
-      if (remainingPrimary <= 0) break;
-
-      let bestIndex = -1;
-      let bestOrientation: ReturnType<typeof chooseStripeFillerOrientation> | null = null;
-
-      remaining.forEach((piece, pieceIndex) => {
-        if (placedIndexes.includes(pieceIndex)) return;
-        const orientation = chooseStripeFillerOrientation(piece, axis, stripeSize, remainingPrimary);
-        if (!orientation) return;
-
-        if (!bestOrientation) {
-          bestIndex = pieceIndex;
-          bestOrientation = orientation;
-          return;
-        }
-
-        const currentSecondary = axis === "rows" ? orientation.height : orientation.width;
-        const bestSecondary = axis === "rows" ? bestOrientation.height : bestOrientation.width;
-        const currentPrimary = axis === "rows" ? orientation.width : orientation.height;
-        const bestPrimary = axis === "rows" ? bestOrientation.width : bestOrientation.height;
-
-        if (
-          stripeSize - currentSecondary < stripeSize - bestSecondary ||
-          (stripeSize - currentSecondary === stripeSize - bestSecondary &&
-            (Number(orientation.rotated) < Number(bestOrientation.rotated) || currentPrimary > bestPrimary))
-        ) {
-          bestIndex = pieceIndex;
-          bestOrientation = orientation;
-        }
-      });
-
-      if (bestIndex === -1 || !bestOrientation) break;
-      placePiece(bestOrientation);
-      placedIndexes.push(bestIndex);
-    }
-
-    remaining = remaining.filter((_piece, pieceIndex) => !placedIndexes.includes(pieceIndex));
-    consumedSecondary += stripeSize + kerf;
-  }
-
-  return { board, remaining };
-}
-
-function chooseRowPlacement(board: GuillotineBoard, piece: Piece, boardWidth: number, boardHeight: number, kerf: number) {
-  const placements = candidateOrientations(piece).flatMap((orientation) => {
-    const existingRows = board.rowStrips.flatMap((row, rowIndex) => {
-      if (orientation.height > row.height) return [];
-      const x = row.usedWidth === 0 ? 0 : row.usedWidth + kerf;
-      if (x + orientation.width > boardWidth) return [];
-      return [{ type: "existing" as const, rowIndex, x, y: row.y, ...orientation, stripPenalty: row.height - orientation.height }];
-    });
-    const lastRow = board.rowStrips[board.rowStrips.length - 1];
-    const y = lastRow ? lastRow.y + lastRow.height + kerf : 0;
-    const newRow = y + orientation.height <= boardHeight ? [{ type: "new" as const, rowIndex: board.rowStrips.length, x: 0, y, ...orientation, stripPenalty: 0 }] : [];
-    return [...existingRows, ...newRow];
-  });
-
-  return placements.sort((a, b) => Number(a.rotated) - Number(b.rotated) || a.stripPenalty - b.stripPenalty || a.y - b.y || a.x - b.x || b.width - a.width)[0];
-}
-
-function chooseColumnPlacement(board: GuillotineBoard, piece: Piece, boardWidth: number, boardHeight: number, kerf: number) {
-  const placements = candidateOrientations(piece).flatMap((orientation) => {
-    const existingColumns = board.columnStrips.flatMap((column, columnIndex) => {
-      if (orientation.width > column.width) return [];
-      const y = column.usedHeight === 0 ? 0 : column.usedHeight + kerf;
-      if (y + orientation.height > boardHeight) return [];
-      return [{ type: "existing" as const, columnIndex, x: column.x, y, ...orientation, stripPenalty: column.width - orientation.width }];
-    });
-    const lastColumn = board.columnStrips[board.columnStrips.length - 1];
-    const x = lastColumn ? lastColumn.x + lastColumn.width + kerf : 0;
-    const newColumn = x + orientation.width <= boardWidth ? [{ type: "new" as const, columnIndex: board.columnStrips.length, x, y: 0, ...orientation, stripPenalty: 0 }] : [];
-    return [...existingColumns, ...newColumn];
-  });
-
-  return placements.sort((a, b) => Number(a.rotated) - Number(b.rotated) || a.stripPenalty - b.stripPenalty || a.x - b.x || a.y - b.y || b.height - a.height)[0];
-}
-
-function placePieceGuillotine(board: GuillotineBoard, piece: Piece, axis: GuillotineAxis, boardWidth: number, boardHeight: number, kerf: number) {
-  const placement = axis === "rows" ? chooseRowPlacement(board, piece, boardWidth, boardHeight, kerf) : chooseColumnPlacement(board, piece, boardWidth, boardHeight, kerf);
-  if (!placement) return false;
 
   board.usedArea += placement.width * placement.height;
   board.rotatedCount += Number(placement.rotated);
+  board.freeRects = pruneFreeRects(board.freeRects.flatMap((rect) => splitFreeRect(rect, usedRect)));
+}
 
-  if (axis === "rows") {
-    const rowPlacement = placement as Extract<typeof placement, { rowIndex: number }>;
-    if (placement.type === "new") board.rowStrips.push({ y: placement.y, height: placement.height, usedWidth: placement.width });
-    else board.rowStrips[rowPlacement.rowIndex].usedWidth = placement.x + placement.width;
-  } else {
-    const columnPlacement = placement as Extract<typeof placement, { columnIndex: number }>;
-    if (placement.type === "new") board.columnStrips.push({ x: placement.x, width: placement.width, usedHeight: placement.height });
-    else board.columnStrips[columnPlacement.columnIndex].usedHeight = placement.y + placement.height;
+function boardUsageScore(boards: BoardPlan[], boardArea: number) {
+  const usedArea = boards.reduce((total, board) => total + board.usedArea, 0);
+  const rotatedCount = boards.reduce((total, board) => total + board.rotatedCount, 0);
+  const boardCount = boards.filter((board) => board.usedArea > 0).length;
+  const wastePercent = boardCount ? Math.max(0, 100 - (usedArea / (boardCount * boardArea)) * 100) : 0;
+  return { usedArea, rotatedCount, boardCount, wastePercent };
+}
+
+function boardStateSignature(boards: BoardPlan[]) {
+  return boards
+    .map((board) =>
+      board.freeRects
+        .map((rect) => `${rect.x}:${rect.y}:${rect.width}:${rect.height}`)
+        .sort()
+        .join("|")
+    )
+    .join("||");
+}
+
+function compareBoardStates(a: BoardPlan[], b: BoardPlan[], boardArea: number) {
+  const scoreA = boardUsageScore(a, boardArea);
+  const scoreB = boardUsageScore(b, boardArea);
+  if (scoreA.boardCount !== scoreB.boardCount) return scoreA.boardCount - scoreB.boardCount;
+  if (scoreA.rotatedCount !== scoreB.rotatedCount) return scoreA.rotatedCount - scoreB.rotatedCount;
+  if (scoreA.wastePercent !== scoreB.wastePercent) return scoreA.wastePercent - scoreB.wastePercent;
+  const freeRectsA = a.reduce((total, board) => total + board.freeRects.length, 0);
+  const freeRectsB = b.reduce((total, board) => total + board.freeRects.length, 0);
+  return freeRectsA - freeRectsB;
+}
+
+function chooseMostConstrainedPiece(remaining: Piece[], boards: BoardPlan[], variant: number) {
+  const candidates = remaining.map((piece) => {
+    const placements = sortPlacements(collectPlacementOptions(boards, piece), variant);
+    return { piece, placements };
+  });
+
+  candidates.sort((a, b) => {
+    if (a.placements.length !== b.placements.length) return a.placements.length - b.placements.length;
+    return b.piece.area - a.piece.area || Math.max(b.piece.width, b.piece.height) - Math.max(a.piece.width, a.piece.height);
+  });
+
+  return candidates[0] ?? null;
+}
+
+function greedyPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: number, boardHeight: number, kerf: number, variant: number): SearchResult {
+  const boards = Array.from({ length: boardCount }, () => createBoard(boardWidth, boardHeight));
+  const orderedPieces = sortPieces(pieces, variant);
+
+  for (const piece of orderedPieces) {
+    const placement = sortPlacements(collectPlacementOptions(boards, piece), variant)[0];
+    if (!placement) return { boards, success: false };
+    applyPlacement(boards[placement.boardIndex], placement, kerf);
   }
 
-  return true;
+  return { boards, success: true };
+}
+
+function beamPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: number, boardHeight: number, kerf: number, variant: number): SearchResult {
+  const orderedPieces = sortPieces(pieces, variant);
+  const boardArea = boardWidth * boardHeight;
+  let frontier: BoardPlan[][] = [Array.from({ length: boardCount }, () => createBoard(boardWidth, boardHeight))];
+
+  for (const piece of orderedPieces) {
+    const nextStates: BoardPlan[][] = [];
+
+    for (const state of frontier) {
+      const placements = sortPlacements(collectPlacementOptions(state, piece), variant).slice(0, BEAM_BRANCHES);
+      for (const placement of placements) {
+        const nextBoards = cloneBoards(state);
+        applyPlacement(nextBoards[placement.boardIndex], placement, kerf);
+        nextStates.push(nextBoards);
+      }
+    }
+
+    if (!nextStates.length) return { boards: frontier[0] ?? [], success: false };
+
+    const uniqueStates = new Map<string, BoardPlan[]>();
+    for (const state of nextStates) {
+      const signature = boardStateSignature(state);
+      const existing = uniqueStates.get(signature);
+      if (!existing || compareBoardStates(state, existing, boardArea) < 0) {
+        uniqueStates.set(signature, state);
+      }
+    }
+
+    frontier = [...uniqueStates.values()]
+      .sort((a, b) => compareBoardStates(a, b, boardArea))
+      .slice(0, BEAM_WIDTH);
+  }
+
+  return frontier.length ? { boards: frontier[0], success: true } : { boards: [], success: false };
+}
+
+function searchPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: number, boardHeight: number, kerf: number, variant: number): SearchResult {
+  const startingBoards = Array.from({ length: boardCount }, () => createBoard(boardWidth, boardHeight));
+  const orderedPieces = sortPieces(pieces, variant);
+  let exploredNodes = 0;
+  const failedStates = new Set<string>();
+
+  const visit = (boards: BoardPlan[], remaining: Piece[]): BoardPlan[] | null => {
+    if (!remaining.length) return boards;
+    if (exploredNodes >= MAX_SEARCH_NODES) return null;
+    exploredNodes += 1;
+
+    const stateKey = `${remaining.map((piece) => piece.id).sort().join(",")}###${boardStateSignature(boards)}`;
+    if (failedStates.has(stateKey)) return null;
+
+    const selected = chooseMostConstrainedPiece(remaining, boards, variant);
+    if (!selected || !selected.placements.length) return null;
+
+    const nextRemaining = remaining.filter((piece) => piece.id !== selected.piece.id);
+    const candidates = selected.placements.slice(0, SEARCH_CANDIDATE_LIMIT);
+
+    for (const placement of candidates) {
+      const nextBoards = cloneBoards(boards);
+      applyPlacement(nextBoards[placement.boardIndex], placement, kerf);
+      const solved = visit(nextBoards, nextRemaining);
+      if (solved) return solved;
+    }
+
+    failedStates.add(stateKey);
+    return null;
+  };
+
+  const solvedBoards = visit(startingBoards, orderedPieces);
+  return { boards: solvedBoards ?? startingBoards, success: Boolean(solvedBoards) };
 }
 
 function calculateBoardsForMaterial(details: DetallePedido[], material: Material, settings: ConfiguracionOptimizador) {
-  const basePieces = details.flatMap((detail) =>
-    Array.from({ length: detail.cantidad }, () => ({
+  const basePieces = details.flatMap((detail, detailIndex) =>
+    Array.from({ length: detail.cantidad }, (_, copyIndex) => ({
+      id: `${detailIndex}-${copyIndex}`,
       width: detail.ancho,
       height: detail.largo,
-      canRotate: detail.permiteRotar
+      canRotate: detail.permiteRotar,
+      area: detail.ancho * detail.largo
     }))
   );
 
   if (!basePieces.length) return 0;
-  if (!usableBoardWidthMm(material, settings) || !usableBoardHeightMm(material, settings)) return Number.POSITIVE_INFINITY;
 
   const boardWidth = usableBoardWidthMm(material, settings);
   const boardHeight = usableBoardHeightMm(material, settings);
+  if (!boardWidth || !boardHeight) return Number.POSITIVE_INFINITY;
+
   const boardArea = boardWidth * boardHeight;
+  const totalArea = basePieces.reduce((total, piece) => total + piece.area, 0);
 
-  const attempts = ["rows", "columns"].flatMap((axis) =>
-    Array.from({ length: 6 }, (_, variant) => {
-      const pieces = sortPieces(basePieces, variant);
-      const boards: GuillotineBoard[] = [];
-      let remaining = [...pieces];
+  const oversizedPiece = basePieces.some((piece) =>
+    !candidateOrientations(piece).some((orientation) => orientation.width <= boardWidth && orientation.height <= boardHeight)
+  );
+  if (oversizedPiece) return Number.POSITIVE_INFINITY;
 
-      while (remaining.length) {
-        const { board, remaining: nextRemaining } = createStripeBoard(remaining, material, settings, axis as GuillotineAxis);
-        if (!board.usedArea) break;
-        boards.push(board);
-        remaining = nextRemaining;
-      }
+  const minBoardsByArea = Math.max(1, Math.ceil(totalArea / boardArea));
 
-      const unplaced = remaining;
-      const usedArea = boards.reduce((total, board) => total + board.usedArea, 0);
-      const rotatedCount = boards.reduce((total, board) => total + board.rotatedCount, 0);
-      const wastePercent = boards.length ? Math.max(0, 100 - usedArea / (boards.length * boardArea) * 100) : 0;
-      return { boards, unplaced, usedArea, rotatedCount, wastePercent };
-    })
-  ).sort((a, b) => {
-    if (a.unplaced.length !== b.unplaced.length) return a.unplaced.length - b.unplaced.length;
-    if (a.boards.length !== b.boards.length) return a.boards.length - b.boards.length;
-    if (a.rotatedCount !== b.rotatedCount) return a.rotatedCount - b.rotatedCount;
-    if (a.wastePercent !== b.wastePercent) return a.wastePercent - b.wastePercent;
-    return b.usedArea - a.usedArea;
-  });
+  for (let boardCount = minBoardsByArea; boardCount <= basePieces.length; boardCount += 1) {
+    const attempts = Array.from({ length: GREEDY_VARIANTS }, (_, variant) =>
+      greedyPackFixedBoards(basePieces, boardCount, boardWidth, boardHeight, settings.espesorSierraMm, variant)
+    );
 
-  const best = attempts[0];
-  return best && !best.unplaced.length ? best.boards.length : Number.POSITIVE_INFINITY;
+    const successfulGreedy = attempts
+      .filter((attempt) => attempt.success)
+      .sort((a, b) => {
+        const scoreA = boardUsageScore(a.boards, boardArea);
+        const scoreB = boardUsageScore(b.boards, boardArea);
+        if (scoreA.rotatedCount !== scoreB.rotatedCount) return scoreA.rotatedCount - scoreB.rotatedCount;
+        if (scoreA.wastePercent !== scoreB.wastePercent) return scoreA.wastePercent - scoreB.wastePercent;
+        return scoreB.usedArea - scoreA.usedArea;
+      })[0];
+
+    if (successfulGreedy) {
+      return successfulGreedy.boards.filter((board) => board.usedArea > 0).length;
+    }
+
+    const beamSolved = Array.from({ length: GREEDY_VARIANTS }, (_, variant) =>
+      beamPackFixedBoards(basePieces, boardCount, boardWidth, boardHeight, settings.espesorSierraMm, variant)
+    )
+      .filter((attempt) => attempt.success)
+      .sort((a, b) => {
+        const scoreA = boardUsageScore(a.boards, boardArea);
+        const scoreB = boardUsageScore(b.boards, boardArea);
+        if (scoreA.rotatedCount !== scoreB.rotatedCount) return scoreA.rotatedCount - scoreB.rotatedCount;
+        if (scoreA.wastePercent !== scoreB.wastePercent) return scoreA.wastePercent - scoreB.wastePercent;
+        return scoreB.usedArea - scoreA.usedArea;
+      })[0];
+
+    if (beamSolved) {
+      return beamSolved.boards.filter((board) => board.usedArea > 0).length;
+    }
+
+    if (basePieces.length > MAX_SEARCH_PIECES) continue;
+
+    const searched = Array.from({ length: SEARCH_VARIANTS }, (_, variant) =>
+      searchPackFixedBoards(basePieces, boardCount, boardWidth, boardHeight, settings.espesorSierraMm, variant)
+    ).find((attempt) => attempt.success);
+
+    if (searched) {
+      return searched.boards.filter((board) => board.usedArea > 0).length;
+    }
+  }
+
+  return Number.POSITIVE_INFINITY;
 }
 
 function resolveEdgeLaborCostPerMeter(espesorMm: number, budgetSettings: BudgetSettingsSnapshot) {
