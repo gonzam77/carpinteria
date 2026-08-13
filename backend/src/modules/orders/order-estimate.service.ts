@@ -4,6 +4,7 @@ import { AppError } from "../../utils/http.js";
 type EstimateSnapshot = {
   placasEstimadas: number;
   costoPlacas: number;
+  costoManoObraCortes: number;
   costoMaterialCantos: number;
   costoPegadoCantos: number;
   costoCantos: number;
@@ -531,6 +532,7 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
     return {
       placasEstimadas: 0,
       costoPlacas: 0,
+      costoManoObraCortes: 0,
       costoMaterialCantos: 0,
       costoPegadoCantos: 0,
       costoCantos: 0,
@@ -554,10 +556,9 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
   let costoPlacas = 0;
   let costoMaterialCantos = 0;
   let costoPegadoCantos = 0;
-  let costoCantos = 0;
   let metrosCanto = 0;
   let faltanteStock = false;
-  let costoManoObraPlacas = 0;
+  let costoManoObraCortes = 0;
 
   for (const materialId of materialIds) {
     const material = materialsById.get(materialId);
@@ -571,7 +572,7 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
 
     placasEstimadas += boards;
     costoPlacas += boards * material.valor;
-    costoManoObraPlacas += boards * budgetSettings.manoObraPlacaPorPlaca;
+    costoManoObraCortes += boards * budgetSettings.manoObraPlacaPorPlaca;
     if ((material.stockPlacas ?? 0) < boards) {
       faltanteStock = true;
     }
@@ -581,18 +582,21 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
     const edgeTotals = calculateEdgeTotals(detail, cantoById, budgetSettings);
     costoMaterialCantos += edgeTotals.costoMaterial;
     costoPegadoCantos += edgeTotals.costoPegado;
-    costoCantos += edgeTotals.costoMaterial + edgeTotals.costoPegado;
     metrosCanto += edgeTotals.metros;
   }
+
+  const costoCantos = costoMaterialCantos + costoPegadoCantos;
+  const presupuestoEstimado = costoPlacas + costoManoObraCortes + costoCantos;
 
   return {
     placasEstimadas,
     costoPlacas,
+    costoManoObraCortes,
     costoMaterialCantos,
     costoPegadoCantos,
     costoCantos,
     metrosCanto,
-    presupuestoEstimado: costoPlacas + costoCantos + costoManoObraPlacas,
+    presupuestoEstimado,
     faltanteStock
   };
 }

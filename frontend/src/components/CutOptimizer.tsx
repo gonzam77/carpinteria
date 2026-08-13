@@ -1381,15 +1381,35 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
         </Box>
         <Alert
           severity="warning"
-          variant="filled"
+          variant="outlined"
+          role="alert"
           sx={{
+            display: "flex",
+            width: "100%",
+            minWidth: 0,
             alignItems: "flex-start",
             borderRadius: 2,
+            borderWidth: 2,
+            borderColor: "warning.main",
+            bgcolor: "warning.light",
+            color: "#4b2d00",
             boxShadow: "0 10px 24px rgba(228, 185, 55, 0.22)",
-            "& .MuiAlert-icon": { mt: 0.25 }
+            px: { xs: 1.25, sm: 2 },
+            py: { xs: 1.25, sm: 1.5 },
+            "& .MuiAlert-icon": {
+              color: "warning.dark",
+              flexShrink: 0,
+              mt: 0.25,
+              mr: { xs: 1, sm: 1.5 }
+            },
+            "& .MuiAlert-message": {
+              width: "100%",
+              minWidth: 0,
+              overflowWrap: "anywhere"
+            }
           }}
         >
-          <Box>
+          <Box sx={{ minWidth: 0 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 800, letterSpacing: 0.2 }}>
               Plano de cortes estimativo
             </Typography>
@@ -1409,7 +1429,15 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
               Costo placas: {formatMoney(result.boardCost)} ({result.optimizedBoards.length} placas) - Mano de obra por cortes: {formatMoney(result.cutCost)} - Material canto: {formatMoney(result.edgeMaterialCost)} - Pegado canto: {formatMoney(result.edgeLaborCost)} - Total cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - TOTAL: {formatMoney(result.cost)}
             </Typography>
             {result.unplaced.length > 0 && (
-              <Alert severity="warning" sx={{ mt: 1 }}>
+              <Alert
+                severity="warning"
+                sx={{
+                  mt: 1,
+                  width: "100%",
+                  minWidth: 0,
+                  "& .MuiAlert-message": { minWidth: 0, overflowWrap: "anywhere" }
+                }}
+              >
                 Hay piezas que no entran en una placa: {result.unplaced.join(", ")}
               </Alert>
             )}
@@ -1471,7 +1499,8 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
   const [results, setResults] = useState<MaterialCutResult[]>([]);
   const [variant, setVariant] = useState(0);
   const [settings, setSettings] = useState<OptimizerSettings>(DEFAULT_OPTIMIZER_SETTINGS);
-  const [budgetSettings, setBudgetSettings] = useState<BudgetSettings>(DEFAULT_BUDGET_SETTINGS);
+  const [budgetSettings, setBudgetSettings] = useState<BudgetSettings | null>(null);
+  const [budgetSettingsError, setBudgetSettingsError] = useState("");
 
   useEffect(() => {
     api
@@ -1481,11 +1510,18 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
 
     api
       .get<BudgetSettings>("/budget-settings")
-      .then((response) => setBudgetSettings(response.data))
-      .catch(() => setBudgetSettings(DEFAULT_BUDGET_SETTINGS));
+      .then((response) => {
+        setBudgetSettings(response.data);
+        setBudgetSettingsError("");
+      })
+      .catch(() => {
+        setBudgetSettings(null);
+        setBudgetSettingsError("No se pudo cargar la configuracion de costos. El presupuesto no se calculara con tarifas en cero.");
+      });
   }, []);
 
   function calculate(nextVariant = 0) {
+    if (!budgetSettings) return;
     setVariant(nextVariant);
     setResults(calculateCuts(rows, materials, nextVariant, settings, budgetSettings));
   }
@@ -1493,15 +1529,25 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
   useEffect(() => {
     setResults([]);
     setVariant(0);
-    if (autoCalculate && rows.length && materials.length) {
+    if (autoCalculate && rows.length && materials.length && budgetSettings) {
       setResults(calculateCuts(rows, materials, 0, settings, budgetSettings));
     }
   }, [autoCalculate, rows, materials, settings, budgetSettings]);
 
   return (
     <Stack spacing={2}>
+      {budgetSettingsError && <Alert severity="error">{budgetSettingsError}</Alert>}
+      {budgetSettings &&
+        budgetSettings.manoObraPlacaPorPlaca === 0 &&
+        budgetSettings.manoObraCanto045Mm === 0 &&
+        budgetSettings.manoObraCanto1Mm === 0 &&
+        budgetSettings.manoObraCanto2Mm === 0 && (
+          <Alert severity="warning">
+            Todas las tarifas de mano de obra estan configuradas en $0. Actualizalas desde Configuracion &gt; Presupuesto.
+          </Alert>
+        )}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-        <Button type="button" variant="contained" startIcon={<CalculateIcon />} onClick={() => calculate(0)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+        <Button type="button" variant="contained" startIcon={<CalculateIcon />} onClick={() => calculate(0)} disabled={!budgetSettings} sx={{ width: { xs: "100%", sm: "auto" } }}>
           Optimizar cortes
         </Button>
         {results.length > 0 && (

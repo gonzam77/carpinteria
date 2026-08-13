@@ -109,6 +109,7 @@ export type Order = {
   estado: EstadoSolicitud;
   placasEstimadas: number;
   costoPlacas: number;
+  costoManoObraCortes?: number;
   costoMaterialCantos: number;
   costoPegadoCantos: number;
   costoCantos: number;

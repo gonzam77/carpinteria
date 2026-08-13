@@ -54,6 +54,7 @@ model Pedido {
   stockReservado Boolean          @default(false)
   placasEstimadas Int             @default(0)
   costoPlacas   Float             @default(0)
+  costoManoObraCortes Float       @default(0)
   costoMaterialCantos Float       @default(0)
   costoPegadoCantos Float         @default(0)
   costoCantos   Float             @default(0)

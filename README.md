@@ -61,7 +61,9 @@ docker compose run --rm api npx prisma db seed
 ```bash --Acceder a la base de datos
 docker exec -it carpinteria-db psql -U carpinteria -d carpinteria
 ```
-
+```bash --ejecutar migracion en docker
+docker compose exec api npx prisma migrate deploy
+```
 
 Para habilitar Google Login, crear un OAuth Client ID web en Google Cloud y configurar en `.env`:
 

@@ -9,6 +9,11 @@ function formatMoney(value: number) {
   return value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 }
 
+function cuttingLaborCost(order: Order) {
+  const cost = order.costoManoObraCortes ?? (order.presupuestoEstimado - order.costoPlacas - order.costoCantos);
+  return Math.abs(cost) < 0.01 ? 0 : cost;
+}
+
 function cantoNames(row: OrderDetail) {
   return [row.cantoLargo1Nombre, row.cantoLargo2Nombre, row.cantoAncho1Nombre, row.cantoAncho2Nombre].filter(Boolean).join(" / ") || "Sin canto";
 }
@@ -106,6 +111,7 @@ export function OrderReceiptDialog({
   function handlePrint() {
     if (!currentOrder) return;
     const printableOrder = currentOrder;
+    const printableCuttingLaborCost = cuttingLaborCost(printableOrder);
     const title = `Constancia - ${printableOrder.cliente}`;
     const date = new Date(printableOrder.fechaCreacion).toLocaleDateString();
     const rowsHtml = printableOrder.detalles
@@ -151,7 +157,7 @@ export function OrderReceiptDialog({
           </div>
           <div class="section">
             <strong>Presupuesto estimado:</strong> ${formatMoney(printableOrder.presupuestoEstimado)}<br />
-            <span class="muted">Placas: ${formatMoney(printableOrder.costoPlacas)} - Material canto: ${formatMoney(printableOrder.costoMaterialCantos)} - Pegado canto: ${formatMoney(printableOrder.costoPegadoCantos)} - Total cantos: ${formatMoney(printableOrder.costoCantos)} (${printableOrder.metrosCanto.toFixed(2)} m)</span>
+            <span class="muted">Placas: ${formatMoney(printableOrder.costoPlacas)} - Mano de obra de cortes: ${formatMoney(printableCuttingLaborCost)} - Material canto: ${formatMoney(printableOrder.costoMaterialCantos)} - Pegado canto: ${formatMoney(printableOrder.costoPegadoCantos)} - Total cantos (material + pegado): ${formatMoney(printableOrder.costoCantos)} (${printableOrder.metrosCanto.toFixed(2)} m)</span>
           </div>
           <div class="section">
             <strong>Entrega estimada:</strong> "Observacion: la entrega puede demorar algunos dias adicionales segun disponibilidad del material al momento de procesar la solicitud."
@@ -247,9 +253,10 @@ export function OrderReceiptDialog({
                 <Stack spacing={1}>
                   <Typography>Placas estimadas: {currentOrder.placasEstimadas}</Typography>
                   <Typography>Costo placas: {formatMoney(currentOrder.costoPlacas)}</Typography>
+                  <Typography>Mano de obra de cortes: {formatMoney(cuttingLaborCost(currentOrder))}</Typography>
                   <Typography>Costo material de canto: {formatMoney(currentOrder.costoMaterialCantos)}</Typography>
                   <Typography>Costo pegado de canto: {formatMoney(currentOrder.costoPegadoCantos)}</Typography>
-                  <Typography>Total cantos: {formatMoney(currentOrder.costoCantos)}</Typography>
+                  <Typography>Total cantos (material + pegado): {formatMoney(currentOrder.costoCantos)}</Typography>
                   <Typography color="text.secondary">Metros de canto estimados: {currentOrder.metrosCanto.toFixed(2)} m</Typography>
                   <Divider sx={{ my: 0.5 }} />
                   <Typography variant="h5" fontWeight={900}>
