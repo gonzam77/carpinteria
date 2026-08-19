@@ -166,8 +166,8 @@ ordersRouter.post(
   asyncHandler(async (req: any, res: any) => {
     const data = orderSchema.parse(req.body);
     const detalles = await normalizeDetails(data.detalles, data.cliente, data.numeroContacto);
+    const estimateSnapshot = await buildOrderEstimateSnapshot(prisma as any, detalles as any);
     const order = await prisma.$transaction(async (tx) => {
-      const estimateSnapshot = await buildOrderEstimateSnapshot(tx as any, detalles as any);
       const created = await tx.pedido.create({
         data: {
           cliente: data.cliente,
@@ -251,12 +251,13 @@ ordersRouter.put(
     if (req.user.rol !== Rol.ADMIN && existing.estado !== EstadoPedido.PENDIENTE) {
       throw new AppError(403, "Solo se pueden editar pedidos pendientes");
     }
+    
+    const estimateSnapshot = await buildOrderEstimateSnapshot(prisma as any, detalles as any);
 
     const order = await prisma.$transaction(async (tx) => {
       if (existing.estado === EstadoPedido.EN_PROCESO && existing.stockReservado) {
         await releaseOrderStock(tx as any, existing.detalles as any);
       }
-      const estimateSnapshot = await buildOrderEstimateSnapshot(tx as any, detalles as any);
       await tx.detallePedido.deleteMany({ where: { pedidoId: existing.id } });
       const updated = await tx.pedido.update({
         where: { id: existing.id },
