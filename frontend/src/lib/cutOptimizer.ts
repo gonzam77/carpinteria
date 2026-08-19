@@ -1643,7 +1643,7 @@ function validateAttempt(attempt: { boards: BoardPlan[]; unplaced: PieceInput[] 
 function logValidationErrors(context: string, errors: string[]) {
   if (!errors.length) return;
 
-  const shouldLog = typeof process === "undefined" || process.env.NODE_ENV !== "production";
+  const shouldLog = !import.meta.env.PROD;
   if (shouldLog) {
     console.warn(`[cutOptimizer] ${context}`, errors);
   }
