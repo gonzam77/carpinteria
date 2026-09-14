@@ -17,7 +17,13 @@ const SEARCH_BRANCH_LIMIT = 6;
 const BEAM_WIDTH = 24;
 const BEAM_BRANCHES = 4;
 const PRIMARY_VARIANT_SEEDS = [0, 1, 3, 8, 26];
-const CANDIDATE_ORDERS = ["fit-first", "size-first"] as const;
+const FLOOR_EXPLORATION_SHARE = 0.35;
+const CANDIDATE_ORDERS = ["fit-first", "size-first", "board-fit-first", "size-board-fit-first"] as const;
+const BOARD_SCOPED_ORDERS: readonly CandidateOrder[] = ["board-fit-first", "size-board-fit-first"];
+const SIZE_SCOPED_ORDERS: readonly CandidateOrder[] = ["size-first", "size-board-fit-first"];
+// Los dos primeros son los modos historicos: se calculan siempre para que el resultado nunca
+// pueda ser peor que el de la version anterior.
+const REQUIRED_CANDIDATE_ORDERS = 2;
 
 export type PieceEdges = {
   top?: string | null;
@@ -70,26 +76,6 @@ type PlacementRecord = {
   piece: PlacedPiece;
   direction: CutDirection;
 };
-
-type LayoutTreeNode =
-  | {
-      kind: "free";
-      rect: FreeRect;
-    }
-  | {
-      kind: "piece";
-      rect: FreeRect;
-      pieceId: string;
-      rotated: boolean;
-      canRotate: boolean;
-    }
-  | {
-      kind: "split";
-      rect: FreeRect;
-      direction: CutDirection;
-      kerfArea: number;
-      children: LayoutTreeNode[];
-    };
 
 export type BoardPlan = {
   index: number;
@@ -179,7 +165,7 @@ type PlacementCandidate = {
   direction: CutDirection;
   freeRectsAfterSplit: FreeRect[];
   boardFreeRectsAfterPlacement: FreeRect[];
-  kerfArea: number;
+  boardKerfAreaAfterPlacement: number;
   fitCount: number;
   blockedArea: number;
   largestRectArea: number;
@@ -205,7 +191,6 @@ type ReplayResult = {
   pieces: PlacedPiece[];
   freeRects: FreeRect[];
   kerfArea: number;
-  tree: LayoutTreeNode;
   errors: string[];
 };
 
@@ -545,7 +530,7 @@ function compareCandidates(
   isLastBoard: boolean,
   candidateOrder: CandidateOrder
 ) {
-  if (candidateOrder === "size-first" && a.piece.area !== b.piece.area) return b.piece.area - a.piece.area;
+  if (SIZE_SCOPED_ORDERS.includes(candidateOrder) && a.piece.area !== b.piece.area) return b.piece.area - a.piece.area;
   if (isLastBoard) {
     const lastBoardStripePriority = compareLastBoardStripePriority(a, b);
     if (lastBoardStripePriority !== 0) return lastBoardStripePriority;
@@ -683,19 +668,41 @@ function collectBoardCandidates(
 
         (["horizontal", "vertical"] as const).forEach((direction) => {
           const split = splitGuillotineRect(rect, orientation.width, orientation.height, direction, kerf);
-          const boardFreeRectsAfterPlacement = sortRects([...remainingFreeRects, ...split.freeRects]);
+          // La fusion se calcula aca y no al aplicar la jugada, para que todas las metricas del
+          // candidato midan el estado real en que quedaria la placa. Si el candidato se evalua
+          // sobre el sobrante partido y la placa despues se fusiona, el comparador decide sobre
+          // una foto que ya no existe.
+          const mergedAfterPlacement = mergeAdjacentFreeRects(
+            sortRects([...remainingFreeRects, ...split.freeRects]),
+            roundArea(board.kerfArea + split.kerfArea),
+            kerf
+          );
+          const boardFreeRectsAfterPlacement = mergedAfterPlacement.freeRects;
+          // "fit-first" mide cuantas piezas entran solo en los recortes del rectangulo usado, asi que
+          // premia cortar el rectangulo mas grande aunque queden intactos otros mas ajustados.
+          // "board-fit-first" mide lo mismo sobre la placa entera, con lo que favorece el encastre justo.
+          const fitScopeRects = BOARD_SCOPED_ORDERS.includes(candidateOrder) ? boardFreeRectsAfterPlacement : split.freeRects;
           const fitCount = nextRemaining.reduce(
-            (total, candidateBucket) => total + countFittableUnitsForBucket(split.freeRects, candidateBucket, kerf),
+            (total, candidateBucket) => total + countFittableUnitsForBucket(fitScopeRects, candidateBucket, kerf),
             0
           );
-          const blockedArea = split.freeRects
-            .filter((freeRect) => !nextRemaining.some((candidateBucket) => bucketFitsAnyRect(candidateBucket, [freeRect])))
-            .reduce((total, freeRect) => total + rectArea(freeRect), 0);
+          // Si no queda ninguna pieza por ubicar, "cuanta area queda bloqueada" y "cuantas piezas
+          // mas entran en la franja" no significan nada: todo el sobrante queda igual de inutil.
+          // Dejarlos en cero evita que la ultima colocacion se decida por diferencias de kerf de
+          // unos pocos mm2 y deja que mande la calidad del remanente.
+          const hasRemainingPieces = nextRemaining.length > 0;
+          const blockedArea = hasRemainingPieces
+            ? split.freeRects
+                .filter((freeRect) => !nextRemaining.some((candidateBucket) => bucketFitsAnyRect(candidateBucket, [freeRect])))
+                .reduce((total, freeRect) => total + rectArea(freeRect), 0)
+            : 0;
           const largestRectArea = split.freeRects.reduce((largest, freeRect) => Math.max(largest, rectArea(freeRect)), 0);
-          const sameGroupStripeCapacity = split.freeRects.reduce(
-            (capacity, freeRect) => capacity + countStripeCapacity(freeRect, orientation.width, orientation.height, kerf),
-            0
-          );
+          const sameGroupStripeCapacity = hasRemainingPieces
+            ? split.freeRects.reduce(
+                (capacity, freeRect) => capacity + countStripeCapacity(freeRect, orientation.width, orientation.height, kerf),
+                0
+              )
+            : 0;
           const sameHeightStripe = sameNumber(rect.height, orientation.height);
           const adjacentStripe = hasAdjacentStripe(board, rect, orientation.height, kerf);
           const fullSpanRemainder = split.freeRects.some(
@@ -711,7 +718,7 @@ function collectBoardCandidates(
             direction,
             freeRectsAfterSplit: split.freeRects,
             boardFreeRectsAfterPlacement,
-            kerfArea: split.kerfArea,
+            boardKerfAreaAfterPlacement: mergedAfterPlacement.kerfArea,
             fitCount,
             blockedArea: roundArea(blockedArea),
             largestRectArea,
@@ -762,7 +769,10 @@ function applyCandidate(board: BoardPlan, candidate: PlacementCandidate) {
 
   board.pieces.push(placedPiece);
   board.usedArea = roundArea(board.usedArea + candidate.width * candidate.height);
-  board.kerfArea = roundArea(board.kerfArea + candidate.kerfArea);
+  // Ambos vienen ya fusionados desde collectBoardCandidates: el sobrante contiguo se unifica
+  // apenas se coloca la pieza. Sin eso el empaquetador ve el sobrante partido en trozos que por
+  // separado no aceptan ninguna pieza, aunque el material sea una sola tabla.
+  board.kerfArea = candidate.boardKerfAreaAfterPlacement;
   board.freeRects = candidate.boardFreeRectsAfterPlacement;
   board.placementHistory.push({
     targetRect: { ...candidate.rect },
@@ -862,25 +872,33 @@ function tryMergeFreeRects(a: FreeRect, b: FreeRect, kerf: number) {
   return null;
 }
 
-function mergeFreeRectsForReport(freeRects: FreeRect[], kerfArea: number, kerf: number): MergedFreeRectsResult {
+function mergeAdjacentFreeRects(freeRects: FreeRect[], kerfArea: number, kerf: number): MergedFreeRectsResult {
   const nextFreeRects = sortRects(freeRects.map((rect) => ({ ...rect })));
   let recoveredKerfArea = 0;
   let merged = true;
 
   while (merged) {
     merged = false;
+    // Un sobrante en forma de L admite mas de una particion en rectangulos. Entre todas las
+    // fusiones posibles se elige la que deja el rectangulo mas grande, que es el que sirve para
+    // reusar como remanente; tomar la primera que aparece parte el sobrante en trozos mas chicos.
+    let best: { index: number; otherIndex: number; rect: FreeRect; recoveredKerfArea: number } | null = null;
 
-    for (let index = 0; index < nextFreeRects.length && !merged; index += 1) {
+    for (let index = 0; index < nextFreeRects.length; index += 1) {
       for (let otherIndex = index + 1; otherIndex < nextFreeRects.length; otherIndex += 1) {
         const merge = tryMergeFreeRects(nextFreeRects[index], nextFreeRects[otherIndex], kerf);
         if (!merge) continue;
+        if (best && rectArea(merge.rect) <= rectArea(best.rect)) continue;
 
-        nextFreeRects.splice(otherIndex, 1);
-        nextFreeRects.splice(index, 1, merge.rect);
-        recoveredKerfArea = roundArea(recoveredKerfArea + merge.recoveredKerfArea);
-        merged = true;
-        break;
+        best = { index, otherIndex, rect: merge.rect, recoveredKerfArea: merge.recoveredKerfArea };
       }
+    }
+
+    if (best) {
+      nextFreeRects.splice(best.otherIndex, 1);
+      nextFreeRects.splice(best.index, 1, best.rect);
+      recoveredKerfArea = roundArea(recoveredKerfArea + best.recoveredKerfArea);
+      merged = true;
     }
   }
 
@@ -892,7 +910,7 @@ function mergeFreeRectsForReport(freeRects: FreeRect[], kerfArea: number, kerf: 
 
 function finalizeBoardForReport(board: BoardPlan, kerf: number): BoardPlan {
   const reportedBoard = cloneBoard(board);
-  const merged = mergeFreeRectsForReport(reportedBoard.freeRects, reportedBoard.kerfArea, kerf);
+  const merged = mergeAdjacentFreeRects(reportedBoard.freeRects, reportedBoard.kerfArea, kerf);
   reportedBoard.freeRects = merged.freeRects;
   reportedBoard.kerfArea = merged.kerfArea;
   return reportedBoard;
@@ -1130,17 +1148,22 @@ export function solveFirstFitComplete(
   usableBoardHeightMm: number,
   kerf: number,
   variant = 0,
-  candidateOrder?: CandidateOrder
+  candidateOrder?: CandidateOrder,
+  deadline = Number.POSITIVE_INFINITY
 ) {
   const boardArea = usableBoardWidthMm * usableBoardHeightMm;
   const orders = candidateOrder ? [candidateOrder] : [...CANDIDATE_ORDERS];
-  const selected = selectBestFirstFitResult(
-    orders.map((order) => solveFirstFitCompleteForOrder(pieces, usableBoardWidthMm, usableBoardHeightMm, kerf, variant, order)),
-    boardArea,
-    kerf
-  );
+  const results: FirstFitSolveResult[] = [];
 
-  return selected.result;
+  orders.forEach((order, index) => {
+    // Los modos historicos se calculan siempre. Los adicionales solo si queda presupuesto: en
+    // pedidos con muchas medidas distintas cada pasada cuesta cientos de ms y no conviene pagarla.
+    if (index >= REQUIRED_CANDIDATE_ORDERS && Date.now() > deadline) return;
+
+    results.push(solveFirstFitCompleteForOrder(pieces, usableBoardWidthMm, usableBoardHeightMm, kerf, variant, order));
+  });
+
+  return selectBestFirstFitResult(results, boardArea, kerf).result;
 }
 
 function compareBeamStates(a: BeamState, b: BeamState) {
@@ -1356,153 +1379,7 @@ export function canPlacePieceInBoard(
   return fitsAnyRect(piece, board.freeRects);
 }
 
-function createSubtreeFromPlacement(record: PlacementRecord, kerf: number): LayoutTreeNode {
-  const rect = record.targetRect;
-  const pieceRect = createRect(record.piece.x, record.piece.y, record.piece.width, record.piece.height);
-  const rightGap = resolveGap(rect.width - record.piece.width, kerf);
-  const bottomGap = resolveGap(rect.height - record.piece.height, kerf);
-  const pieceNode: LayoutTreeNode = {
-    kind: "piece",
-    rect: pieceRect,
-    pieceId: record.piece.id,
-    rotated: record.piece.rotated,
-    canRotate: record.piece.canRotate
-  };
-
-  const verticalNode: LayoutTreeNode = {
-    kind: "split",
-    rect: createRect(rect.x, rect.y, rect.width, record.piece.height),
-    direction: "vertical",
-    kerfArea: roundArea(rightGap.consumed * record.piece.height),
-    children: [
-      pieceNode,
-      ...(rightGap.remainder > 0
-        ? [
-            {
-              kind: "free" as const,
-              rect: createRect(rect.x + record.piece.width + rightGap.consumed, rect.y, rightGap.remainder, record.piece.height)
-            }
-          ]
-        : [])
-    ]
-  };
-
-  const horizontalNode: LayoutTreeNode = {
-    kind: "split",
-    rect: createRect(rect.x, rect.y, record.piece.width, rect.height),
-    direction: "horizontal",
-    kerfArea: roundArea(bottomGap.consumed * record.piece.width),
-    children: [
-      pieceNode,
-      ...(bottomGap.remainder > 0
-        ? [
-            {
-              kind: "free" as const,
-              rect: createRect(rect.x, rect.y + record.piece.height + bottomGap.consumed, record.piece.width, bottomGap.remainder)
-            }
-          ]
-        : [])
-    ]
-  };
-
-  if (record.direction === "horizontal") {
-    return {
-      kind: "split",
-      rect,
-      direction: "horizontal",
-      kerfArea: roundArea(bottomGap.consumed * rect.width),
-      children: [
-        rightGap.remainder > 0 || rightGap.consumed > 0 ? verticalNode : pieceNode,
-        ...(bottomGap.remainder > 0
-          ? [{ kind: "free" as const, rect: createRect(rect.x, rect.y + record.piece.height + bottomGap.consumed, rect.width, bottomGap.remainder) }]
-          : [])
-      ]
-    };
-  }
-
-  return {
-    kind: "split",
-    rect,
-    direction: "vertical",
-    kerfArea: roundArea(rightGap.consumed * rect.height),
-    children: [
-      bottomGap.remainder > 0 || bottomGap.consumed > 0 ? horizontalNode : pieceNode,
-      ...(rightGap.remainder > 0
-        ? [{ kind: "free" as const, rect: createRect(rect.x + record.piece.width + rightGap.consumed, rect.y, rightGap.remainder, rect.height) }]
-        : [])
-    ]
-  };
-}
-
-function replaceFreeLeaf(node: LayoutTreeNode, targetRect: FreeRect, replacement: LayoutTreeNode): LayoutTreeNode | null {
-  if (node.kind === "free") {
-    return sameRect(node.rect, targetRect) ? replacement : null;
-  }
-
-  if (node.kind === "piece") return null;
-
-  const replacedChildren = node.children.map((child) => replaceFreeLeaf(child, targetRect, replacement));
-  const foundChildIndex = replacedChildren.findIndex(Boolean);
-  if (foundChildIndex === -1) return null;
-
-  return {
-    ...node,
-    children: node.children.map((child, index) => (index === foundChildIndex ? (replacedChildren[index] as LayoutTreeNode) : child))
-  };
-}
-
-function validateTree(node: LayoutTreeNode, errors: string[]): number {
-  if (node.kind === "free" || node.kind === "piece") return rectArea(node.rect);
-
-  const orderedChildren =
-    node.direction === "horizontal"
-      ? [...node.children].sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x)
-      : [...node.children].sort((a, b) => a.rect.x - b.rect.x || a.rect.y - b.rect.y);
-
-  let childrenArea = 0;
-
-  orderedChildren.forEach((child) => {
-    if (child.rect.x < node.rect.x - EPS_MM || child.rect.y < node.rect.y - EPS_MM) {
-      errors.push("Un nodo de corte quedó fuera del rectángulo padre.");
-    }
-    if (child.rect.x + child.rect.width > node.rect.x + node.rect.width + EPS_MM) {
-      errors.push("Un nodo de corte excede el ancho del rectángulo padre.");
-    }
-    if (child.rect.y + child.rect.height > node.rect.y + node.rect.height + EPS_MM) {
-      errors.push("Un nodo de corte excede el alto del rectángulo padre.");
-    }
-    childrenArea += validateTree(child, errors);
-  });
-
-  if (node.direction === "horizontal" && orderedChildren.length > 1) {
-    const gap = orderedChildren[1].rect.y - (orderedChildren[0].rect.y + orderedChildren[0].rect.height);
-    const expectedKerfArea = roundArea(Math.max(0, gap) * node.rect.width);
-    if (!sameArea(expectedKerfArea, node.kerfArea)) {
-      errors.push("El árbol de cortes horizontal no conserva el área de kerf.");
-    }
-  }
-
-  if (node.direction === "vertical" && orderedChildren.length > 1) {
-    const gap = orderedChildren[1].rect.x - (orderedChildren[0].rect.x + orderedChildren[0].rect.width);
-    const expectedKerfArea = roundArea(Math.max(0, gap) * node.rect.height);
-    if (!sameArea(expectedKerfArea, node.kerfArea)) {
-      errors.push("El árbol de cortes vertical no conserva el área de kerf.");
-    }
-  }
-
-  const totalArea = roundArea(childrenArea + node.kerfArea);
-  if (!sameArea(totalArea, rectArea(node.rect))) {
-    errors.push("El árbol de cortes no recompone el área del rectángulo padre.");
-  }
-
-  return totalArea;
-}
-
 function replayBoard(board: BoardPlan, kerf: number): ReplayResult {
-  let tree: LayoutTreeNode = {
-    kind: "free",
-    rect: createRect(0, 0, board.usableWidthMm, board.usableHeightMm)
-  };
   let freeRects = [createRect(0, 0, board.usableWidthMm, board.usableHeightMm)];
   const pieces: PlacedPiece[] = [];
   let kerfArea = 0;
@@ -1521,28 +1398,70 @@ function replayBoard(board: BoardPlan, kerf: number): ReplayResult {
     }
 
     const split = splitGuillotineRect(targetRect, record.piece.width, record.piece.height, record.direction, kerf);
-    freeRects = sortRects([...freeRects.filter((freeRect) => !sameRect(freeRect, targetRect)), ...split.freeRects]);
+    // Misma fusion que en applyCandidate y en el mismo punto: asi el replay reproduce exactamente
+    // el estado que vio el empaquetador y los rectangulos objetivo se siguen encontrando.
+    const mergedAfterSplit = mergeAdjacentFreeRects(
+      [...freeRects.filter((freeRect) => !sameRect(freeRect, targetRect)), ...split.freeRects],
+      roundArea(kerfArea + split.kerfArea),
+      kerf
+    );
+
+    freeRects = mergedAfterSplit.freeRects;
+    kerfArea = mergedAfterSplit.kerfArea;
     pieces.push(record.piece);
-    kerfArea = roundArea(kerfArea + split.kerfArea);
-
-    const replacement = createSubtreeFromPlacement(record, kerf);
-    const nextTree = replaceFreeLeaf(tree, targetRect, replacement);
-    if (!nextTree) {
-      errors.push(`No se pudo reconstruir el árbol de cortes para la pieza ${record.piece.id}.`);
-      return;
-    }
-    tree = nextTree;
   });
-
-  validateTree(tree, errors);
 
   return {
     pieces,
     freeRects,
     kerfArea,
-    tree,
     errors
   };
+}
+
+type CuttableRect = Pick<FreeRect, "x" | "y" | "width" | "height">;
+
+// Parte las piezas por una linea pasante. Devuelve null si alguna pieza la cruza (el corte no
+// seria de borde a borde) o si deja un lado vacio (no separa nada).
+function splitPiecesByCut<T extends CuttableRect>(pieces: T[], cut: number, axis: "x" | "y") {
+  const size = axis === "x" ? "width" : "height";
+  const before: T[] = [];
+  const after: T[] = [];
+
+  for (const piece of pieces) {
+    if (lessOrEqual(piece[axis] + piece[size], cut)) before.push(piece);
+    else if (!greaterThan(cut, piece[axis])) after.push(piece);
+    else return null;
+  }
+
+  return before.length && after.length ? { before, after } : null;
+}
+
+// Una seccionadora solo hace cortes pasantes: cada corte atraviesa el material de lado a lado.
+// Esto verifica que exista una secuencia de cortes asi que libere todas las piezas. Reemplaza a la
+// reconstruccion del arbol de cortes, que solo sabia deshacer particiones y por eso rechazaba
+// cualquier plano armado sobre rectangulos libres fusionados.
+function isGuillotineCuttable<T extends CuttableRect>(pieces: T[], failed = new Set<string>()): boolean {
+  if (pieces.length <= 1) return true;
+
+  const signature = pieces
+    .map((piece) => [piece.x, piece.y, piece.width, piece.height].join(":"))
+    .sort()
+    .join("|");
+  if (failed.has(signature)) return false;
+
+  for (const axis of ["x", "y"] as const) {
+    const size = axis === "x" ? "width" : "height";
+    const cuts = [...new Set(pieces.map((piece) => piece[axis] + piece[size]))];
+
+    for (const cut of cuts) {
+      const parts = splitPiecesByCut(pieces, cut, axis);
+      if (parts && isGuillotineCuttable(parts.before, failed) && isGuillotineCuttable(parts.after, failed)) return true;
+    }
+  }
+
+  failed.add(signature);
+  return false;
 }
 
 function rectanglesOverlap(a: FreeRect, b: FreeRect) {
@@ -1601,21 +1520,24 @@ export function validateBoardPlan(board: BoardPlan, usableWidthMm: number, usabl
 
   const replay = replayBoard(board, kerf);
   errors.push(...replay.errors);
-  const reportedReplay = mergeFreeRectsForReport(replay.freeRects, replay.kerfArea, kerf);
 
   const boardFreeRectSignature = sortRects(board.freeRects)
     .map((rect) => [rect.x, rect.y, rect.width, rect.height].join(":"))
     .join("|");
-  const replayFreeRectSignature = sortRects(reportedReplay.freeRects)
+  const replayFreeRectSignature = sortRects(replay.freeRects)
     .map((rect) => [rect.x, rect.y, rect.width, rect.height].join(":"))
     .join("|");
 
   if (boardFreeRectSignature !== replayFreeRectSignature) {
-    errors.push(`La placa ${board.index} no conserva los rectángulos libres al reconstruir el árbol.`);
+    errors.push(`La placa ${board.index} no conserva los rectángulos libres al reconstruir las colocaciones.`);
   }
 
-  if (!sameArea(reportedReplay.kerfArea, board.kerfArea)) {
+  if (!sameArea(replay.kerfArea, board.kerfArea)) {
     errors.push(`La placa ${board.index} no conserva el área consumida por kerf.`);
+  }
+
+  if (!isGuillotineCuttable(board.pieces)) {
+    errors.push(`La placa ${board.index} no se puede resolver con cortes pasantes de borde a borde.`);
   }
 
   const pieceArea = board.pieces.reduce((total, piece) => total + piece.width * piece.height, 0);
@@ -1741,51 +1663,93 @@ export function optimizeCutLayout({
   const boardArea = usableBoardWidthMm * usableBoardHeightMm;
   const lowerBound = calculateLowerBound(fitPieces, usableBoardWidthMm, usableBoardHeightMm, kerf);
   const resolvedMinimumPieceArea = Number.isFinite(minimumPieceArea) ? minimumPieceArea : 0;
-  const baselineFloor = buildFloorCandidate(
-    "baseline",
-    solveFirstFitComplete(pieces, usableBoardWidthMm, usableBoardHeightMm, kerf, 0, candidateOrder),
-    boardArea,
-    kerf
-  );
-  const variantFloor =
-    variant === 0
-      ? null
-      : buildFloorCandidate(
-          `variant-${variant}`,
-          solveFirstFitComplete(pieces, usableBoardWidthMm, usableBoardHeightMm, kerf, variant, candidateOrder),
-          boardArea,
-          kerf
-        );
-  const floorCandidates = [baselineFloor, ...(variantFloor ? [variantFloor] : [])];
+  const buildSeedFloor = (seedIndex: number) =>
+    buildFloorCandidate(
+      seedIndex === 0 ? "baseline" : `variant-${seedIndex}`,
+      solveFirstFitComplete(pieces, usableBoardWidthMm, usableBoardHeightMm, kerf, seedIndex, candidateOrder, overallDeadline),
+      boardArea,
+      kerf
+    );
 
-  floorCandidates
-    .filter(({ validation }) => !validation.valid)
-    .forEach(({ label, validation }) => logValidationErrors(`Piso first-fit invalido (${label})`, validation.errors));
-
-  const preferredVariantFloorCandidates = [variantFloor].filter(
-    (candidate): candidate is typeof baselineFloor => candidate !== null
-  );
-  const preferredVariantFloor = preferredVariantFloorCandidates.sort(compareValidatedAttempts)[0] || null;
-  const selectedFloor =
-    preferredVariantFloor &&
-    ((preferredVariantFloor.validation.valid && !baselineFloor.validation.valid) ||
-      (preferredVariantFloor.validation.valid === baselineFloor.validation.valid &&
-        preferredVariantFloor.attempt.unplaced.length <= baselineFloor.attempt.unplaced.length &&
-        preferredVariantFloor.attempt.boardCount <= baselineFloor.attempt.boardCount))
-      ? preferredVariantFloor
-      : [...floorCandidates].sort(compareValidatedAttempts)[0];
-  const floorBoards = selectedFloor?.attempt.boards || [];
-  const floorBoardCount = floorBoards.length;
-  const floorUnplaced = selectedFloor?.attempt.unplaced || [];
-  const floorPlacedAllPossiblePieces = floorUnplaced.length === impossiblePieces.length;
-  const candidateAttempts: OptimizationAttempt[] = [];
-  const floorGap = Math.max(0, floorBoardCount - lowerBound);
-  const winningFloorOrder = selectedFloor?.floor.candidateOrder || candidateOrder || "fit-first";
-  const winningFloorVariant = selectedFloor?.floor.variant ?? 0;
-  const winningVariantBase = resolveVariantSeed(winningFloorVariant);
+  const baselineFloor = buildSeedFloor(0);
   let improvementRan = false;
 
-  if (floorPlacedAllPossiblePieces && floorBoardCount > 0 && floorGap <= 1) {
+  if (!baselineFloor.validation.valid) {
+    logValidationErrors(`Piso first-fit invalido (${baselineFloor.label})`, baselineFloor.validation.errors);
+  }
+
+  const baselineBoardCount = baselineFloor.attempt.boardCount;
+  const baselinePlacedAllPossiblePieces = baselineFloor.attempt.unplaced.length === impossiblePieces.length;
+
+  // La etapa de mejora solo puede bajar de placas cuando el piso quedo a una placa de la cota
+  // inferior. Si no es el caso, no hay nada que proteger y toda la exploracion de semillas usa
+  // tiempo que de otro modo quedaria sin gastar.
+  const boardCountCanDrop =
+    baselinePlacedAllPossiblePieces && baselineBoardCount > 0 && baselineBoardCount - lowerBound === 1;
+  const floorExplorationDeadline = boardCountCanDrop
+    ? Date.now() + Math.max(0, overallDeadline - Date.now()) * FLOOR_EXPLORATION_SHARE
+    : overallDeadline;
+
+  // Se prueban las demas semillas y se rankean junto al piso base. Como el piso base nunca sale
+  // de la lista y el ranking ordena por cantidad de placas, el conteo no puede subir.
+  const requestedSeedIndex =
+    ((variant % PRIMARY_VARIANT_SEEDS.length) + PRIMARY_VARIANT_SEEDS.length) % PRIMARY_VARIANT_SEEDS.length;
+  // La semilla pedida va primero y se calcula si o si: en pedidos con muchas medidas distintas un
+  // solo piso ya supera el presupuesto, y sin esto "Recalcular distribucion" no tendria alternativa.
+  const seedIndexesToExplore = [
+    ...(requestedSeedIndex > 0 ? [requestedSeedIndex] : []),
+    ...PRIMARY_VARIANT_SEEDS.map((_, seedIndex) => seedIndex).filter(
+      (seedIndex) => seedIndex > 0 && seedIndex !== requestedSeedIndex
+    )
+  ];
+  const floorCandidates = [baselineFloor];
+
+  for (const seedIndex of seedIndexesToExplore) {
+    if (seedIndex !== requestedSeedIndex && Date.now() >= floorExplorationDeadline) break;
+
+    const seedFloor = buildSeedFloor(seedIndex);
+
+    if (!seedFloor.validation.valid) {
+      logValidationErrors(`Piso first-fit invalido (${seedFloor.label})`, seedFloor.validation.errors);
+      continue;
+    }
+    if (seedFloor.attempt.unplaced.length > baselineFloor.attempt.unplaced.length) continue;
+
+    floorCandidates.push(seedFloor);
+  }
+
+  const rankedFloors = [...floorCandidates].sort(compareValidatedAttempts);
+  const bestFloor = rankedFloors[0];
+  const interchangeableFloors: FloorCandidate[] = [];
+  const seenFloorSignatures = new Set<string>();
+
+  // Solo se rota entre pisos empatados en validez, piezas sin ubicar y cantidad de placas:
+  // "Recalcular distribucion" cambia el acomodo, nunca el costo en placas.
+  rankedFloors.forEach((candidate) => {
+    if (candidate.validation.valid !== bestFloor.validation.valid) return;
+    if (candidate.attempt.unplaced.length !== bestFloor.attempt.unplaced.length) return;
+    if (candidate.attempt.boardCount !== bestFloor.attempt.boardCount) return;
+    if (seenFloorSignatures.has(candidate.attempt.signature)) return;
+
+    seenFloorSignatures.add(candidate.attempt.signature);
+    interchangeableFloors.push(candidate);
+  });
+
+  // La variante 0 se queda con el mejor piso del ranking. Cada recalculo posterior busca el piso
+  // de su propia semilla y, si esa semilla no empato en cantidad de placas, rota por el ranking.
+  const selectedFloor =
+    (requestedSeedIndex > 0 && interchangeableFloors.find((candidate) => candidate.floor.variant === requestedSeedIndex)) ||
+    interchangeableFloors[requestedSeedIndex % interchangeableFloors.length];
+  const floorBoardCount = selectedFloor.attempt.boardCount;
+  const floorUnplaced = selectedFloor.attempt.unplaced;
+  const floorGap = Math.max(0, floorBoardCount - lowerBound);
+  // El orden ganador se toma del piso base para no alterar la busqueda que ya hacia esta etapa;
+  // la semilla de diversificacion es la que pidio el usuario.
+  const improvementOrder = baselineFloor.floor.candidateOrder || candidateOrder || "fit-first";
+  const variantBase = resolveVariantSeed(variant);
+  const candidateAttempts: OptimizationAttempt[] = [];
+
+  if (floorUnplaced.length === impossiblePieces.length && floorBoardCount > 0 && floorGap <= 1) {
     for (
       let boardLimit = Math.max(1, lowerBound);
       boardLimit < floorBoardCount && Date.now() < overallDeadline;
@@ -1800,10 +1764,10 @@ export function optimizeCutLayout({
         usableBoardWidthMm,
         usableBoardHeightMm,
         resolvedMinimumPieceArea,
-        winningVariantBase,
+        variantBase,
         kerf,
         stageDeadline,
-        winningFloorOrder
+        improvementOrder
       );
 
       const validAttempts = attempts
@@ -1816,7 +1780,7 @@ export function optimizeCutLayout({
       const minimalAttempts = dedupeAttempts(validAttempts);
       const minimalBoardCount = minimalAttempts[0].boardCount;
       const bestAttempts = minimalAttempts.filter((attempt) => attempt.boardCount === minimalBoardCount);
-      const selectedAttemptIndex = ((winningVariantBase % bestAttempts.length) + bestAttempts.length) % bestAttempts.length;
+      const selectedAttemptIndex = ((variantBase % bestAttempts.length) + bestAttempts.length) % bestAttempts.length;
 
       return {
         boards: bestAttempts[selectedAttemptIndex].boards,
@@ -1831,12 +1795,12 @@ export function optimizeCutLayout({
     }
   }
 
-  if (selectedFloor?.validation.valid) {
+  if (selectedFloor.validation.valid) {
     candidateAttempts.push(selectedFloor.attempt);
   }
 
   return {
-    boards: floorBoards,
+    boards: selectedFloor.attempt.boards,
     unplaced: floorUnplaced,
     attempts: candidateAttempts,
     lowerBound,
