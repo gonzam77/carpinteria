@@ -600,3 +600,119 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
     faltanteStock
   };
 }
+
+type MaterialsSummaryPlate = {
+  materialId: string;
+  nombre: string;
+  anchoPlaca: number | null;
+  altoPlaca: number | null;
+  espesorMm: number;
+  piezas: number;
+  placas: number;
+  stockPlacas: number | null;
+  faltantePlacas: number;
+};
+
+type MaterialsSummaryEdge = {
+  cantoId: string;
+  nombre: string;
+  espesorMm: number;
+  metros: number;
+};
+
+export type OrderMaterialsSummary = {
+  placas: MaterialsSummaryPlate[];
+  cantos: MaterialsSummaryEdge[];
+  totalPlacas: number;
+  totalMetrosCanto: number;
+};
+
+function edgeEntriesForDetail(detail: DetallePedido) {
+  const largoMeters = detail.largo / 1000;
+  const anchoMeters = detail.ancho / 1000;
+
+  return [
+    { id: detail.cantoLargo1Id, nombre: detail.cantoLargo1Nombre, meters: largoMeters },
+    { id: detail.cantoLargo2Id, nombre: detail.cantoLargo2Nombre, meters: largoMeters },
+    { id: detail.cantoAncho1Id, nombre: detail.cantoAncho1Nombre, meters: anchoMeters },
+    { id: detail.cantoAncho2Id, nombre: detail.cantoAncho2Nombre, meters: anchoMeters }
+  ].filter((edge) => Boolean(edge.id));
+}
+
+export async function buildOrderMaterialsSummary(tx: PrismaClient, detalles: DetallePedido[]): Promise<OrderMaterialsSummary> {
+  const materialIds = [...new Set(detalles.map((detail) => detail.materialId).filter(Boolean))] as string[];
+  const cantoIds = [
+    ...new Set(
+      detalles
+        .flatMap((detail) => [detail.cantoLargo1Id, detail.cantoLargo2Id, detail.cantoAncho1Id, detail.cantoAncho2Id])
+        .filter(Boolean)
+    )
+  ] as string[];
+
+  if (!materialIds.length) {
+    return { placas: [], cantos: [], totalPlacas: 0, totalMetrosCanto: 0 };
+  }
+
+  const [settings, materials, cantos] = await Promise.all([
+    getOptimizerSettings(tx),
+    tx.material.findMany({ where: { id: { in: materialIds }, tipo: TipoMaterial.PLACA } }),
+    cantoIds.length ? tx.material.findMany({ where: { id: { in: cantoIds }, tipo: TipoMaterial.CANTO } }) : Promise.resolve([])
+  ]);
+
+  const materialsById = new Map(materials.map((material) => [material.id, material]));
+  const cantoById = new Map(cantos.map((canto) => [canto.id, canto]));
+
+  const placas: MaterialsSummaryPlate[] = [];
+
+  for (const materialId of materialIds) {
+    const material = materialsById.get(materialId);
+    if (!material) throw new AppError(400, "Material no encontrado para calcular el listado de materiales.");
+
+    const materialDetails = detalles.filter((detail) => detail.materialId === materialId);
+    const boards = calculateBoardsForMaterial(materialDetails, material, settings);
+    if (!Number.isFinite(boards)) {
+      throw new AppError(400, `Hay piezas que no entran en la placa ${material.nombre}.`);
+    }
+
+    const stockPlacas = material.stockPlacas ?? null;
+    placas.push({
+      materialId: material.id,
+      nombre: material.nombre,
+      anchoPlaca: material.anchoPlaca,
+      altoPlaca: material.altoPlaca,
+      espesorMm: material.espesorMm,
+      piezas: materialDetails.reduce((total, detail) => total + detail.cantidad, 0),
+      placas: boards,
+      stockPlacas,
+      faltantePlacas: Math.max(0, boards - (stockPlacas ?? 0))
+    });
+  }
+
+  const cantoTotals = new Map<string, MaterialsSummaryEdge>();
+
+  for (const detail of detalles) {
+    for (const edge of edgeEntriesForDetail(detail)) {
+      const canto = cantoById.get(edge.id as string);
+      if (!canto) continue;
+      const metros = edge.meters * detail.cantidad;
+      const current = cantoTotals.get(canto.id) ?? {
+        cantoId: canto.id,
+        nombre: edge.nombre ?? canto.nombre,
+        espesorMm: canto.espesorMm,
+        metros: 0
+      };
+      current.metros += metros;
+      cantoTotals.set(canto.id, current);
+    }
+  }
+
+  const cantosList = [...cantoTotals.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  placas.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+
+  return {
+    placas,
+    cantos: cantosList,
+    totalPlacas: placas.reduce((total, placa) => total + placa.placas, 0),
+    totalMetrosCanto: cantosList.reduce((total, canto) => total + canto.metros, 0)
+  };
+}

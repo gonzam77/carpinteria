@@ -132,3 +132,28 @@ export type Order = {
 };
 
 
+export type OrderMaterialsPlate = {
+  materialId: string;
+  nombre: string;
+  anchoPlaca: number | null;
+  altoPlaca: number | null;
+  espesorMm: number;
+  piezas: number;
+  placas: number;
+  stockPlacas: number | null;
+  faltantePlacas: number;
+};
+
+export type OrderMaterialsEdge = {
+  cantoId: string;
+  nombre: string;
+  espesorMm: number;
+  metros: number;
+};
+
+export type OrderMaterialsSummary = {
+  placas: OrderMaterialsPlate[];
+  cantos: OrderMaterialsEdge[];
+  totalPlacas: number;
+  totalMetrosCanto: number;
+};

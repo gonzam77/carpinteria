@@ -9,7 +9,7 @@ import { buildOrdersWorkbook } from "./excel.service.js";
 import { orderFiltersSchema, orderSchema, orderStatusSchema } from "./order.schemas.js";
 import { sendNewOrderWhatsappNotification } from "./whatsapp.service.js";
 import { sendNewOrderPushNotification, sendOrderStockShortagePushNotification } from "../push-notifications/push-notifications.service.js";
-import { buildOrderEstimateSnapshot } from "./order-estimate.service.js";
+import { buildOrderEstimateSnapshot, buildOrderMaterialsSummary } from "./order-estimate.service.js";
 
 export const ordersRouter = Router();
 
@@ -216,6 +216,20 @@ ordersRouter.get(
     res.setHeader("Content-Disposition", `attachment; filename="pedidos-carpinteria.xlsx"`);
     await workbook.xlsx.write(res);
     res.end();
+  })
+);
+
+ordersRouter.get(
+  "/:id/materiales",
+  asyncHandler(async (req: any, res: any) => {
+    const order = await prisma.pedido.findFirst({
+      where: { id: req.params.id, ...orderAccessWhere(req.user) },
+      include: { detalles: true }
+    });
+    if (!order) throw new AppError(404, "Pedido no encontrado");
+
+    const summary = await buildOrderMaterialsSummary(prisma, order.detalles);
+    res.json(summary);
   })
 );
 

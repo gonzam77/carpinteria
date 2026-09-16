@@ -1,9 +1,9 @@
 import PrintIcon from "@mui/icons-material/Print";
-import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Paper, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useCompanySettings } from "../context/CompanySettingsContext";
-import { Order, OrderDetail } from "../types";
+import { Order } from "../types";
 
 function formatMoney(value: number) {
   return value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
@@ -12,10 +12,6 @@ function formatMoney(value: number) {
 function cuttingLaborCost(order: Order) {
   const cost = order.costoManoObraCortes ?? (order.presupuestoEstimado - order.costoPlacas - order.costoCantos);
   return Math.abs(cost) < 0.01 ? 0 : cost;
-}
-
-function cantoNames(row: OrderDetail) {
-  return [row.cantoLargo1Nombre, row.cantoLargo2Nombre, row.cantoAncho1Nombre, row.cantoAncho2Nombre].filter(Boolean).join(" / ") || "Sin canto";
 }
 
 function openPrintWindow(title: string, html: string) {
@@ -114,19 +110,6 @@ export function OrderReceiptDialog({
     const printableCuttingLaborCost = cuttingLaborCost(printableOrder);
     const title = `Constancia - ${printableOrder.cliente}`;
     const date = new Date(printableOrder.fechaCreacion).toLocaleDateString();
-    const rowsHtml = printableOrder.detalles
-      .map(
-        (detail) => `
-          <tr>
-            <td>${detail.material}</td>
-            <td>${detail.largo} x ${detail.ancho} mm</td>
-            <td>${detail.cantidad}</td>
-            <td>${cantoNames(detail)}</td>
-            <td>${detail.nombreProducto ?? detail.remark ?? "-"}</td>
-          </tr>
-        `
-      )
-      .join("");
 
     openPrintWindow(
       title,
@@ -140,20 +123,6 @@ export function OrderReceiptDialog({
             Cliente: ${printableOrder.cliente}<br />
             Contacto: ${printableOrder.numeroContacto ?? "-"}<br />
             Fecha: ${date}
-          </div>
-          <div class="section">
-            <table>
-              <thead>
-                <tr>
-                  <th>Material</th>
-                  <th>Medida</th>
-                  <th>Cantidad</th>
-                  <th>Cantos</th>
-                  <th>Producto</th>
-                </tr>
-              </thead>
-              <tbody>${rowsHtml}</tbody>
-            </table>
           </div>
           <div class="section">
             <strong>Presupuesto estimado:</strong> ${formatMoney(printableOrder.presupuestoEstimado)}<br />
@@ -204,37 +173,6 @@ export function OrderReceiptDialog({
                 <Typography>{new Date(currentOrder.fechaCreacion).toLocaleDateString()}</Typography>
               </Paper>
             </Stack>
-
-            <Box>
-              <Typography variant="h6" sx={{ mb: 1.5 }}>
-                Detalle de piezas
-              </Typography>
-              <Paper variant="outlined" sx={{ borderRadius: "12px", overflow: "hidden" }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      {["Material", "Largo", "Ancho", "Cantidad", "Cantos", "Producto / Remark"].map((header) => (
-                        <TableCell key={header} sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>
-                          {header}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {currentOrder.detalles.map((detail, index) => (
-                      <TableRow key={detail.id ?? index}>
-                        <TableCell>{detail.material}</TableCell>
-                        <TableCell>{detail.largo} mm</TableCell>
-                        <TableCell>{detail.ancho} mm</TableCell>
-                        <TableCell>{detail.cantidad}</TableCell>
-                        <TableCell>{cantoNames(detail)}</TableCell>
-                        <TableCell>{detail.nombreProducto || detail.remark || "-"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Paper>
-            </Box>
 
             {currentOrder.observaciones && (
               <Paper variant="outlined" sx={{ p: 2, borderRadius: "12px" }}>

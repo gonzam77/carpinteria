@@ -2,6 +2,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DescriptionIcon from "@mui/icons-material/Description";
 import EditIcon from "@mui/icons-material/Edit";
+import InventoryIcon from "@mui/icons-material/Inventory2";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { Box, Button, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
@@ -11,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
+import { OrderMaterialsDialog } from "../components/OrderMaterialsDialog";
 import { OrderReceiptDialog } from "../components/OrderReceiptDialog";
 import { StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
@@ -61,6 +63,7 @@ export function OrdersPage() {
   const [selection, setSelection] = useState<GridRowSelectionModel>([]);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [orderToPreview, setOrderToPreview] = useState<Order | null>(null);
+  const [orderToListMaterials, setOrderToListMaterials] = useState<Order | null>(null);
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -113,7 +116,7 @@ export function OrdersPage() {
       {
         field: "acciones",
         headerName: "Acciones",
-        width: 260,
+        width: 300,
         sortable: false,
         headerClassName: "orders-actions-column",
         cellClassName: "orders-actions-column",
@@ -133,6 +136,15 @@ export function OrdersPage() {
                   <DescriptionIcon />
                 </IconButton>
               </Tooltip>
+              <Box sx={{ width: 40, display: "flex", justifyContent: "center" }}>
+                {user?.rol === "ADMIN" ? (
+                  <Tooltip title="Listado de materiales">
+                    <IconButton onClick={() => setOrderToListMaterials(row)}>
+                      <InventoryIcon />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+              </Box>
               <Tooltip title={canNotifyByWhatsapp ? "Avisar por WhatsApp" : "La solicitud no tiene telefono de contacto"}>
                 <span>
                   <IconButton
@@ -243,6 +255,7 @@ export function OrdersPage() {
       </Paper>
       <DeleteOrderDialog order={orderToDelete} open={Boolean(orderToDelete)} loading={deleting} onCancel={() => setOrderToDelete(null)} onConfirm={() => orderToDelete && deleteOrder(orderToDelete)} />
       <OrderReceiptDialog order={orderToPreview} open={Boolean(orderToPreview)} onClose={() => setOrderToPreview(null)} />
+      <OrderMaterialsDialog order={orderToListMaterials} open={Boolean(orderToListMaterials)} onClose={() => setOrderToListMaterials(null)} />
     </Stack>
   );
 }
