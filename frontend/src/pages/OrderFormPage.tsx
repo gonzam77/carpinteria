@@ -4,7 +4,7 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CloseIcon from "@mui/icons-material/Close";
 import { Alert, Box, Button, Paper, Stack, Step, StepLabel, Stepper, TextField, Typography } from "@mui/material";
 import axios from "axios";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { createEmptyDetail, OrderItemsTable } from "../components/OrderItemsTable";
@@ -48,6 +48,7 @@ export function OrderFormPage() {
   const [step, setStep] = useState(0);
   const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const previewRequest = useRef<AbortController | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? (id ? `/pedidos/${id}` : user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes");
 
@@ -59,6 +60,8 @@ export function OrderFormPage() {
   useEffect(() => {
     api.get<Material[]>("/materiales").then((response) => setMaterials(response.data));
   }, []);
+
+  useEffect(() => () => previewRequest.current?.abort(), []);
 
   useEffect(() => {
     if (!id) return;
@@ -132,15 +135,31 @@ export function OrderFormPage() {
       return;
     }
 
+    const controller = new AbortController();
+    previewRequest.current = controller;
     setPreviewLoading(true);
+
     try {
-      const response = await api.post<Order>("/orders/preview", buildPayload());
+      const response = await api.post<Order>("/orders/preview", buildPayload(), { signal: controller.signal });
       setPreviewOrder(response.data);
     } catch (previewError) {
+      // Si lo cancelamos nosotros (el usuario se fue del paso) no es un error
+      // que haya que mostrar, y el comprobante no se tiene que abrir.
+      if (controller.signal.aborted) return;
       setError(resolveApiError(previewError, "No se pudo generar el comprobante de la solicitud."));
     } finally {
-      setPreviewLoading(false);
+      if (previewRequest.current === controller) {
+        previewRequest.current = null;
+        setPreviewLoading(false);
+      }
     }
+  }
+
+  /** Corta la generacion en curso: se usa al volver, cancelar o desmontar. */
+  function cancelPreview() {
+    previewRequest.current?.abort();
+    previewRequest.current = null;
+    setPreviewLoading(false);
   }
 
   async function handleConfirmSubmit() {
@@ -260,12 +279,28 @@ export function OrderFormPage() {
         )}
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
           {id && (
-            <Button variant="outlined" startIcon={<CloseIcon />} onClick={() => navigate(returnTo)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            <Button
+              variant="outlined"
+              startIcon={<CloseIcon />}
+              onClick={() => {
+                cancelPreview();
+                navigate(returnTo);
+              }}
+              sx={{ width: { xs: "100%", sm: "auto" } }}
+            >
               Cancelar
             </Button>
           )}
           {step > 0 && (
-            <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => setStep((current) => current - 1)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => {
+                cancelPreview();
+                setStep((current) => current - 1);
+              }}
+              sx={{ width: { xs: "100%", sm: "auto" } }}
+            >
               Volver
             </Button>
           )}

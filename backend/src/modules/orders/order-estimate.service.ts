@@ -72,8 +72,51 @@ const MAX_SEARCH_NODES = 25000;
 const GREEDY_VARIANTS = 8;
 const SEARCH_VARIANTS = 6;
 const SEARCH_CANDIDATE_LIMIT = 18;
-const BEAM_WIDTH = 96;
-const BEAM_BRANCHES = 10;
+// El beam se corre por etapas, de barata a cara, hasta encontrar solucion o
+// quedarse sin presupuesto. Un beam angosto no es solo mas rapido: muchas veces
+// encuentra soluciones que el ancho pierde, porque el ancho se llena de estados
+// casi identicos. La primera etapa son los valores del optimizador del frontend
+// y la ultima equivale a la configuracion vieja, que queda como red de seguridad.
+const BEAM_STAGES = [
+  { width: 24, branches: 4, variants: 4 },
+  { width: 48, branches: 6, variants: 6 },
+  { width: 96, branches: 10, variants: 8 }
+];
+
+// Presupuesto para la fase de refinamiento (la que intenta bajar una placa).
+// La fase greedy nunca se corta: el presupuesto solo limita la mejora opcional.
+// 1200 ms por material es el punto donde el refinamiento deja de perder placas
+// contra la version sin limite; mas tiempo que eso no mejoro ningun caso.
+// El refinamiento se limita por cantidad de trabajo, no por reloj: si midieramos
+// tiempo, el mismo pedido podria dar 17 placas en el preview y 16 al guardarlo
+// segun la carga del servidor, y el presupuesto que ve el cliente tiene que ser
+// reproducible. El reloj queda solo como red de seguridad.
+// Calibrado sobre 40 pedidos de prueba: con 500k el refinamiento deja de perder
+// placas contra la version sin limite, y subirlo a 1M, 2M o 4M no mejoro ningun
+// caso, solo agrego tiempo.
+const REFINE_STATES_PER_MATERIAL = Number(process.env.ORDER_ESTIMATE_BUDGET_STATES ?? 500000);
+const REFINE_STATES_TOTAL = Number(process.env.ORDER_ESTIMATE_TOTAL_BUDGET_STATES ?? 1500000);
+const MIN_REFINE_STATES = 150000;
+const SAFETY_TIMEOUT_MS = Number(process.env.ORDER_ESTIMATE_SAFETY_TIMEOUT_MS ?? 15000);
+
+type Budget = { states: number; until: number };
+
+/** Reparte el trabajo entre los materiales del pedido, con tope por pedido. */
+function createBudget(materialCount: number): Budget {
+  const share = Math.floor(REFINE_STATES_TOTAL / Math.max(1, materialCount));
+  return {
+    states: Math.max(MIN_REFINE_STATES, Math.min(REFINE_STATES_PER_MATERIAL, share)),
+    until: Date.now() + SAFETY_TIMEOUT_MS
+  };
+}
+
+function expired(budget: Budget | null) {
+  return budget !== null && (budget.states <= 0 || Date.now() >= budget.until);
+}
+
+function spend(budget: Budget | null, states: number) {
+  if (budget !== null) budget.states -= states;
+}
 
 function materialBoardWidthMm(material: Material) {
   return material.anchoPlaca ?? 0;
@@ -146,95 +189,178 @@ function candidateOrientations(piece: Piece): PieceOrientation[] {
   ];
 }
 
-function collectPlacementOptions(boards: BoardPlan[], piece: Piece) {
-  const placements: PlacementOption[] = [];
+// Objeto reutilizado al recorrer ubicaciones: evita crear un objeto por cada
+// candidata. Quien quiera conservar una ubicacion tiene que clonarla.
+const placementScratch: PlacementOption = {
+  boardIndex: 0,
+  rect: { x: 0, y: 0, width: 0, height: 0 },
+  x: 0,
+  y: 0,
+  width: 0,
+  height: 0,
+  rotated: false,
+  areaFit: 0,
+  shortSideWaste: 0,
+  longSideWaste: 0,
+  areaWaste: 0,
+  exactEdgeMatches: 0
+};
 
-  boards.forEach((board, boardIndex) => {
-    board.freeRects.forEach((rect) => {
-      candidateOrientations(piece).forEach((orientation) => {
-        if (orientation.width > rect.width || orientation.height > rect.height) return;
+let scannedRects = 0;
 
-        const anchors = [
-          { x: rect.x, y: rect.y },
-          { x: rect.x + rect.width - orientation.width, y: rect.y },
-          { x: rect.x, y: rect.y + rect.height - orientation.height },
-          { x: rect.x + rect.width - orientation.width, y: rect.y + rect.height - orientation.height }
-        ];
-        const seenAnchors = new Set<string>();
-
-        anchors.forEach((anchor) => {
-          const anchorKey = `${anchor.x}:${anchor.y}`;
-          if (seenAnchors.has(anchorKey)) return;
-          seenAnchors.add(anchorKey);
-
-          placements.push({
-            boardIndex,
-            rect,
-            x: anchor.x,
-            y: anchor.y,
-            width: orientation.width,
-            height: orientation.height,
-            rotated: orientation.rotated,
-            areaFit: orientation.width * orientation.height,
-            shortSideWaste: Math.min(rect.width - orientation.width, rect.height - orientation.height),
-            longSideWaste: Math.max(rect.width - orientation.width, rect.height - orientation.height),
-            areaWaste: rect.width * rect.height - orientation.width * orientation.height,
-            exactEdgeMatches:
-              Number(anchor.x === rect.x || anchor.x + orientation.width === rect.x + rect.width) +
-              Number(anchor.y === rect.y || anchor.y + orientation.height === rect.y + rect.height)
-          });
-        });
-      });
-    });
-  });
-
-  return placements;
+function clonePlacement(placement: PlacementOption): PlacementOption {
+  return { ...placement };
 }
 
-function sortPlacements(placements: PlacementOption[], variant: number) {
-  const mode = variant % 8;
-  return [...placements].sort((a, b) => {
-    const byTightFit =
-      a.shortSideWaste - b.shortSideWaste ||
-      a.longSideWaste - b.longSideWaste ||
-      a.areaWaste - b.areaWaste ||
-      b.exactEdgeMatches - a.exactEdgeMatches ||
-      a.boardIndex - b.boardIndex ||
-      a.rect.y - b.rect.y ||
-      a.rect.x - b.rect.x ||
-      a.y - b.y ||
-      a.x - b.x ||
-      Number(a.rotated) - Number(b.rotated);
-    const byAreaWaste =
-      a.areaWaste - b.areaWaste ||
-      a.shortSideWaste - b.shortSideWaste ||
-      b.exactEdgeMatches - a.exactEdgeMatches ||
-      a.boardIndex - b.boardIndex ||
-      a.rect.y - b.rect.y ||
-      a.rect.x - b.rect.x ||
-      a.y - b.y ||
-      a.x - b.x ||
-      Number(a.rotated) - Number(b.rotated);
-    const byEdges =
-      b.exactEdgeMatches - a.exactEdgeMatches ||
-      a.shortSideWaste - b.shortSideWaste ||
-      a.areaWaste - b.areaWaste ||
-      a.boardIndex - b.boardIndex ||
-      a.rect.y - b.rect.y ||
-      a.rect.x - b.rect.x ||
-      a.y - b.y ||
-      a.x - b.x ||
-      Number(a.rotated) - Number(b.rotated);
+/**
+ * Recorre todas las ubicaciones posibles de una pieza sin armar el array
+ * completo. Mantiene el mismo orden de generacion que la version anterior para
+ * que los desempates den identico resultado.
+ */
+function eachPlacement(boards: BoardPlan[], piece: Piece, visit: (placement: PlacementOption) => void) {
+  const orientations = candidateOrientations(piece);
 
-    if (mode === 1) return byAreaWaste;
-    if (mode === 2) return byEdges;
-    if (mode === 3) return a.boardIndex - b.boardIndex || byTightFit;
-    if (mode === 4) return byTightFit || Number(a.rotated) - Number(b.rotated);
-    if (mode === 5) return a.y - b.y || a.x - b.x || byTightFit;
-    if (mode === 6) return a.longSideWaste - b.longSideWaste || byTightFit;
-    if (mode === 7) return b.areaFit - a.areaFit || byTightFit;
-    return byTightFit;
+  for (let boardIndex = 0; boardIndex < boards.length; boardIndex += 1) {
+    const freeRects = boards[boardIndex].freeRects;
+    // El costo real de empaquetar es recorrer los rectangulos libres, y crece
+    // con la cantidad de placas y la fragmentacion. Medir el presupuesto en
+    // esta unidad hace que el tope de trabajo se traduzca en un tiempo parejo
+    // sin importar el tamano del pedido.
+    scannedRects += freeRects.length;
+
+    for (let rectIndex = 0; rectIndex < freeRects.length; rectIndex += 1) {
+      const rect = freeRects[rectIndex];
+
+      for (const orientation of orientations) {
+        if (orientation.width > rect.width || orientation.height > rect.height) continue;
+
+        const farX = rect.x + rect.width - orientation.width;
+        const farY = rect.y + rect.height - orientation.height;
+        const shortSideWaste = Math.min(rect.width - orientation.width, rect.height - orientation.height);
+        const longSideWaste = Math.max(rect.width - orientation.width, rect.height - orientation.height);
+        const areaWaste = rect.width * rect.height - orientation.width * orientation.height;
+
+        for (let yIndex = 0; yIndex < 2; yIndex += 1) {
+          if (yIndex === 1 && farY === rect.y) continue;
+          const y = yIndex === 0 ? rect.y : farY;
+
+          for (let xIndex = 0; xIndex < 2; xIndex += 1) {
+            if (xIndex === 1 && farX === rect.x) continue;
+            const x = xIndex === 0 ? rect.x : farX;
+
+            placementScratch.boardIndex = boardIndex;
+            placementScratch.rect = rect;
+            placementScratch.x = x;
+            placementScratch.y = y;
+            placementScratch.width = orientation.width;
+            placementScratch.height = orientation.height;
+            placementScratch.rotated = orientation.rotated;
+            placementScratch.areaFit = orientation.width * orientation.height;
+            placementScratch.shortSideWaste = shortSideWaste;
+            placementScratch.longSideWaste = longSideWaste;
+            placementScratch.areaWaste = areaWaste;
+            placementScratch.exactEdgeMatches =
+              Number(x === rect.x || x + orientation.width === rect.x + rect.width) +
+              Number(y === rect.y || y + orientation.height === rect.y + rect.height);
+
+            visit(placementScratch);
+          }
+        }
+      }
+    }
+  }
+}
+
+function tightFitOrder(a: PlacementOption, b: PlacementOption) {
+  return (
+    a.shortSideWaste - b.shortSideWaste ||
+    a.longSideWaste - b.longSideWaste ||
+    a.areaWaste - b.areaWaste ||
+    b.exactEdgeMatches - a.exactEdgeMatches ||
+    a.boardIndex - b.boardIndex ||
+    a.rect.y - b.rect.y ||
+    a.rect.x - b.rect.x ||
+    a.y - b.y ||
+    a.x - b.x ||
+    Number(a.rotated) - Number(b.rotated)
+  );
+}
+
+function areaWasteOrder(a: PlacementOption, b: PlacementOption) {
+  return (
+    a.areaWaste - b.areaWaste ||
+    a.shortSideWaste - b.shortSideWaste ||
+    b.exactEdgeMatches - a.exactEdgeMatches ||
+    a.boardIndex - b.boardIndex ||
+    a.rect.y - b.rect.y ||
+    a.rect.x - b.rect.x ||
+    a.y - b.y ||
+    a.x - b.x ||
+    Number(a.rotated) - Number(b.rotated)
+  );
+}
+
+function edgesOrder(a: PlacementOption, b: PlacementOption) {
+  return (
+    b.exactEdgeMatches - a.exactEdgeMatches ||
+    a.shortSideWaste - b.shortSideWaste ||
+    a.areaWaste - b.areaWaste ||
+    a.boardIndex - b.boardIndex ||
+    a.rect.y - b.rect.y ||
+    a.rect.x - b.rect.x ||
+    a.y - b.y ||
+    a.x - b.x ||
+    Number(a.rotated) - Number(b.rotated)
+  );
+}
+
+function comparePlacements(a: PlacementOption, b: PlacementOption, variant: number) {
+  const mode = variant % 8;
+  if (mode === 1) return areaWasteOrder(a, b);
+  if (mode === 2) return edgesOrder(a, b);
+  if (mode === 3) return a.boardIndex - b.boardIndex || tightFitOrder(a, b);
+  if (mode === 4) return tightFitOrder(a, b) || Number(a.rotated) - Number(b.rotated);
+  if (mode === 5) return a.y - b.y || a.x - b.x || tightFitOrder(a, b);
+  if (mode === 6) return a.longSideWaste - b.longSideWaste || tightFitOrder(a, b);
+  if (mode === 7) return b.areaFit - a.areaFit || tightFitOrder(a, b);
+  return tightFitOrder(a, b);
+}
+
+/** Equivale a ordenar todas las ubicaciones y quedarse con la primera. */
+function bestPlacement(boards: BoardPlan[], piece: Piece, variant: number) {
+  let best: PlacementOption | null = null;
+
+  eachPlacement(boards, piece, (placement) => {
+    if (best === null || comparePlacements(placement, best, variant) < 0) {
+      best = clonePlacement(placement);
+    }
   });
+
+  return best as PlacementOption | null;
+}
+
+/** Equivale a ordenar todas las ubicaciones y cortar las primeras `limit`. */
+function topPlacements(boards: BoardPlan[], piece: Piece, variant: number, limit: number) {
+  const top: PlacementOption[] = [];
+
+  eachPlacement(boards, piece, (placement) => {
+    let index = top.length;
+    while (index > 0 && comparePlacements(placement, top[index - 1], variant) < 0) index -= 1;
+    if (index >= limit) return;
+
+    top.splice(index, 0, clonePlacement(placement));
+    if (top.length > limit) top.pop();
+  });
+
+  return top;
+}
+
+function countPlacements(boards: BoardPlan[], piece: Piece) {
+  let total = 0;
+  eachPlacement(boards, piece, () => {
+    total += 1;
+  });
+  return total;
 }
 
 function sortPieces<T extends { width: number; height: number; area: number }>(pieces: T[], variant: number) {
@@ -295,17 +421,35 @@ function compareBoardStates(a: BoardPlan[], b: BoardPlan[], boardArea: number) {
 }
 
 function chooseMostConstrainedPiece(remaining: Piece[], boards: BoardPlan[], variant: number) {
-  const candidates = remaining.map((piece) => {
-    const placements = sortPlacements(collectPlacementOptions(boards, piece), variant);
-    return { piece, placements };
-  });
+  let selected: Piece | null = null;
+  let selectedCount = Number.POSITIVE_INFINITY;
 
-  candidates.sort((a, b) => {
-    if (a.placements.length !== b.placements.length) return a.placements.length - b.placements.length;
-    return b.piece.area - a.piece.area || Math.max(b.piece.width, b.piece.height) - Math.max(a.piece.width, a.piece.height);
-  });
+  // Solo se cuentan las ubicaciones de cada pieza; ordenarlas todas para
+  // despues descartarlas era el grueso del costo de esta funcion.
+  for (const piece of remaining) {
+    const count = countPlacements(boards, piece);
+    if (selected === null) {
+      selected = piece;
+      selectedCount = count;
+      continue;
+    }
 
-  return candidates[0] ?? null;
+    const better =
+      count !== selectedCount
+        ? count < selectedCount
+        : piece.area !== selected.area
+          ? piece.area > selected.area
+          : Math.max(piece.width, piece.height) > Math.max(selected.width, selected.height);
+
+    if (better) {
+      selected = piece;
+      selectedCount = count;
+    }
+  }
+
+  if (selected === null) return null;
+
+  return { piece: selected, placements: topPlacements(boards, selected, variant, SEARCH_CANDIDATE_LIMIT) };
 }
 
 function greedyPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: number, boardHeight: number, kerf: number, variant: number): SearchResult {
@@ -313,7 +457,7 @@ function greedyPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: 
   const orderedPieces = sortPieces(pieces, variant);
 
   for (const piece of orderedPieces) {
-    const placement = sortPlacements(collectPlacementOptions(boards, piece), variant)[0];
+    const placement = bestPlacement(boards, piece, variant);
     if (!placement) return { boards, success: false };
     applyPlacement(boards[placement.boardIndex], placement, kerf);
   }
@@ -321,16 +465,18 @@ function greedyPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: 
   return { boards, success: true };
 }
 
-function beamPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: number, boardHeight: number, kerf: number, variant: number): SearchResult {
+function beamPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: number, boardHeight: number, kerf: number, variant: number, budget: Budget | null, beamWidth: number, beamBranches: number): SearchResult {
   const orderedPieces = sortPieces(pieces, variant);
   const boardArea = boardWidth * boardHeight;
   let frontier: BoardPlan[][] = [Array.from({ length: boardCount }, () => createBoard(boardWidth, boardHeight))];
 
   for (const piece of orderedPieces) {
+    if (expired(budget)) return { boards: [], success: false };
+    const scannedBefore = scannedRects;
     const nextStates: BoardPlan[][] = [];
 
     for (const state of frontier) {
-      const placements = sortPlacements(collectPlacementOptions(state, piece), variant).slice(0, BEAM_BRANCHES);
+      const placements = topPlacements(state, piece, variant, beamBranches);
       for (const placement of placements) {
         const nextBoards = cloneBoards(state);
         applyPlacement(nextBoards[placement.boardIndex], placement, kerf);
@@ -351,13 +497,15 @@ function beamPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: nu
 
     frontier = [...uniqueStates.values()]
       .sort((a, b) => compareBoardStates(a, b, boardArea))
-      .slice(0, BEAM_WIDTH);
+      .slice(0, beamWidth);
+
+    spend(budget, scannedRects - scannedBefore);
   }
 
   return frontier.length ? { boards: frontier[0], success: true } : { boards: [], success: false };
 }
 
-function searchPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: number, boardHeight: number, kerf: number, variant: number): SearchResult {
+function searchPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: number, boardHeight: number, kerf: number, variant: number, budget: Budget | null): SearchResult {
   const startingBoards = Array.from({ length: boardCount }, () => createBoard(boardWidth, boardHeight));
   const orderedPieces = sortPieces(pieces, variant);
   let exploredNodes = 0;
@@ -366,16 +514,19 @@ function searchPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: 
   const visit = (boards: BoardPlan[], remaining: Piece[]): BoardPlan[] | null => {
     if (!remaining.length) return boards;
     if (exploredNodes >= MAX_SEARCH_NODES) return null;
+    if (expired(budget)) return null;
     exploredNodes += 1;
+    const scannedBefore = scannedRects;
 
     const stateKey = `${remaining.map((piece) => piece.id).sort().join(",")}###${boardStateSignature(boards)}`;
     if (failedStates.has(stateKey)) return null;
 
     const selected = chooseMostConstrainedPiece(remaining, boards, variant);
+    spend(budget, scannedRects - scannedBefore);
     if (!selected || !selected.placements.length) return null;
 
     const nextRemaining = remaining.filter((piece) => piece.id !== selected.piece.id);
-    const candidates = selected.placements.slice(0, SEARCH_CANDIDATE_LIMIT);
+    const candidates = selected.placements;
 
     for (const placement of candidates) {
       const nextBoards = cloneBoards(boards);
@@ -392,7 +543,91 @@ function searchPackFixedBoards(pieces: Piece[], boardCount: number, boardWidth: 
   return { boards: solvedBoards ?? startingBoards, success: Boolean(solvedBoards) };
 }
 
-function calculateBoardsForMaterial(details: DetallePedido[], material: Material, settings: ConfiguracionOptimizador) {
+function compareSolutions(a: BoardPlan[], b: BoardPlan[], boardArea: number) {
+  const scoreA = boardUsageScore(a, boardArea);
+  const scoreB = boardUsageScore(b, boardArea);
+  if (scoreA.rotatedCount !== scoreB.rotatedCount) return scoreA.rotatedCount - scoreB.rotatedCount;
+  if (scoreA.wastePercent !== scoreB.wastePercent) return scoreA.wastePercent - scoreB.wastePercent;
+  return scoreB.usedArea - scoreA.usedArea;
+}
+
+function usedBoardCount(boards: BoardPlan[]) {
+  return boards.filter((board) => board.usedArea > 0).length;
+}
+
+function bestGreedySolution(
+  pieces: Piece[],
+  boardCount: number,
+  boardWidth: number,
+  boardHeight: number,
+  kerf: number,
+  boardArea: number,
+  firstVariant: number,
+  variantCount: number,
+  budget: Budget | null
+) {
+  let best: BoardPlan[] | null = null;
+
+  for (let offset = 0; offset < variantCount; offset += 1) {
+    if (offset > 0 && expired(budget)) break;
+    const attempt = greedyPackFixedBoards(pieces, boardCount, boardWidth, boardHeight, kerf, firstVariant + offset);
+    if (!attempt.success) continue;
+    if (best === null || compareSolutions(attempt.boards, best, boardArea) < 0) best = attempt.boards;
+  }
+
+  return best;
+}
+
+function bestBeamSolution(
+  pieces: Piece[],
+  boardCount: number,
+  boardWidth: number,
+  boardHeight: number,
+  kerf: number,
+  boardArea: number,
+  budget: Budget | null
+) {
+  for (const stage of BEAM_STAGES) {
+    let best: BoardPlan[] | null = null;
+
+    for (let variant = 0; variant < stage.variants; variant += 1) {
+      if (expired(budget)) return best;
+      const attempt = beamPackFixedBoards(pieces, boardCount, boardWidth, boardHeight, kerf, variant, budget, stage.width, stage.branches);
+      if (!attempt.success) continue;
+      if (best === null || compareSolutions(attempt.boards, best, boardArea) < 0) best = attempt.boards;
+    }
+
+    // Etapa resuelta: no hace falta gastar presupuesto en las mas caras.
+    if (best !== null) return best;
+  }
+
+  return null;
+}
+
+function bestSearchSolution(
+  pieces: Piece[],
+  boardCount: number,
+  boardWidth: number,
+  boardHeight: number,
+  kerf: number,
+  boardArea: number,
+  budget: Budget | null
+) {
+  if (pieces.length > MAX_SEARCH_PIECES) return null;
+
+  let best: BoardPlan[] | null = null;
+
+  for (let variant = 0; variant < SEARCH_VARIANTS; variant += 1) {
+    if (expired(budget)) break;
+    const attempt = searchPackFixedBoards(pieces, boardCount, boardWidth, boardHeight, kerf, variant, budget);
+    if (!attempt.success) continue;
+    if (best === null || compareSolutions(attempt.boards, best, boardArea) < 0) best = attempt.boards;
+  }
+
+  return best;
+}
+
+function calculateBoardsForMaterial(details: DetallePedido[], material: Material, settings: ConfiguracionOptimizador, budget: Budget | null = null) {
   const basePieces = details.flatMap((detail, detailIndex) =>
     Array.from({ length: detail.cantidad }, (_, copyIndex) => ({
       id: `${detailIndex}-${copyIndex}`,
@@ -410,6 +645,7 @@ function calculateBoardsForMaterial(details: DetallePedido[], material: Material
   if (!boardWidth || !boardHeight) return Number.POSITIVE_INFINITY;
 
   const boardArea = boardWidth * boardHeight;
+  const kerf = settings.espesorSierraMm;
   const totalArea = basePieces.reduce((total, piece) => total + piece.area, 0);
 
   const oversizedPiece = basePieces.some((piece) =>
@@ -419,53 +655,39 @@ function calculateBoardsForMaterial(details: DetallePedido[], material: Material
 
   const minBoardsByArea = Math.max(1, Math.ceil(totalArea / boardArea));
 
+  // Fase 1 - respuesta garantizada. Solo greedy, y sin limite de tiempo: es
+  // barato y tiene que terminar si o si, porque de aca sale el presupuesto.
+  let bestBoards: number | null = null;
+
   for (let boardCount = minBoardsByArea; boardCount <= basePieces.length; boardCount += 1) {
-    const attempts = Array.from({ length: GREEDY_VARIANTS }, (_, variant) =>
-      greedyPackFixedBoards(basePieces, boardCount, boardWidth, boardHeight, settings.espesorSierraMm, variant)
-    );
-
-    const successfulGreedy = attempts
-      .filter((attempt) => attempt.success)
-      .sort((a, b) => {
-        const scoreA = boardUsageScore(a.boards, boardArea);
-        const scoreB = boardUsageScore(b.boards, boardArea);
-        if (scoreA.rotatedCount !== scoreB.rotatedCount) return scoreA.rotatedCount - scoreB.rotatedCount;
-        if (scoreA.wastePercent !== scoreB.wastePercent) return scoreA.wastePercent - scoreB.wastePercent;
-        return scoreB.usedArea - scoreA.usedArea;
-      })[0];
-
-    if (successfulGreedy) {
-      return successfulGreedy.boards.filter((board) => board.usedArea > 0).length;
-    }
-
-    const beamSolved = Array.from({ length: GREEDY_VARIANTS }, (_, variant) =>
-      beamPackFixedBoards(basePieces, boardCount, boardWidth, boardHeight, settings.espesorSierraMm, variant)
-    )
-      .filter((attempt) => attempt.success)
-      .sort((a, b) => {
-        const scoreA = boardUsageScore(a.boards, boardArea);
-        const scoreB = boardUsageScore(b.boards, boardArea);
-        if (scoreA.rotatedCount !== scoreB.rotatedCount) return scoreA.rotatedCount - scoreB.rotatedCount;
-        if (scoreA.wastePercent !== scoreB.wastePercent) return scoreA.wastePercent - scoreB.wastePercent;
-        return scoreB.usedArea - scoreA.usedArea;
-      })[0];
-
-    if (beamSolved) {
-      return beamSolved.boards.filter((board) => board.usedArea > 0).length;
-    }
-
-    if (basePieces.length > MAX_SEARCH_PIECES) continue;
-
-    const searched = Array.from({ length: SEARCH_VARIANTS }, (_, variant) =>
-      searchPackFixedBoards(basePieces, boardCount, boardWidth, boardHeight, settings.espesorSierraMm, variant)
-    ).find((attempt) => attempt.success);
-
-    if (searched) {
-      return searched.boards.filter((board) => board.usedArea > 0).length;
+    const solved = bestGreedySolution(basePieces, boardCount, boardWidth, boardHeight, kerf, boardArea, 0, 1, null);
+    if (solved) {
+      bestBoards = usedBoardCount(solved);
+      break;
     }
   }
 
-  return Number.POSITIVE_INFINITY;
+  if (bestBoards === null) return Number.POSITIVE_INFINITY;
+
+  // Fase 2 - mejora opcional, acotada por tiempo. Se baja de a una placa desde
+  // la respuesta de la fase 1. Si un nivel no se puede resolver, ninguno mas
+  // bajo va a poder tampoco, asi que se corta ahi: probar de menor a mayor
+  // gastaba casi todo el tiempo demostrando que lo imposible era imposible.
+  let target = bestBoards - 1;
+
+  while (target >= minBoardsByArea && !expired(budget)) {
+    const solved =
+      bestGreedySolution(basePieces, target, boardWidth, boardHeight, kerf, boardArea, 1, GREEDY_VARIANTS - 1, budget) ??
+      bestBeamSolution(basePieces, target, boardWidth, boardHeight, kerf, boardArea, budget) ??
+      bestSearchSolution(basePieces, target, boardWidth, boardHeight, kerf, boardArea, budget);
+
+    if (!solved) break;
+
+    bestBoards = usedBoardCount(solved);
+    target = Math.min(target, bestBoards) - 1;
+  }
+
+  return bestBoards;
 }
 
 function resolveEdgeLaborCostPerMeter(espesorMm: number, budgetSettings: BudgetSettingsSnapshot) {
@@ -560,12 +782,15 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
   let faltanteStock = false;
   let costoManoObraCortes = 0;
 
+  // Cada material recibe su parte del trabajo, asi un material grande no se
+  // come el presupuesto de los demas.
+
   for (const materialId of materialIds) {
     const material = materialsById.get(materialId);
     if (!material) throw new AppError(400, "Material no encontrado para calcular presupuesto.");
 
     const materialDetails = detalles.filter((detail) => detail.materialId === materialId);
-    const boards = calculateBoardsForMaterial(materialDetails, material, settings);
+    const boards = calculateBoardsForMaterial(materialDetails, material, settings, createBudget(materialIds.length));
     if (!Number.isFinite(boards)) {
       throw new AppError(400, `Hay piezas que no entran en la placa ${material.nombre}.`);
     }
@@ -669,7 +894,7 @@ export async function buildOrderMaterialsSummary(tx: PrismaClient, detalles: Det
     if (!material) throw new AppError(400, "Material no encontrado para calcular el listado de materiales.");
 
     const materialDetails = detalles.filter((detail) => detail.materialId === materialId);
-    const boards = calculateBoardsForMaterial(materialDetails, material, settings);
+    const boards = calculateBoardsForMaterial(materialDetails, material, settings, createBudget(materialIds.length));
     if (!Number.isFinite(boards)) {
       throw new AppError(400, `Hay piezas que no entran en la placa ${material.nombre}.`);
     }
