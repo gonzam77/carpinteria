@@ -29,6 +29,7 @@ services:
       DATABASE_URL: postgresql://carpinteria:carpinteria@db:5432/carpinteria?schema=public
       JWT_SECRET: ${JWT_SECRET:-cambiar-este-secreto-en-produccion}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      SESSION_MAX_HOURS: ${SESSION_MAX_HOURS:-24}
       PORT: 4000
      # FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       FRONTEND_URL: ${FRONTEND_URL:-http://127.0.0.1:5173}

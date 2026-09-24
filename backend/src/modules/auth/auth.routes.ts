@@ -27,14 +27,22 @@ const profileSchema = z.object({
   telefono: z.string().min(6)
 });
 
-function signToken(user: { id: string; email: string; rol: Rol }) {
+/**
+ * `ses` marca cuando empezo la sesion y se arrastra en cada renovacion. Es lo
+ * que le pone un techo a la renovacion deslizante: sin el, una sesion renovada
+ * cada tanto no venceria nunca.
+ */
+function signToken(user: { id: string; email: string; rol: Rol }, sessionStart = Date.now()) {
   return jwt.sign(
-    { id: user.id, email: user.email, rol: user.rol },
+    { id: user.id, email: user.email, rol: user.rol, ses: sessionStart },
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN as SignOptions["expiresIn"] }
   );
 }
 
+// Tiene que devolver la MISMA forma que el select de GET /me: el front compara
+// el usuario entre respuestas para decidir si cambio, y una diferencia de
+// campos lo hacia ver siempre como distinto.
 function publicUser(user: any) {
   return {
     id: user.id,
@@ -42,7 +50,8 @@ function publicUser(user: any) {
     apellido: user.apellido,
     email: user.email,
     telefono: user.telefono,
-    rol: user.rol
+    rol: user.rol,
+    fechaCreacion: user.fechaCreacion
   };
 }
 
@@ -129,5 +138,28 @@ authRouter.put(
       select: { id: true, nombre: true, apellido: true, email: true, telefono: true, rol: true, fechaCreacion: true }
     });
     res.json(user);
+  })
+);
+
+authRouter.post(
+  "/refresh",
+  authenticate,
+  asyncHandler(async (req: any, res: any) => {
+    // Renovacion deslizante: mientras el usuario trabaja, el front pide un token
+    // nuevo antes de que venza el actual. Releemos el usuario de la base para que
+    // un cambio de rol o una baja no sobrevivan renovandose indefinidamente.
+    const user = await prisma.usuario.findUnique({ where: { id: req.user.id } });
+
+    if (!user) {
+      throw new AppError(401, "Usuario inexistente");
+    }
+
+    // Tope absoluto: se puede renovar dentro de la ventana, no indefinidamente.
+    const sessionStart = typeof req.user.ses === "number" ? req.user.ses : Date.now();
+    if (Date.now() - sessionStart > env.SESSION_MAX_HOURS * 60 * 60 * 1000) {
+      throw new AppError(401, "La sesion alcanzo su duracion maxima");
+    }
+
+    res.json({ token: signToken(user, sessionStart), user: publicUser(user) });
   })
 );

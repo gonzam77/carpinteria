@@ -1,6 +1,7 @@
 import CalculateIcon from "@mui/icons-material/Calculate";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import { Alert, Box, Button, Divider, Paper, Stack, Typography } from "@mui/material";
+import axios from "axios";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import {
@@ -601,9 +602,16 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
         setBudgetSettings(response.data);
         setBudgetSettingsError("");
       })
-      .catch(() => {
+      .catch((error) => {
         setBudgetSettings(null);
-        setBudgetSettingsError("No se pudo cargar la configuracion de costos. El presupuesto no se calculara con tarifas en cero.");
+        // El mensaje anterior culpaba a los costos de los materiales, que no
+        // intervienen en este endpoint, y mandaba a revisar donde no estaba el
+        // problema. Casi siempre es la sesion.
+        setBudgetSettingsError(
+          axios.isAxiosError(error) && error.response?.status === 401
+            ? "Tu sesion expiro. Volve a ingresar para calcular el presupuesto."
+            : "No se pudo contactar al servidor para traer las tarifas de mano de obra. Revisa la conexion e intenta de nuevo."
+        );
       });
   }, []);
 

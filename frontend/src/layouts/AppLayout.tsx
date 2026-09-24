@@ -226,7 +226,12 @@ export function AppLayout() {
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, maxWidth: "100%", overflowX: "hidden", p: { xs: 2, sm: 2.5, md: 3.5 }, width: { xs: "100%", md: `calc(100% - ${drawerWidth}px)` } }}>
         <Toolbar />
-        <Outlet />
+        {/* La `key` con el id del usuario remonta la pantalla si cambia quien
+            esta logueado. Pasa cuando vence una sesion y en el dialogo de
+            reingreso entra otra persona: sin esto, el formulario del anterior
+            quedaba vivo, se autoguardaba en el espacio del nuevo y se podia
+            enviar a su nombre con un solo click. */}
+        <Outlet key={user?.id ?? "anon"} />
       </Box>
       <Snackbar
         open={Boolean(notification)}

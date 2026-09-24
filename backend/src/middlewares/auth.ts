@@ -7,6 +7,8 @@ type JwtPayload = {
   id: string;
   email: string;
   rol: Rol;
+  /** Inicio de la sesion, arrastrado entre renovaciones. Falta en tokens viejos. */
+  ses?: number;
 };
 
 export function authenticate(req: any, _res: any, next: any) {
@@ -17,12 +19,23 @@ export function authenticate(req: any, _res: any, next: any) {
     throw new AppError(401, "Token requerido");
   }
 
+  let payload: JwtPayload;
+
   try {
-    req.user = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
-    next();
+    payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
   } catch {
     throw new AppError(401, "Token invalido");
   }
+
+  // El tope tambien se aplica al usar y no solo al renovar. Si se controlara
+  // solo en /refresh, la sesion real duraria el tope MAS lo que le quede de
+  // vida al ultimo token emitido.
+  if (typeof payload.ses === "number" && Date.now() - payload.ses > env.SESSION_MAX_HOURS * 60 * 60 * 1000) {
+    throw new AppError(401, "La sesion alcanzo su duracion maxima");
+  }
+
+  req.user = payload;
+  next();
 }
 
 export function authorize(...roles: Rol[]) {

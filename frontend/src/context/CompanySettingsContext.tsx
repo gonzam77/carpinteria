@@ -39,12 +39,18 @@ export function CompanySettingsProvider({ children }: { children: React.ReactNod
     }
   }
 
+  // Depende de si HAY sesion, no del valor del token: este ahora se renueva
+  // sola cada tanto, y no hace falta volver a pedir los datos de la empresa
+  // cada vez que eso pasa.
+  const authenticated = !!token;
+
   useEffect(() => {
     refresh().catch(() => {
       setSettings(DEFAULT_SETTINGS);
       setLoading(false);
     });
-  }, [token]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticated]);
 
   const value = useMemo<CompanySettingsContextValue>(
     () => ({

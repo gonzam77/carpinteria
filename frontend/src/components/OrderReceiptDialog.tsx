@@ -48,7 +48,8 @@ export function OrderReceiptDialog({
   onClose,
   onConfirm,
   confirmLabel,
-  confirmLoading = false
+  confirmLoading = false,
+  errorMessage
 }: {
   order: Order | null;
   open: boolean;
@@ -56,6 +57,8 @@ export function OrderReceiptDialog({
   onConfirm?: () => void | Promise<void>;
   confirmLabel?: string;
   confirmLoading?: boolean;
+  /** Error de la pagina. Se muestra aca porque el modal tapa el de atras. */
+  errorMessage?: string;
 }) {
   const { settings: companySettings } = useCompanySettings();
   const [loadedOrder, setLoadedOrder] = useState<Order | null>(null);
@@ -143,6 +146,14 @@ export function OrderReceiptDialog({
     <Dialog open={open} onClose={confirmLoading ? undefined : onClose} fullWidth maxWidth="lg">
       <DialogTitle>Constancia de solicitud</DialogTitle>
       <DialogContent>
+        {/* Pegado arriba: el comprobante es largo y, si quedara dentro del area
+            que scrollea, el error no se veria justo cuando el usuario esta
+            abajo del todo mirando el boton de confirmar. */}
+        {errorMessage && (
+          <Alert severity="error" sx={{ position: "sticky", top: 0, zIndex: 2, mb: 2 }}>
+            {errorMessage}
+          </Alert>
+        )}
         <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: "12px", background: "linear-gradient(180deg, #fffef9 0%, #ffffff 100%)", border: "1px solid", borderColor: "divider" }}>
           <Stack spacing={3}>
             {loadError && <Alert severity="error">{loadError}</Alert>}
