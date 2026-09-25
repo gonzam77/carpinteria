@@ -7,8 +7,8 @@ import {
   BoardPlan,
   FreeRect,
   PlacedPiece,
+  buildPiecesFromRows,
   calculateBoardUtilization,
-  createPieceGroupKey,
   getLargestFreeRect,
   optimizeCutLayout
 } from "../lib/cutOptimizer";
@@ -89,19 +89,6 @@ function usableBoardHeightMm(material: Material, settings: OptimizerSettings) {
   return Math.max(0, materialBoardHeightMm(material) - settings.perfiladoBordeMm * 2);
 }
 
-function pieceLabel(row: OrderDetail, rowIndex: number, copyIndex: number) {
-  return row.nombreProducto || row.remark || `Pieza ${rowIndex + 1}.${copyIndex + 1}`;
-}
-
-function resolvePieceEdges(row: OrderDetail) {
-  return {
-    top: row.cantoAncho1Nombre || (row.cantoAncho1 ? "Canto" : null),
-    right: row.cantoLargo2Nombre || (row.cantoLargo2 ? "Canto" : null),
-    bottom: row.cantoAncho2Nombre || (row.cantoAncho2 ? "Canto" : null),
-    left: row.cantoLargo1Nombre || (row.cantoLargo1 ? "Canto" : null)
-  };
-}
-
 function calculateRowEdgeCost(row: OrderDetail, cantoById: Map<string, Material>, budgetSettings: BudgetSettings) {
   const largoMeters = Number(row.largo || 0) / 1000;
   const anchoMeters = Number(row.ancho || 0) / 1000;
@@ -141,24 +128,7 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
       const materialRows = rows.filter((row) => resolveMaterialId(row, materials) === material.id);
       if (!materialRows.length) return null;
 
-      const basePieces = materialRows.flatMap((row, rowIndex) =>
-        Array.from({ length: Number(row.cantidad) }, (_, copyIndex) => {
-          const width = Number(row.ancho);
-          const height = Number(row.largo);
-          const edges = resolvePieceEdges(row);
-          return {
-            id: `${material.id}-${rowIndex}-${copyIndex}`,
-            width,
-            height,
-            label: pieceLabel(row, rowIndex, copyIndex),
-            colorIndex: rowIndex,
-            canRotate: Boolean(row.permiteRotar),
-            edges,
-            area: width * height,
-            groupKey: createPieceGroupKey({ width, height, canRotate: Boolean(row.permiteRotar), edges })
-          };
-        })
-      );
+      const basePieces = buildPiecesFromRows(materialRows, material.id);
 
       if (!basePieces.length) return null;
 
