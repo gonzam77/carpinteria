@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildPiecesFromRows,
   calculateBoardUtilization,
+  countUsedBoards,
   calculateLowerBound,
   canPlacePieceInBoard,
   getLargestFreeRect,
@@ -911,4 +913,34 @@ test("T32 - en la ultima placa del pedido real las piezas de igual altura no se 
       }`
     );
   });
+});
+
+test("T33 - el mismo pedido da siempre las mismas placas (el presupuesto no depende del reloj)", () => {
+  const run = () =>
+    optimizeCutLayout({ pieces: t10Pieces(), usableBoardWidthMm, usableBoardHeightMm, settings, variant: 0 });
+  const first = run();
+  const second = run();
+
+  assert.equal(countUsedBoards(second.boards), countUsedBoards(first.boards));
+  assert.equal(layoutPositionSignature(second.boards), layoutPositionSignature(first.boards));
+});
+
+test("T34 - recalcular distribucion nunca cambia la cantidad de placas de la variante 0", () => {
+  const pieces = t10Pieces();
+  const baseline = optimizeCutLayout({ pieces, usableBoardWidthMm, usableBoardHeightMm, settings, variant: 0 });
+
+  for (const variant of [1, 2, 3, 4, 5]) {
+    const result = optimizeCutLayout({ pieces, usableBoardWidthMm, usableBoardHeightMm, settings, variant });
+    assert.equal(countUsedBoards(result.boards), countUsedBoards(baseline.boards), `variante ${variant}`);
+  }
+});
+
+test("T35 - buildPiecesFromRows agrupa por id de canto y no por el nombre mostrado", () => {
+  const row = { ancho: 562, largo: 712, cantidad: 2, permiteRotar: true, cantoLargo1Id: "canto-1" };
+  const fromForm = buildPiecesFromRows([{ ...row, cantoLargo1Nombre: "Canto gris perla 0.45mm" }], "m");
+  const fromDatabase = buildPiecesFromRows([{ ...row, cantoLargo1Nombre: "Canto gris perla 0,45mm" }], "m");
+
+  assert.equal(fromForm.length, 2);
+  assert.equal(fromForm[0].groupKey, fromDatabase[0].groupKey);
+  assert.equal(fromForm[0].edges.left, "Canto gris perla 0.45mm");
 });
