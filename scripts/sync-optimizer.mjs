@@ -1,19 +1,30 @@
-// El optimizador de cortes vive en frontend/src/lib/cutOptimizer.ts y se copia al backend para que
-// el plano de cortes y la constancia calculen las placas con el mismo codigo.
-//   node scripts/sync-optimizer.mjs          copia la version del frontend al backend
-//   node scripts/sync-optimizer.mjs --check  falla si las dos copias difieren
-import { copyFileSync, readFileSync } from "node:fs";
+// El optimizador de cortes y el motor de formulas de modulos viven en frontend/src/lib/ y se copian al
+// backend para que el navegador y el servidor calculen placas y despieces con el mismo codigo.
+//   node scripts/sync-optimizer.mjs          copia las versiones del frontend al backend
+//   node scripts/sync-optimizer.mjs --check  falla si alguna copia difiere
+import { copyFileSync, existsSync, readFileSync } from "node:fs";
 
-const source = new URL("../frontend/src/lib/cutOptimizer.ts", import.meta.url);
-const target = new URL("../backend/src/shared/cutOptimizer.ts", import.meta.url);
+const sharedFiles = ["cutOptimizer.ts", "moduleFormula.ts"].map((name) => ({
+  name,
+  source: new URL(`../frontend/src/lib/${name}`, import.meta.url),
+  target: new URL(`../backend/src/shared/${name}`, import.meta.url)
+}));
 
 if (process.argv.includes("--check")) {
-  if (readFileSync(source, "utf8") !== readFileSync(target, "utf8")) {
-    console.error("backend/src/shared/cutOptimizer.ts no coincide con frontend/src/lib/cutOptimizer.ts. Corre `npm run sync:optimizer`.");
+  const outdated = sharedFiles.filter(
+    ({ source, target }) => !existsSync(target) || readFileSync(source, "utf8") !== readFileSync(target, "utf8")
+  );
+  if (outdated.length) {
+    for (const { name } of outdated) {
+      console.error(`backend/src/shared/${name} no coincide con frontend/src/lib/${name}.`);
+    }
+    console.error("Corre `npm run sync:optimizer`.");
     process.exit(1);
   }
-  console.log("Optimizador sincronizado.");
+  console.log("Codigo compartido sincronizado.");
 } else {
-  copyFileSync(source, target);
-  console.log("Optimizador copiado al backend.");
+  for (const { name, source, target } of sharedFiles) {
+    copyFileSync(source, target);
+    console.log(`${name} copiado al backend.`);
+  }
 }

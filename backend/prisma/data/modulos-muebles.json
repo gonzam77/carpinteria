@@ -1,0 +1,7816 @@
+{
+ "version": 1,
+ "generado": "2026-10-01",
+ "fuente": "muebles.xlsx (33 hojas)",
+ "notas": [
+  "Formulas en la sintaxis del motor (ver ESPECIFICACION seccion 7). Referencias: CLAVE_PARAMETRO o CODIGO_PIEZA.largo|ancho|cant.",
+  "esperadoExcel = valores calculados por el Excel con los valores por defecto (sin redondear). Usarlos como fixtures de test de paridad.",
+  "rol y cantosProvisorios son una propuesta inicial por heuristica: DEBEN validarse con ROMA antes de dar por buena la carga.",
+  "permiteRotar se propone true solo para fondos (sin veta visible). Validar con ROMA."
+ ],
+ "modulos": [
+  {
+   "codigo": "CAJONERA_3_CAJONES",
+   "nombre": "Cajonera 3 cajones",
+   "hojaExcel": "Cajonera 3c",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": "imagenes/CAJONERA_3_CAJONES.jpg",
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 560,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 780,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 560,
+      "ancho": 580,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 762,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 524,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "GOLA_M",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 524,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_M2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 524,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FREN_CAJ",
+     "nombre": "Fren Caj",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO.largo - 4",
+     "formulaAncho": "(ALTO - FREN_CAJ2.ancho - 65) / 2",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 556,
+      "ancho": 205,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FREN_CAJ2",
+     "nombre": "Fren Caj (2)",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO.largo - 4",
+     "formulaAncho": "305",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 556,
+      "ancho": 305,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "INT_CAJ",
+     "nombre": "Int caj",
+     "rol": "ESQUELETO",
+     "formulaLargo": "120",
+     "formulaAncho": "500",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 120,
+      "ancho": 500,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "INT_CAJ2",
+     "nombre": "Int caj (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "120",
+     "formulaAncho": "PISO.largo - 99",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 120,
+      "ancho": 461,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "INT_CAJ3",
+     "nombre": "Int caj (3)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "200",
+     "formulaAncho": "500",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 200,
+      "ancho": 500,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "INT_CAJ4",
+     "nombre": "Int caj (4)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "200",
+     "formulaAncho": "PISO.largo - 99",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 11,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 200,
+      "ancho": 461,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS",
+     "nombre": "Zocalos",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 20",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 12,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 540,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS2",
+     "nombre": "Zocalos (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "500",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 13,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO.largo - 4",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 14,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 556,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FONDO_CAJ",
+     "nombre": "Fondo caj",
+     "rol": "FONDO",
+     "formulaLargo": "500",
+     "formulaAncho": "INT_CAJ2.ancho + 34",
+     "formulaCantidad": "3",
+     "permiteRotar": true,
+     "orden": 15,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 495,
+      "cantidad": 3
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "ESPECIERO",
+   "nombre": "Especiero",
+   "hojaExcel": "Especiero",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 230,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 780,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 230,
+      "ancho": 580,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 762,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 194,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "GOLA",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "TRAVESANO.largo",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 194,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "GOLA.largo",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 194,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FRENTE",
+     "nombre": "Frente",
+     "rol": "FRENTE",
+     "formulaLargo": "ALTO - 30",
+     "formulaAncho": "ANCHO - 4",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 750,
+      "ancho": 226,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ESTANT_PISO",
+     "nombre": "Estant-piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "TRAVESANO.largo - 27",
+     "formulaAncho": "460",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 167,
+      "ancho": 460,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "TRASERA_FRON",
+     "nombre": "Trasera-fron",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ESTANT_PISO.largo",
+     "formulaAncho": "600",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 167,
+      "ancho": 600,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "COSTADOS",
+     "nombre": "Costados",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ESTANT_PISO.ancho",
+     "formulaAncho": "80",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 460,
+      "ancho": 80,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ANCHO - 4",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 226,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "ALACENA_LEVADIZA_2_PUERTAS",
+   "nombre": "Alacena levadiza 2 puertas",
+   "hojaExcel": "Alac levad 2 p",
+   "categoria": "Alacenas",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1150,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 890,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 300,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISOTECHO",
+     "nombre": "Pisotecho",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1150,
+      "ancho": 300,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 854,
+      "ancho": 300,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "DIVISION",
+     "nombre": "División",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1114,
+      "ancho": 300,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "DIVISION.ancho - 20",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1114,
+      "ancho": 280,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "PUERTA",
+     "nombre": "Puerta",
+     "rol": "FRENTE",
+     "formulaLargo": "ANCHO - 4",
+     "formulaAncho": "(ALTO - 65) / 2",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 1146,
+      "ancho": 412.5,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ANCHO - 4",
+     "formulaAncho": "ALTO - 4",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1146,
+      "ancho": 886,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": [
+    "\"Puerta\" da medidas con decimales (412.5 mm): se redondea al mm."
+   ]
+  },
+  {
+   "codigo": "ESCOBERO",
+   "nombre": "Escobero",
+   "hojaExcel": "Escobero",
+   "categoria": "Placares y torres",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 290,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 2235,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 560,
+     "formula": null,
+     "orden": 3
+    },
+    {
+     "clave": "LUZ_ABAJO",
+     "etiqueta": "Luz abajoo",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1550,
+     "formula": null,
+     "orden": 4
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 290,
+      "ancho": 560,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PISO_TECHO.ancho",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2199,
+      "ancho": 560,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 36",
+     "formulaAncho": "PISO_TECHO.ancho",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 254,
+      "ancho": 560,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "PUER_ABAJ",
+     "nombre": "Puer abaj",
+     "rol": "FRENTE",
+     "formulaLargo": "LUZ_ABAJO - 27",
+     "formulaAncho": "PISO_TECHO.largo - 4",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 1523,
+      "ancho": 286,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUER_ARRIB",
+     "nombre": "Puer arrib",
+     "rol": "FRENTE",
+     "formulaLargo": "(LATERAL.largo + 36) - PUER_ABAJ.largo - 30",
+     "formulaAncho": "PISO_TECHO.largo - 4",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 682,
+      "ancho": 286,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MELA",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 36",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 254,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MELA2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 36",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 254,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "LATERAL.largo + 34",
+     "formulaAncho": "PISO_TECHO.largo - 4",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2233,
+      "ancho": 286,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "OPCION2",
+     "nombre": "Fondo abajo (opción 2)",
+     "rol": "FONDO",
+     "formulaLargo": "LUZ_ABAJO + 27",
+     "formulaAncho": "PISO_TECHO.largo - 4",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1577,
+      "ancho": 286,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "OPCION22",
+     "nombre": "Fondo arriba (opción 2)",
+     "rol": "FONDO",
+     "formulaLargo": "(LATERAL.largo + 36) - OPCION2.largo",
+     "formulaAncho": "PISO_TECHO.largo - 4",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 658,
+      "ancho": 286,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": [
+    "El Excel trae dos variantes de fondo: opción 1 = fondo entero (2233 x 286) y opción 2 = fondo partido en dos (1577 + 658 = 2235). Convertir en parámetro VARIANTE al importar (ver §19)."
+   ]
+  },
+  {
+   "codigo": "MESA_DE_LUZ_FLOTANTE",
+   "nombre": "Mesa de luz flotante",
+   "hojaExcel": "Mesa lus flot",
+   "categoria": "Dormitorio y otros",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 550,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 370,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 330,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "TAPA",
+     "nombre": "Tapa",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 550,
+      "ancho": 330,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 550,
+      "ancho": 330,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERALES",
+     "nombre": "Laterales",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 334,
+      "ancho": 330,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FRENT_CAJ",
+     "nombre": "Frent caj",
+     "rol": "FRENTE",
+     "formulaLargo": "ANCHO - 44",
+     "formulaAncho": "LATERALES.largo / 2",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 506,
+      "ancho": 167,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "INT_CAJ",
+     "nombre": "Int caj",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 97",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 453,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "INT_CAJ2",
+     "nombre": "Int caj (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "350",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 350,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO_CAJ",
+     "nombre": "Fondo caj",
+     "rol": "FONDO",
+     "formulaLargo": "INT_CAJ.largo + 35",
+     "formulaAncho": "INT_CAJ2.largo",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 488,
+      "ancho": 350,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "MESA_DE_LUZ",
+   "nombre": "Mesa de luz",
+   "hojaExcel": "Mesa dé luz",
+   "categoria": "Dormitorio y otros",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 500,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 610,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 400,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "TAPA",
+     "nombre": "Tapa",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 400,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "PROFUNDIDAD - 20",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 464,
+      "ancho": 380,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PISO.ancho",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 592,
+      "ancho": 380,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo",
+     "formulaAncho": "PISO.ancho - 20",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 464,
+      "ancho": 360,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FRENTE_CAJ",
+     "nombre": "Frente caj",
+     "rol": "FRENTE",
+     "formulaLargo": "ANCHO - 2",
+     "formulaAncho": "170",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 498,
+      "ancho": 170,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTA",
+     "nombre": "Puerta",
+     "rol": "FRENTE",
+     "formulaLargo": "FRENTE_CAJ.largo",
+     "formulaAncho": "LATERAL.largo - ZOCALO.ancho - FRENTE_CAJ.ancho - 8",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 498,
+      "ancho": 334,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "INT_CAJON",
+     "nombre": "Int cajon",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 61",
+     "formulaAncho": "120",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 403,
+      "ancho": 120,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "INT_CAJON2",
+     "nombre": "Int cajon (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PROFUNDIDAD - 50",
+     "formulaAncho": "120",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 350,
+      "ancho": 120,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALO",
+     "nombre": "Zocalo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 464,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ANCHO - 3",
+     "formulaAncho": "ALTO - 3",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 497,
+      "ancho": 607,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FONDO_CAJ",
+     "nombre": "Fondo caj",
+     "rol": "FONDO",
+     "formulaLargo": "INT_CAJON.largo + 35",
+     "formulaAncho": "INT_CAJON2.largo",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 11,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 438,
+      "ancho": 350,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "ESQUINERO_PLACA_FIJA",
+   "nombre": "Esquinero placa fija",
+   "hojaExcel": "Esquí-p.fíj",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1140,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 780,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1140,
+      "ancho": 580,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 762,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1104,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "PROFUNDIDAD - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1104,
+      "ancho": 550,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MELA",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1104,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MELA2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1104,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PLAC_FIJA",
+     "nombre": "Plac fija",
+     "rol": "FRENTE",
+     "formulaLargo": "LATERAL.ancho + 40",
+     "formulaAncho": "LATERAL.largo + 18",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 620,
+      "ancho": 780,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTA",
+     "nombre": "Puerta",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO.largo - PLAC_FIJA.largo - 6",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 514,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PARANTE",
+     "nombre": "Parante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "LATERAL.largo",
+     "formulaAncho": "70",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 762,
+      "ancho": 70,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS",
+     "nombre": "Zocalos",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 20",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1120,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS2",
+     "nombre": "Zocalos (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "500",
+     "formulaAncho": "100",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 11,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 100,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO.largo - 4",
+     "formulaAncho": "LATERAL.largo - 20",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 12,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1136,
+      "ancho": 742,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "CAJONERA_DOBLE_4_CAJONES",
+   "nombre": "Cajonera doble 4 cajones",
+   "hojaExcel": "Caj dob 4c",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1459,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 780,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1459,
+      "ancho": 580,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PISO.ancho",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 762,
+      "ancho": 580,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1423,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "GOLA_MELA",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1423,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MELA2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1423,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FRENT_CAJ",
+     "nombre": "Frent caj",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO.largo / 2 - 4",
+     "formulaAncho": "ALTO / 2 - 30",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 725.5,
+      "ancho": 360,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "INT_CAJ",
+     "nombre": "Int caj",
+     "rol": "ESQUELETO",
+     "formulaLargo": "200",
+     "formulaAncho": "500",
+     "formulaCantidad": "8",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 200,
+      "ancho": 500,
+      "cantidad": 8
+     }
+    },
+    {
+     "codigo": "INT_CAJ2",
+     "nombre": "Int caj (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "200",
+     "formulaAncho": "PISO.largo / 2 - 90",
+     "formulaCantidad": "8",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 200,
+      "ancho": 639.5,
+      "cantidad": 8
+     }
+    },
+    {
+     "codigo": "ZOCALO",
+     "nombre": "Zocalo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 20",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1439,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALO2",
+     "nombre": "Zocalo (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "500",
+     "formulaAncho": "100",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 100,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "FONDO_CAJ",
+     "nombre": "Fondo caj",
+     "rol": "FONDO",
+     "formulaLargo": "INT_CAJ2.ancho + 34",
+     "formulaAncho": "INT_CAJ.ancho - 2",
+     "formulaCantidad": "4",
+     "permiteRotar": true,
+     "orden": 11,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 673.5,
+      "ancho": 498,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO.largo - 2",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 12,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1457,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": [
+    "\"Frent caj\" da medidas con decimales (725.5 mm): se redondea al mm.",
+    "\"Int caj (2)\" da medidas con decimales (639.5 mm): se redondea al mm.",
+    "\"Fondo caj\" da medidas con decimales (673.5 mm): se redondea al mm."
+   ]
+  },
+  {
+   "codigo": "MODULO_SOBRE_HELADERA",
+   "nombre": "Módulo sobre heladera",
+   "hojaExcel": "Sobre helad",
+   "categoria": "Alacenas",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 700,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 446,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 700,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PISO_TECHO.ancho",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 410,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "PUERTA",
+     "nombre": "Puerta",
+     "rol": "FRENTE",
+     "formulaLargo": "LATERAL.largo + 34",
+     "formulaAncho": "PISO_TECHO.largo / 2 - 4",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 444,
+      "ancho": 346,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 36",
+     "formulaAncho": "PISO_TECHO.ancho - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 664,
+      "ancho": 550,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO_TECHO.largo - 4",
+     "formulaAncho": "LATERAL.largo + 34",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 696,
+      "ancho": 444,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "ALACENA_4_PUERTAS_LEVADIZAS",
+   "nombre": "Alacena 4 puertas levadizas",
+   "hojaExcel": "Alac 4p lev",
+   "categoria": "Alacenas",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1250,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 960,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 330,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1250,
+      "ancho": 330,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 924,
+      "ancho": 330,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "ESTANTE_DIV",
+     "nombre": "Estante div",
+     "rol": "ESQUELETO",
+     "formulaLargo": "(ANCHO - 54) / 2",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 598,
+      "ancho": 330,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "(ANCHO / 2) - 4",
+     "formulaAncho": "(ALTO / 2) - 6",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 621,
+      "ancho": 474,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "ESTANT_REG",
+     "nombre": "Estant reg",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ESTANTE_DIV.largo",
+     "formulaAncho": "ESTANTE_DIV.ancho - 30",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 598,
+      "ancho": 300,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ANCHO - 2",
+     "formulaAncho": "ALTO - 2",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1248,
+      "ancho": 958,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "ALACENA_PLACA_FIJA",
+   "nombre": "Alacena placa fija",
+   "hojaExcel": "Alac.plac.fij.",
+   "categoria": "Alacenas",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1113,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 820,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    },
+    {
+     "clave": "ANCHO_PLACA_FIJA",
+     "etiqueta": "Ancho placa fija",
+     "tipo": "MEDIDA",
+     "valorDefecto": 620,
+     "formula": null,
+     "orden": 4
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1113,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 784,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "PROFUNDIDAD - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1077,
+      "ancho": 550,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PLAC_FIJA",
+     "nombre": "Plac.fija",
+     "rol": "FRENTE",
+     "formulaLargo": "ANCHO_PLACA_FIJA",
+     "formulaAncho": "ALTO",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 620,
+      "ancho": 820,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTA",
+     "nombre": "Puerta",
+     "rol": "FRENTE",
+     "formulaLargo": "ANCHO - ANCHO_PLACA_FIJA - 6",
+     "formulaAncho": "ALTO + 15",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 487,
+      "ancho": 835,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PARANTE",
+     "nombre": "Parante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "70",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 784,
+      "ancho": 70,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ANCHO - 2",
+     "formulaAncho": "ALTO - 2",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1111,
+      "ancho": 818,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "ALACENA_1_PUERTA",
+   "nombre": "Alacena 1 puerta",
+   "hojaExcel": "Alac 1pL",
+   "categoria": "Alacenas",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": "imagenes/ALACENA_1_PUERTA.jpg",
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 564,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1000,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 330,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 564,
+      "ancho": 330,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PISO_TECHO.ancho",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 964,
+      "ancho": 330,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 36",
+     "formulaAncho": "PISO_TECHO.ancho - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 528,
+      "ancho": 300,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTA",
+     "nombre": "Puerta",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO_TECHO.largo - 4",
+     "formulaAncho": "LATERAL.largo + 51",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 560,
+      "ancho": 1015,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO_TECHO.largo - 4",
+     "formulaAncho": "LATERAL.largo + 33",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 560,
+      "ancho": 997,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "MODULO_MICROONDAS",
+   "nombre": "Módulo microondas",
+   "hojaExcel": "Módulo micro",
+   "categoria": "Alacenas",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": "imagenes/MODULO_MICROONDAS.jpg",
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 530,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 700,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 330,
+     "formula": null,
+     "orden": 3
+    },
+    {
+     "clave": "PROF_PISO",
+     "etiqueta": "Profundidad piso",
+     "tipo": "MEDIDA",
+     "valorDefecto": 400,
+     "formula": null,
+     "orden": 4
+    },
+    {
+     "clave": "LUZ_MICRO",
+     "etiqueta": "Luz microondas",
+     "tipo": "MEDIDA",
+     "valorDefecto": 350,
+     "formula": null,
+     "orden": 5
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "TECHO",
+     "nombre": "Techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 530,
+      "ancho": 330,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROF_PISO",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 530,
+      "ancho": 400,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 664,
+      "ancho": 330,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 494,
+      "ancho": 330,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTA",
+     "nombre": "Puerta",
+     "rol": "FRENTE",
+     "formulaLargo": "ANCHO - 4",
+     "formulaAncho": "ALTO - LUZ_MICRO - 8",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 526,
+      "ancho": 342,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ANCHO - 2",
+     "formulaAncho": "ALTO - LUZ_MICRO - 18",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 528,
+      "ancho": 332,
+      "cantidad": null
+     }
+    }
+   ],
+   "observacionesImportacion": [
+    "\"Fondo\" no tiene cantidad en el Excel (se asumió 1)."
+   ]
+  },
+  {
+   "codigo": "ARMARIO_2_PUERTAS",
+   "nombre": "Armario 2 puertas",
+   "hojaExcel": "Armario 2p",
+   "categoria": "Placares y torres",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1200,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1820,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 430,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1200,
+      "ancho": 430,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1784,
+      "ancho": 430,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO / 2 - 27",
+     "formulaAncho": "PROFUNDIDAD - 20",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 573,
+      "ancho": 410,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "ALTO - 3",
+     "formulaAncho": "ANCHO / 2 - 4",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 1817,
+      "ancho": 596,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS",
+     "nombre": "Zocalos",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 30",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1170,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS2",
+     "nombre": "Zocalos (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PROFUNDIDAD - 50",
+     "formulaAncho": "100",
+     "formulaCantidad": "5",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 380,
+      "ancho": 100,
+      "cantidad": 5
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ALTO",
+     "formulaAncho": "ANCHO - 4",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1820,
+      "ancho": 1196,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "MODULO_ABIERTO",
+   "nombre": "Módulo abierto",
+   "hojaExcel": "Módulo abierto",
+   "categoria": "Dormitorio y otros",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 900,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 800,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 300,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 900,
+      "ancho": 300,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 764,
+      "ancho": 300,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 864,
+      "ancho": 300,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS",
+     "nombre": "Zocalos",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 30",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 870,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS2",
+     "nombre": "Zocalos (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PROFUNDIDAD - 46",
+     "formulaAncho": "100",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 254,
+      "ancho": 100,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ANCHO - 4",
+     "formulaAncho": "ALTO - 4",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 896,
+      "ancho": 796,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "TORRE_HORNO",
+   "nombre": "Torre horno",
+   "hojaExcel": "Torré horno",
+   "categoria": "Placares y torres",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 2570,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 636,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    },
+    {
+     "clave": "LUZ_ABAJO",
+     "etiqueta": "Luz abajo",
+     "tipo": "MEDIDA",
+     "valorDefecto": 762,
+     "formula": null,
+     "orden": 4
+    },
+    {
+     "clave": "LUZ_HORNO",
+     "etiqueta": "Luz horno",
+     "tipo": "MEDIDA",
+     "valorDefecto": 600,
+     "formula": null,
+     "orden": 5
+    },
+    {
+     "clave": "LUZ_MICRO",
+     "etiqueta": "Luz micro",
+     "tipo": "MEDIDA",
+     "valorDefecto": 350,
+     "formula": null,
+     "orden": 6
+    },
+    {
+     "clave": "LUZ_ARRIBA",
+     "etiqueta": "Luz arriba",
+     "tipo": "CALCULADO",
+     "valorDefecto": null,
+     "formula": "LATERAL.largo - LUZ_MICRO - LUZ_ABAJO - LUZ_HORNO - 54",
+     "orden": 7
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 636,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PISO_TECHO.ancho",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2534,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTES",
+     "nombre": "Estantes",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 36",
+     "formulaAncho": "PISO_TECHO.ancho",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 600,
+      "ancho": 580,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "PUERT_ABAJ",
+     "nombre": "Puert abaj",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO_TECHO.largo / 2 - 4",
+     "formulaAncho": "LUZ_ABAJO - 12",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 314,
+      "ancho": 750,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "PUER_ARRIBA",
+     "nombre": "Puer arriba",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO_TECHO.largo / 2 - 4",
+     "formulaAncho": "LUZ_ARRIBA + 35",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 314,
+      "ancho": 803,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO_ABAJO",
+     "nombre": "Fondo abajo",
+     "rol": "FONDO",
+     "formulaLargo": "LUZ_ABAJO + 34",
+     "formulaAncho": "PISO_TECHO.largo - 4",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 796,
+      "ancho": 632,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FONDO_ARRIBA",
+     "nombre": "Fondo arriba",
+     "rol": "FONDO",
+     "formulaLargo": "LUZ_ARRIBA + LUZ_MICRO + 53",
+     "formulaAncho": "PISO_TECHO.largo - 4",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1171,
+      "ancho": 632,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": [
+    "\"Luz arriba\" es un valor calculado a partir de otras medidas."
+   ]
+  },
+  {
+   "codigo": "DESPENSERO_4_PUERTAS",
+   "nombre": "Despensero 4 puertas",
+   "hojaExcel": "Despensero 4p",
+   "categoria": "Placares y torres",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1050,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 2100,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    },
+    {
+     "clave": "LUZ_ABAJO",
+     "etiqueta": "Luz abajoo",
+     "tipo": "MEDIDA",
+     "valorDefecto": 777,
+     "formula": null,
+     "orden": 4
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1050,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERALES",
+     "nombre": "Laterales",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2064,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "EST_MEDIO",
+     "nombre": "Est. medio",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1014,
+      "ancho": 580,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ESTANTES",
+     "nombre": "Estantes",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "PROFUNDIDAD - 30",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1014,
+      "ancho": 550,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "GOLA_MELA",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1014,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MELA2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1014,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERT_ABAJ",
+     "nombre": "Puert Abaj",
+     "rol": "FRENTE",
+     "formulaLargo": "LUZ_ABAJO - 27",
+     "formulaAncho": "ANCHO / 2 - 4",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 750,
+      "ancho": 521,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "PUERT_ARRIB",
+     "nombre": "Puert arrib",
+     "rol": "FRENTE",
+     "formulaLargo": "ALTO - PUERT_ABAJ.largo - 30",
+     "formulaAncho": "ANCHO / 2 - 4",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 1320,
+      "ancho": 521,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ALTO - 3",
+     "formulaAncho": "ANCHO - 3",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2097,
+      "ancho": 1047,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "BAJO_MESADA_2_PUERTAS",
+   "nombre": "Bajo mesada 2 puertas",
+   "hojaExcel": "Bajo 2p",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": "imagenes/BAJO_MESADA_2_PUERTAS.jpg",
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1200,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 780,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1200,
+      "ancho": 580,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 762,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1164,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "PUESTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO.largo / 2 - 4",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 596,
+      "ancho": 750,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "PROFUNDIDAD - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1164,
+      "ancho": 550,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MELA",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1164,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MELA2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1164,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ZOCALO",
+     "nombre": "Zocalo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 20",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1180,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALO2",
+     "nombre": "Zocalo (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "500",
+     "formulaAncho": "100",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 100,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO.largo - 4",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1196,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "PLACARD_EN_ESPEJO_2_PUERTAS",
+   "nombre": "Placard en espejo 2 puertas",
+   "hojaExcel": "Placard 2p en esp",
+   "categoria": "Placares y torres",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 2000,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 2100,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 600,
+     "formula": null,
+     "orden": 3
+    },
+    {
+     "clave": "DIV_BAULERA",
+     "etiqueta": "Divisor baulera",
+     "tipo": "MEDIDA",
+     "valorDefecto": 300,
+     "formula": null,
+     "orden": 4
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2000,
+      "ancho": 600,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36 - ZOCALOS.ancho",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1964,
+      "ancho": 600,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "BAULERA",
+     "nombre": "Baulera",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 36",
+     "formulaAncho": "PROFUNDIDAD - 100",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1964,
+      "ancho": 500,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "DIV_BAULER",
+     "nombre": "Div bauler",
+     "rol": "ESQUELETO",
+     "formulaLargo": "DIV_BAULERA",
+     "formulaAncho": "PROFUNDIDAD - 100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 300,
+      "ancho": 500,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "DIV_CENTR",
+     "nombre": "Div centr",
+     "rol": "ESQUELETO",
+     "formulaLargo": "LATERAL.largo - DIV_BAULERA - 18",
+     "formulaAncho": "PROFUNDIDAD - 100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1646,
+      "ancho": 500,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTES",
+     "nombre": "Estantes",
+     "rol": "ESQUELETO",
+     "formulaLargo": "500",
+     "formulaAncho": "PROFUNDIDAD - 100",
+     "formulaCantidad": "6",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 500,
+      "cantidad": 6
+     }
+    },
+    {
+     "codigo": "FREN_CAJON",
+     "nombre": "Fren cajón",
+     "rol": "FRENTE",
+     "formulaLargo": "ESTANTES.largo - 8",
+     "formulaAncho": "160",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 492,
+      "ancho": 160,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "INT_CAJON",
+     "nombre": "Int cajon",
+     "rol": "ESQUELETO",
+     "formulaLargo": "110",
+     "formulaAncho": "450",
+     "formulaCantidad": "8",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 110,
+      "ancho": 450,
+      "cantidad": 8
+     }
+    },
+    {
+     "codigo": "INT_CAJON2",
+     "nombre": "Int cajon (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "110",
+     "formulaAncho": "ESTANTES.largo - 63",
+     "formulaCantidad": "8",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 110,
+      "ancho": 437,
+      "cantidad": 8
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "BAULERA.largo / 2 - 20",
+     "formulaAncho": "LATERAL.largo - 30",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 962,
+      "ancho": 1934,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS",
+     "nombre": "Zócalos",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 30",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 11,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1970,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS2",
+     "nombre": "Zócalos (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "530",
+     "formulaAncho": "100",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 12,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 530,
+      "ancho": 100,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "FONDO_CAJ",
+     "nombre": "Fondo caj",
+     "rol": "FONDO",
+     "formulaLargo": "INT_CAJON2.ancho + 34",
+     "formulaAncho": "448",
+     "formulaCantidad": "4",
+     "permiteRotar": true,
+     "orden": 13,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 471,
+      "ancho": 448,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "LATERAL.largo + 36",
+     "formulaAncho": "ANCHO",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 14,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2000,
+      "ancho": 2000,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "PLACARD_3_PUERTAS_DE_EMBUTIR",
+   "nombre": "Placard 3 puertas de embutir",
+   "hojaExcel": "Placard 3p",
+   "categoria": "Placares y torres",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 2600,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 2400,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 600,
+     "formula": null,
+     "orden": 3
+    },
+    {
+     "clave": "ALTO_BAULERA",
+     "etiqueta": "Alto baulera",
+     "tipo": "MEDIDA",
+     "valorDefecto": 432,
+     "formula": null,
+     "orden": 4
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO / 3 - 12",
+     "formulaAncho": "PROFUNDIDAD - 100",
+     "formulaCantidad": "6",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 854.6666666666666,
+      "ancho": 500,
+      "cantidad": 6
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 120 - 54 - ALTO_BAULERA",
+     "formulaAncho": "PISO_TECHO.ancho",
+     "formulaCantidad": "6",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1794,
+      "ancho": 500,
+      "cantidad": 6
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 36",
+     "formulaAncho": "PISO_TECHO.ancho",
+     "formulaCantidad": "6",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 818.6666666666666,
+      "ancho": 500,
+      "cantidad": 6
+     }
+    },
+    {
+     "codigo": "DIVIS_ESTA",
+     "nombre": "Divis. está",
+     "rol": "ESQUELETO",
+     "formulaLargo": "(LATERAL.largo - DIVIS_CAJO.largo - 54) / 3",
+     "formulaAncho": "ESTANTE.ancho",
+     "formulaCantidad": "6",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 353.3333333333333,
+      "ancho": 500,
+      "cantidad": 6
+     }
+    },
+    {
+     "codigo": "DIVIS_CAJO",
+     "nombre": "Divis. Cajo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "680",
+     "formulaAncho": "ESTANTE.ancho",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 680,
+      "ancho": 500,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTAN_CHIC",
+     "nombre": "Están chic",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo / 3",
+     "formulaAncho": "ESTANTE.ancho",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 284.88888888888886,
+      "ancho": 500,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FRENT_CAJ",
+     "nombre": "Frent caj",
+     "rol": "FRENTE",
+     "formulaLargo": "ESTANTE.largo - ESTAN_CHIC.largo - 34",
+     "formulaAncho": "170",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 499.7777777777778,
+      "ancho": 170,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "INT_CAJON",
+     "nombre": "Int cajón",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ESTANTE.largo - DIVIS_ESTA.largo - 81",
+     "formulaAncho": "120",
+     "formulaCantidad": "8",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 384.3333333333333,
+      "ancho": 120,
+      "cantidad": 8
+     }
+    },
+    {
+     "codigo": "INT_CAJON2",
+     "nombre": "Int cajón (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "450",
+     "formulaAncho": "120",
+     "formulaCantidad": "8",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 450,
+      "ancho": 120,
+      "cantidad": 8
+     }
+    },
+    {
+     "codigo": "TECHO_BAULE",
+     "nombre": "Techo baule",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo",
+     "formulaAncho": "ESTANTE.ancho",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 854.6666666666666,
+      "ancho": 500,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "LATER_BAUL",
+     "nombre": "Later. Baul",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO_BAULERA - 18",
+     "formulaAncho": "TECHO_BAULE.ancho",
+     "formulaCantidad": "6",
+     "permiteRotar": false,
+     "orden": 11,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 414,
+      "ancho": 500,
+      "cantidad": 6
+     }
+    },
+    {
+     "codigo": "LATERAL_TERMIN",
+     "nombre": "Lateral termin",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 12,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2400,
+      "ancho": 600,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "SOBRE_ZOCYTECH",
+     "nombre": "Sobre zocytech",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "200",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 13,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2564,
+      "ancho": 200,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FRENT_ZOCALO",
+     "nombre": "Frent zócalo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "SOBRE_ZOCYTECH.largo",
+     "formulaAncho": "100",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 14,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2564,
+      "ancho": 100,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "ALTO - 166",
+     "formulaAncho": "(ANCHO - 96) / 3",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 15,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 2234,
+      "ancho": 834.6666666666666,
+      "cantidad": 3
+     }
+    }
+   ],
+   "observacionesImportacion": [
+    "\"Piso techo\" da medidas con decimales (854.7 mm): se redondea al mm.",
+    "\"Estante\" da medidas con decimales (818.7 mm): se redondea al mm.",
+    "\"Divis. está\" da medidas con decimales (353.3 mm): se redondea al mm.",
+    "\"Están chic\" da medidas con decimales (284.9 mm): se redondea al mm.",
+    "\"Frent caj\" da medidas con decimales (499.8 mm): se redondea al mm.",
+    "\"Int cajón\" da medidas con decimales (384.3 mm): se redondea al mm.",
+    "\"Techo baule\" da medidas con decimales (854.7 mm): se redondea al mm.",
+    "\"Puertas\" da medidas con decimales (834.7 mm): se redondea al mm."
+   ]
+  },
+  {
+   "codigo": "INTERIOR_DE_PLACARD_FRENTE",
+   "nombre": "Interior de placard + frente",
+   "hojaExcel": "Int.placard + frente",
+   "categoria": "Placares y torres",
+   "activo": false,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 2185,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 2515,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "ANCHO_MODULOS",
+     "etiqueta": "Ancho módulos",
+     "tipo": "MEDIDA",
+     "valorDefecto": 550,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [],
+   "observacionesImportacion": [
+    "La hoja no tiene fórmulas cargadas: el módulo queda incompleto hasta definirlas."
+   ]
+  },
+  {
+   "codigo": "BAJO_MESADA_2_PUERTAS_3_CAJONES",
+   "nombre": "Bajo mesada 2 puertas 3 cajones",
+   "hojaExcel": "Bajo 2p3c",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1000,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 780,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 560,
+     "formula": null,
+     "orden": 3
+    },
+    {
+     "clave": "ANCHO_FRENTE_CAJON",
+     "etiqueta": "Ancho frente cajón",
+     "tipo": "MEDIDA",
+     "valorDefecto": 370,
+     "formula": null,
+     "orden": 4
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1000,
+      "ancho": 560,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PISO.ancho",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 762,
+      "ancho": 560,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "FRENT_CAJ",
+     "nombre": "Frent caj",
+     "rol": "FRENTE",
+     "formulaLargo": "ANCHO_FRENTE_CAJON",
+     "formulaAncho": "(ALTO - FRENT_CAJ2.ancho - 65) / 2",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 370,
+      "ancho": 205,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FRENT_CAJ2",
+     "nombre": "Frent caj (2)",
+     "rol": "FRENTE",
+     "formulaLargo": "ANCHO_FRENTE_CAJON",
+     "formulaAncho": "305",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 370,
+      "ancho": 305,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - FRENT_CAJ.largo - 31",
+     "formulaAncho": "PROFUNDIDAD - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 599,
+      "ancho": 530,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "ESTANTE.largo / 2 + 9.5",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 309,
+      "ancho": 750,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 964,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "GOLA_MEL",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 964,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MEL2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 964,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "INT_CAJON",
+     "nombre": "Int cajón",
+     "rol": "ESQUELETO",
+     "formulaLargo": "120",
+     "formulaAncho": "500",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 120,
+      "ancho": 500,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "INT_CAJON2",
+     "nombre": "Int cajón (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "120",
+     "formulaAncho": "FRENT_CAJ.largo - 86",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 11,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 120,
+      "ancho": 284,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "INT_CAJON3",
+     "nombre": "Int cajón (3)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "200",
+     "formulaAncho": "500",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 12,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 200,
+      "ancho": 500,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "INT_CAJON4",
+     "nombre": "Int cajón (4)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "200",
+     "formulaAncho": "FRENT_CAJ.largo - 86",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 13,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 200,
+      "ancho": 284,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALO",
+     "nombre": "Zócalo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 20",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 14,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 980,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALO2",
+     "nombre": "Zócalo (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PROFUNDIDAD - 60",
+     "formulaAncho": "100",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 15,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 100,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "FONDO_CAJ",
+     "nombre": "Fondo caj",
+     "rol": "FONDO",
+     "formulaLargo": "INT_CAJON4.ancho + 34",
+     "formulaAncho": "496",
+     "formulaCantidad": "3",
+     "permiteRotar": true,
+     "orden": 16,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 318,
+      "ancho": 496,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO.largo - 5",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 17,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 995,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "ESQUINERO_PLACA_FIJA_2_PUERTAS",
+   "nombre": "Esquinero placa fija 2 puertas",
+   "hojaExcel": "Esq PF 2 pue",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1500,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 750,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 560,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1500,
+      "ancho": 560,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 732,
+      "ancho": 560,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1464,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "GOLA",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "TRAVESANO.largo",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1464,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "GOLA.largo",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1464,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PLACA_FIJA",
+     "nombre": "Placa fíja",
+     "rol": "FRENTE",
+     "formulaLargo": "LATERAL.ancho + 30",
+     "formulaAncho": "ALTO",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 590,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "GOLA2.largo",
+     "formulaAncho": "PROFUNDIDAD - PARANTE.ancho - 2",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1464,
+      "ancho": 488,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PARANTE",
+     "nombre": "Parante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "LATERAL.largo",
+     "formulaAncho": "70",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 732,
+      "ancho": 70,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "ALTO - 30",
+     "formulaAncho": "(ANCHO - PLACA_FIJA.largo - 10) / 2",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 720,
+      "ancho": 450,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ANCHO - 4",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1496,
+      "ancho": 720,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "PLACARD_2_PUERTAS_UN_LADO_PERCHERO",
+   "nombre": "Placard 2 puertas un lado perchero",
+   "hojaExcel": "Placard 2p 1Lp",
+   "categoria": "Placares y torres",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 2000,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 2600,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 600,
+     "formula": null,
+     "orden": 3
+    },
+    {
+     "clave": "ALTO_BAULERA",
+     "etiqueta": "Alto bauleraa",
+     "tipo": "MEDIDA",
+     "valorDefecto": 450,
+     "formula": null,
+     "orden": 4
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2000,
+      "ancho": 600,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - ZOCALOS.ancho - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2464,
+      "ancho": 600,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "DIV_CENTR",
+     "nombre": "Div. Centr",
+     "rol": "ESQUELETO",
+     "formulaLargo": "LATERAL.largo - DIV_BAULE.largo - 18",
+     "formulaAncho": "PROFUNDIDAD - 100",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1996,
+      "ancho": 500,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ESTANTES",
+     "nombre": "Estantes",
+     "rol": "ESQUELETO",
+     "formulaLargo": "BAULERA.largo / 2 - 70",
+     "formulaAncho": "PROFUNDIDAD - 100",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 912,
+      "ancho": 500,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "DIV_ESTAN",
+     "nombre": "Div. Están",
+     "rol": "ESQUELETO",
+     "formulaLargo": "380",
+     "formulaAncho": "PROFUNDIDAD - 100",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 380,
+      "ancho": 500,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "BAULERA",
+     "nombre": "Baulera",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 36",
+     "formulaAncho": "PROFUNDIDAD - 100",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1964,
+      "ancho": 500,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "DIV_BAULE",
+     "nombre": "Div. Baule",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO_BAULERA",
+     "formulaAncho": "PROFUNDIDAD - 100",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 450,
+      "ancho": 500,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "LATERAL.largo - 30",
+     "formulaAncho": "BAULERA.largo / 2 - 20",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 2434,
+      "ancho": 962,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "F_CAJ",
+     "nombre": "F-caj",
+     "rol": "FRENTE",
+     "formulaLargo": "ESTANTES.largo - 8",
+     "formulaAncho": "160",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 904,
+      "ancho": 160,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "INT_CAJ",
+     "nombre": "Int caj",
+     "rol": "ESQUELETO",
+     "formulaLargo": "120",
+     "formulaAncho": "450",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 120,
+      "ancho": 450,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "INT_CAJ2",
+     "nombre": "Int caj (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "120",
+     "formulaAncho": "ESTANTES.largo - 61",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 11,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 120,
+      "ancho": 851,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "ZOCALOS",
+     "nombre": "Zocalos",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 20",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 12,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1980,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS2",
+     "nombre": "Zocalos (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "500",
+     "formulaAncho": "100",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 13,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 100,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "FONDO_CAJ",
+     "nombre": "Fondo caj",
+     "rol": "FONDO",
+     "formulaLargo": "INT_CAJ2.ancho + 34",
+     "formulaAncho": "INT_CAJ.ancho - 2",
+     "formulaCantidad": "F_CAJ.cant",
+     "permiteRotar": true,
+     "orden": 14,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 885,
+      "ancho": 448,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "LATERAL.largo + 34",
+     "formulaAncho": "PISO_TECHO.largo - 2",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 15,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 2498,
+      "ancho": 1998,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "CAJONERA_2_CAJONES",
+   "nombre": "Cajonera 2 cajones",
+   "hojaExcel": "Cajone 2c",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": "imagenes/CAJONERA_2_CAJONES.jpg",
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 630,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 800,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 630,
+      "ancho": 580,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 782,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 594,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "GOLA_MELA",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 594,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MELA2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 594,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FRENTE_CAJ",
+     "nombre": "Frente caj",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO.largo - 4",
+     "formulaAncho": "ALTO / 2 - 30",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 626,
+      "ancho": 370,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "INT_CAJON",
+     "nombre": "Int cajón",
+     "rol": "ESQUELETO",
+     "formulaLargo": "200",
+     "formulaAncho": "500",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 200,
+      "ancho": 500,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "INT_CAJON2",
+     "nombre": "Int cajón (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "200",
+     "formulaAncho": "PISO.largo - 99",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 200,
+      "ancho": 531,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "ZOCALOS",
+     "nombre": "Zocalos",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 20",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 610,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS2",
+     "nombre": "Zocalos (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "500",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO_CAJON",
+     "nombre": "Fondo cajón",
+     "rol": "FONDO",
+     "formulaLargo": "INT_CAJON2.ancho + 34",
+     "formulaAncho": "INT_CAJON.ancho - 2",
+     "formulaCantidad": "2",
+     "permiteRotar": true,
+     "orden": 11,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 565,
+      "ancho": 498,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO.largo - 4",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 12,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 626,
+      "ancho": 770,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "ESQUINERO",
+   "nombre": "Esquinero",
+   "hojaExcel": "Esquinero",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho lado 1",
+     "tipo": "MEDIDA",
+     "valorDefecto": 940,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ANCHO_2",
+     "etiqueta": "Ancho lado 2",
+     "tipo": "MEDIDA",
+     "valorDefecto": 870,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 780,
+     "formula": null,
+     "orden": 3
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 560,
+     "formula": null,
+     "orden": 4
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "ANCHO_2",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 940,
+      "ancho": 870,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 762,
+      "ancho": 560,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 904,
+      "ancho": 80,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 18",
+     "formulaAncho": "PISO.ancho - 18",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 922,
+      "ancho": 852,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTA",
+     "nombre": "Puerta",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO.largo - LATERAL.ancho - 25",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 355,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTA2",
+     "nombre": "Puerta",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO.ancho - LATERAL.ancho - 25",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 285,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PARANTE",
+     "nombre": "Parante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "LATERAL.largo",
+     "formulaAncho": "100",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 762,
+      "ancho": 100,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FONDOS",
+     "nombre": "Fondos",
+     "rol": "FONDO",
+     "formulaLargo": "PISO.largo - 2",
+     "formulaAncho": "LATERAL.largo - 10",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 938,
+      "ancho": 752,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FONDOS2",
+     "nombre": "Fondos (2)",
+     "rol": "FONDO",
+     "formulaLargo": "PISO.ancho - 2",
+     "formulaAncho": "LATERAL.largo - 10",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 868,
+      "ancho": 752,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": [
+    "Tiene dos parámetros llamados \"Ancho\": se renombran Ancho 1 / Ancho 2."
+   ]
+  },
+  {
+   "codigo": "ALACENA_2_PUERTAS",
+   "nombre": "Alacena 2 puertas",
+   "hojaExcel": "Alac 2pA",
+   "categoria": "Alacenas",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": "imagenes/ALACENA_2_PUERTAS.jpg",
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 780,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 500,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 300,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 780,
+      "ancho": 300,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PISO_TECHO.ancho",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 464,
+      "ancho": 300,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - 36",
+     "formulaAncho": "PISO_TECHO.ancho - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 744,
+      "ancho": 270,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO_TECHO.largo / 2 - 4",
+     "formulaAncho": "LATERAL.largo + 51",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 386,
+      "ancho": 515,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO_TECHO.largo - 2",
+     "formulaAncho": "LATERAL.largo + 34",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 778,
+      "ancho": 498,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "BAJO_MESADA_1_PUERTA",
+   "nombre": "Bajo mesada 1 puerta",
+   "hojaExcel": "Bajo 1p",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": "imagenes/BAJO_MESADA_1_PUERTA.jpg",
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 570,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 780,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 570,
+      "ancho": 580,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 762,
+      "ancho": 580,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 534,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "GOLA_MEL",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 534,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MEL2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 534,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTA",
+     "nombre": "Puerta",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO.largo - 4",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 566,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "530",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 534,
+      "ancho": 530,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ZOCALOS",
+     "nombre": "Zocalos",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 20",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 550,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS2",
+     "nombre": "Zocalos (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "500",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO.largo - 4",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 566,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "BAJO_MESADA_3_PUERTAS",
+   "nombre": "Bajo mesada 3 puertas",
+   "hojaExcel": "Bajo 3p",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": "imagenes/BAJO_MESADA_3_PUERTAS.jpg",
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1546,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 880,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 610,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1546,
+      "ancho": 610,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERALES",
+     "nombre": "Laterales",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 862,
+      "ancho": 610,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1510,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "GOLA_MELA",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1510,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA_MELA2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 36",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1510,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PUERTAS.largo - 23",
+     "formulaAncho": "PROFUNDIDAD - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 488.33333333333337,
+      "ancho": 580,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ESTANTE2",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - ESTANTE.largo - 54",
+     "formulaAncho": "PROFUNDIDAD - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1003.6666666666665,
+      "ancho": 580,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO.largo / 3 - 4",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 511.33333333333337,
+      "ancho": 850,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "ZOCALOS",
+     "nombre": "Zocalos",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO.largo - 20",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1526,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS2",
+     "nombre": "Zocalos (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "500",
+     "formulaAncho": "100",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 500,
+      "ancho": 100,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO.largo - 4",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 11,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1542,
+      "ancho": 850,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": [
+    "\"Estante\" da medidas con decimales (488.3 mm): se redondea al mm.",
+    "\"Estante\" da medidas con decimales (1003.7 mm): se redondea al mm.",
+    "\"Puertas\" da medidas con decimales (511.3 mm): se redondea al mm."
+   ]
+  },
+  {
+   "codigo": "VANITORY_2_CAJONES",
+   "nombre": "Vanitory 2 cajones",
+   "hojaExcel": "Vanitory 2c",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": null,
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1181,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 650,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 550,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1181,
+      "ancho": 550,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 632,
+      "ancho": 550,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "150",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1145,
+      "ancho": 150,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FRENTE_CAJ",
+     "nombre": "Frente caj",
+     "rol": "FRENTE",
+     "formulaLargo": "ANCHO - 4",
+     "formulaAncho": "(ALTO - 60) / 2",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 1177,
+      "ancho": 295,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "GOLA",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "60",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1145,
+      "ancho": 60,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "GOLA2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "GOLA.largo",
+     "formulaAncho": "40",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1145,
+      "ancho": 40,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "INT_CAJON",
+     "nombre": "Int cajón",
+     "rol": "ESQUELETO",
+     "formulaLargo": "450",
+     "formulaAncho": "170",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 450,
+      "ancho": 170,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "INT_CAJON2",
+     "nombre": "Int cajón (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 99",
+     "formulaAncho": "170",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1082,
+      "ancho": 170,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "N1_CONTRA_FRENTE",
+     "nombre": "N1 contra frente",
+     "rol": "ESQUELETO",
+     "formulaLargo": "INT_CAJON2.largo",
+     "formulaAncho": "170",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1082,
+      "ancho": 170,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "N2_LATERALES",
+     "nombre": "N2 laterales",
+     "rol": "ESQUELETO",
+     "formulaLargo": "INT_CAJON.largo",
+     "formulaAncho": "170",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 450,
+      "ancho": 170,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "N3_TRASERAS",
+     "nombre": "N3 traseras",
+     "rol": "ESQUELETO",
+     "formulaLargo": "200",
+     "formulaAncho": "170",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 11,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 200,
+      "ancho": 170,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "N4_LATERAL_CORTO",
+     "nombre": "N4 lateral corto",
+     "rol": "ESQUELETO",
+     "formulaLargo": "N2_LATERALES.largo - 170",
+     "formulaAncho": "170",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 12,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 280,
+      "ancho": 170,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "N5_TRASERA_CENTDRO",
+     "nombre": "N5 trasera centdro",
+     "rol": "ESQUELETO",
+     "formulaLargo": "N1_CONTRA_FRENTE.largo - N3_TRASERAS.largo - 36 - N3_TRASERAS.largo",
+     "formulaAncho": "170",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 13,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 646,
+      "ancho": 170,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "FONDO_CAJ",
+     "nombre": "Fondo caj",
+     "rol": "FONDO",
+     "formulaLargo": "INT_CAJON.largo",
+     "formulaAncho": "INT_CAJON2.largo + 35",
+     "formulaCantidad": "2",
+     "permiteRotar": true,
+     "orden": 14,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 450,
+      "ancho": 1117,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ANCHO - 2",
+     "formulaAncho": "ALTO - 5",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 15,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1179,
+      "ancho": 645,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "BAJO_MESADA_4_PUERTAS",
+   "nombre": "Bajo mesada 4 puertas",
+   "hojaExcel": "Bajo 4 p",
+   "categoria": "Bajo mesada",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": "imagenes/BAJO_MESADA_4_PUERTAS.jpg",
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1500,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 780,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 580,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO",
+     "nombre": "Piso",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1500,
+      "ancho": 580,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 18",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 762,
+      "ancho": 580,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "TRAVESANO",
+     "nombre": "Travesaño",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 36",
+     "formulaAncho": "80",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1464,
+      "ancho": 80,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "GOLA",
+     "nombre": "Gola",
+     "rol": "ESQUELETO",
+     "formulaLargo": "TRAVESANO.largo",
+     "formulaAncho": "60",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1464,
+      "ancho": 60,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "GOLA2",
+     "nombre": "Gola (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "GOLA.largo",
+     "formulaAncho": "40",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1464,
+      "ancho": 40,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ESTANTES",
+     "nombre": "Estantes",
+     "rol": "ESQUELETO",
+     "formulaLargo": "(ANCHO - 54) / 2",
+     "formulaAncho": "PROFUNDIDAD - 30",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 723,
+      "ancho": 550,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "ALTO - 30",
+     "formulaAncho": "(ANCHO - 16) / 4",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 7,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 750,
+      "ancho": 371,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "ZOCALOS",
+     "nombre": "Zocalos",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO - 20",
+     "formulaAncho": "100",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 8,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1480,
+      "ancho": 100,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "ZOCALOS2",
+     "nombre": "Zocalos (2)",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PROFUNDIDAD - 70",
+     "formulaAncho": "100",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 9,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 510,
+      "ancho": 100,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ANCHO - 4",
+     "formulaAncho": "ALTO - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 10,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1496,
+      "ancho": 750,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  },
+  {
+   "codigo": "ALACENA_3_PUERTAS",
+   "nombre": "Alacena 3 puertas",
+   "hojaExcel": "Alac 3p A",
+   "categoria": "Alacenas",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": "imagenes/ALACENA_3_PUERTAS.jpg",
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1171,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 500,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 300,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECHO",
+     "nombre": "Piso techo",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1171,
+      "ancho": 300,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERALES",
+     "nombre": "Laterales",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PISO_TECHO.ancho",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 464,
+      "ancho": 300,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PISO_TECHO.largo - ESTANTE2.largo - 54",
+     "formulaAncho": "PISO_TECHO.ancho - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 753.6666666666667,
+      "ancho": 270,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "ESTANTE2",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "PUERTAS.largo - 23",
+     "formulaAncho": "PISO_TECHO.ancho - 30",
+     "formulaCantidad": "1",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 363.3333333333333,
+      "ancho": 270,
+      "cantidad": 1
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "PISO_TECHO.largo / 3 - 4",
+     "formulaAncho": "ALTO + 15",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 386.3333333333333,
+      "ancho": 515,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "PISO_TECHO.largo - 4",
+     "formulaAncho": "LATERALES.largo + 34",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 6,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1167,
+      "ancho": 498,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": [
+    "\"Estante\" da medidas con decimales (753.7 mm): se redondea al mm.",
+    "\"Estante\" da medidas con decimales (363.3 mm): se redondea al mm.",
+    "\"Puertas\" da medidas con decimales (386.3 mm): se redondea al mm."
+   ]
+  },
+  {
+   "codigo": "ALACENA_4_PUERTAS",
+   "nombre": "Alacena 4 puertas",
+   "hojaExcel": "Alac 4p",
+   "categoria": "Alacenas",
+   "activo": true,
+   "espesorDisenoMm": 18,
+   "imagen": "imagenes/ALACENA_4_PUERTAS.jpg",
+   "parametros": [
+    {
+     "clave": "ANCHO",
+     "etiqueta": "Ancho",
+     "tipo": "MEDIDA",
+     "valorDefecto": 1600,
+     "formula": null,
+     "orden": 1
+    },
+    {
+     "clave": "ALTO",
+     "etiqueta": "Alto",
+     "tipo": "MEDIDA",
+     "valorDefecto": 500,
+     "formula": null,
+     "orden": 2
+    },
+    {
+     "clave": "PROFUNDIDAD",
+     "etiqueta": "Profundidad",
+     "tipo": "MEDIDA",
+     "valorDefecto": 330,
+     "formula": null,
+     "orden": 3
+    }
+   ],
+   "piezas": [
+    {
+     "codigo": "PISO_TECH",
+     "nombre": "Piso-tech",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 1,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1600,
+      "ancho": 330,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "LATERAL",
+     "nombre": "Lateral",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ALTO - 36",
+     "formulaAncho": "PROFUNDIDAD",
+     "formulaCantidad": "3",
+     "permiteRotar": false,
+     "orden": 2,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 464,
+      "ancho": 330,
+      "cantidad": 3
+     }
+    },
+    {
+     "codigo": "ESTANTE",
+     "nombre": "Estante",
+     "rol": "ESQUELETO",
+     "formulaLargo": "ANCHO / 2 - 27",
+     "formulaAncho": "PROFUNDIDAD - 30",
+     "formulaCantidad": "2",
+     "permiteRotar": false,
+     "orden": 3,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 773,
+      "ancho": 300,
+      "cantidad": 2
+     }
+    },
+    {
+     "codigo": "PUERTAS",
+     "nombre": "Puertas",
+     "rol": "FRENTE",
+     "formulaLargo": "ALTO + 15",
+     "formulaAncho": "ANCHO / 4 - 4",
+     "formulaCantidad": "4",
+     "permiteRotar": false,
+     "orden": 4,
+     "cantosProvisorios": {
+      "LARGO_1": 1,
+      "LARGO_2": 1,
+      "ANCHO_1": 1,
+      "ANCHO_2": 1
+     },
+     "esperadoExcel": {
+      "largo": 515,
+      "ancho": 396,
+      "cantidad": 4
+     }
+    },
+    {
+     "codigo": "FONDO",
+     "nombre": "Fondo",
+     "rol": "FONDO",
+     "formulaLargo": "ANCHO - 2",
+     "formulaAncho": "ALTO - 2",
+     "formulaCantidad": "1",
+     "permiteRotar": true,
+     "orden": 5,
+     "cantosProvisorios": {
+      "LARGO_1": 0,
+      "LARGO_2": 0,
+      "ANCHO_1": 0,
+      "ANCHO_2": 0
+     },
+     "esperadoExcel": {
+      "largo": 1598,
+      "ancho": 498,
+      "cantidad": 1
+     }
+    }
+   ],
+   "observacionesImportacion": []
+  }
+ ]
+}

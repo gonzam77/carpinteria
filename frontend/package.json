@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
-    "test": "npm run test:cut-optimizer",
+    "test": "npm run test:cut-optimizer && npm run test:module-formula",
     "test:cut-optimizer": "node --test --experimental-strip-types src/lib/cutOptimizer.test.ts",
+    "test:module-formula": "node --test --experimental-strip-types src/lib/moduleFormula.test.ts",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
