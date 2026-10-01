@@ -10,3 +10,12 @@ backend/dist/
 frontend/dist/
 *.log
 .DS_Store
+
+# Configuracion local de Claude Code (permisos de cada equipo)
+.claude/settings.local.json
+
+# Backups de la base: tienen datos personales de clientes y nunca se versionan.
+# carpinteria.backup ya estaba en el repo y es de prueba.
+*.backup
+!/carpinteria.backup
+*.dump
