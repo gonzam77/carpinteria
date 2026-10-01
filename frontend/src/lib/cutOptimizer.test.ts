@@ -9,7 +9,8 @@ import {
   getLargestFreeRect,
   optimizeCutLayout,
   solveFirstFitComplete,
-  validateBoardPlan
+  validateBoardPlan,
+  type OptimizerRow
 } from "./cutOptimizer.ts";
 
 const settings = {
@@ -943,4 +944,155 @@ test("T35 - buildPiecesFromRows agrupa por id de canto y no por el nombre mostra
   assert.equal(fromForm.length, 2);
   assert.equal(fromForm[0].groupKey, fromDatabase[0].groupKey);
   assert.equal(fromForm[0].edges.left, "Canto gris perla 0.45mm");
+});
+
+// Las placas tienen que depender solo de las piezas fisicas. Las solicitudes de corte y las de modulos
+// cargan las mismas piezas en otro orden y con otra particion, y la base devuelve los detalles sin orden fijo.
+const catalogUsableWidthMm = 1810;
+const catalogUsableHeightMm = 2730;
+
+function optimizeRows(rows: OptimizerRow[], idPrefix = "mat-1") {
+  return optimizeCutLayout({
+    pieces: buildPiecesFromRows(rows, idPrefix),
+    usableBoardWidthMm: catalogUsableWidthMm,
+    usableBoardHeightMm: catalogUsableHeightMm,
+    settings,
+    variant: 0
+  });
+}
+
+// Que tipo de pieza queda en cada lugar de cada placa, sin ids ni nombres.
+function physicalLayoutSignature(result: ReturnType<typeof optimizeCutLayout>) {
+  const boards = result.boards
+    .map((board) =>
+      board.pieces
+        .map((placed) => [placed.groupKey, placed.x, placed.y, placed.width, placed.height, Number(placed.rotated)].join(":"))
+        .sort()
+        .join("|")
+    )
+    .join("||");
+  return `${boards}@@@${result.unplaced.map((unplacedPiece) => unplacedPiece.groupKey).sort().join("|")}`;
+}
+
+function seededRandom(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seededShuffle<T>(items: T[], seed: number) {
+  const random = seededRandom(seed);
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swap]] = [shuffled[swap], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function splitRow(row: OptimizerRow, parts: number) {
+  const total = Number(row.cantidad);
+  return Array.from({ length: parts }, (_, index) => ({
+    ...row,
+    cantidad: Math.floor(total / parts) + (index < total % parts ? 1 : 0)
+  })).filter((part) => part.cantidad > 0);
+}
+
+function assertSameResultForEveryForm(forms: Array<{ label: string; rows: OptimizerRow[]; idPrefix?: string }>) {
+  const [base, ...others] = forms;
+  const baseResult = optimizeRows(base.rows, base.idPrefix);
+  const baseBoards = countUsedBoards(baseResult.boards);
+  const baseLayout = physicalLayoutSignature(baseResult);
+
+  others.forEach((form) => {
+    const result = optimizeRows(form.rows, form.idPrefix);
+    assert.equal(countUsedBoards(result.boards), baseBoards, `${form.label}: otra cantidad de placas que ${base.label}`);
+    assert.equal(result.unplaced.length, baseResult.unplaced.length, `${form.label}: otras piezas sin ubicar que ${base.label}`);
+    assert.equal(physicalLayoutSignature(result), baseLayout, `${form.label}: otro acomodo que ${base.label}`);
+  });
+}
+
+test("T36 - las mismas piezas dan las mismas placas sin importar el orden ni la particion de las filas", () => {
+  // Antes de la correccion, estas 18 piezas daban 1 o 2 placas segun que fila se cargaba primero.
+  const g1: OptimizerRow = { ancho: 187, largo: 582, cantidad: 2, permiteRotar: false };
+  const g2: OptimizerRow = { ancho: 412, largo: 733, cantidad: 10, permiteRotar: true };
+  const g3: OptimizerRow = { ancho: 325, largo: 670, cantidad: 6, permiteRotar: true };
+  const units = [...splitRow(g1, 2), ...splitRow(g2, 10), ...splitRow(g3, 6)];
+
+  assertSameResultForEveryForm([
+    { label: "g1,g2,g3", rows: [g1, g2, g3] },
+    { label: "g2,g1,g3", rows: [g2, g1, g3] },
+    { label: "g3,g2,g1", rows: [g3, g2, g1] },
+    { label: "g1,g3,g2", rows: [g1, g3, g2] },
+    { label: "g2,g3,g1", rows: [g2, g3, g1] },
+    { label: "g3,g1,g2", rows: [g3, g1, g2] },
+    { label: "una fila por pieza", rows: units },
+    { label: "una fila por pieza, barajadas", rows: seededShuffle(units, 7) },
+    { label: "g2 en dos filas", rows: [g1, ...splitRow(g2, 2), g3] },
+    { label: "otro prefijo de material", rows: [g2, g1, g3], idPrefix: "7c9e6679-7425-40de-944b-e07fc1f90ae7" }
+  ]);
+});
+
+test("T37 - los frentes de un pedido de modulos dan las mismas placas en cualquier orden de lectura", () => {
+  // Frentes de ALACENA_3_PUERTAS, ALACENA_4_PUERTAS, PLACARD_2_PUERTAS_UN_LADO_PERCHERO, CAJONERA_DOBLE_4_CAJONES
+  // y BAJO_MESADA_4_PUERTAS con sus medidas por defecto, en un color, con canto de 2 mm en los 4 lados y sin rotar.
+  // Antes de la correccion daban 2 placas en el orden de los modulos y 3 en otros ordenes.
+  const front = (largo: number, ancho: number, cantidad: number, nombreProducto: string): OptimizerRow => ({
+    largo,
+    ancho,
+    cantidad,
+    permiteRotar: false,
+    nombreProducto,
+    cantoLargo1Id: "canto-2mm",
+    cantoLargo2Id: "canto-2mm",
+    cantoAncho1Id: "canto-2mm",
+    cantoAncho2Id: "canto-2mm"
+  });
+  const moduleOrder = [
+    front(386, 515, 3, "Puertas"),
+    front(515, 396, 4, "Puertas"),
+    front(2434, 962, 2, "Puertas"),
+    front(904, 160, 2, "F-caj"),
+    front(726, 360, 4, "Frent caj"),
+    front(750, 371, 4, "Puertas")
+  ];
+  const [a3, a4, placard, frenteCajon, cajonera, bajoMesada] = moduleOrder;
+
+  assertSameResultForEveryForm([
+    { label: "orden de modulos", rows: moduleOrder },
+    { label: "permutado", rows: [cajonera, a4, bajoMesada, placard, frenteCajon, a3] },
+    { label: "primera fila al final", rows: [...moduleOrder.slice(1), moduleOrder[0]] },
+    { label: "ultima fila al principio", rows: [moduleOrder[5], ...moduleOrder.slice(0, 5)] },
+    { label: "invertido", rows: [...moduleOrder].reverse() },
+    { label: "una fila por pieza", rows: moduleOrder.flatMap((row) => splitRow(row, Number(row.cantidad))) },
+    { label: "otros nombres", rows: moduleOrder.map((row, index) => ({ ...row, nombreProducto: `Pieza ${index + 1}` })) }
+  ]);
+});
+
+test("T38 - pedidos al azar dan las mismas placas y el mismo acomodo al reordenar, partir o juntar filas", () => {
+  // Con esta semilla, uno de los pedidos tenia dos acomodos distintos segun como se cargaban las filas.
+  const random = seededRandom(4);
+  const between = (min: number, max: number) => min + Math.floor(random() * (max - min + 1));
+
+  for (let orderIndex = 0; orderIndex < 6; orderIndex += 1) {
+    const rows: OptimizerRow[] = Array.from({ length: between(3, 6) }, () => ({
+      ancho: between(150, 900),
+      largo: between(150, 2200),
+      cantidad: between(1, 6),
+      permiteRotar: random() < 0.5
+    }));
+    const units = rows.flatMap((row) => splitRow(row, Number(row.cantidad)));
+
+    assertSameResultForEveryForm([
+      { label: `pedido ${orderIndex}`, rows },
+      { label: `pedido ${orderIndex} barajado`, rows: seededShuffle(rows, orderIndex + 1) },
+      { label: `pedido ${orderIndex} en dos filas por medida`, rows: rows.flatMap((row) => splitRow(row, 2)) },
+      { label: `pedido ${orderIndex} de a una pieza, barajado`, rows: seededShuffle(units, orderIndex + 101) }
+    ]);
+  }
 });

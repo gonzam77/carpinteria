@@ -644,7 +644,7 @@ function compareCandidates(
   const preferHorizontal = variant % 2 === 0;
   if (a.direction !== b.direction) return a.direction === (preferHorizontal ? "horizontal" : "vertical") ? -1 : 1;
 
-  return compareText(a.piece.id, b.piece.id);
+  return compareText(a.piece.groupKey, b.piece.groupKey);
 }
 
 function previewLastBoardCandidate(
@@ -846,13 +846,17 @@ function fillBoardGreedy(
   return { board: nextBoard, remaining: nextRemaining };
 }
 
+// La firma es el ultimo desempate entre acomodos y decide que orden de candidatos llega a la etapa de
+// mejora, que es la que puede bajar una placa. Por eso describe el acomodo fisico (que tipo de pieza va
+// en cada lugar) y no usa el id: el id lleva el indice de fila, y con el las mismas piezas cargadas en
+// otro orden, partidas en otras filas o leidas de la base en otro orden podian dar otra cantidad de placas.
 function layoutSignature(boards: BoardPlan[], unplaced: PieceInput[]) {
   const boardSignature = boards
     .map((board) => {
       const pieces = board.pieces
         .map((piece) =>
           [
-            piece.id,
+            piece.groupKey,
             piece.x,
             piece.y,
             piece.width,
@@ -872,7 +876,7 @@ function layoutSignature(boards: BoardPlan[], unplaced: PieceInput[]) {
     })
     .join("||");
 
-  return `${boardSignature}@@@${unplaced.map((piece) => piece.id).sort().join("|")}`;
+  return `${boardSignature}@@@${unplaced.map((piece) => piece.groupKey || createPieceGroupKey(piece)).sort().join("|")}`;
 }
 
 function tryMergeFreeRects(a: FreeRect, b: FreeRect, kerf: number) {
