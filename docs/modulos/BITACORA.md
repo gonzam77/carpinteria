@@ -27,6 +27,36 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (14) · equipo Pinformatico15 · rama main
+
+**Pasos:** F4.1 terminado.
+
+**Hecho:**
+- `normalizeDetails` pasó de `orders.routes.ts` a `order-details.service.ts`, con transacción opcional, paso directo de los campos de módulos y validación de enteros (R8).
+- `GET /api/orders` filtra por `tipo`, `CORTE` por defecto.
+- `PUT /api/orders/:id` sobre un pedido de módulos responde 400.
+- Herramienta `herramientas/e2e-f41.mjs`, que compara antes y después.
+
+**Verificaciones:**
+- `e2e-f41.mjs` con el backend anterior (un worktree de `dc1442d` en el puerto 4101) y el nuevo (4100), sobre la copia del backup: 21 chequeos ok. Los 65 pedidos dan idéntico en detalle, materiales y vista previa; listados y dashboard iguales; alta y edición iguales en 3 pedidos.
+- Frontend `npm test` en verde; `tsc` de frontend y backend, `check:optimizer` y build en verde.
+- La copia quedó con sus 65 pedidos de corte. El worktree se borró.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F4.2:
+- `buildModuleDetails` (spec §8.2) sobre `evaluateModuleDefinition` y `normalizeDetails`;
+- el encaje de §8.3 con `findPiecesThatDoNotFit`;
+- el envoltorio del presupuesto;
+- el test de paridad corte contra módulos.
+
+**Esperando a Gonzalo o a ROMA:**
+- P1 y P5–P8;
+- DECISIONES 15 (tildes);
+- el material de fondo en la configuración del catálogo.
+
+---
+
 ## 2026-10-03 (13) · equipo Pinformatico15 · rama main
 
 **Pasos:** F3.4 terminado. Con eso, la Fase 3 está completa.

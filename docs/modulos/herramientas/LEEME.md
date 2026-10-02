@@ -6,6 +6,7 @@ Scripts para comprobar los cálculos y el stock contra una copia restaurada de u
 |---|---|
 | `guillotina.mjs` | Verifica si un acomodo de piezas se puede cortar con cortes de guillotina. Se ejecuta con `node guillotina.mjs` para correr la autoprueba. |
 | `e2e-f04.mjs` | Prueba de punta a punta de F0.4: orden de las filas, detalle guardado en la constancia, listado de materiales y edición sin cambios. |
+| `e2e-f41.mjs` | Prueba de F4.1, antes y después. Compara pedido por pedido dos backends sobre la misma copia: el anterior en el puerto 4101 (un `git worktree` del commit previo) y el actual en el 4100. Compara el listado, el detalle, el listado de materiales, la vista previa, el dashboard, el alta y la edición. También prueba que el listado excluya los pedidos de módulos, que `PUT` responda 400 sobre uno de ellos y que `normalizeDetails` se comporte bien. Sin el backend anterior, prueba solo lo nuevo. |
 | `e2e-f31.mjs` | Prueba de punta a punta de F3.1 y F3.2: API del catálogo (listado, alta, validaciones, edición, activación, duplicar, borrar, evaluar, categorías y configuración), imágenes (subir, ETag, límite de 1 MB, tipo real) y permisos. Necesita el catálogo importado y `UPLOADS_DIR`. |
 | `e2e-f23.mjs` | Prueba de punta a punta de F2.3: un material usado por el catálogo de módulos no se puede borrar definitivamente (409) y, al desactivarlo, avisa. |
 | `e2e-f05.mjs` | Prueba de punta a punta de F0.5: reserva y devolución exacta de stock, transiciones, concurrencia, forzado sin stock, edición de materiales y borrado. |

@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-03
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F3.4. Las Fases 0 a 3 están completas.
-- **Próximo paso:** **F4.1**, preparar lo existente sin cambiar el flujo de corte.
+- **Último paso terminado:** F4.1. Las Fases 0 a 3 están completas.
+- **Próximo paso:** **F4.2**, del módulo a las piezas, con el test de paridad corte contra módulos.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -34,7 +34,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
-| F4.1–F4.5 | API y asistente de solicitudes de módulos | [ ] |
+| F4.1–F4.5 | API y asistente de solicitudes de módulos | [~] F4.1 hecho |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (solo si se contrató) | [!] preguntar a Gonzalo |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
@@ -408,9 +408,14 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 
 ### Fase 4: API y asistente de solicitudes de módulos (spec §8, §9 y §13.2)
 
-#### F4.1 Preparar lo existente sin cambiar el flujo de corte · [ ]
+#### F4.1 Preparar lo existente sin cambiar el flujo de corte · [x]
+- **Hecho (2026-10-03):**
+  - `backend/src/modules/orders/order-details.service.ts`: `normalizeDetails(detalles, cliente, numeroContacto, tx?)`. Pasa tal cual `pedidoModuloId`, `piezaCodigo`, `origen`, `orden` e `indice` si vienen; en corte no vienen, y la fila queda igual que antes. Rechaza con 400 `DETAIL_NOT_INTEGER` una medida o cantidad que no sea un entero positivo (R8).
+  - `GET /api/orders` filtra `tipo` (por defecto `CORTE`; con `?tipo=MODULOS` se ven los de módulos).
+  - `PUT /api/orders/:id` sobre un pedido MODULOS responde 400 `ORDER_IS_MODULES`.
+- **Comprobado con `herramientas/e2e-f41.mjs`:** en los 65 pedidos del backup dan idéntico antes y después el listado, el detalle, el listado de materiales, la vista previa y el dashboard. El alta y la edición también dan igual, probadas con 3 pedidos.
 - **Depende de:** F2.2 y F0.3.
-- **Hacer:**
+- **Era:**
   - extraer `normalizeDetails` a `order-details.service.ts`, con transacción opcional y pasando sin tocar `pedidoModuloId`, `piezaCodigo`, `origen`, `orden` e `indice`, y validando enteros (DECISIONES R8);
   - `GET /api/orders` filtra `tipo = CORTE` por defecto;
   - `PUT /api/orders/:id` sobre un pedido MODULOS responde 400 (spec §15).
