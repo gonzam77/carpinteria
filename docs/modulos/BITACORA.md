@@ -27,6 +27,44 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (13) · equipo Pinformatico15 · rama main
+
+**Pasos:** F3.4 terminado. Con eso, la Fase 3 está completa.
+
+**Hecho:**
+- `evaluateModuleDefinition` en el código compartido, que ahora usa también el backend (DECISIONES 13). Test nuevo en `moduleFormula.test.ts`.
+- `lib/moduleEditor.ts` con sus tests (`npm run test:module-editor`, sumado a `npm test`).
+- Editor `ModuleEditorPage`:
+  - **General:** datos e imagen. Para un módulo nuevo, la imagen se sube después de crearlo.
+  - **Medidas:** tabla editable con orden. Las calculadas muestran su valor.
+  - **Despiece y cantos:** "Probar con medidas", resultado en vivo L × A × cant, errores por fórmula y por pieza, cantos por perfil, encaje y renombrar con actualización de las fórmulas.
+  - **Perfiles:** agregar y quitar B, "Copiar Perfil A a B" y predeterminado.
+  - Guardar (también con Ctrl+S), descartar, eliminar, aviso de cambios sin guardar y aviso de que un módulo con errores no se puede guardar activo.
+- Diálogo "Configuracion" en el catálogo (DECISIONES 16).
+
+**Decisiones nuevas:** DECISIONES 13 a 16.
+
+**Verificaciones:**
+- frontend `npm test`: 39, 13, 5, 5 y 8, todos en verde;
+- `tsc` de frontend y backend, `check:optimizer` y build en verde;
+- `e2e-f31.mjs` contra la copia del backup: todo ok;
+- `drive-editor.mjs` en Edge headless: 35 chequeos OK. Al terminar quedan los 33 módulos y la configuración como estaba.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F4.1:
+- extraer `normalizeDetails` a `order-details.service.ts` (R8);
+- que `GET /api/orders` filtre `tipo = CORTE`;
+- que `PUT` de un pedido MODULOS responda 400;
+- un test de snapshot antes y después sobre los pedidos del backup.
+
+**Esperando a Gonzalo o a ROMA:**
+- P1 y P5–P8 (ver PLAN §6);
+- tildes en la interfaz (DECISIONES 15);
+- cargar el material de fondo por defecto en la configuración del catálogo.
+
+---
+
 ## 2026-10-03 (12) · equipo Pinformatico15 · rama main
 
 **Pasos:** F3.3 terminado.

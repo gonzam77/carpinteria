@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-03
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F3.3. Las Fases 0 y 2 están completas.
-- **Próximo paso:** **F3.4**, el editor de módulo.
+- **Último paso terminado:** F3.4. Las Fases 0 a 3 están completas.
+- **Próximo paso:** **F4.1**, preparar lo existente sin cambiar el flujo de corte.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -33,7 +33,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
-| F3.1–F3.4 | API y pantallas del catálogo | [~] F3.1 a F3.3 hechos |
+| F3.1–F3.4 | API y pantallas del catálogo | [x] |
 | F4.1–F4.5 | API y asistente de solicitudes de módulos | [ ] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (solo si se contrató) | [!] preguntar a Gonzalo |
@@ -393,9 +393,15 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - menú "Catálogo de módulos";
   - tarjetas, filtros, métricas, duplicar y activar/desactivar (spec §6.1).
 
-#### F3.4 Editor de módulo · [ ]
+#### F3.4 Editor de módulo · [x]
+- **Hecho (2026-10-03):**
+  - `pages/ModuleEditorPage.tsx` en `/configuracion-modulos/nuevo` y `/configuracion-modulos/:id`, con las pestañas en `components/moduleEditor/` (General con imagen, Medidas, Despiece y cantos, Perfiles);
+  - `FormulaInput` (autocompletado, `aria-invalid` y `aria-describedby`) y `PieceEdgesToggles` (`aria-pressed` y `title` por lado);
+  - lógica sin React en `lib/moduleEditor.ts`, con 8 tests: borrador, cantos por perfil, referencias, renombrar en todas las fórmulas, autocompletado, opciones y encaje;
+  - `evaluateModuleDefinition` compartida (DECISIONES 13), aviso de cambios sin guardar (DECISIONES 14) y el diálogo de configuración del catálogo (DECISIONES 16).
+- **Probado en Edge headless:** `scratchpad/browser/drive-editor.mjs`, con 35 chequeos en verde. Un módulo real se probó sin guardarlo, y uno de prueba se creó, se editó y se borró.
 - **Depende de:** F3.3.
-- **Hacer:**
+- **Era:**
   - pestañas General, Medidas, Despiece y cantos (con `FormulaInput`, autocompletado y resultado en vivo, siempre con la configuración de redondeo real) y Perfiles (spec §6.2);
   - aviso si se sale con cambios sin guardar;
   - advertencia de encaje contra las placas candidatas, con la **misma función de encaje del optimizador** (DECISIONES R2 y R6).
