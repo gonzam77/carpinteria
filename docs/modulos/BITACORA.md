@@ -27,6 +27,56 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (15) · equipo Pinformatico15 · rama main
+
+**Pasos:** F4.2 terminado.
+
+**Hecho:**
+- `buildModulePieces` en el código compartido (`moduleFormula.ts`, DECISIONES R6 y 18), con 5 tests nuevos. Uno compara sus medidas con las del motor en las 305 piezas del catálogo, con los dos redondeos.
+- `backend/src/modules/module-orders/`:
+  - `planModuleOrder`, el armado sin base de datos;
+  - `buildModuleOrder` y `buildModuleOrderEstimate`;
+  - `POST /api/pedidos-modulos/preview`, solo ADMIN. Se adelantó de F4.3 porque el criterio de terminado de F4.2 la necesita.
+- Tests unitarios del backend: `cd backend && npm test` (14). `tsconfig.build.json` los deja fuera del build (DECISIONES 22).
+- Fuera del paso: el aviso de encaje del editor de F3.4 muestra la placa en el mismo orden que la pieza, largo × ancho (DECISIONES 21).
+- **Revisión con 8 agentes** en 4 frentes (spec, paridad, robustez y pruebas), con verificación escéptica de cada hallazgo. Hubo 21 hallazgos; se confirmaron 5, que eran 4 problemas distintos, y se corrigieron todos:
+  - el perfil de cantos es obligatorio y los campos desconocidos se rechazan;
+  - se sacó el doble cast entre `toDefinition` y el armador;
+  - tests unitarios del armado, también con material fijo y fondo propio, que la copia no tiene;
+  - chequeos del e2e que no podían fallar.
+- **Segunda verificación (2 agentes):** confirmó las correcciones y armó la lista para cerrar el paso. A partir de ella se sumaron tests para 5 mutaciones que sobrevivían y los mensajes de zod en español.
+
+**Decisiones nuevas:**
+- DECISIONES 17 a 24;
+- R1 y 11 actualizadas;
+- la tabla de pendientes pasó a tener la columna Estado.
+
+**Verificaciones:**
+- frontend `npm test`: 39, 17, 5, 5 y 8; backend `npm test`: 14; todo en verde.
+- `tsc` de frontend y backend, `check:optimizer` y `npm run build`, en verde.
+- Mutación del armado: se metieron 16 errores a propósito y los tests detectaron los 16.
+- `e2e-f42.mjs` contra la copia: 92/92.
+  - Paridad `===` en placas y en cada componente en los 30 módulos que se pueden pedir: 60 casos, cada uno contra 4 cargas de corte. También en una solicitud de 7 módulos y en un módulo con material fijo y fondo propio.
+  - La copia quedó como estaba: 33 módulos, la configuración sin fondo y 65 pedidos.
+- Tiempos de la vista previa con 20 módulos: 1,5 a 1,8 s con placares, 4,5 s con bajo mesadas y 8,4 s con otra mezcla (medida del verificador). Con 100 módulos, unos 28 s (P12, DECISIONES 24).
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F4.3:
+- el alta en una transacción: Pedido, `numero`, códigos con número, PedidoModulo con snapshot y valores, DetallePedido con `pedidoModuloId` e historial;
+- el listado y el detalle;
+- los m² por material en la función compartida.
+
+**Esperando a Gonzalo o a ROMA:**
+- P9: el material de fondo por defecto. Sin él, no se puede pedir ninguno de los 31 módulos (de 32) que tienen piezas de fondo.
+- P10: colores sin cantos de 0,45 y de 2 mm.
+- P11: el Remark en la máquina.
+- P12: el tiempo de la vista previa.
+- P6: los dos placares que no entran.
+- P1, P5, P7, P8 y DECISIONES 15 (tildes).
+
+---
+
 ## 2026-10-03 (14) · equipo Pinformatico15 · rama main
 
 **Pasos:** F4.1 terminado.

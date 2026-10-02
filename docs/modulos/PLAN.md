@@ -12,9 +12,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-03
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F4.1. Las Fases 0 a 3 están completas.
-- **Próximo paso:** **F4.2**, del módulo a las piezas, con el test de paridad corte contra módulos.
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido. Lo posterior está en commits locales sin push: el push espera el OK de Gonzalo.
+- **Último paso terminado:** F4.2. Las Fases 0 a 3 están completas.
+- **Próximo paso:** **F4.3**, alta, detalle y listado de `/api/pedidos-modulos` (la vista previa ya está).
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -34,7 +34,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
-| F4.1–F4.5 | API y asistente de solicitudes de módulos | [~] F4.1 hecho |
+| F4.1–F4.5 | API y asistente de solicitudes de módulos | [~] F4.1 y F4.2 hechos |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (solo si se contrató) | [!] preguntar a Gonzalo |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
@@ -67,7 +67,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 ### 2.1 Verificaciones de siempre
 
 ```bash
-cd frontend && npm test           # optimizador (39), motor de fórmulas (12), presupuesto (5) y compresión de imágenes (5)
+cd frontend && npm test           # optimizador (39), motor de fórmulas (17), presupuesto (5), compresión de imágenes (5) y editor de módulos (8)
+cd backend && npm test            # armado de solicitudes de módulos (14), sin base de datos
 npm run check:optimizer           # desde la raíz: el código compartido está sincronizado
 cd frontend && npx tsc --noEmit
 cd backend && npx tsc --noEmit
@@ -421,9 +422,19 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - `PUT /api/orders/:id` sobre un pedido MODULOS responde 400 (spec §15).
 - **Terminado cuando:** las solicitudes de corte dan exactamente lo mismo que antes. Para comprobarlo: test que compara el snapshot antes y después en los pedidos del backup.
 
-#### F4.2 Del módulo a las piezas · [ ]
-- **Depende de:** F4.1, F0.4 y F0.5.
-- **Hacer:**
+#### F4.2 Del módulo a las piezas · [x]
+- **Hecho (2026-10-03):**
+  - `buildModulePieces` en el código compartido (`moduleFormula.ts`, DECISIONES R6 y 18): las piezas de un módulo pedido, con medidas enteras, orden 1..n, cantos del perfil y cambios a mano.
+  - `backend/src/modules/module-orders/`:
+    - `module-order-plan.ts`: `planModuleOrder`, el armado sin base de datos (material por rol, cantos por color y espesor, encaje, errores; DECISIONES 19 a 21), con tests en `module-order-plan.test.ts` (`cd backend && npm test`, DECISIONES 22);
+    - `module-orders.service.ts`: `buildModuleOrder` (lee de la base, arma y pasa por `normalizeDetails`) y `buildModuleOrderEstimate` (el presupuesto de corte sin cambios, más los herrajes aparte, R1);
+    - `module-orders.schemas.ts` y `module-orders.routes.ts`: `POST /api/pedidos-modulos/preview`, solo ADMIN (contrato en DECISIONES 17).
+  - Las filas salen sin `numero` (código `M----PP-OO`) ni `pedidoModuloId`: los completa el alta de F4.3.
+- **Comprobado:** `herramientas/e2e-f42.mjs`, 92/92 contra la copia del backup:
+  - paridad `===` en placas y en cada componente entre la vista previa de módulos y la de corte (tal cual, agregada, invertida y partida) en los 30 módulos que se pueden pedir, con los dos perfiles, en una solicitud de 7 módulos y en un módulo de prueba con material fijo y fondo propio;
+  - cada fila en el material de su rol y cada canto del color de su módulo;
+  - los errores de spec §8.2, §8.3 y §8.6, los 400 de datos mal formados y el 403 de un carpintero.
+- **Era:**
   1. `buildModuleDetails` (spec §8.2): material por rol, cantos por perfil y color (con **todos** los faltantes juntos), `codigoBarra`, `remark` y `orden`.
   2. La validación de encaje de §8.3, con la función del optimizador exportada. No va una validación propia, porque la de la spec tiene los ejes invertidos (DECISIONES R2).
   3. El presupuesto, con un envoltorio fino sobre la función de F0.3:
@@ -432,8 +443,19 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 - **Terminado cuando:** pasa el **test de paridad corte contra módulos**. Las mismas piezas por `POST /api/orders/preview` y por `POST /api/pedidos-modulos/preview`, y la carga a mano equivalente (agregada y en otro orden), dan `===` en placas y en cada componente.
 
 #### F4.3 Endpoints de solicitudes · [ ]
-- **Depende de:** F4.2.
-- **Hacer:** `/api/pedidos-modulos` con preview, crear (en una transacción: primero el `Pedido` para obtener `numero`, sin push), obtener y listado (spec §13.2).
+- **Depende de:** F4.2. La vista previa ya existe (`POST /api/pedidos-modulos/preview`).
+- **Leer:** spec §13.2 y §8.5; DECISIONES 17, 18 y R5.
+- **Hacer:**
+  - el schema de alta: `moduleOrderPreviewSchema` más cliente (mínimo 2), numeroContacto (mínimo 6), emailContacto, direccionEntrega, fechaEntrega (YYYY-MM-DD, desde hoy en `America/Argentina/Buenos_Aires`) y observaciones;
+  - `POST /api/pedidos-modulos` en una transacción: `buildModuleOrder(tx)` y `buildModuleOrderEstimate(tx)`, crear el `Pedido` MODULOS, leer su `numero`, reescribir los códigos con `moduleBarcode(numero, posicion, orden)`, crear los `PedidoModulo` (con `definicionSnapshot` y los `valores` efectivos) y los `DetallePedido` con su `pedidoModuloId`, e historial `CREAR_PEDIDO_MODULOS`. Sin push ni WhatsApp;
+  - decidir qué pasa si el módulo cambió de versión entre la vista previa y el alta (la vista previa devuelve `version`);
+  - `GET /api/pedidos-modulos` (listado con `_count.modulos`, `numero` y `fechaEntrega`) y `GET /api/pedidos-modulos/:id` (módulos con snapshot y colores, detalles con `DETALLES_ORDENADOS`, herrajes e historial);
+  - los m² por material en la función compartida (`orderEstimate.ts`, con test de paridad) y en la respuesta de la vista previa, para el panel del paso 4 (spec §9.2, R3).
+- **Terminado cuando:**
+  - el alta guarda exactamente lo que mostró la vista previa: placas, cada componente y las filas;
+  - `PATCH /api/orders/:id/status` reserva y devuelve el stock de un pedido MODULOS como el de uno de corte;
+  - `GET /api/orders` sigue sin mostrar los de módulos;
+  - e2e contra la copia, que deja la base como estaba.
 
 #### F4.4 Asistente de 4 pasos · [ ]
 - **Depende de:** F4.3.
@@ -442,6 +464,11 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - borrador con `useFormDraft` y la clave `${draftScope(user?.id)}modules:new`;
   - el paso 3 valida en vivo con el motor;
   - el paso 4 muestra **solo** lo que devuelve `/preview`, sin cálculos locales, y `CutOptimizer` con los detalles del backend (spec §9.2; DECISIONES R3).
+- **Tener en cuenta (de F4.2):**
+  - cada módulo se manda con los campos de spec §13.2 y nada más: la API rechaza campos desconocidos (DECISIONES 17). Un borrador viejo con una medida que el catálogo ya no tiene recibe 400: al recuperarlo hay que descartar esas claves (DECISIONES 18);
+  - el perfil de cantos viene marcado con el predeterminado del módulo y siempre se manda;
+  - la vista previa tarda de 1,5 a 8,4 s con 20 módulos (P12): no llamarla en cada clic de canto sin control (por ejemplo, un botón "Recalcular" o una espera corta), y mostrar que está calculando;
+  - marcar en el selector los colores que no tienen los cantos que pide el perfil (P10).
 
 #### F4.5 Listado de solicitudes de módulos · [ ]
 - **Depende de:** F4.3.
@@ -517,6 +544,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
   2. Correr `npm --prefix backend run pedidos:recalcular` y revisar las diferencias contra lo guardado (DECISIONES 0.5: constancias del estimador viejo).
   3. Correr `npm --prefix backend run pedidos:completar-detalle`, que guarda el detalle recalculado de los pedidos anteriores. Sin esto, el dashboard tarda más de 60 s (DECISIONES 0.12).
   4. Aplicar todas las migraciones sobre esa copia y probar la app completa.
+     Cargar el material de fondo por defecto en Catálogo de módulos > Configuración y los cantos que falten (P9 y P10). Sin fondo, no se puede pedir ningún módulo que tenga piezas de fondo.
   5. Recién ahí, en la VPS: backup, actualizar el código y reconstruir frontend y backend juntos. La API aplica sola las migraciones al arrancar.
      Después de desplegar, correr `pedidos:completar-detalle` contra la base de producción.
   6. Si algo falla: volver al backup y a la versión anterior.
@@ -531,7 +559,11 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 | P3 | Placas reales usadas por la máquina en 4 pedidos (F0.8) | Taller | Descartado (2026-10-03) |
 | P4 | Pase a producción (F8), cuando todo esté probado | Gonzalo | Nada se despliega antes |
 | P5 | Cantos, material por pieza, fondos, zócalo y gola, color de canto de los frentes, veta, redondeo y plazos | ROMA | Lo de spec §19 |
-| P6 | `PLACARD_EN_ESPEJO_2_PUERTAS` (fondo de 2000×2000 y puertas de 962×1934 sin rotar) y `PLACARD_2_PUERTAS_UN_LADO_PERCHERO` (fondo de 2498×1998) no entran en placas de 1830 de ancho | ROMA | Se importan, con advertencia |
+| P6 | `PLACARD_EN_ESPEJO_2_PUERTAS` (fondo de 2000×2000 y puertas de 962×1934 sin rotar) y `PLACARD_2_PUERTAS_UN_LADO_PERCHERO` (fondo de 2498×1998) no entran en placas de 1830 de ancho. Preguntas: ¿esas puertas se pueden girar según la veta? ¿Cómo arman esos fondos (partidos, como la variante del escobero)? | ROMA | Se importan, con advertencia. Desde F4.2, con sus medidas por defecto la vista previa responde 400 `MODULE_PIECES_DO_NOT_FIT` |
+| P9 | Material de fondo por defecto (spec §19: ¿3 mm, 5,5 mm o 18 mm?). 31 de los 32 módulos activos tienen piezas de fondo | Gonzalo o ROMA | Sin cargar: esos módulos no se pueden pedir hasta configurarlo en Catálogo de módulos > Configuración |
+| P10 | De los 60 colores de 18 mm activos, 14 no tienen canto de 0,45 y de 2 mm (los que usa el perfil Estándar) y 11 no tienen ninguno | Gonzalo | Con esos colores de canto la vista previa responde `MISSING_EDGE_MATERIAL`, con todos los faltantes juntos. Cargar los cantos en Materiales o no ofrecer esos colores |
+| P11 | ¿La máquina lee bien el Remark "Modulo N · Nombre" (largo máximo y caracteres)? Hoy ninguna fila de producción lo usa | Taller | Se manda así (DECISIONES 20). Probarlo antes de F7.3 |
+| P12 | La vista previa de 20 módulos tarda de 1,5 a 8,4 s, según las piezas (100 módulos: unos 28 s). Spec §20 pide caché si pasa de 2 s | Gonzalo | Se acepta y se trabaja en F7.4 (DECISIONES 0.12 y 24); F4.4 no la llama en cada clic sin control |
 | P7 | La placa "metal cepillado bronce" figura como 1830×26000, con un cero de más | Gonzalo | Corregirla en Materiales |
 | P8 | ¿Se conserva el contenedor `carpinteria-analisis-db` con el backup en la PC de la primera sesión? | Gonzalo | Se conserva hasta F2.4 |
 
