@@ -1595,6 +1595,19 @@ function pieceCanFitBoard(piece: NormalizedPieceInput, usableBoardWidthMm: numbe
   );
 }
 
+/**
+ * Indices de las filas cuyas piezas no entran en la placa, con el mismo criterio que usa el optimizador
+ * (orientaciones permitidas y tolerancia). Es la unica forma de validar "entra en la placa" fuera del
+ * optimizador: el editor de modulos, la validacion de las solicitudes y la planilla de revision la usan
+ * (DECISIONES R2).
+ */
+export function findPiecesThatDoNotFit(rows: OptimizerRow[], usableBoardWidthMm: number, usableBoardHeightMm: number) {
+  return rows.flatMap((row, index) => {
+    const [piece] = buildPiecesFromRows([{ ...row, cantidad: 1 }], "fit");
+    return piece && pieceCanFitBoard(normalizePiece(piece), usableBoardWidthMm, usableBoardHeightMm) ? [] : [index];
+  });
+}
+
 function validateAttempt(attempt: { boards: BoardPlan[]; unplaced: PieceInput[] }, kerf: number) {
   const errors = attempt.boards.flatMap((board) => validateBoardPlan(board, board.usableWidthMm, board.usableHeightMm, kerf));
   return { valid: errors.length === 0, errors };
