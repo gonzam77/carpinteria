@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { EstadoPedido, Prisma, Rol, TipoMaterial, type Material } from "../../generated/prisma/client.js";
+import { EstadoPedido, Prisma, Rol, TipoPedido } from "../../generated/prisma/client.js";
 import dayjs from "dayjs";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
@@ -11,6 +11,7 @@ import { sendNewOrderWhatsappNotification } from "./whatsapp.service.js";
 import { sendNewOrderPushNotification, sendOrderStockShortagePushNotification } from "../push-notifications/push-notifications.service.js";
 import { buildOrderEstimateSnapshot, buildOrderMaterialsSummary } from "./order-estimate.service.js";
 import { DETALLES_ORDENADOS } from "./order-queries.js";
+import { normalizeDetails } from "./order-details.service.js";
 
 export const ordersRouter = Router();
 
@@ -24,94 +25,11 @@ function orderAccessWhere(user: any) {
   return user.rol === Rol.ADMIN ? {} : { usuarioId: user.id };
 }
 
-type CantoWithPlate = Material & {
-  placaMaterial?: Pick<Material, "nombre"> | null;
-};
-
-function formatThickness(value: number) {
-  return Number(value.toFixed(2)).toLocaleString("es-AR", { maximumFractionDigits: 2 });
-}
-
-function buildCantoName(placaNombre: string, espesorMm: number) {
-  return `Canto ${placaNombre} ${formatThickness(espesorMm)}mm`;
-}
-
-function resolveCantoName(canto?: CantoWithPlate | null) {
-  if (!canto) return null;
-  return canto.placaMaterial?.nombre ? buildCantoName(canto.placaMaterial.nombre, canto.espesorMm) : canto.nombre;
-}
-
-async function normalizeDetails(detalles: any[], cliente: string, numeroContacto: string) {
-  const materialIds = [...new Set(detalles.map((detail) => detail.materialId))];
-  const cantoIds = [
-    ...new Set(
-      detalles
-        .flatMap((detail) => [detail.cantoLargo1Id, detail.cantoLargo2Id, detail.cantoAncho1Id, detail.cantoAncho2Id])
-        .filter(Boolean)
-    )
-  ];
-
-  const materials: Material[] = await prisma.material.findMany({
-    where: { id: { in: materialIds }, activo: true, tipo: TipoMaterial.PLACA }
-  });
-  const materialById = new Map(materials.map((material) => [material.id, material]));
-  const cantos: CantoWithPlate[] = cantoIds.length
-    ? await prisma.material.findMany({
-        where: { id: { in: cantoIds }, activo: true, tipo: TipoMaterial.CANTO },
-        include: { placaMaterial: { select: { nombre: true } } }
-      })
-    : [];
-  const cantoById = new Map(cantos.map((canto) => [canto.id, canto]));
-
-  if (materials.length !== materialIds.length) {
-    throw new AppError(400, "Seleccione un material valido para cada pieza.");
-  }
-  if (cantos.length !== cantoIds.length) {
-    throw new AppError(400, "Seleccione un canto valido en cada borde.");
-  }
-
-  return detalles.map((detail, indice) => {
-    const material = materialById.get(detail.materialId)!;
-    const cantoLargo1 = detail.cantoLargo1Id ? cantoById.get(detail.cantoLargo1Id) : null;
-    const cantoLargo2 = detail.cantoLargo2Id ? cantoById.get(detail.cantoLargo2Id) : null;
-    const cantoAncho1 = detail.cantoAncho1Id ? cantoById.get(detail.cantoAncho1Id) : null;
-    const cantoAncho2 = detail.cantoAncho2Id ? cantoById.get(detail.cantoAncho2Id) : null;
-
-    return {
-      materialId: material.id,
-      codigoBarra: detail.codigoBarra ?? "",
-      material: material.nombre,
-      largo: detail.largo,
-      ancho: detail.ancho,
-      cantidad: detail.cantidad,
-      cantoLargo1Id: cantoLargo1?.id ?? null,
-      cantoLargo1Nombre: resolveCantoName(cantoLargo1),
-      cantoLargo1: Boolean(cantoLargo1),
-      cantoLargo2Id: cantoLargo2?.id ?? null,
-      cantoLargo2Nombre: resolveCantoName(cantoLargo2),
-      cantoLargo2: Boolean(cantoLargo2),
-      cantoAncho1Id: cantoAncho1?.id ?? null,
-      cantoAncho1Nombre: resolveCantoName(cantoAncho1),
-      cantoAncho1: Boolean(cantoAncho1),
-      cantoAncho2Id: cantoAncho2?.id ?? null,
-      cantoAncho2Nombre: resolveCantoName(cantoAncho2),
-      cantoAncho2: Boolean(cantoAncho2),
-      permiteRotar: detail.permiteRotar,
-      codigoBarraCentro: detail.codigoBarraCentro,
-      remark: detail.remark,
-      numeroCliente: detail.numeroCliente || numeroContacto,
-      nombreCliente: detail.nombreCliente || cliente,
-      nombreProducto: detail.nombreProducto,
-      indice
-    };
-  });
-}
-
 ordersRouter.get(
   "/",
   asyncHandler(async (req: any, res: any) => {
     const filters = orderFiltersSchema.parse(req.query);
-    const where: any = { ...orderAccessWhere(req.user) };
+    const where: any = { ...orderAccessWhere(req.user), tipo: filters.tipo };
 
     if (filters.estado) where.estado = filters.estado;
     if (filters.cliente) where.cliente = { contains: filters.cliente, mode: "insensitive" };
@@ -261,6 +179,9 @@ ordersRouter.put(
       include: { detalles: DETALLES_ORDENADOS }
     });
     if (!existing) throw new AppError(404, "Pedido no encontrado");
+    if (existing.tipo === TipoPedido.MODULOS) {
+      throw new AppError(400, "Esta solicitud es de modulos a medida: editala desde Modulos a medida.", { code: "ORDER_IS_MODULES" });
+    }
     if (!canEditOrder(existing.estado)) {
       throw new AppError(403, "No se pueden editar pedidos en proceso, terminados o entregados.");
     }

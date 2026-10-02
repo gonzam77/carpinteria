@@ -1,4 +1,4 @@
-import { EstadoPedido } from "../../generated/prisma/client.js";
+import { EstadoPedido, TipoPedido } from "../../generated/prisma/client.js";
 import { z } from "zod";
 
 export const detailSchema = z.object({
@@ -28,6 +28,8 @@ export const detailSchema = z.object({
   nombreProducto: z.string().optional().nullable()
 });
 
+export type DetailInput = z.infer<typeof detailSchema>;
+
 export const orderSchema = z.object({
   cliente: z.string().min(1),
   numeroContacto: z.string().min(6),
@@ -40,7 +42,9 @@ export const orderFiltersSchema = z.object({
   cliente: z.string().optional(),
   estado: z.nativeEnum(EstadoPedido).optional(),
   desde: z.string().optional(),
-  hasta: z.string().optional()
+  hasta: z.string().optional(),
+  // Por defecto solo las solicitudes de corte: las de modulos tienen su propio listado (spec §15).
+  tipo: z.nativeEnum(TipoPedido).optional().default(TipoPedido.CORTE)
 });
 
 export const orderStatusSchema = z.object({
