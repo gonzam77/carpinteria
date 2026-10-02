@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-03
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F3.2. Las Fases 0 y 2 están completas.
-- **Próximo paso:** **F3.3**, la pantalla del catálogo.
+- **Último paso terminado:** F3.3. Las Fases 0 y 2 están completas.
+- **Próximo paso:** **F3.4**, el editor de módulo.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -33,7 +33,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
-| F3.1–F3.4 | API y pantallas del catálogo | [~] F3.1 y F3.2 hechos |
+| F3.1–F3.4 | API y pantallas del catálogo | [~] F3.1 a F3.3 hechos |
 | F4.1–F4.5 | API y asistente de solicitudes de módulos | [ ] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (solo si se contrató) | [!] preguntar a Gonzalo |
@@ -370,7 +370,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - `lib/imageCompression.ts` lleva la imagen a 1200 px como máximo y la comprime a WebP, o a JPEG si el navegador no codifica WebP. Baja la calidad, y si hace falta el tamaño, hasta quedar debajo de 1 MB; si no lo logra, avisa. Tiene tests.
   - `api/moduleImages.ts` sube y quita imágenes.
   - `hooks/useModuleImage.ts` baja la imagen con la sesión, la muestra con `createObjectURL` y la cachea por módulo y versión.
-- **No probado en el navegador:** se ve al usarlo en F3.3 y F3.4.
+- **Probado en el navegador (F3.3):** el hook muestra las 11 imágenes del catálogo. La compresión real con canvas se prueba en F3.4, al subir una imagen.
 - **Depende de:** F3.1.
 - **Ya hecho (2026-10-03):**
   - el almacenamiento en disco, la migración y el importador (DECISIONES 12);
@@ -379,9 +379,15 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - achicar a 1200 px en un `<canvas>` y comprimir a WebP o JPEG; si pasa de 1 MB, bajar la calidad, y si no alcanza, avisar;
   - el hook `useModuleImage` con `axios` en modo blob, `createObjectURL` y caché.
 
-#### F3.3 Pantalla del catálogo · [ ]
+#### F3.3 Pantalla del catálogo · [x]
+- **Hecho (2026-10-03):**
+  - tipos del catálogo en `types/index.ts` y cliente `api/catalog.ts` (con `catalogErrorMessage`);
+  - `components/ModuleCard.tsx` (tarjeta e imagen, reutilizable en el asistente de F4);
+  - `pages/ModuleCatalogPage.tsx`: métricas, filtro por categoría, búsqueda, mostrar inactivos, Editar, Duplicar, Activar/Desactivar y el ABM de categorías;
+  - ruta `/configuracion-modulos` (solo ADMIN) y menú "Catálogo de módulos" en Configuración.
+- **Probado en Edge headless** contra la copia del backup: 32 tarjetas y 11 imágenes, búsqueda, categorías, sin desborde en celular, duplicar y activar/desactivar desde la pantalla (la copia de prueba se borró después).
 - **Depende de:** F3.1.
-- **Hacer:**
+- **Era:**
   - tipos en `frontend/src/types`;
   - rutas `/configuracion-modulos`;
   - menú "Catálogo de módulos";

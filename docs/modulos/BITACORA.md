@@ -27,6 +27,29 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (12) · equipo Pinformatico15 · rama main
+
+**Pasos:** F3.3 terminado.
+
+**Hecho:**
+- tipos del catálogo y `api/catalog.ts`;
+- `ModuleCard` (tarjeta con imagen, "Sin imagen", chips de estado y observaciones);
+- `ModuleCatalogPage` en `/configuracion-modulos` (solo ADMIN): métricas, filtros, búsqueda, inactivos, duplicar, activar/desactivar y ABM de categorías;
+- ítem "Catálogo de módulos" en el menú de Configuración.
+
+**Verificaciones:**
+- `tsc` y build del frontend en verde; `check:optimizer` sincronizado;
+- pantalla manejada en Edge headless (playwright-core, solo en el scratch) con backend en 4100 y Vite en 5180 sobre la copia del backup: 32 tarjetas, 11 imágenes, búsqueda "placard", diálogo de categorías, sin desborde a 390 px; duplicar crea la copia inactiva, desactivar y activar cambian la base. La copia se borró: quedan 33 módulos;
+- el único error de consola es el 404 de `favicon.ico` del Vite de desarrollo.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F3.4, editor de módulo en `/configuracion-modulos/nuevo` y `/configuracion-modulos/:id` (las tarjetas ya navegan ahí): pestañas General, Medidas, Despiece y cantos, Perfiles; subir imagen con `uploadModuleImage`; aviso de cambios sin guardar; advertencia de encaje con `findPiecesThatDoNotFit`.
+
+**Esperando a Gonzalo o a ROMA:** P1, P5–P8 (ver PLAN §6).
+
+---
+
 ## 2026-10-03 (11) · equipo Pinformatico15 · rama main
 
 **Pasos:** F3.2 terminado.
