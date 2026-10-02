@@ -10,6 +10,7 @@
     "test:cut-optimizer": "node --test --experimental-strip-types src/lib/cutOptimizer.test.ts",
     "test:module-formula": "node --test --experimental-strip-types src/lib/moduleFormula.test.ts",
     "test:order-estimate": "node --test --experimental-strip-types src/lib/orderEstimate.test.ts",
+    "bench:optimizer": "node --experimental-strip-types --no-warnings src/lib/cutOptimizer.bench.ts",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
