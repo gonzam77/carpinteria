@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-03
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F2.2. La Fase 0 está completa.
-- **Próximo paso:** **F2.3**, materiales y los vínculos nuevos.
+- **Último paso terminado:** F2.3. La Fase 0 está completa.
+- **Próximo paso:** **F2.4**, el importador de los 33 modelos.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
@@ -31,7 +31,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.9 | Optimizador: el mejor resultado posible | [x] |
 | F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
-| F2.1–F2.5 | Modelo de datos, migraciones e importador | [~] F2.1 y F2.2 hechos |
+| F2.1–F2.5 | Modelo de datos, migraciones e importador | [~] F2.1 a F2.3 hechos |
 | F3.1–F3.4 | API y pantallas del catálogo | [ ] |
 | F4.1–F4.5 | API y asistente de solicitudes de módulos | [ ] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
@@ -305,7 +305,12 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - todos quedan con `tipo = CORTE`;
   - los conteos coinciden antes y después.
 
-#### F2.3 Materiales y los vínculos nuevos · [ ]
+#### F2.3 Materiales y los vínculos nuevos · [x]
+- **Hecho (2026-10-03):** en `materials.routes.ts`, `catalogLinkCounts` cuenta los vínculos con 6 consultas agrupadas.
+  - El listado devuelve `linkedModulesCount`, y `canDeletePermanently` lo tiene en cuenta.
+  - El borrado definitivo responde 409 `MATERIAL_IN_USE_BY_MODULES`.
+  - Desactivar un material vinculado responde 200 con un `aviso`, que la pantalla de Materiales muestra.
+  - La prueba es `herramientas/e2e-f23.mjs`: 4 de 4.
 - **Depende de:** F2.2.
 - **Leer:** spec §5.6, el ajuste en Materiales.
 - **Hacer:** que `countMaterialLinks` y `canDeletePermanently` cuenten los vínculos nuevos y respondan 409 con un mensaje claro, y avisar al desactivar un color que usa el catálogo.

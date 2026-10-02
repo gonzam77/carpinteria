@@ -27,6 +27,25 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (6) · equipo Pinformatico15 · rama main
+
+**Pasos:** F2.3 terminado.
+
+**Hecho:**
+- **Materiales y vínculos con el catálogo y las solicitudes de módulos** (spec §5.6):
+  - se muestran en el listado;
+  - bloquean el borrado definitivo con un 409 claro, en lugar del P2003 de la base;
+  - al desactivar el material, avisan en la pantalla de Materiales.
+- **Prueba de punta a punta** `herramientas/e2e-f23.mjs`: 4 de 4. Usa un módulo de prueba que se borra al terminar.
+
+**Verificaciones:** `tsc` en verde en frontend y backend.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F2.4, importador `backend/prisma/seed-modulos.ts` (spec §16; DECISIONES 6).
+
+---
+
 ## 2026-10-03 (5) · equipo Pinformatico15 · rama main
 
 **Pasos:** F2.2 terminado.

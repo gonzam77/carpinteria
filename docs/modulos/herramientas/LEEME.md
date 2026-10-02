@@ -6,6 +6,7 @@ Scripts para comprobar los cálculos y el stock contra una copia restaurada de u
 |---|---|
 | `guillotina.mjs` | Verifica si un acomodo de piezas se puede cortar con cortes de guillotina. Se ejecuta con `node guillotina.mjs` para correr la autoprueba. |
 | `e2e-f04.mjs` | Prueba de punta a punta de F0.4: orden de las filas, detalle guardado en la constancia, listado de materiales y edición sin cambios. |
+| `e2e-f23.mjs` | Prueba de punta a punta de F2.3: un material usado por el catálogo de módulos no se puede borrar definitivamente (409) y, al desactivarlo, avisa. |
 | `e2e-f05.mjs` | Prueba de punta a punta de F0.5: reserva y devolución exacta de stock, transiciones, concurrencia, forzado sin stock, edición de materiales y borrado. |
 
 ## Cómo correr las pruebas de punta a punta
