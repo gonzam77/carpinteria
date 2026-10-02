@@ -2,7 +2,8 @@ import { Router } from "express";
 import { EstadoPedido, Rol } from "../../generated/prisma/client.js";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
-import { calculateOrderMaterialBoards } from "../orders/order-stock.service.js";
+import { orderMaterialBoards } from "../orders/order-estimate.service.js";
+import { DETALLES_ORDENADOS } from "../orders/order-queries.js";
 import { asyncHandler } from "../../utils/http.js";
 
 export const statsRouter = Router();
@@ -19,7 +20,7 @@ statsRouter.get(
       prisma.detallePedido.aggregate({ _sum: { cantidad: true }, _count: { _all: true } }),
       prisma.pedido.findMany({
         where: { estado: EstadoPedido.PENDIENTE },
-        include: { detalles: true },
+        include: { detalles: DETALLES_ORDENADOS },
         orderBy: { fechaCreacion: "asc" }
       })
     ]);
@@ -31,8 +32,9 @@ statsRouter.get(
 
     for (const order of pendingOrders) {
       try {
-        const materialBoards = await calculateOrderMaterialBoards(prisma as any, order.detalles as any);
-        for (const { material, boards } of materialBoards) {
+        // Las mismas placas que informa la constancia de cada pedido.
+        const { items } = await orderMaterialBoards(prisma as any, order as any);
+        for (const { material, boards } of items) {
           const current = stockDemandByMaterial.get(material.id);
           if (current) {
             current.placasPendientes += boards;

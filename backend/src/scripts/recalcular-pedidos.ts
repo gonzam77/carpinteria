@@ -9,6 +9,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client.js";
 import { buildOrderEstimateSnapshot } from "../modules/orders/order-estimate.service.js";
+import { DETALLES_ORDENADOS } from "../modules/orders/order-queries.js";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -21,7 +22,7 @@ const money = (value: number) => Math.round(value).toLocaleString("es-AR");
 const FIELDS = ["costoPlacas", "costoManoObraCortes", "costoMaterialCantos", "costoPegadoCantos", "presupuestoEstimado"] as const;
 
 try {
-  const orders = await prisma.pedido.findMany({ include: { detalles: true }, orderBy: { fechaCreacion: "asc" } });
+  const orders = await prisma.pedido.findMany({ include: { detalles: DETALLES_ORDENADOS }, orderBy: { fechaCreacion: "asc" } });
   let boardsChanged = 0;
   let errors = 0;
   let maxDiff = 0;

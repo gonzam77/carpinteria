@@ -152,6 +152,8 @@ export type OrderMaterialsEdge = {
 };
 
 export type OrderMaterialsSummary = {
+  /** CONSTANCIA: las placas que se guardaron con la constancia. RECALCULADO: pedidos anteriores, calculados hoy. */
+  origen: "CONSTANCIA" | "RECALCULADO";
   placas: OrderMaterialsPlate[];
   cantos: OrderMaterialsEdge[];
   totalPlacas: number;

@@ -10,6 +10,7 @@ import { orderFiltersSchema, orderSchema, orderStatusSchema } from "./order.sche
 import { sendNewOrderWhatsappNotification } from "./whatsapp.service.js";
 import { sendNewOrderPushNotification, sendOrderStockShortagePushNotification } from "../push-notifications/push-notifications.service.js";
 import { buildOrderEstimateSnapshot, buildOrderMaterialsSummary } from "./order-estimate.service.js";
+import { DETALLES_ORDENADOS } from "./order-queries.js";
 
 export const ordersRouter = Router();
 
@@ -69,7 +70,7 @@ async function normalizeDetails(detalles: any[], cliente: string, numeroContacto
     throw new AppError(400, "Seleccione un canto valido en cada borde.");
   }
 
-  return detalles.map((detail) => {
+  return detalles.map((detail, indice) => {
     const material = materialById.get(detail.materialId)!;
     const cantoLargo1 = detail.cantoLargo1Id ? cantoById.get(detail.cantoLargo1Id) : null;
     const cantoLargo2 = detail.cantoLargo2Id ? cantoById.get(detail.cantoLargo2Id) : null;
@@ -100,7 +101,8 @@ async function normalizeDetails(detalles: any[], cliente: string, numeroContacto
       remark: detail.remark,
       numeroCliente: detail.numeroCliente || numeroContacto,
       nombreCliente: detail.nombreCliente || cliente,
-      nombreProducto: detail.nombreProducto
+      nombreProducto: detail.nombreProducto,
+      indice
     };
   });
 }
@@ -131,7 +133,7 @@ ordersRouter.get(
       where,
       include: {
         usuario: { select: { id: true, nombre: true, apellido: true, email: true, telefono: true } },
-        detalles: true
+        detalles: DETALLES_ORDENADOS
       },
       orderBy: { fechaCreacion: "desc" }
     });
@@ -177,7 +179,7 @@ ordersRouter.post(
           ...estimateSnapshot,
           detalles: { create: detalles }
         },
-        include: { detalles: true }
+        include: { detalles: DETALLES_ORDENADOS }
       });
       await tx.historialPedido.create({
         data: { pedidoId: created.id, usuarioId: req.user.id, accion: "CREAR_PEDIDO" }
@@ -209,7 +211,7 @@ ordersRouter.get(
       .map((id) => id.trim())
       .filter(Boolean);
     const where: any = { ...orderAccessWhere(req.user), ...(ids.length ? { id: { in: ids } } : {}) };
-    const orders = await prisma.pedido.findMany({ where, include: { detalles: true } });
+    const orders = await prisma.pedido.findMany({ where, include: { detalles: DETALLES_ORDENADOS } });
     const workbook = await buildOrdersWorkbook(orders);
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -224,11 +226,11 @@ ordersRouter.get(
   asyncHandler(async (req: any, res: any) => {
     const order = await prisma.pedido.findFirst({
       where: { id: req.params.id, ...orderAccessWhere(req.user) },
-      include: { detalles: true }
+      include: { detalles: DETALLES_ORDENADOS }
     });
     if (!order) throw new AppError(404, "Pedido no encontrado");
 
-    const summary = await buildOrderMaterialsSummary(prisma, order.detalles);
+    const summary = await buildOrderMaterialsSummary(prisma, order);
     res.json(summary);
   })
 );
@@ -240,7 +242,7 @@ ordersRouter.get(
       where: { id: req.params.id, ...orderAccessWhere(req.user) },
       include: {
         usuario: { select: { id: true, nombre: true, apellido: true, email: true, telefono: true } },
-        detalles: true,
+        detalles: DETALLES_ORDENADOS,
         historial: { include: { usuario: { select: { nombre: true, apellido: true } } }, orderBy: { fechaCreacion: "desc" } }
       }
     });
@@ -256,7 +258,7 @@ ordersRouter.put(
     const detalles = await normalizeDetails(data.detalles, data.cliente, data.numeroContacto);
     const existing = await prisma.pedido.findFirst({
       where: { id: req.params.id, ...orderAccessWhere(req.user) },
-      include: { detalles: true }
+      include: { detalles: DETALLES_ORDENADOS }
     });
     if (!existing) throw new AppError(404, "Pedido no encontrado");
     if (!canEditOrder(existing.estado)) {
@@ -282,7 +284,7 @@ ordersRouter.put(
           ...estimateSnapshot,
           detalles: { create: detalles }
         },
-        include: { detalles: true }
+        include: { detalles: DETALLES_ORDENADOS }
       });
       if (existing.estado === EstadoPedido.EN_PROCESO && existing.stockReservado) {
         await reserveOrderStock(tx as any, updated.detalles as any);
@@ -301,7 +303,7 @@ ordersRouter.patch(
   authorize(Rol.ADMIN),
   asyncHandler(async (req: any, res: any) => {
     const schema = orderStatusSchema.parse(req.body);
-    const previous = await prisma.pedido.findUnique({ where: { id: req.params.id }, include: { detalles: true } });
+    const previous = await prisma.pedido.findUnique({ where: { id: req.params.id }, include: { detalles: DETALLES_ORDENADOS } });
     if (!previous) throw new AppError(404, "Pedido no encontrado");
     const order = await prisma.$transaction(async (tx) => {
       let stockReservado = previous.stockReservado;
@@ -345,7 +347,7 @@ ordersRouter.delete(
     }
     const existing = await prisma.pedido.findFirst({
       where: { id: req.params.id, ...orderAccessWhere(req.user) },
-      include: { detalles: true }
+      include: { detalles: DETALLES_ORDENADOS }
     });
     if (!existing) throw new AppError(404, "Pedido no encontrado");
     await prisma.$transaction(async (tx) => {

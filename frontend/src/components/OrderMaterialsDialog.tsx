@@ -173,6 +173,11 @@ export function OrderMaterialsDialog({ order, open, onClose }: { order: Order | 
 
           {summary && (
             <>
+              {summary.origen === "RECALCULADO" && (
+                <Alert severity="info">
+                  Esta solicitud se guardo antes de que se registrara el detalle de su constancia: las placas se recalcularon con los valores de hoy y pueden no coincidir con la constancia.
+                </Alert>
+              )}
               <Box>
                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
                   <Typography variant="h6">Placas necesarias</Typography>
