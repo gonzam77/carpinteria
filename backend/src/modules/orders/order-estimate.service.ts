@@ -14,6 +14,11 @@ export type EstimacionDetalle = {
   porCanto: Array<{ cantoId: string; mm: number; espesorMm: number; valorCentavos: number }>;
   optimizador: { espesorSierraMm: number; perfiladoBordeMm: number };
   tarifas: { manoObraPlacaPorPlaca: number; manoObraCanto045Mm: number; manoObraCanto1Mm: number; manoObraCanto2Mm: number };
+  /**
+   * true en pedidos anteriores al detalle: se calculo despues, con el codigo de ese momento, y puede no
+   * coincidir con su constancia (DECISIONES 0.5). Lo completa el script pedidos:completar-detalle.
+   */
+  recalculado?: boolean;
 };
 
 type EstimateSnapshot = {
@@ -159,7 +164,7 @@ export async function orderMaterialBoards(
     : [];
   const materialById = new Map(materials.map((material) => [material.id, material]));
   return {
-    origen: "CONSTANCIA",
+    origen: detail.recalculado ? "RECALCULADO" : "CONSTANCIA",
     items: detail.porMaterial.map((item) => {
       const material = materialById.get(item.materialId);
       if (!material) throw new AppError(400, missingMaterialMessage);
