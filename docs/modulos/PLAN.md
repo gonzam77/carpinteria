@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-02
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F0.6.
-- **Próximo paso:** **F0.10**, piezas rotables cargadas al revés. F0.7 y F0.8 esperan a Gonzalo y al taller, y F0.9 depende de F0.8. Después sigue la **Fase 2**.
+- **Último paso terminado:** F0.10. Con eso, todo el código de la Fase 0 está hecho.
+- **Próximo paso:** **F2.1**, esquema del catálogo de módulos. De la Fase 0 solo quedan F0.7 y F0.8, que esperan a Gonzalo y al taller, y F0.9, opcional, que depende de F0.8.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
@@ -29,7 +29,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.7 | Constancias desactualizadas (decisión comercial) | [!] espera a Gonzalo |
 | F0.8 | Validar contra las placas que usó la máquina | [!] espera al taller |
 | F0.9 | Búsqueda extra en pedidos chicos (opcional) | [ ] después de F0.8 |
-| F0.10 | Piezas rotables cargadas al revés | [ ] |
+| F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [ ] |
 | F3.1–F3.4 | API y pantallas del catálogo | [ ] |
@@ -66,7 +66,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 ### 2.1 Verificaciones de siempre
 
 ```bash
-cd frontend && npm test           # optimizador (38), motor de fórmulas (12) y presupuesto (5)
+cd frontend && npm test           # optimizador (39), motor de fórmulas (12) y presupuesto (5)
 npm run check:optimizer           # desde la raíz: el código compartido está sincronizado
 cd frontend && npx tsc --noEmit
 cd backend && npx tsc --noEmit
@@ -144,7 +144,8 @@ Requisito del dueño (regla 1 de CLAUDE.md): para las mismas piezas, las placas 
 - **Hecho:** el desempate entre acomodos usa `groupKey` en lugar del id de pieza. Están en `frontend/src/lib/cutOptimizer.ts` (`compareCandidates` y `layoutSignature`), en su copia `backend/src/shared/cutOptimizer.ts` y en los tests T36 a T38 de `frontend/src/lib/cutOptimizer.test.ts`, que fallan con el código anterior.
 - **Medido:** en producción no cambia la cantidad de placas de ningún pedido (DECISIONES 0.2).
 
-#### F0.10 Piezas rotables cargadas al revés · [ ]
+#### F0.10 Piezas rotables cargadas al revés · [x]
+- **Hecho (2026-10-02):** ver DECISIONES 0.11, con el test T39.
 - **Depende de:** F0.1.
 - **Problema:** una pieza rotable cargada como ancho × largo o como largo × ancho tiene distinto `groupKey`, y el optimizador puede tratarla distinto. Es un hallazgo menor de la auditoría, sin verificar.
 - **Hacer:**

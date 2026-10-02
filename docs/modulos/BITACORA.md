@@ -27,6 +27,31 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-02 (noche, 3) · equipo Pinformatico15 · rama main
+
+**Pasos:** F0.10 terminado. Con eso, todo el código de la Fase 0 está hecho.
+
+**Hecho:**
+- `buildPiecesFromRows` normaliza las piezas rotables a ancho ≤ largo, girando los cantos, y la clave del grupo no distingue un giro de 180° (DECISIONES 0.11).
+- Test T39.
+- Sobre el backup: 0 cambios de placas en 101 pares, y todas las placas se pueden cortar.
+
+**Verificaciones:**
+- tests 39, 12 y 5, todos en verde;
+- `check:optimizer` y `tsc` en verde;
+- `npm run build` en verde.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F2.1, esquema del catálogo de módulos (spec §5.1, §5.2 y §5.4; DECISIONES 9).
+
+**Esperando a Gonzalo o a ROMA:**
+- F0.7: decidir qué hacer con las constancias desactualizadas;
+- F0.8: placas reales del taller;
+- P1 a P8.
+
+---
+
 ## 2026-10-02 (noche, 2) · equipo Pinformatico15 · rama main
 
 **Pasos:** F0.6 terminado.
