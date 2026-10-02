@@ -49,10 +49,9 @@ Sistema de gestión de solicitudes de corte de placas de melamina para ROMA Amob
    - nunca se copian nombres ni teléfonos de clientes a commits, logs ni mensajes;
    - se restauran solo en un contenedor local descartable.
 6. **Commit y push solo con el OK de Gonzalo.**
-   - Se trabaja directo sobre `main`, que también es lo que se despliega. Por eso:
-     - todo commit deja verdes las verificaciones;
-     - las pantallas a medio hacer no se agregan al menú ni a las rutas;
-     - las migraciones no rompen lo existente.
+   - Se trabaja directo sobre `main`.
+   - **La VPS de producción no se toca hasta que todo esté terminado y probado en local (PLAN F8).** Mientras tanto se prueba con Docker y PostgreSQL local (PLAN §3.1). No propongas desplegar antes.
+   - Igual, todo commit deja verdes las verificaciones y las migraciones no rompen lo existente, porque el día del pase se aplican sobre la base real.
    - Los commits van separados por paso o por tema.
    - Para deshacer algo ya subido se usa `git revert`, nunca `push --force`.
 7. **Estilo:** sin dependencias nuevas salvo que sean imprescindibles; validación con zod; mensajes de error en español, claros y accionables; MUI y el `theme.ts` existente.

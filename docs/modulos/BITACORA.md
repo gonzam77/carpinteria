@@ -47,9 +47,9 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 **Próximo paso:** F0.5, reserva de stock exacta. Reservar desde `estimacionDetalle`, guardar lo reservado por material y liberar exactamente eso, con transiciones idempotentes, actualización condicional del estado y ajuste de stock por delta.
 
-**Esperando a Gonzalo o a ROMA:**
-- desplegar F0.1, F0.3 y F0.4 juntos;
-- P1 a P8 sin cambios.
+**Esperando a Gonzalo o a ROMA:** P1 a P8, sin cambios.
+
+**Decisión de Gonzalo:** no se despliega nada a la VPS hasta terminar y probar todo en local, con Docker y PostgreSQL. El pase a producción quedó como el paso F8 del plan.
 
 ---
 

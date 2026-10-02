@@ -14,13 +14,13 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
 - **Último paso terminado:** F0.4.
-- **Próximo paso:** **F0.5**, reserva de stock exacta. Además, Gonzalo tiene que desplegar F0.1, F0.3 y F0.4 juntos (F0.1b). La migración de F0.4 la aplica sola el contenedor del backend al arrancar (`prisma migrate deploy`).
+- **Próximo paso:** **F0.5**, reserva de stock exacta.
+- **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
 | Paso | Qué | Estado |
 |---|---|---|
 | F0.1 | Optimizador independiente del orden de las filas | [x] |
-| F0.1b | Despliegue de F0.1 | [ ] |
 | F0.2 | Medir el impacto con el backup de producción | [x] |
 | F0.3 | Presupuesto exacto con una función compartida | [x] |
 | F0.4 | Una sola verdad por pedido: detalle por material y orden estable | [x] |
@@ -37,6 +37,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (solo si se contrató) | [!] preguntar a Gonzalo |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
+| F8 | Pase a producción (VPS), al final | [ ] |
 
 ---
 
@@ -104,20 +105,29 @@ Si un paso toca placas o presupuesto, además tiene que agregar o mantener un **
 5. **Comprobar que todo funciona:** correr §2.1. Todo tiene que dar verde antes de tocar nada.
 6. **Base local con datos reales (opcional; necesaria para probar migraciones):** ver §7.
 
+### 3.1 Entorno local de pruebas
+
+Todo se prueba en local antes de pensar en producción.
+
+- **Levantar la app:** `docker compose up -d --build` levanta la base (`127.0.0.1:5433`), la API (`127.0.0.1:4000`) y la web (`127.0.0.1:5173`).
+- **Desarrollo:** `npm run dev:backend` y `npm run dev:frontend`, con `docker compose up -d db`.
+- **Migraciones:** el contenedor de la API aplica las migraciones al arrancar (`prisma migrate deploy`).
+- **Datos reales:** para probar con los datos de producción, se restaura un backup en la base local siguiendo §7. Se cambia el nombre del contenedor y el puerto por los del compose, o se usa el contenedor descartable de §7 y se apunta `DATABASE_URL` a él.
+
 ---
 
 ## 4. Ramas, commits y despliegue
 
-- **Se trabaja directamente sobre `main`.** Lo decidió Gonzalo el 2026-10-01. `main` también es lo que se despliega, así que:
+- **Se trabaja directamente sobre `main`.** Lo decidió Gonzalo el 2026-10-01.
+- **La VPS no se actualiza hasta terminar y probar todo (F8).** Lo decidió Gonzalo el 2026-10-02. Aun así:
   - todo commit en `main` deja verdes las verificaciones de §2.1, incluido `npm run build`;
-  - las pantallas de módulos a medio hacer no se agregan al menú ni a las rutas hasta que su fase esté terminada;
-  - las migraciones nuevas no rompen lo existente (columnas nuevas con default o nullable).
+  - las migraciones nuevas no rompen lo existente (columnas nuevas con default o nullable), porque el día del pase se aplican sobre la base real.
 - **Al empezar, `git pull`; al cerrar, commit y push.** Así otra computadora encuentra todo al día.
 - **Commits separados, uno por paso o por tema**, con un mensaje que nombre el paso, por ejemplo `F2.1: esquema del catálogo de módulos`.
 - **Commit y push solo con el OK de Gonzalo.** Al cerrar la sesión se le proponen los mensajes.
 - **Si dos computadoras tocaron el plan o la bitácora a la vez,** al hacer pull se resuelve el conflicto quedándose con las dos entradas de la bitácora y con el estado más avanzado de cada paso.
 - **Para deshacer un commit ya subido,** se usa `git revert <hash>` y nunca `push --force`.
-- **Frontend y backend se despliegan juntos** cuando cambia código compartido (`frontend/src/lib/*.ts` y `backend/src/shared/*.ts`).
+- **Frontend y backend se despliegan juntos** cuando cambia código compartido (`frontend/src/lib/*.ts` y `backend/src/shared/*.ts`). En F8 se despliega todo junto.
 - **Nunca** correr `prisma migrate reset`, borrar `prisma/migrations` ni editar migraciones viejas. El README tiene una sección de "reset" que es solo para una base de desarrollo descartable.
 
 ---
@@ -134,14 +144,6 @@ Requisito del dueño (regla 1 de CLAUDE.md): para las mismas piezas, las placas 
 - **Hecho:** el desempate entre acomodos usa `groupKey` en lugar del id de pieza. Están en `frontend/src/lib/cutOptimizer.ts` (`compareCandidates` y `layoutSignature`), en su copia `backend/src/shared/cutOptimizer.ts` y en los tests T36 a T38 de `frontend/src/lib/cutOptimizer.test.ts`, que fallan con el código anterior.
 - **Medido:** en producción no cambia la cantidad de placas de ningún pedido (DECISIONES 0.2).
 
-#### F0.1b Despliegue de F0.1 · [ ]
-- **Depende de:** F0.1, ya commiteado en `main` (ver la bitácora).
-- **Hacer:**
-  1. Desplegar frontend y backend **juntos**, porque los dos usan el optimizador.
-  2. Si algo falla, `git revert` del commit de F0.1 y volver a desplegar.
-- **Terminado cuando:** está en producción.
-- **Verificar:** abrir un pedido existente y comprobar que el plano muestra la misma cantidad de placas que la constancia. Según DECISIONES 0.2, ningún pedido cambia.
-
 #### F0.10 Piezas rotables cargadas al revés · [ ]
 - **Depende de:** F0.1.
 - **Problema:** una pieza rotable cargada como ancho × largo o como largo × ancho tiene distinto `groupKey`, y el optimizador puede tratarla distinto. Es un hallazgo menor de la auditoría, sin verificar.
@@ -155,7 +157,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 
 #### F0.3 Presupuesto exacto con una función compartida · [x]
 - **Hecho (2026-10-02):** ver DECISIONES 0.3 y 0.8. La función está en `frontend/src/lib/orderEstimate.ts`, con sus tests, y la usan el snapshot, el listado de materiales, la reserva de stock, el dashboard y el plano. El script de recálculo es `npm --prefix backend run pedidos:recalcular`.
-- **Depende de:** F0.1b.
+- **Depende de:** F0.1.
 - **Leer:**
   - DECISIONES 0.3;
   - `backend/src/modules/orders/order-estimate.service.ts`, completo;
@@ -424,6 +426,16 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 
 ---
 
+### Fase 8: Pase a producción · [ ] al final
+- **Depende de:** todas las fases anteriores, probadas en local por Gonzalo.
+- **Hacer:**
+  1. Hacer un backup reciente de producción y restaurarlo en local (§7).
+  2. Correr `npm --prefix backend run pedidos:recalcular` y revisar las diferencias contra lo guardado (DECISIONES 0.5: constancias del estimador viejo).
+  3. Aplicar todas las migraciones sobre esa copia y probar la app completa.
+  4. Recién ahí, en la VPS: backup, actualizar el código y reconstruir frontend y backend juntos. La API aplica sola las migraciones al arrancar.
+  5. Si algo falla: volver al backup y a la versión anterior.
+- **Terminado cuando:** producción corre la versión nueva y los pedidos existentes muestran lo mismo que en la prueba local.
+
 ## 6. Decisiones pendientes (de Gonzalo o de ROMA)
 
 | # | Tema | Quién | Por defecto mientras tanto |
@@ -431,7 +443,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 | P1 | ¿Se contrató Herrajes? | Gonzalo | Interruptor apagado |
 | P2 | Las 7 constancias desactualizadas (F0.7) | Gonzalo | No se tocan |
 | P3 | Placas reales usadas por la máquina en 4 pedidos (F0.8) | Taller | El optimizador actual |
-| P4 | Despliegue de F0.1 (F0.1b) | Gonzalo | — |
+| P4 | Pase a producción (F8), cuando todo esté probado | Gonzalo | Nada se despliega antes |
 | P5 | Cantos, material por pieza, fondos, zócalo y gola, color de canto de los frentes, veta, redondeo y plazos | ROMA | Lo de spec §19 |
 | P6 | `PLACARD_EN_ESPEJO_2_PUERTAS` (fondo de 2000×2000 y puertas de 962×1934 sin rotar) y `PLACARD_2_PUERTAS_UN_LADO_PERCHERO` (fondo de 2498×1998) no entran en placas de 1830 de ancho | ROMA | Se importan, con advertencia |
 | P7 | La placa "metal cepillado bronce" figura como 1830×26000, con un cero de más | Gonzalo | Corregirla en Materiales |
