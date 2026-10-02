@@ -1726,22 +1726,43 @@ function rowEdges(row: OptimizerRow): PieceEdges {
   };
 }
 
+// Giro de 90 grados, el mismo que usa buildOrientations para la orientacion rotada.
+function rotateEdges90<T extends PieceEdges>(edges: T): T {
+  return { ...edges, top: edges.left, right: edges.top, bottom: edges.right, left: edges.bottom };
+}
+
+// Una pieza girada 180 grados es la misma pieza fisica (tambien con veta): para la clave del grupo se toma
+// siempre la misma de las dos lecturas de los cantos.
+function edgesKeyFor180(edges: PieceEdges): PieceEdges {
+  const asRead = [edges.top || "", edges.right || "", edges.bottom || "", edges.left || ""];
+  const turned = [edges.bottom || "", edges.left || "", edges.top || "", edges.right || ""];
+  const [top, right, bottom, left] = asRead.join("|") <= turned.join("|") ? asRead : turned;
+  return { top, right, bottom, left };
+}
+
 // Arma las piezas de un material. Es la unica forma en que frontend y backend construyen la entrada
 // del optimizador, para que ambos le pasen exactamente lo mismo. El grupo se arma con los ids de
 // canto y no con los nombres: el formulario y la base pueden nombrar distinto al mismo canto.
+// Una pieza rotable es la misma cargada como ancho x largo o como largo x ancho: se normaliza a
+// ancho <= largo, girando tambien sus cantos, para que el optimizador la vea igual en los dos casos.
 export function buildPiecesFromRows(rows: OptimizerRow[], idPrefix: string): PieceInput[] {
   return rows.flatMap((row, rowIndex) =>
     Array.from({ length: Number(row.cantidad) || 0 }, (_, copyIndex) => {
-      const width = Number(row.ancho);
-      const height = Number(row.largo);
       const canRotate = Boolean(row.permiteRotar);
-      const edges = rowEdges(row);
-      const edgeIds = {
+      const rowWidth = Number(row.ancho);
+      const rowHeight = Number(row.largo);
+      const turn = canRotate && rowWidth > rowHeight;
+      const width = turn ? rowHeight : rowWidth;
+      const height = turn ? rowWidth : rowHeight;
+      const rowEdgeNames = rowEdges(row);
+      const rowEdgeIds = {
         top: row.cantoAncho1Id || (row.cantoAncho1 ? "canto" : null),
         right: row.cantoLargo2Id || (row.cantoLargo2 ? "canto" : null),
         bottom: row.cantoAncho2Id || (row.cantoAncho2 ? "canto" : null),
         left: row.cantoLargo1Id || (row.cantoLargo1 ? "canto" : null)
       };
+      const edges = turn ? rotateEdges90(rowEdgeNames) : rowEdgeNames;
+      const edgeIds = edgesKeyFor180(turn ? rotateEdges90(rowEdgeIds) : rowEdgeIds);
       return {
         id: `${idPrefix}-${rowIndex}-${copyIndex}`,
         width,

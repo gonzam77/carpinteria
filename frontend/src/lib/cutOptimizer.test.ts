@@ -1096,3 +1096,32 @@ test("T38 - pedidos al azar dan las mismas placas y el mismo acomodo al reordena
     ]);
   }
 });
+
+test("T39 - una pieza rotable da lo mismo cargada como ancho x largo o como largo x ancho", () => {
+  // Con cantos distintos en cada lado: al girar la pieza 90 grados, los cantos giran con ella.
+  const piece = (largo: number, ancho: number, cantidad: number): OptimizerRow => ({
+    largo,
+    ancho,
+    cantidad,
+    permiteRotar: true,
+    cantoLargo1Id: "canto-2mm",
+    cantoAncho1Id: "canto-045"
+  });
+  const turned = (row: OptimizerRow): OptimizerRow => ({
+    ...row,
+    largo: row.ancho,
+    ancho: row.largo,
+    cantoLargo1Id: row.cantoAncho2Id ?? null,
+    cantoLargo2Id: row.cantoAncho1Id ?? null,
+    cantoAncho1Id: row.cantoLargo1Id ?? null,
+    cantoAncho2Id: row.cantoLargo2Id ?? null
+  });
+  const rows = [piece(733, 412, 10), piece(670, 325, 6), piece(1200, 450, 4), piece(560, 380, 7)];
+
+  assertSameResultForEveryForm([
+    { label: "como se cargaron", rows },
+    { label: "todas giradas", rows: rows.map(turned) },
+    { label: "mitad giradas", rows: rows.map((row, index) => (index % 2 ? turned(row) : row)) },
+    { label: "una fila partida y girada a medias", rows: [...splitRow(rows[0], 2).map((row, index) => (index ? turned(row) : row)), ...rows.slice(1)] }
+  ]);
+});
