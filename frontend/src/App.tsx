@@ -6,6 +6,7 @@ import { CompanySettingsPage } from "./pages/CompanySettingsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MaterialsPage } from "./pages/MaterialsPage";
+import { ModuleCatalogPage } from "./pages/ModuleCatalogPage";
 import { OrderDetailPage } from "./pages/OrderDetailPage";
 import { OrderFormPage } from "./pages/OrderFormPage";
 import { OptimizerSettingsPage } from "./pages/OptimizerSettingsPage";
@@ -61,6 +62,14 @@ export function App() {
           element={
             <ProtectedRoute roles={["ADMIN"]}>
               <OptimizerSettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="configuracion-modulos"
+          element={
+            <ProtectedRoute roles={["ADMIN"]}>
+              <ModuleCatalogPage />
             </ProtectedRoute>
           }
         />

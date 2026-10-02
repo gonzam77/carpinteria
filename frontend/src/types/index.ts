@@ -161,3 +161,103 @@ export type OrderMaterialsSummary = {
   totalPlacas: number;
   totalMetrosCanto: number;
 };
+
+// ---------------------------------------------------------------- Catalogo de modulos a medida (spec §5.2 y §13.1)
+
+export type TipoParametroModulo = "MEDIDA" | "ENTERO" | "OPCION" | "CALCULADO";
+export type RolPiezaModulo = "ESQUELETO" | "FRENTE" | "FONDO" | "FIJO";
+export type LadoCanto = "LARGO_1" | "LARGO_2" | "ANCHO_1" | "ANCHO_2";
+export type EspesorCanto = 0.45 | 1 | 2;
+
+export type ModuleCategory = { id: string; nombre: string; orden: number; activo: boolean; modulos?: number };
+
+export type ModuleParameter = {
+  clave: string;
+  etiqueta: string;
+  tipo: TipoParametroModulo;
+  valorDefecto: number | null;
+  minimo: number | null;
+  maximo: number | null;
+  opciones: Array<{ valor: number; etiqueta: string }> | null;
+  formula: string | null;
+  ayuda: string | null;
+  orden: number;
+};
+
+export type ModuleProfile = { orden: 1 | 2; nombre: string; descripcion: string | null; predeterminado: boolean };
+
+export type ModulePiece = {
+  codigo: string;
+  nombre: string;
+  rol: RolPiezaModulo;
+  materialFijoId: string | null;
+  formulaLargo: string;
+  formulaAncho: string;
+  formulaCantidad: string;
+  permiteRotar: boolean;
+  orden: number;
+  observaciones: string | null;
+  cantos: Array<{ perfilOrden: 1 | 2; lado: LadoCanto; espesorMm: EspesorCanto }>;
+};
+
+export type ModuleFormulaError = { ref: string; mensaje: string };
+
+/** Lo que se manda al crear o guardar un modulo. */
+export type ModuleInput = {
+  codigo: string;
+  nombre: string;
+  categoriaId: string;
+  descripcion: string | null;
+  activo: boolean;
+  espesorDisenoMm: number;
+  materialFondoId: string | null;
+  observaciones: string | null;
+  parametros: ModuleParameter[];
+  perfiles: ModuleProfile[];
+  piezas: ModulePiece[];
+  herrajes: Array<{ herrajeId: string; formulaCantidad: string; orden: number }>;
+};
+
+export type ModuleDefinition = ModuleInput & {
+  id: string;
+  categoria: { id: string; nombre: string };
+  version: number;
+  fechaActualizacion: string;
+  imagen: { mime: string; tamanoBytes: number; fechaActualizacion: string } | null;
+  tienePedidos: boolean;
+  estadoFormulas?: "OK" | "CON_ERRORES";
+  errores?: ModuleFormulaError[];
+};
+
+export type ModuleListItem = {
+  id: string;
+  codigo: string;
+  nombre: string;
+  categoria: { id: string; nombre: string };
+  activo: boolean;
+  version: number;
+  fechaActualizacion: string;
+  tieneImagen: boolean;
+  imagenActualizada: string | null;
+  piezas: number;
+  parametros: number;
+  tienePedidos: boolean;
+  estadoFormulas: "OK" | "CON_ERRORES";
+  observaciones: string | null;
+  cantidadObservaciones: number;
+};
+
+export type ModulesConfig = {
+  id: string;
+  materialFondoId: string | null;
+  redondeo: "REDONDEAR" | "TRUNCAR";
+  diasEntregaDefecto: number;
+  diasAvisoVencimiento: number;
+  herrajesHabilitados: boolean;
+};
+
+export type ModuleEvaluation = {
+  piezas: Array<{ codigo: string; nombre: string; largo: number; ancho: number; cantidad: number; largoExacto: number; anchoExacto: number }>;
+  errores: ModuleFormulaError[];
+  herrajes: Array<{ herrajeId: string; cantidad: number | null }>;
+};

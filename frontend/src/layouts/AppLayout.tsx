@@ -11,6 +11,7 @@ import PostAddIcon from "@mui/icons-material/PostAdd";
 import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
 import SettingsIcon from "@mui/icons-material/Settings";
 import TuneIcon from "@mui/icons-material/Tune";
+import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import { Alert, AppBar, Avatar, Box, Button, Collapse, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Snackbar, Toolbar, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useEffect, useMemo, useState } from "react";
@@ -52,6 +53,12 @@ export function AppLayout() {
             { label: "Optimizador", to: "/configuracion-optimizador", icon: <TuneIcon />, match: (pathname: string) => pathname === "/configuracion-optimizador" },
             { label: "Presupuesto", to: "/configuracion-presupuesto", icon: <RequestQuoteIcon />, match: (pathname: string) => pathname === "/configuracion-presupuesto" },
             { label: "Materiales", to: "/materiales", icon: <Inventory2Icon />, match: (pathname: string) => pathname === "/materiales" },
+            {
+              label: "Catalogo de modulos",
+              to: "/configuracion-modulos",
+              icon: <ViewModuleIcon />,
+              match: (pathname: string) => pathname.startsWith("/configuracion-modulos")
+            },
             { label: "Empresa", to: "/configuracion-empresa", icon: <BusinessIcon />, match: (pathname: string) => pathname === "/configuracion-empresa" },
             { label: "Usuarios", to: "/usuarios", icon: <GroupIcon />, match: (pathname: string) => pathname === "/usuarios" }
           ]
