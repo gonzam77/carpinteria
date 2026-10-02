@@ -352,7 +352,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 #### F3.1 API del catálogo · [ ]
 - **Depende de:** F2.4.
 - **Hacer:**
-  - `backend/src/modules/modules/` con rutas, schemas zod (`moduloSchema`) y servicio;
+  - `backend/src/modules/catalog/` con rutas, schemas zod (`moduloSchema`) y servicio;
   - **orden de las rutas:** `/categorias`, `/configuracion` y `POST /evaluar` van antes de `/:id`;
   - validaciones de §5.6: claves y códigos (`validateIdentifier` de `moduleFormula.ts`), perfiles, y que las fórmulas evalúen sin error si el módulo está activo;
   - `PUT` transaccional con `version + 1` y `Auditoria` (`EDITAR_MODULO`);
@@ -360,13 +360,13 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - todo con `authenticate` y `authorize(ADMIN)`.
 - **Terminado cuando:** hay tests de servicio y un carpintero recibe 403 en todas las rutas nuevas.
 
-#### F3.2 Imágenes · [ ]
+#### F3.2 Imágenes · [~] almacenamiento hecho
 - **Depende de:** F3.1.
+- **Ya hecho (2026-10-03):** el almacenamiento en disco, la migración y el importador (DECISIONES 12).
 - **Hacer:**
-  - `PUT` con `express.raw`, máximo 3 MB y solo jpeg, png o webp;
-  - `GET` con `ETag` y `Cache-Control`;
-  - `DELETE`;
-  - en el frontend, achicar la imagen a 1200 px en un `<canvas>` y crear el hook `useModuleImage` con `axios` en modo blob, `createObjectURL` y caché (spec D5).
+  - endpoints `PUT /api/modulos/:id/imagen` (`express.raw`, hasta 1 MB, con `storeModuleImage`), `GET` (envía el archivo con `ETag` y `Cache-Control`) y `DELETE` (`removeModuleImage`);
+  - en el frontend, achicar a 1200 px en un `<canvas>` y comprimir a WebP o JPEG; si pasa de 1 MB, bajar la calidad, y si no alcanza, avisar;
+  - el hook `useModuleImage` con `axios` en modo blob, `createObjectURL` y caché.
 
 #### F3.3 Pantalla del catálogo · [ ]
 - **Depende de:** F3.1.
@@ -485,7 +485,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 ### Fase 8: Pase a producción · [ ] al final
 - **Depende de:** todas las fases anteriores, probadas en local por Gonzalo.
 - **Hacer:**
-  1. Hacer un backup reciente de producción y restaurarlo en local (§7).
+  1. Hacer un backup reciente de producción y restaurarlo en local (§7). Desde esta versión, el backup incluye la base y el volumen de imágenes `uploads_data`.
   2. Correr `npm --prefix backend run pedidos:recalcular` y revisar las diferencias contra lo guardado (DECISIONES 0.5: constancias del estimador viejo).
   3. Correr `npm --prefix backend run pedidos:completar-detalle`, que guarda el detalle recalculado de los pedidos anteriores. Sin esto, el dashboard tarda más de 60 s (DECISIONES 0.12).
   4. Aplicar todas las migraciones sobre esa copia y probar la app completa.
@@ -511,6 +511,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 
 ## 7. Datos de producción
 
+- **Imágenes de los módulos:** están en el volumen `uploads_data` (en local, en `backend/uploads/`). El backup de producción tiene que incluir ese volumen además de la base (DECISIONES 12).
 - **Los backups no se versionan nunca:** tienen nombres y teléfonos de clientes, y están en `.gitignore`. Se piden a Gonzalo y se guardan fuera del repo.
 - **Se restauran solo en un contenedor local descartable**, nunca sobre la base del docker-compose ni sobre producción. En PowerShell:
 

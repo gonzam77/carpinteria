@@ -27,6 +27,22 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (9) · equipo Pinformatico15 · rama main
+
+**Decisión de Gonzalo (DECISIONES 12):** las imágenes de los módulos van como archivos en el servidor, comprimidas y con 1 MB como máximo. Cambia la spec D5, que las guardaba en la base. El ABM de módulos ya estaba en la spec, en la sección 6.
+
+**Hecho:**
+- **`UPLOADS_DIR`** en `env.ts`, más el volumen `uploads_data` en `docker-compose.yml` y `backend/uploads/` en `.gitignore`.
+- **Migración `20261003180000_imagenes_en_disco`:** `modulos_imagen` deja de guardar los bytes y pasa a guardar `archivo` y `tamanoBytes`.
+- **`module-images.service.ts`**, con validación de tamaño y de tipo real y escritura atómica.
+- **El importador guarda las imágenes como archivos:** 11 archivos, 271 KB en total, sin duplicar al correrlo de nuevo.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F3.1, la API del catálogo, en `backend/src/modules/catalog/`. Después, F3.2: los endpoints de imagen y la compresión en el navegador.
+
+---
+
 ## 2026-10-03 (8) · equipo Pinformatico15 · rama main
 
 **Pasos:** F2.5 terminado. La Fase 2 está completa.
