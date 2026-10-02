@@ -27,6 +27,36 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-02 (noche) · equipo Pinformatico15 · rama main
+
+**Pasos:** F0.5 terminado.
+
+**Hecho:**
+- **Migración `20261002150000_reserva_stock`:** agrega `Pedido.reservaStock` y marca como forzados los 24 pedidos anteriores que avanzaron sin descontar stock. Se probó con `migrate deploy` sobre la copia: no queda diferencia entre el esquema y la base.
+- **Reglas del stock comprometido** (DECISIONES 0.9) en `order-stock.service.ts` y en las rutas de pedidos: cambio de estado con bloqueo optimista, devolución exacta y borrado que devuelve el stock.
+- **Edición de materiales por diferencia de stock**, en `materials.routes.ts` y `MaterialsPage.tsx`.
+- **Diálogo de stock insuficiente** para cualquier estado que descuente, en `OrderDetailPage.tsx`.
+- **Listado de materiales:** ya no marca como faltantes las placas propias.
+- **Prueba de punta a punta**, `herramientas/e2e-f05.mjs`, contra la copia del backup: 22 de 22. La de F0.4 también quedó en `herramientas/`, junto con un LEEME.
+
+**Atención:** al probar, quedó vivo un backend viejo en el puerto 4100 y la primera corrida probó el código anterior. Al terminar, verificar siempre que el puerto quedó libre (se explica en `herramientas/LEEME.md`).
+
+**Verificaciones:**
+- tests 38, 12 y 5, todos en verde;
+- `check:optimizer` y `tsc` en verde;
+- `npm run build` en verde.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F0.6, plano de cortes coherente con el backend:
+- esperar la configuración real antes de calcular;
+- no mostrar un costo parcial si una pieza no entra;
+- no omitir los materiales inactivos en la edición.
+
+**Esperando a Gonzalo o a ROMA:** P1 a P8, sin cambios.
+
+---
+
 ## 2026-10-02 (tarde) · equipo Pinformatico15 · rama main
 
 **Pasos:** F0.4 terminado.

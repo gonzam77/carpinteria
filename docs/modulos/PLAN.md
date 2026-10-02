@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-02
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F0.4.
-- **Próximo paso:** **F0.5**, reserva de stock exacta.
+- **Último paso terminado:** F0.5.
+- **Próximo paso:** **F0.6**, plano de cortes coherente con el backend.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
@@ -24,7 +24,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.2 | Medir el impacto con el backup de producción | [x] |
 | F0.3 | Presupuesto exacto con una función compartida | [x] |
 | F0.4 | Una sola verdad por pedido: detalle por material y orden estable | [x] |
-| F0.5 | Reserva de stock exacta y transiciones de estado | [ ] |
+| F0.5 | Reserva de stock exacta y transiciones de estado | [x] |
 | F0.6 | Plano de cortes coherente con el backend | [ ] |
 | F0.7 | Constancias desactualizadas (decisión comercial) | [!] espera a Gonzalo |
 | F0.8 | Validar contra las placas que usó la máquina | [!] espera al taller |
@@ -199,7 +199,8 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 - **Terminado cuando:** leer un pedido, editarlo sin cambios y volver a leerlo da el mismo snapshot; y el listado y el dashboard coinciden con la constancia.
 - **Verificar:** migración probada sobre el backup (§7); tests de lectura y edición sin cambios; §2.1.
 
-#### F0.5 Reserva de stock exacta · [ ]
+#### F0.5 Reserva de stock exacta · [x]
+- **Hecho (2026-10-02):** ver DECISIONES 0.4 y 0.9. Están la migración `20261002150000_reserva_stock`, `Pedido.reservaStock` y `order-stock.service.ts` (`takeOrderStock`, `returnOrderStock` y `hasStockCommitment`). El cambio de estado lleva bloqueo optimista; la edición de materiales ajusta el stock por diferencia; el diálogo de stock insuficiente vale para cualquier estado que descuente. La prueba de punta a punta es `herramientas/e2e-f05.mjs`: 22 de 22.
 - **Depende de:** F0.4.
 - **Leer:** DECISIONES 0.4; `order-stock.service.ts` y `PATCH /orders/:id/status` en `orders.routes.ts`.
 - **Hacer:**
