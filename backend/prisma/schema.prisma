@@ -64,6 +64,9 @@ model Pedido {
   // Detalle del calculo con el que se armo la constancia: placas por material, mm por canto, y los precios
   // y la configuracion usados. Lo leen el listado de materiales y el dashboard. Null en pedidos anteriores.
   estimacionDetalle Json?
+  // Stock comprometido por el pedido: las placas por material que se descontaron, para devolver exactamente
+  // eso. forzada = se avanzo sin descontar. Null si no tiene stock comprometido (o en pedidos anteriores).
+  reservaStock Json?
   usuarioId     String
   fechaCreacion DateTime          @default(now())
   fechaActualizacion DateTime     @updatedAt
