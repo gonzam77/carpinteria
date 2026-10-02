@@ -152,6 +152,34 @@ async function countMaterialLinks(materialId: string) {
   });
 }
 
+// Vinculos con el catalogo de modulos y con las solicitudes de modulos (spec §5.6): material de fondo de un
+// modulo o de la configuracion, material fijo de una pieza y colores de un modulo pedido. Con estas claves
+// foraneas el borrado definitivo fallaria en la base, asi que se cuentan antes. Son 6 consultas agrupadas en
+// total, no una por material.
+async function catalogLinkCounts(materialIds: string[]) {
+  const counts = new Map<string, number>();
+  if (!materialIds.length) return counts;
+  const add = (id: string | null, amount: number) => {
+    if (id) counts.set(id, (counts.get(id) ?? 0) + amount);
+  };
+  const inIds = { in: materialIds };
+  const [fondos, fijos, esqueletos, frentes, cantos, configuraciones] = await Promise.all([
+    prisma.modulo.groupBy({ by: ["materialFondoId"], where: { materialFondoId: inIds }, _count: { _all: true } }),
+    prisma.moduloPieza.groupBy({ by: ["materialFijoId"], where: { materialFijoId: inIds }, _count: { _all: true } }),
+    prisma.pedidoModulo.groupBy({ by: ["colorEsqueletoId"], where: { colorEsqueletoId: inIds }, _count: { _all: true } }),
+    prisma.pedidoModulo.groupBy({ by: ["colorFrentesId"], where: { colorFrentesId: inIds }, _count: { _all: true } }),
+    prisma.pedidoModulo.groupBy({ by: ["colorCantoId"], where: { colorCantoId: inIds }, _count: { _all: true } }),
+    prisma.configuracionModulos.findMany({ where: { materialFondoId: inIds }, select: { materialFondoId: true } })
+  ]);
+  fondos.forEach((row) => add(row.materialFondoId, row._count._all));
+  fijos.forEach((row) => add(row.materialFijoId, row._count._all));
+  esqueletos.forEach((row) => add(row.colorEsqueletoId, row._count._all));
+  frentes.forEach((row) => add(row.colorFrentesId, row._count._all));
+  cantos.forEach((row) => add(row.colorCantoId, row._count._all));
+  configuraciones.forEach((row) => add(row.materialFondoId, 1));
+  return counts;
+}
+
 async function countLinkedCantos(materialId: string) {
   return prisma.material.count({
     where: {
@@ -162,9 +190,11 @@ async function countLinkedCantos(materialId: string) {
 }
 
 async function serializeMaterials(materials: Array<any>) {
+  const catalogLinks = await catalogLinkCounts(materials.map((material) => material.id));
   const materialsWithUsage = await Promise.all(
     materials.map(async (material) => {
       const [linkedOrdersCount, linkedCantosCount] = await Promise.all([countMaterialLinks(material.id), countLinkedCantos(material.id)]);
+      const linkedModulesCount = catalogLinks.get(material.id) ?? 0;
       const nombre =
         material.tipo === TipoMaterial.CANTO && material.placaMaterial?.nombre
           ? buildCantoName(material.placaMaterial.nombre, material.espesorMm)
@@ -174,7 +204,8 @@ async function serializeMaterials(materials: Array<any>) {
         nombre,
         linkedOrdersCount,
         linkedCantosCount,
-        canDeletePermanently: linkedOrdersCount === 0 && linkedCantosCount === 0
+        linkedModulesCount,
+        canDeletePermanently: linkedOrdersCount === 0 && linkedCantosCount === 0 && linkedModulesCount === 0
       };
     })
   );
@@ -392,6 +423,15 @@ materialsRouter.delete(
       data: { usuarioId: req.user.id, accion: "DESACTIVAR_MATERIAL", entidad: "Material", entidadId: material.id }
     });
 
+    // Se permite desactivar un material que usa el catalogo de modulos, pero deja de aparecer en los
+    // selectores: se avisa para que se revisen los modulos (spec §5.6).
+    const linkedModules = (await catalogLinkCounts([material.id])).get(material.id) ?? 0;
+    if (linkedModules > 0) {
+      res.json({
+        aviso: `El material se usa en el catalogo de modulos o en solicitudes de modulos (${linkedModules} vinculos). Deja de aparecer en los selectores: revisa los modulos que lo usan.`
+      });
+      return;
+    }
     res.status(204).send();
   })
 );
@@ -403,6 +443,14 @@ materialsRouter.delete(
     const linkedOrdersCount = await countMaterialLinks(req.params.id);
     if (linkedOrdersCount > 0) {
       throw new AppError(400, "No se puede eliminar definitivamente un material vinculado a solicitudes.");
+    }
+    const linkedModules = (await catalogLinkCounts([req.params.id])).get(req.params.id) ?? 0;
+    if (linkedModules > 0) {
+      throw new AppError(
+        409,
+        `No se puede eliminar definitivamente: el material se usa en el catalogo de modulos o en solicitudes de modulos (${linkedModules} vinculos). Desactivalo en su lugar.`,
+        { code: "MATERIAL_IN_USE_BY_MODULES" }
+      );
     }
 
     await prisma.$transaction(async (tx) => {

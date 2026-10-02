@@ -96,7 +96,7 @@ export function MaterialsPage() {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState<BulkValueForm>(emptyBulkForm);
   const [feedback, setFeedback] = useState("");
-  const [feedbackSeverity, setFeedbackSeverity] = useState<"success" | "error">("success");
+  const [feedbackSeverity, setFeedbackSeverity] = useState<"success" | "error" | "warning">("success");
   const [view, setView] = useState<"activos" | "historial">("activos");
   const [deleteDialog, setDeleteDialog] = useState<MaterialDeleteDialogState>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -223,10 +223,11 @@ export function MaterialsPage() {
 
   async function deactivateMaterial(material: Material) {
     try {
-      await api.delete(`/materiales/${material.id}`);
+      const response = await api.delete<{ aviso?: string } | "">(`/materiales/${material.id}`);
       if (editingId === material.id) resetForm();
-      setFeedbackSeverity("success");
-      setFeedback("Material movido al historial correctamente.");
+      const aviso = typeof response.data === "object" ? response.data?.aviso : undefined;
+      setFeedbackSeverity(aviso ? "warning" : "success");
+      setFeedback(aviso ? `Material movido al historial. ${aviso}` : "Material movido al historial correctamente.");
       await loadMaterials();
     } catch (error) {
       setFeedbackSeverity("error");

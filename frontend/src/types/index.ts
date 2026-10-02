@@ -58,6 +58,8 @@ export type Material = {
   activo: boolean;
   linkedOrdersCount?: number;
   linkedCantosCount?: number;
+  /** Vinculos con el catalogo de modulos y las solicitudes de modulos. */
+  linkedModulesCount?: number;
   canDeletePermanently?: boolean;
   fechaCreacion?: string;
   fechaActualizacion?: string;
