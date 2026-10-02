@@ -27,6 +27,30 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 · equipo Pinformatico15 · rama main
+
+**Pasos:** F2.1 terminado.
+
+**Hecho:**
+- **Modelos del catálogo en `schema.prisma`**: CategoriaModulo, Modulo, ModuloImagen, ModuloParametro, ModuloPieza, ModuloPerfilCanto, ModuloPiezaCanto, ConfiguracionModulos (con clave foránea al material de fondo, DECISIONES 9), Herraje y ModuloHerraje. También las relaciones inversas en `Material`.
+- **Migración `20261003120000_modulos_catalogo`**:
+  - se generó con `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script`, con `DATABASE_URL` apuntando al contenedor;
+  - se aplicó con `migrate deploy`, sin diferencias;
+  - las claves foráneas se revisaron: cascada desde el módulo, SetNull en el material de fondo y Restrict en el material fijo y en el herraje.
+
+**Nota para F2.3:** las claves foráneas nuevas a `materiales` hacen que el borrado permanente de un material usado en el catálogo falle con P2003. Hay que contarlas en `countMaterialLinks` (spec §5.6).
+
+**Verificaciones:**
+- tests 39, 12 y 5, todos en verde;
+- `check:optimizer` y `tsc` en verde;
+- `npm run build` en verde.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F2.2, migración de pedidos. Se genera con `--create-only` (o con `migrate diff`) y se edita a mano el backfill de `numero` por `fechaCreacion` (spec §5.5, punto 2). Lleva `fechaEntrega @db.Date` (DECISIONES 8).
+
+---
+
 ## 2026-10-02 (noche, 3) · equipo Pinformatico15 · rama main
 
 **Pasos:** F0.10 terminado. Con eso, todo el código de la Fase 0 está hecho.

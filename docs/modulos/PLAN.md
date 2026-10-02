@@ -10,11 +10,11 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 ## 1. Estado actual
 
-**Actualizado:** 2026-10-02
+**Actualizado:** 2026-10-03
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F0.10. Con eso, todo el código de la Fase 0 está hecho.
-- **Próximo paso:** **F2.1**, esquema del catálogo de módulos. De la Fase 0 solo quedan F0.7 y F0.8, que esperan a Gonzalo y al taller, y F0.9, opcional, que depende de F0.8.
+- **Último paso terminado:** F2.1. Todo el código de la Fase 0 está hecho.
+- **Próximo paso:** **F2.2**, migración de pedidos (`Pedido.numero` con backfill, `tipo`, `PedidoModulo`). De la Fase 0 solo quedan F0.7 y F0.8, que esperan a Gonzalo y al taller, y F0.9, opcional, que depende de F0.8.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
@@ -31,7 +31,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.9 | Búsqueda extra en pedidos chicos (opcional) | [ ] después de F0.8 |
 | F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
-| F2.1–F2.5 | Modelo de datos, migraciones e importador | [ ] |
+| F2.1–F2.5 | Modelo de datos, migraciones e importador | [~] F2.1 hecho |
 | F3.1–F3.4 | API y pantallas del catálogo | [ ] |
 | F4.1–F4.5 | API y asistente de solicitudes de módulos | [ ] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
@@ -257,7 +257,8 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 
 ### Fase 2: Modelo de datos, migraciones e importador (spec §5 y §16)
 
-#### F2.1 Esquema del catálogo · [ ]
+#### F2.1 Esquema del catálogo · [x]
+- **Hecho (2026-10-03):** migración `20261003120000_modulos_catalogo`, generada con `prisma migrate diff` contra la copia del backup y aplicada sin diferencias. Crea 3 enums y 10 tablas, sin tocar las existentes. Las relaciones con los pedidos van en F2.2. Por ahora la API no usa estas tablas.
 - **Depende de:** F1.
 - **Leer:** spec §5.1, §5.2, §5.4 y §5.5 (punto 1); DECISIONES 9.
 - **Hacer:**
