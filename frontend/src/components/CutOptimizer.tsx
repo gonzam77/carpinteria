@@ -5,7 +5,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { BoardPlan, FreeRect, PlacedPiece, calculateBoardUtilization, getLargestFreeRect } from "../lib/cutOptimizer";
-import { computeOrderEstimate } from "../lib/orderEstimate";
+import { computeOrderEstimate, type EstimateTotals } from "../lib/orderEstimate";
 import { BudgetSettings, Material, OptimizerSettings, OrderDetail } from "../types";
 
 type MaterialCutResult = {
@@ -23,21 +23,9 @@ type MaterialCutResult = {
   edgeMeters: number;
   cutCost: number;
   cost: number;
+  /** false si alguna pieza no entra en la placa o la placa no tiene medidas: no se muestra costo. */
+  entra: boolean;
   unplaced: string[];
-};
-
-const DEFAULT_OPTIMIZER_SETTINGS: OptimizerSettings = {
-  id: "default",
-  espesorSierraMm: 4.3,
-  perfiladoBordeMm: 10
-};
-
-const DEFAULT_BUDGET_SETTINGS: BudgetSettings = {
-  id: "default",
-  manoObraCanto045Mm: 0,
-  manoObraCanto1Mm: 0,
-  manoObraCanto2Mm: 0,
-  manoObraPlacaPorPlaca: 0
 };
 
 const pieceColors = [
@@ -55,9 +43,11 @@ const pieceColors = [
   { background: "#e2e8f0", border: "#94a3b8" }
 ];
 
-function resolveMaterialId(row: OrderDetail, materials: Material[]) {
-  return row.materialId || materials.find((material) => material.nombre === row.material)?.id || "";
+function resolveMaterialId(row: OrderDetail, plates: Material[]) {
+  return row.materialId || plates.find((material) => material.nombre === row.material)?.id || "";
 }
+
+const EDGE_ID_FIELDS = ["cantoLargo1Id", "cantoLargo2Id", "cantoAncho1Id", "cantoAncho2Id"] as const;
 
 function formatMoney(value: number) {
   return value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
@@ -67,23 +57,49 @@ function formatMm(value: number) {
   return Number.isInteger(value) ? `${value}` : value.toFixed(1);
 }
 
-type CutCalculation = { results: MaterialCutResult[]; totalBoards: number; totalCost: number };
+type CutCalculation = {
+  results: MaterialCutResult[];
+  totalBoards: number;
+  totals: EstimateTotals;
+  /** Lo que haria rechazar la solicitud en el backend. Si hay alguno, no se muestra ningun costo. */
+  errores: string[];
+};
 
 // Placas y costos salen de la misma funcion que usa el backend para la constancia, el listado de
 // materiales y el stock (lib/orderEstimate.ts): para las mismas filas, el plano muestra los mismos numeros.
+// Lo que el backend rechazaria (placas o cantos no disponibles, medidas no enteras, piezas que no entran)
+// se muestra como error y sin costo, en lugar de calcular un costo parcial.
 function calculateCuts(rows: OrderDetail[], materials: Material[], variant: number, settings: OptimizerSettings, budgetSettings: BudgetSettings): CutCalculation {
-  const plates = materials.filter((material) => material.tipo === "PLACA" && material.anchoPlaca && material.altoPlaca);
+  const plates = materials.filter((material) => material.tipo === "PLACA");
+  const cantos = materials.filter((material) => material.tipo === "CANTO");
   const plateIndex = new Map(plates.map((plate, index) => [plate.id, index]));
+  const cantoIds = new Set(cantos.map((canto) => canto.id));
+  const preparedRows = rows.map((row) => ({ ...row, materialId: resolveMaterialId(row, plates) }));
+  const errores: string[] = [];
+
+  const withoutPlate = preparedRows.filter((row) => !plateIndex.has(row.materialId));
+  if (withoutPlate.length) {
+    const names = [...new Set(withoutPlate.map((row) => row.material || "sin placa"))].join(", ");
+    errores.push(`Hay ${withoutPlate.length} pieza(s) con una placa que no esta disponible (inactiva o eliminada): ${names}. Elegi otra placa para poder guardar la solicitud.`);
+  }
+  const withoutCanto = preparedRows.filter((row) => EDGE_ID_FIELDS.some((field) => row[field] && !cantoIds.has(row[field] as string)));
+  if (withoutCanto.length) {
+    errores.push(`Hay ${withoutCanto.length} pieza(s) con un canto que no esta disponible (inactivo o eliminado). Elegi otro canto para poder guardar la solicitud.`);
+  }
+  const notWhole = preparedRows.filter((row) => [row.largo, row.ancho, row.cantidad].some((value) => !Number.isInteger(Number(value)) || Number(value) <= 0));
+  if (notWhole.length) {
+    errores.push("El largo, el ancho y la cantidad de cada pieza tienen que ser numeros enteros mayores a 0.");
+  }
+
   const estimate = computeOrderEstimate({
-    rows: rows
-      .map((row) => ({ ...row, materialId: resolveMaterialId(row, materials) }))
-      .filter((row) => plateIndex.has(row.materialId)),
+    rows: preparedRows.filter((row) => plateIndex.has(row.materialId)),
     plates,
-    cantos: materials.filter((material) => material.tipo === "CANTO"),
+    cantos,
     optimizerSettings: settings,
     budgetSettings,
     variant
   });
+  errores.push(...estimate.errores.map((error) => error.mensaje));
 
   const results = estimate.porMaterial
     .filter((item) => item.placa && item.piezas > 0)
@@ -105,11 +121,12 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
         edgeMeters: item.mmCanto / 1000,
         cutCost: item.costoManoObraCortesCentavos / 100,
         cost: item.totalCentavos / 100,
+        entra: item.entra,
         unplaced: item.unplaced.map((piece) => `${piece.label} (${piece.height}x${piece.width})`)
       };
     });
 
-  return { results, totalBoards: estimate.totales.placasEstimadas, totalCost: estimate.totales.presupuestoEstimado };
+  return { results, totalBoards: estimate.totales.placasEstimadas, totals: estimate.totales, errores };
 }
 
 function edgeLineStyle(side: "top" | "right" | "bottom" | "left") {
@@ -350,7 +367,8 @@ function boardLargestRemnantLabel(board: BoardPlan) {
 }
 
 function CutResults({ calculation, settings }: { calculation: CutCalculation; settings: OptimizerSettings }) {
-  const { results, totalBoards, totalCost } = calculation;
+  const { results, totalBoards, totals, errores } = calculation;
+  const hasErrors = errores.length > 0;
 
   return (
     <Paper sx={{ p: { xs: 2, sm: 2.5 }, overflow: "hidden" }}>
@@ -358,9 +376,19 @@ function CutResults({ calculation, settings }: { calculation: CutCalculation; se
         <Box>
           <Typography variant="h6">Optimizador de cortes</Typography>
           <Typography color="text.secondary">
-            Placas necesarias: {totalBoards} - Costo estimado: {formatMoney(totalCost)}
+            Placas necesarias: {totalBoards} - Costo estimado: {hasErrors ? "no se puede calcular hasta corregir los errores" : formatMoney(totals.presupuestoEstimado)}
           </Typography>
+          {!hasErrors && (
+            <Typography variant="body2" color="text.secondary">
+              Placas: {formatMoney(totals.costoPlacas)} - Mano de obra por cortes: {formatMoney(totals.costoManoObraCortes)} - Material canto: {formatMoney(totals.costoMaterialCantos)} - Pegado canto: {formatMoney(totals.costoPegadoCantos)} ({totals.metrosCanto.toFixed(2)} m de canto)
+            </Typography>
+          )}
         </Box>
+        {errores.map((error) => (
+          <Alert key={error} severity="error" sx={{ "& .MuiAlert-message": { minWidth: 0, overflowWrap: "anywhere" } }}>
+            {error}
+          </Alert>
+        ))}
         <Alert
           severity="warning"
           variant="outlined"
@@ -408,7 +436,9 @@ function CutResults({ calculation, settings }: { calculation: CutCalculation; se
               {result.material.nombre} {result.material.espesorMm}mm - Placa {result.material.anchoPlaca}x{result.material.altoPlaca} mm
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Costo placas: {formatMoney(result.boardCost)} ({result.optimizedBoards.length} placas) - Mano de obra por cortes: {formatMoney(result.cutCost)} - Material canto: {formatMoney(result.edgeMaterialCost)} - Pegado canto: {formatMoney(result.edgeLaborCost)} - Total cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - TOTAL: {formatMoney(result.cost)}
+              {result.entra && !hasErrors
+                ? <>Costo placas: {formatMoney(result.boardCost)} ({result.optimizedBoards.length} placas) - Mano de obra por cortes: {formatMoney(result.cutCost)} - Material canto: {formatMoney(result.edgeMaterialCost)} - Pegado canto: {formatMoney(result.edgeLaborCost)} - Total cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - TOTAL: {formatMoney(result.cost)}</>
+                : `${result.optimizedBoards.length} placas en el acomodo - sin costo hasta corregir los errores`}
             </Typography>
             {result.unplaced.length > 0 && (
               <Alert
@@ -486,15 +516,28 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
   const [calculation, setCalculation] = useState<CutCalculation | null>(null);
   const results = calculation?.results ?? [];
   const [variant, setVariant] = useState(0);
-  const [settings, setSettings] = useState<OptimizerSettings>(DEFAULT_OPTIMIZER_SETTINGS);
+  // Sin la configuracion real (sierra y perfilado) no se calcula: con valores por defecto el plano podia
+  // mostrar otras placas que la constancia.
+  const [settings, setSettings] = useState<OptimizerSettings | null>(null);
+  const [settingsError, setSettingsError] = useState("");
   const [budgetSettings, setBudgetSettings] = useState<BudgetSettings | null>(null);
   const [budgetSettingsError, setBudgetSettingsError] = useState("");
 
   useEffect(() => {
     api
       .get<OptimizerSettings>("/optimizer-settings")
-      .then((response) => setSettings(response.data))
-      .catch(() => setSettings(DEFAULT_OPTIMIZER_SETTINGS));
+      .then((response) => {
+        setSettings(response.data);
+        setSettingsError("");
+      })
+      .catch((error) => {
+        setSettings(null);
+        setSettingsError(
+          axios.isAxiosError(error) && error.response?.status === 401
+            ? "Tu sesion expiro. Volve a ingresar para calcular el plano de cortes."
+            : "No se pudo traer la configuracion del optimizador (sierra y perfilado). Revisa la conexion e intenta de nuevo."
+        );
+      });
 
     api
       .get<BudgetSettings>("/budget-settings")
@@ -516,7 +559,7 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
   }, []);
 
   function calculate(nextVariant = 0) {
-    if (!budgetSettings) return;
+    if (!settings || !budgetSettings) return;
     setVariant(nextVariant);
     setCalculation(calculateCuts(rows, materials, nextVariant, settings, budgetSettings));
   }
@@ -524,13 +567,14 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
   useEffect(() => {
     setCalculation(null);
     setVariant(0);
-    if (autoCalculate && rows.length && materials.length && budgetSettings) {
+    if (autoCalculate && rows.length && materials.length && settings && budgetSettings) {
       setCalculation(calculateCuts(rows, materials, 0, settings, budgetSettings));
     }
   }, [autoCalculate, rows, materials, settings, budgetSettings]);
 
   return (
     <Stack spacing={2}>
+      {settingsError && <Alert severity="error">{settingsError}</Alert>}
       {budgetSettingsError && <Alert severity="error">{budgetSettingsError}</Alert>}
       {budgetSettings &&
         budgetSettings.manoObraPlacaPorPlaca === 0 &&
@@ -542,7 +586,7 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
           </Alert>
         )}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-        <Button type="button" variant="contained" startIcon={<CalculateIcon />} onClick={() => calculate(0)} disabled={!budgetSettings} sx={{ width: { xs: "100%", sm: "auto" } }}>
+        <Button type="button" variant="contained" startIcon={<CalculateIcon />} onClick={() => calculate(0)} disabled={!settings || !budgetSettings} sx={{ width: { xs: "100%", sm: "auto" } }}>
           Optimizar cortes
         </Button>
         {results.length > 0 && (
@@ -551,7 +595,7 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
           </Button>
         )}
       </Stack>
-      {calculation && results.length > 0 && <CutResults calculation={calculation} settings={settings} />}
+      {calculation && settings && (results.length > 0 || calculation.errores.length > 0) && <CutResults calculation={calculation} settings={settings} />}
     </Stack>
   );
 }
