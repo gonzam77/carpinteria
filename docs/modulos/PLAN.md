@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-02
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F0.3.
-- **Próximo paso:** **F0.4**, una sola verdad por pedido. Además, Gonzalo tiene que desplegar F0.1 y F0.3 juntos (F0.1b): los dos cambian código compartido.
+- **Último paso terminado:** F0.4.
+- **Próximo paso:** **F0.5**, reserva de stock exacta. Además, Gonzalo tiene que desplegar F0.1, F0.3 y F0.4 juntos (F0.1b). La migración de F0.4 la aplica sola el contenedor del backend al arrancar (`prisma migrate deploy`).
 - **Esperando decisiones:** ver §6.
 
 | Paso | Qué | Estado |
@@ -23,7 +23,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.1b | Despliegue de F0.1 | [ ] |
 | F0.2 | Medir el impacto con el backup de producción | [x] |
 | F0.3 | Presupuesto exacto con una función compartida | [x] |
-| F0.4 | Una sola verdad por pedido: detalle por material y orden estable | [ ] |
+| F0.4 | Una sola verdad por pedido: detalle por material y orden estable | [x] |
 | F0.5 | Reserva de stock exacta y transiciones de estado | [ ] |
 | F0.6 | Plano de cortes coherente con el backend | [ ] |
 | F0.7 | Constancias desactualizadas (decisión comercial) | [!] espera a Gonzalo |
@@ -183,7 +183,8 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - §2.1;
   - recalcular los pedidos del backup (§7) y anotar las diferencias de centavos frente a lo guardado.
 
-#### F0.4 Una sola verdad por pedido · [ ]
+#### F0.4 Una sola verdad por pedido · [x]
+- **Hecho (2026-10-02):** ver DECISIONES 0.4 y 11. Están la migración `20261002120000_estimacion_detalle_e_indice`, `Pedido.estimacionDetalle` (que escribe `buildOrderEstimateSnapshot`), `DetallePedido.indice` y el helper `DETALLES_ORDENADOS` (`order-queries.ts`). El listado de materiales y el dashboard leen el detalle. Para los pedidos anteriores (`origen: RECALCULADO`), el listado muestra un aviso.
 - **Depende de:** F0.3.
 - **Leer:** DECISIONES 0.4 y 0.5; spec §5.3 (DetallePedido.orden).
 - **Hacer:**

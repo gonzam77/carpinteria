@@ -27,6 +27,32 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-02 (tarde) · equipo Pinformatico15 · rama main
+
+**Pasos:** F0.4 terminado.
+
+**Hecho:**
+- **Migración `20261002120000_estimacion_detalle_e_indice`:** agrega `Pedido.estimacionDetalle` y `DetallePedido.indice`, con backfill por `ctid`, más un índice `(pedidoId, indice)`. Se probó con `migrate deploy` sobre el contenedor: no queda diferencia entre el esquema y la base.
+- **El snapshot guarda el detalle del cálculo**, `normalizeDetails` numera las filas y todas las lecturas usan `DETALLES_ORDENADOS` (`order-queries.ts`).
+- **El listado de materiales y el dashboard leen el detalle guardado** (`orderMaterialBoards`). En los pedidos anteriores, el diálogo de materiales avisa que se recalculó.
+- **Prueba de punta a punta:** backend local en el puerto 4100 contra la copia, sin push, con un pedido de prueba de 38 filas que después se borró. 12 de 12 chequeos: orden de las filas, detalle guardado, el listado igual a la constancia, y editar sin cambios o con las filas invertidas da el mismo snapshot.
+- **En la copia del backup** quedaron vacías las suscripciones push, para no notificar a nadie en las pruebas.
+
+**Verificaciones:**
+- tests 38, 12 y 5, todos en verde;
+- `check:optimizer` y `tsc` en verde;
+- `npm run build` en verde.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F0.5, reserva de stock exacta. Reservar desde `estimacionDetalle`, guardar lo reservado por material y liberar exactamente eso, con transiciones idempotentes, actualización condicional del estado y ajuste de stock por delta.
+
+**Esperando a Gonzalo o a ROMA:**
+- desplegar F0.1, F0.3 y F0.4 juntos;
+- P1 a P8 sin cambios.
+
+---
+
 ## 2026-10-02 · equipo Pinformatico15 · rama main
 
 **Pasos:** F0.3 terminado. F0.1b sigue pendiente porque lo despliega Gonzalo en el servidor.
