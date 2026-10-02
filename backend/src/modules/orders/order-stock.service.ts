@@ -1,7 +1,7 @@
-import { EstadoPedido, TipoMaterial, type DetallePedido, type Material, type PrismaClient } from "../../generated/prisma/client.js";
+import { EstadoPedido, type DetallePedido, type PrismaClient } from "../../generated/prisma/client.js";
 import { AppError } from "../../utils/http.js";
 // Mismo calculo que el presupuesto y el plano de cortes: se reserva lo que la constancia informa.
-import { calculateBoardsForMaterial } from "./order-estimate.service.js";
+import { calculateOrderMaterialBoardsEstimate } from "./order-estimate.service.js";
 
 export async function getOptimizerSettings(tx: PrismaClient) {
   return tx.configuracionOptimizador.upsert({
@@ -12,25 +12,8 @@ export async function getOptimizerSettings(tx: PrismaClient) {
 }
 
 export async function calculateOrderMaterialBoards(tx: PrismaClient, detalles: DetallePedido[]) {
-  const materialIds = [...new Set(detalles.map((detail) => detail.materialId).filter(Boolean))] as string[];
-  if (!materialIds.length) return [];
-
-  const settings = await getOptimizerSettings(tx);
-  const materials = await tx.material.findMany({
-    where: { id: { in: materialIds }, tipo: TipoMaterial.PLACA }
-  });
-  const materialsById = new Map(materials.map((material) => [material.id, material]));
-
-  return materialIds.map((materialId) => {
-    const material = materialsById.get(materialId);
-    if (!material) throw new AppError(400, "Material no encontrado para calcular stock.");
-    const materialDetails = detalles.filter((detail) => detail.materialId === materialId);
-    const boards = calculateBoardsForMaterial(materialDetails, material, settings);
-    if (!Number.isFinite(boards)) {
-      throw new AppError(400, `Hay piezas que no entran en la placa ${material.nombre}.`);
-    }
-    return { material, boards };
-  });
+  if (!detalles.some((detail) => detail.materialId)) return [];
+  return calculateOrderMaterialBoardsEstimate(tx, detalles);
 }
 
 export async function calculateOrderStockShortages(tx: PrismaClient, detalles: DetallePedido[]) {

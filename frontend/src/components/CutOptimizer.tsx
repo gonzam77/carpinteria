@@ -4,15 +4,8 @@ import { Alert, Box, Button, Divider, Paper, Stack, Typography } from "@mui/mate
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import {
-  BoardPlan,
-  FreeRect,
-  PlacedPiece,
-  buildPiecesFromRows,
-  calculateBoardUtilization,
-  getLargestFreeRect,
-  optimizeCutLayout
-} from "../lib/cutOptimizer";
+import { BoardPlan, FreeRect, PlacedPiece, calculateBoardUtilization, getLargestFreeRect } from "../lib/cutOptimizer";
+import { computeOrderEstimate } from "../lib/orderEstimate";
 import { BudgetSettings, Material, OptimizerSettings, OrderDetail } from "../types";
 
 type MaterialCutResult = {
@@ -74,112 +67,49 @@ function formatMm(value: number) {
   return Number.isInteger(value) ? `${value}` : value.toFixed(1);
 }
 
-function materialBoardWidthMm(material: Material) {
-  return material.anchoPlaca ?? 0;
-}
+type CutCalculation = { results: MaterialCutResult[]; totalBoards: number; totalCost: number };
 
-function materialBoardHeightMm(material: Material) {
-  return material.altoPlaca ?? 0;
-}
+// Placas y costos salen de la misma funcion que usa el backend para la constancia, el listado de
+// materiales y el stock (lib/orderEstimate.ts): para las mismas filas, el plano muestra los mismos numeros.
+function calculateCuts(rows: OrderDetail[], materials: Material[], variant: number, settings: OptimizerSettings, budgetSettings: BudgetSettings): CutCalculation {
+  const plates = materials.filter((material) => material.tipo === "PLACA" && material.anchoPlaca && material.altoPlaca);
+  const plateIndex = new Map(plates.map((plate, index) => [plate.id, index]));
+  const estimate = computeOrderEstimate({
+    rows: rows
+      .map((row) => ({ ...row, materialId: resolveMaterialId(row, materials) }))
+      .filter((row) => plateIndex.has(row.materialId)),
+    plates,
+    cantos: materials.filter((material) => material.tipo === "CANTO"),
+    optimizerSettings: settings,
+    budgetSettings,
+    variant
+  });
 
-function usableBoardWidthMm(material: Material, settings: OptimizerSettings) {
-  return Math.max(0, materialBoardWidthMm(material) - settings.perfiladoBordeMm * 2);
-}
-
-function usableBoardHeightMm(material: Material, settings: OptimizerSettings) {
-  return Math.max(0, materialBoardHeightMm(material) - settings.perfiladoBordeMm * 2);
-}
-
-function calculateRowEdgeCost(row: OrderDetail, cantoById: Map<string, Material>, budgetSettings: BudgetSettings) {
-  const largoMeters = Number(row.largo || 0) / 1000;
-  const anchoMeters = Number(row.ancho || 0) / 1000;
-  const cantidad = Number(row.cantidad || 0);
-
-  const edges = [
-    { id: row.cantoLargo1Id, meters: largoMeters },
-    { id: row.cantoLargo2Id, meters: largoMeters },
-    { id: row.cantoAncho1Id, meters: anchoMeters },
-    { id: row.cantoAncho2Id, meters: anchoMeters }
-  ];
-
-  return edges.reduce(
-    (total, edge) => {
-      if (!edge.id) return total;
-      const canto = cantoById.get(edge.id);
-      if (!canto) return total;
-      const laborCostPerMeter =
-        canto.espesorMm === 0.45 ? budgetSettings.manoObraCanto045Mm : canto.espesorMm === 1 ? budgetSettings.manoObraCanto1Mm : canto.espesorMm === 2 ? budgetSettings.manoObraCanto2Mm : 0;
-
-      return {
-        materialCost: total.materialCost + edge.meters * cantidad * canto.valor,
-        laborCost: total.laborCost + edge.meters * cantidad * laborCostPerMeter,
-        meters: total.meters + edge.meters * cantidad
-      };
-    },
-    { materialCost: 0, laborCost: 0, meters: 0 }
-  );
-}
-
-function calculateCuts(rows: OrderDetail[], materials: Material[], variant: number, settings: OptimizerSettings, budgetSettings: BudgetSettings) {
-  const cantoById = new Map(materials.filter((material) => material.tipo === "CANTO").map((material) => [material.id, material]));
-
-  return materials
-    .filter((material) => material.tipo === "PLACA" && material.anchoPlaca && material.altoPlaca)
-    .map((material) => {
-      const materialRows = rows.filter((row) => resolveMaterialId(row, materials) === material.id);
-      if (!materialRows.length) return null;
-
-      const basePieces = buildPiecesFromRows(materialRows, material.id);
-
-      if (!basePieces.length) return null;
-
-      const boardWidthMm = materialBoardWidthMm(material);
-      const boardHeightMm = materialBoardHeightMm(material);
-      const usableWidthMm = usableBoardWidthMm(material, settings);
-      const usableHeightMm = usableBoardHeightMm(material, settings);
-      const optimization = optimizeCutLayout({
-        pieces: basePieces,
-        usableBoardWidthMm: usableWidthMm,
-        usableBoardHeightMm: usableHeightMm,
-        settings,
-        variant
-      });
-
-      const edgeSummary = materialRows.reduce(
-        (total, row) => {
-          const edgeTotals = calculateRowEdgeCost(row, cantoById, budgetSettings);
-          return {
-            materialCost: total.materialCost + edgeTotals.materialCost,
-            laborCost: total.laborCost + edgeTotals.laborCost,
-            meters: total.meters + edgeTotals.meters
-          };
-        },
-        { materialCost: 0, laborCost: 0, meters: 0 }
-      );
-
-      const boards = optimization.boards.filter((board) => board.usedArea > 0);
-      const boardCost = boards.length * material.valor;
-      const cutCost = boards.length * budgetSettings.manoObraPlacaPorPlaca;
-
+  const results = estimate.porMaterial
+    .filter((item) => item.placa && item.piezas > 0)
+    .sort((a, b) => (plateIndex.get(a.materialId) ?? 0) - (plateIndex.get(b.materialId) ?? 0))
+    .map((item): MaterialCutResult => {
+      const material = plates[plateIndex.get(item.materialId) as number];
       return {
         material,
-        boardWidthMm,
-        boardHeightMm,
-        usableBoardWidthMm: usableWidthMm,
-        usableBoardHeightMm: usableHeightMm,
-        minimumPieceArea: optimization.minimumPieceArea,
-        optimizedBoards: boards,
-        boardCost,
-        edgeMaterialCost: edgeSummary.materialCost,
-        edgeLaborCost: edgeSummary.laborCost,
-        edgeCost: edgeSummary.materialCost + edgeSummary.laborCost,
-        edgeMeters: edgeSummary.meters,
-        cutCost,
-        cost: boardCost + edgeSummary.materialCost + edgeSummary.laborCost + cutCost,
-        unplaced: optimization.unplaced.map((piece) => `${piece.label} (${piece.height}x${piece.width})`)
+        boardWidthMm: material.anchoPlaca ?? 0,
+        boardHeightMm: material.altoPlaca ?? 0,
+        usableBoardWidthMm: item.usableBoardWidthMm,
+        usableBoardHeightMm: item.usableBoardHeightMm,
+        minimumPieceArea: item.minimumPieceArea,
+        optimizedBoards: item.boards,
+        boardCost: item.costoPlacasCentavos / 100,
+        edgeMaterialCost: item.costoMaterialCantosCentavos / 100,
+        edgeLaborCost: item.costoPegadoCantosCentavos / 100,
+        edgeCost: (item.costoMaterialCantosCentavos + item.costoPegadoCantosCentavos) / 100,
+        edgeMeters: item.mmCanto / 1000,
+        cutCost: item.costoManoObraCortesCentavos / 100,
+        cost: item.totalCentavos / 100,
+        unplaced: item.unplaced.map((piece) => `${piece.label} (${piece.height}x${piece.width})`)
       };
-    })
-    .filter(Boolean) as MaterialCutResult[];
+    });
+
+  return { results, totalBoards: estimate.totales.placasEstimadas, totalCost: estimate.totales.presupuestoEstimado };
 }
 
 function edgeLineStyle(side: "top" | "right" | "bottom" | "left") {
@@ -255,8 +185,8 @@ function BoardPreview({
   settings: OptimizerSettings;
   minimumUsefulAreaMm2: number;
 }) {
-  const originalBoardWidthMm = materialBoardWidthMm(material);
-  const originalBoardHeightMm = materialBoardHeightMm(material);
+  const originalBoardWidthMm = material.anchoPlaca ?? 0;
+  const originalBoardHeightMm = material.altoPlaca ?? 0;
   const boardWidthMm = originalBoardHeightMm;
   const boardHeightMm = originalBoardWidthMm;
   const usableDisplayRect = transformBoardRect(
@@ -419,9 +349,8 @@ function boardLargestRemnantLabel(board: BoardPlan) {
   return largestFreeRect ? freeRectLabel(largestFreeRect) : "Sin remanente";
 }
 
-function CutResults({ results, settings }: { results: MaterialCutResult[]; settings: OptimizerSettings }) {
-  const totalBoards = results.reduce((total, result) => total + result.optimizedBoards.length, 0);
-  const totalCost = results.reduce((total, result) => total + result.cost, 0);
+function CutResults({ calculation, settings }: { calculation: CutCalculation; settings: OptimizerSettings }) {
+  const { results, totalBoards, totalCost } = calculation;
 
   return (
     <Paper sx={{ p: { xs: 2, sm: 2.5 }, overflow: "hidden" }}>
@@ -554,7 +483,8 @@ function CutResults({ results, settings }: { results: MaterialCutResult[]; setti
 }
 
 export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows: OrderDetail[]; materials: Material[]; autoCalculate?: boolean }) {
-  const [results, setResults] = useState<MaterialCutResult[]>([]);
+  const [calculation, setCalculation] = useState<CutCalculation | null>(null);
+  const results = calculation?.results ?? [];
   const [variant, setVariant] = useState(0);
   const [settings, setSettings] = useState<OptimizerSettings>(DEFAULT_OPTIMIZER_SETTINGS);
   const [budgetSettings, setBudgetSettings] = useState<BudgetSettings | null>(null);
@@ -588,14 +518,14 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
   function calculate(nextVariant = 0) {
     if (!budgetSettings) return;
     setVariant(nextVariant);
-    setResults(calculateCuts(rows, materials, nextVariant, settings, budgetSettings));
+    setCalculation(calculateCuts(rows, materials, nextVariant, settings, budgetSettings));
   }
 
   useEffect(() => {
-    setResults([]);
+    setCalculation(null);
     setVariant(0);
     if (autoCalculate && rows.length && materials.length && budgetSettings) {
-      setResults(calculateCuts(rows, materials, 0, settings, budgetSettings));
+      setCalculation(calculateCuts(rows, materials, 0, settings, budgetSettings));
     }
   }, [autoCalculate, rows, materials, settings, budgetSettings]);
 
@@ -621,7 +551,7 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
           </Button>
         )}
       </Stack>
-      {results.length > 0 && <CutResults results={results} settings={settings} />}
+      {calculation && results.length > 0 && <CutResults calculation={calculation} settings={settings} />}
     </Stack>
   );
 }
