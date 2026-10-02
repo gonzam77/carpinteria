@@ -27,6 +27,32 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (11) · equipo Pinformatico15 · rama main
+
+**Pasos:** F3.2 terminado.
+
+**Hecho:** del lado del navegador:
+- la compresión de imágenes (`lib/imageCompression.ts`), con el codificador separado del canvas para poder testearla;
+- 5 tests;
+- `api/moduleImages.ts`;
+- el hook `useModuleImage`.
+
+**Verificaciones:**
+- frontend `npm test`: 39, 12, 5 y 5, todos en verde;
+- `tsc` y build en verde.
+
+**No probado en el navegador:** la compresión real con canvas y el hook. Se usan en las pantallas de F3.3 y F3.4.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F3.3, pantalla del catálogo:
+- tipos en `frontend/src/types`;
+- rutas `/configuracion-modulos`;
+- menú "Catálogo de módulos";
+- tarjetas, filtros, métricas, duplicar y activar/desactivar (spec §6.1).
+
+---
+
 ## 2026-10-03 (10) · equipo Pinformatico15 · rama main
 
 **Pasos:**

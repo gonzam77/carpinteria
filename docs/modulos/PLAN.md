@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-03
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F3.1 (y el backend de F3.2). Las Fases 0 y 2 están completas.
-- **Próximo paso:** **F3.2**, la parte de imágenes en el frontend (compresión y `useModuleImage`), y después **F3.3**, la pantalla del catálogo.
+- **Último paso terminado:** F3.2. Las Fases 0 y 2 están completas.
+- **Próximo paso:** **F3.3**, la pantalla del catálogo.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -33,7 +33,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
-| F3.1–F3.4 | API y pantallas del catálogo | [~] F3.1 y el backend de F3.2 hechos |
+| F3.1–F3.4 | API y pantallas del catálogo | [~] F3.1 y F3.2 hechos |
 | F4.1–F4.5 | API y asistente de solicitudes de módulos | [ ] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (solo si se contrató) | [!] preguntar a Gonzalo |
@@ -67,7 +67,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 ### 2.1 Verificaciones de siempre
 
 ```bash
-cd frontend && npm test           # optimizador (39), motor de fórmulas (12) y presupuesto (5)
+cd frontend && npm test           # optimizador (39), motor de fórmulas (12), presupuesto (5) y compresión de imágenes (5)
 npm run check:optimizer           # desde la raíz: el código compartido está sincronizado
 cd frontend && npx tsc --noEmit
 cd backend && npx tsc --noEmit
@@ -365,7 +365,12 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - todo con `authenticate` y `authorize(ADMIN)`.
 - **Terminado cuando:** hay tests de servicio y un carpintero recibe 403 en todas las rutas nuevas.
 
-#### F3.2 Imágenes · [~] backend hecho
+#### F3.2 Imágenes · [x]
+- **Frontend hecho (2026-10-03):**
+  - `lib/imageCompression.ts` lleva la imagen a 1200 px como máximo y la comprime a WebP, o a JPEG si el navegador no codifica WebP. Baja la calidad, y si hace falta el tamaño, hasta quedar debajo de 1 MB; si no lo logra, avisa. Tiene tests.
+  - `api/moduleImages.ts` sube y quita imágenes.
+  - `hooks/useModuleImage.ts` baja la imagen con la sesión, la muestra con `createObjectURL` y la cachea por módulo y versión.
+- **No probado en el navegador:** se ve al usarlo en F3.3 y F3.4.
 - **Depende de:** F3.1.
 - **Ya hecho (2026-10-03):**
   - el almacenamiento en disco, la migración y el importador (DECISIONES 12);
