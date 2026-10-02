@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-03
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F0.9. La Fase 0 está completa, y F2.1 también.
-- **Próximo paso:** **F2.2**, la migración de pedidos.
+- **Último paso terminado:** F2.2. La Fase 0 está completa.
+- **Próximo paso:** **F2.3**, materiales y los vínculos nuevos.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
@@ -31,7 +31,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.9 | Optimizador: el mejor resultado posible | [x] |
 | F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
-| F2.1–F2.5 | Modelo de datos, migraciones e importador | [~] F2.1 hecho |
+| F2.1–F2.5 | Modelo de datos, migraciones e importador | [~] F2.1 y F2.2 hechos |
 | F3.1–F3.4 | API y pantallas del catálogo | [ ] |
 | F4.1–F4.5 | API y asistente de solicitudes de módulos | [ ] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
@@ -285,7 +285,13 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - la migración `modulos_catalogo`.
 - **Terminado cuando:** `prisma migrate deploy` aplica sin errores sobre una copia del backup (§7) y el cliente generado compila.
 
-#### F2.2 Migración de pedidos · [ ]
+#### F2.2 Migración de pedidos · [x]
+- **Hecho (2026-10-03):** migración `20261003150000_pedido_tipo_y_modulos`. Se generó con `migrate diff` y se editó a mano el backfill de `numero`. Sobre la copia del backup:
+  - mismos 65 pedidos y 1404 filas, y el mismo presupuesto total;
+  - `numero` del 1 al 65 en orden de creación, y la secuencia sigue en 66;
+  - todos quedan con `tipo = CORTE`;
+  - no queda diferencia entre el esquema y la base;
+  - las pruebas `e2e-f04` y `e2e-f05` pasan.
 - **Depende de:** F2.1 (y F0.4, si ya agregó columnas a `DetallePedido`).
 - **Leer:** spec §5.3 y §5.5 (punto 2); DECISIONES 8.
 - **Hacer:**

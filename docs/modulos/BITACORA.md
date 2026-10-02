@@ -27,6 +27,29 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (5) · equipo Pinformatico15 · rama main
+
+**Pasos:** F2.2 terminado.
+
+**Hecho:**
+- **Esquema:** enums `TipoPedido` y `OrigenDetalle`.
+  - `Pedido` suma `numero`, `tipo`, `fechaEntrega @db.Date`, `emailContacto`, `direccionEntrega` y `costoHerrajes`.
+  - `DetallePedido` suma `pedidoModuloId`, `piezaCodigo`, `origen` y `orden`.
+  - Hay dos tablas nuevas, `PedidoModulo` y `PedidoHerraje`, y las relaciones de color en `Material`.
+- **Migración `20261003150000_pedido_tipo_y_modulos`:** `numero` se completa a mano en orden de creación, con una secuencia y `setval`.
+- **Verificado sobre la copia:**
+  - los conteos y el presupuesto total no cambian;
+  - los números van del 1 al 65 en orden, todos los pedidos quedan como `CORTE` y no queda diferencia entre el esquema y la base;
+  - pasan `e2e-f04` y `e2e-f05`, y los pedidos nuevos toman número desde el 66.
+
+**Verificaciones:** `tsc` del backend en verde. El frontend no cambió.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F2.3, que `countMaterialLinks` y `canDeletePermanently` cuenten los vínculos nuevos, con un 409 claro (spec §5.6).
+
+---
+
 ## 2026-10-03 (4) · equipo Pinformatico15 · rama main
 
 **Pasos:** F0.9 terminado. La Fase 0 está completa.
