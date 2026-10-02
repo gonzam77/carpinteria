@@ -367,3 +367,19 @@ export function evaluateModule(
 
   return { piezas, errores, evaluarExpresion };
 }
+
+// ---------------------------------------------------------------- definicion de un modulo del catalogo
+
+export type ModuleDefinitionInput = { parametros: ParamDef[]; piezas: PieceDef[]; espesorDisenoMm: number };
+
+/**
+ * Evalua un modulo del catalogo como lo hace todo el sistema: la constante ESP es el espesor de diseno y el
+ * redondeo es el de ConfiguracionModulos, que hay que pasar siempre (DECISIONES R6). La usan el editor del
+ * catalogo, la API y el armado de solicitudes, asi las mismas medidas dan las mismas piezas en todos lados.
+ */
+export function evaluateModuleDefinition(definition: ModuleDefinitionInput, valores: Record<string, number>, redondeo: RoundingMode): ModuleEvaluation {
+  return evaluateModule({ parametros: definition.parametros, piezas: definition.piezas }, valores, {
+    redondeo,
+    constantes: { ESP: definition.espesorDisenoMm }
+  });
+}

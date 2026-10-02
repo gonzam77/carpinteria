@@ -3,7 +3,7 @@
 import { readFile } from "node:fs/promises";
 import { Prisma, RolPiezaModulo, TipoMaterial, type PrismaClient } from "../../generated/prisma/client.js";
 import { AppError } from "../../utils/http.js";
-import { evaluateModule, validateIdentifier, type ModuleError, type ParamDef, type RoundingMode } from "../../shared/moduleFormula.js";
+import { evaluateModuleDefinition, validateIdentifier, type ModuleError, type ParamDef, type RoundingMode } from "../../shared/moduleFormula.js";
 import type { ModuloInput } from "./catalog.schemas.js";
 import { moduleImagePath, removeModuleImage, storeModuleImage } from "./module-images.service.js";
 
@@ -34,13 +34,10 @@ type Definition = Pick<ModuloInput, "parametros" | "piezas" | "espesorDisenoMm">
 
 /** Evalua una definicion con el motor compartido: piezas, errores y cantidad de cada herraje. */
 export function evaluateDefinition(definition: Definition, valores: Record<string, number>, redondeo: RoundingMode) {
-  const evaluation = evaluateModule(
-    {
-      parametros: definition.parametros.map((param) => ({ ...param, tipo: param.tipo })) as ParamDef[],
-      piezas: definition.piezas
-    },
+  const evaluation = evaluateModuleDefinition(
+    { parametros: definition.parametros as ParamDef[], piezas: definition.piezas, espesorDisenoMm: definition.espesorDisenoMm },
     valores,
-    { redondeo, constantes: { ESP: definition.espesorDisenoMm } }
+    redondeo
   );
   const errores: ModuleError[] = [...evaluation.errores];
   const herrajes = (definition.herrajes ?? []).map((herraje) => {

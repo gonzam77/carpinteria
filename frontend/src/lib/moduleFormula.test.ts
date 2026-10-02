@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { evaluateModule, parseFormula, roundMm, validateIdentifier, type ModuleDef } from "./moduleFormula.ts";
+import { evaluateModule, evaluateModuleDefinition, parseFormula, roundMm, validateIdentifier, type ModuleDef } from "./moduleFormula.ts";
 
 // Mismo archivo que importa el seed del catalogo: si alguien lo modifica, la paridad con el Excel se vuelve a verificar.
 const catalog = JSON.parse(readFileSync(new URL("../../../backend/prisma/data/modulos-muebles.json", import.meta.url), "utf8"));
@@ -165,4 +165,16 @@ test("nombres de medidas y piezas", () => {
   assert.match(validateIdentifier("luz") ?? "", /mayusculas/);
   assert.match(validateIdentifier("SI") ?? "", /funcion/);
   assert.match(validateIdentifier("ESP") ?? "", /constante/);
+});
+
+test("evaluateModuleDefinition: ESP es el espesor de diseno y el redondeo es el que se pasa", () => {
+  const definition = {
+    parametros: [{ clave: "ALTO", tipo: "MEDIDA" as const, valorDefecto: 1000.5 }],
+    piezas: [piece("PUERTA", "ALTO - 2 * ESP", "400.5")]
+  };
+  const redondeada = evaluateModuleDefinition({ ...definition, espesorDisenoMm: 18 }, {}, "REDONDEAR");
+  assert.deepEqual([redondeada.piezas[0].largo, redondeada.piezas[0].ancho], [965, 401]);
+  const truncada = evaluateModuleDefinition({ ...definition, espesorDisenoMm: 15 }, { ALTO: 1000.5 }, "TRUNCAR");
+  assert.deepEqual([truncada.piezas[0].largo, truncada.piezas[0].ancho], [970, 400]);
+  assert.equal(truncada.piezas[0].largoExacto, 970.5);
 });
