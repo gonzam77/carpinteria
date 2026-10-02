@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
-    "test": "npm run test:cut-optimizer && npm run test:module-formula && npm run test:order-estimate && npm run test:image-compression",
+    "test": "npm run test:cut-optimizer && npm run test:module-formula && npm run test:order-estimate && npm run test:image-compression && npm run test:module-editor",
     "test:cut-optimizer": "node --test --experimental-strip-types src/lib/cutOptimizer.test.ts",
     "test:module-formula": "node --test --experimental-strip-types src/lib/moduleFormula.test.ts",
     "test:order-estimate": "node --test --experimental-strip-types src/lib/orderEstimate.test.ts",
     "test:image-compression": "node --test --experimental-strip-types src/lib/imageCompression.test.ts",
+    "test:module-editor": "node --test --experimental-strip-types src/lib/moduleEditor.test.ts",
     "bench:optimizer": "node --experimental-strip-types --no-warnings src/lib/cutOptimizer.bench.ts",
     "preview": "vite preview --host 0.0.0.0"
   },

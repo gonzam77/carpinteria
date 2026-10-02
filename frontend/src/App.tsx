@@ -7,6 +7,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MaterialsPage } from "./pages/MaterialsPage";
 import { ModuleCatalogPage } from "./pages/ModuleCatalogPage";
+import { ModuleEditorPage } from "./pages/ModuleEditorPage";
 import { OrderDetailPage } from "./pages/OrderDetailPage";
 import { OrderFormPage } from "./pages/OrderFormPage";
 import { OptimizerSettingsPage } from "./pages/OptimizerSettingsPage";
@@ -70,6 +71,22 @@ export function App() {
           element={
             <ProtectedRoute roles={["ADMIN"]}>
               <ModuleCatalogPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="configuracion-modulos/nuevo"
+          element={
+            <ProtectedRoute roles={["ADMIN"]}>
+              <ModuleEditorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="configuracion-modulos/:id"
+          element={
+            <ProtectedRoute roles={["ADMIN"]}>
+              <ModuleEditorPage />
             </ProtectedRoute>
           }
         />
