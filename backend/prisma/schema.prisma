@@ -97,6 +97,9 @@ model Material {
   detalles           DetallePedido[]
   placaMaterial      Material?       @relation("CantoPlaca", fields: [placaMaterialId], references: [id], onDelete: SetNull)
   cantos             Material[]      @relation("CantoPlaca")
+  modulosFondo       Modulo[]        @relation("ModuloFondo")
+  piezasModuloFijas  ModuloPieza[]   @relation("ModuloPiezaFijo")
+  configuracionesModulosFondo ConfiguracionModulos[] @relation("ConfiguracionModulosFondo")
 
   @@index([tipo])
   @@index([activo])
@@ -217,3 +220,181 @@ model PushSubscription {
 }
 
 
+
+// ---------------------------------------------------------------- Modulos a medida: catalogo (F2.1)
+// Especificacion: docs/modulos/ESPECIFICACION-MODULOS-A-MEDIDA.md §5. Las relaciones con los pedidos
+// (PedidoModulo y PedidoHerraje) se agregan en la migracion de pedidos (F2.2).
+
+enum TipoParametroModulo {
+  MEDIDA // mm, se pide al cargar (ANCHO, ALTO, PROFUNDIDAD, LUZ_ABAJO...)
+  ENTERO // cantidad entera que se pide al cargar (ej. ESTANTES)
+  OPCION // lista de opciones numeradas (ej. VARIANTE_FONDO)
+  CALCULADO // no se pide; se calcula con una formula (ej. LUZ_ARRIBA en Torre horno)
+}
+
+enum RolPiezaModulo {
+  ESQUELETO // toma el color de esqueleto de la solicitud
+  FRENTE // toma el color de frentes
+  FONDO // toma el material de fondo (del modulo o de ConfiguracionModulos)
+  FIJO // usa siempre ModuloPieza.materialFijoId
+}
+
+enum LadoCanto {
+  LARGO_1
+  LARGO_2
+  ANCHO_1
+  ANCHO_2
+}
+
+model CategoriaModulo {
+  id      String   @id @default(uuid())
+  nombre  String   @unique
+  orden   Int      @default(0)
+  activo  Boolean  @default(true)
+  modulos Modulo[]
+
+  @@map("categorias_modulo")
+}
+
+model Modulo {
+  id                 String              @id @default(uuid())
+  codigo             String              @unique // UPPER_SNAKE, ej. BAJO_MESADA_2_PUERTAS
+  nombre             String
+  categoriaId        String
+  descripcion        String?
+  activo             Boolean             @default(true)
+  espesorDisenoMm    Float               @default(18) // espesor con el que estan escritas las formulas
+  materialFondoId    String? // si es null usa ConfiguracionModulos.materialFondoId
+  observaciones      String? // notas internas (ej. las de importacion del Excel)
+  version            Int                 @default(1) // +1 en cada guardado; se copia al snapshot
+  fechaCreacion      DateTime            @default(now())
+  fechaActualizacion DateTime            @updatedAt
+  categoria          CategoriaModulo     @relation(fields: [categoriaId], references: [id])
+  materialFondo      Material?           @relation("ModuloFondo", fields: [materialFondoId], references: [id], onDelete: SetNull)
+  imagen             ModuloImagen?
+  parametros         ModuloParametro[]
+  piezas             ModuloPieza[]
+  perfiles           ModuloPerfilCanto[]
+  herrajes           ModuloHerraje[]
+
+  @@index([categoriaId])
+  @@index([activo])
+  @@map("modulos")
+}
+
+model ModuloImagen {
+  moduloId           String   @id
+  mime               String // image/jpeg | image/png | image/webp
+  datos              Bytes
+  fechaActualizacion DateTime @updatedAt
+  modulo             Modulo   @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+
+  @@map("modulos_imagen")
+}
+
+model ModuloParametro {
+  id           String              @id @default(uuid())
+  moduloId     String
+  clave        String // UPPER_SNAKE: ANCHO, ALTO, PROFUNDIDAD, LUZ_ABAJO...
+  etiqueta     String
+  tipo         TipoParametroModulo @default(MEDIDA)
+  valorDefecto Float?
+  minimo       Float?
+  maximo       Float?
+  opciones     Json? // OPCION: [{ "valor": 1, "etiqueta": "Fondo entero" }, ...]
+  formula      String? // CALCULADO
+  ayuda        String?
+  orden        Int                 @default(0)
+  modulo       Modulo              @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+
+  @@unique([moduloId, clave])
+  @@map("modulos_parametro")
+}
+
+model ModuloPieza {
+  id              String             @id @default(uuid())
+  moduloId        String
+  codigo          String // UPPER_SNAKE unico dentro del modulo: PISO, LATERAL, PUERTAS...
+  nombre          String // como sale en el Excel de maquina y en la hoja de taller
+  rol             RolPiezaModulo     @default(ESQUELETO)
+  materialFijoId  String? // obligatorio si rol = FIJO
+  formulaLargo    String
+  formulaAncho    String
+  formulaCantidad String             @default("1")
+  permiteRotar    Boolean            @default(false)
+  orden           Int                @default(0)
+  observaciones   String?
+  modulo          Modulo             @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  materialFijo    Material?          @relation("ModuloPiezaFijo", fields: [materialFijoId], references: [id], onDelete: Restrict)
+  cantos          ModuloPiezaCanto[]
+
+  @@unique([moduloId, codigo])
+  @@map("modulos_pieza")
+}
+
+model ModuloPerfilCanto {
+  id             String             @id @default(uuid())
+  moduloId       String
+  nombre         String // "Estandar", "Economico"
+  descripcion    String?
+  orden          Int // 1 o 2 (maximo dos perfiles por modulo, validado en el servicio)
+  predeterminado Boolean            @default(false) // exactamente uno por modulo
+  modulo         Modulo             @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  lados          ModuloPiezaCanto[]
+
+  @@unique([moduloId, orden])
+  @@map("modulos_perfil_canto")
+}
+
+model ModuloPiezaCanto {
+  id        String            @id @default(uuid())
+  perfilId  String
+  piezaId   String
+  lado      LadoCanto
+  espesorMm Float // 0.45 | 1 | 2
+  perfil    ModuloPerfilCanto @relation(fields: [perfilId], references: [id], onDelete: Cascade)
+  pieza     ModuloPieza       @relation(fields: [piezaId], references: [id], onDelete: Cascade)
+
+  @@unique([perfilId, piezaId, lado])
+  @@map("modulos_pieza_canto")
+}
+
+model ConfiguracionModulos {
+  id                   String    @id @default("default")
+  materialFondoId      String? // material PLACA por defecto para piezas FONDO (DECISIONES 9: con clave foranea)
+  redondeo             String    @default("REDONDEAR") // REDONDEAR | TRUNCAR
+  diasEntregaDefecto   Int       @default(15)
+  diasAvisoVencimiento Int       @default(3)
+  herrajesHabilitados  Boolean   @default(false)
+  fechaActualizacion   DateTime  @updatedAt
+  materialFondo        Material? @relation("ConfiguracionModulosFondo", fields: [materialFondoId], references: [id], onDelete: SetNull)
+
+  @@map("configuracion_modulos")
+}
+
+// Herrajes (opcional, detras de ConfiguracionModulos.herrajesHabilitados). Las tablas se crean igual.
+model Herraje {
+  id                 String          @id @default(uuid())
+  nombre             String          @unique
+  unidad             String          @default("unidad") // unidad | par | juego | metro
+  valor              Float           @default(0)
+  activo             Boolean         @default(true)
+  fechaCreacion      DateTime        @default(now())
+  fechaActualizacion DateTime        @updatedAt
+  modulos            ModuloHerraje[]
+
+  @@map("herrajes")
+}
+
+model ModuloHerraje {
+  id              String  @id @default(uuid())
+  moduloId        String
+  herrajeId       String
+  formulaCantidad String // ej. "PUERTAS.cant * SI(PUERTAS.largo > 900; 3; 2)"
+  orden           Int     @default(0)
+  modulo          Modulo  @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  herraje         Herraje @relation(fields: [herrajeId], references: [id], onDelete: Restrict)
+
+  @@unique([moduloId, herrajeId])
+  @@map("modulos_herraje")
+}
