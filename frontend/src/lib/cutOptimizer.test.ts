@@ -328,7 +328,9 @@ test("5 piezas 400x600 dejan pocos remanentes y uno claramente dominante", () =>
   validateSolvedBoards(result);
 });
 
-test("mezcla de 40 piezas valida todas las placas y responde en menos de 1.5s", () => {
+// Hasta F0.9 el limite era 1,5 s. Desde el 2026-10-03, por decision de Gonzalo, el optimizador busca mas para
+// ahorrar placas aunque tarde mas (DECISIONES 0.12); el limite queda como resguardo contra demoras desmedidas.
+test("mezcla de 40 piezas valida todas las placas y responde en menos de 8s", () => {
   const mixedPieces = [
     ...Array.from({ length: 8 }, (_, index) => piece(`a${index}`, 300, 500, true)),
     ...Array.from({ length: 8 }, (_, index) => piece(`b${index}`, 450, 700, true)),
@@ -350,7 +352,7 @@ test("mezcla de 40 piezas valida todas las placas y responde en menos de 1.5s", 
   const elapsedMs = performance.now() - startedAt;
 
   assert.equal(result.unplaced.length, 0);
-  assert.ok(elapsedMs < 1500, `El motor no debe superar 1.5s y tardo ${elapsedMs.toFixed(1)} ms`);
+  assert.ok(elapsedMs < 8000, `El motor no debe superar 8s y tardo ${elapsedMs.toFixed(1)} ms`);
   validateSolvedBoards(result);
 });
 

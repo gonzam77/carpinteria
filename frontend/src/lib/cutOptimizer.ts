@@ -45,6 +45,11 @@ const BEAM_WIDTH = 24;
 const BEAM_BRANCHES = 4;
 const PRIMARY_VARIANT_SEEDS = [0, 1, 3, 8, 26];
 const FLOOR_EXPLORATION_SHARE = 0.35;
+// Presupuesto de trabajo de cada orden de candidatos extra en la etapa de mejora, en proporcion al presupuesto total.
+const EXTRA_ORDER_BUDGET_SHARE = 1;
+// Pedidos chicos (por material) a los que se les da una segunda busqueda con mas presupuesto si quedan arriba de la cota.
+const SMALL_ORDER_PIECES = 24;
+const SMALL_ORDER_BUDGET_FACTOR = 10;
 const CANDIDATE_ORDERS = ["fit-first", "size-first", "board-fit-first", "size-board-fit-first"] as const;
 const BOARD_SCOPED_ORDERS: readonly CandidateOrder[] = ["board-fit-first", "size-board-fit-first"];
 const SIZE_SCOPED_ORDERS: readonly CandidateOrder[] = ["size-first", "size-board-fit-first"];
@@ -1683,13 +1688,29 @@ function runStrategies(
 // distribucion" pide otras variantes solo para ver otro acomodo: si una variante llega a otra
 // cantidad de placas se devuelve la variante 0, asi el plano nunca contradice a la constancia.
 export function optimizeCutLayout(params: OptimizeCutLayoutParams): OptimizeCutLayoutResult {
-  if (params.variant === 0) return optimizeCutLayoutForVariant(params);
+  if (params.variant === 0) return optimizeBestForVariant(params);
 
-  const base = optimizeCutLayoutForVariant({ ...params, variant: 0 });
-  const alternative = optimizeCutLayoutForVariant(params);
+  const base = optimizeBestForVariant({ ...params, variant: 0 });
+  const alternative = optimizeBestForVariant(params);
   const sameOutcome =
     alternative.unplaced.length === base.unplaced.length && countUsedBoards(alternative.boards) === countUsedBoards(base.boards);
   return sameOutcome ? alternative : base;
+}
+
+// En pedidos chicos que quedan por encima de la cota por superficie se vuelve a buscar con mas presupuesto de
+// trabajo. Con pocas piezas la busqueda es barata, y una placa menos es plata que el carpintero no paga. Es
+// determinista: depende solo de las piezas, no del reloj.
+function optimizeBestForVariant(params: OptimizeCutLayoutParams): OptimizeCutLayoutResult {
+  const result = optimizeCutLayoutForVariant(params);
+  const boards = countUsedBoards(result.boards);
+  if (result.unplaced.length || boards <= result.lowerBound || params.pieces.length > SMALL_ORDER_PIECES) return result;
+
+  // La segunda busqueda no repite los ordenes extra: ya se probaron en la primera.
+  const boosted = optimizeCutLayoutForVariant(
+    { ...params, timeBudgetMs: (params.timeBudgetMs ?? DEFAULT_TIME_BUDGET_MS) * SMALL_ORDER_BUDGET_FACTOR },
+    false
+  );
+  return !boosted.unplaced.length && countUsedBoards(boosted.boards) < boards ? boosted : result;
 }
 
 export function countUsedBoards(boards: BoardPlan[]) {
@@ -1786,7 +1807,7 @@ function optimizeCutLayoutForVariant({
   variant,
   timeBudgetMs = DEFAULT_TIME_BUDGET_MS,
   candidateOrder
-}: OptimizeCutLayoutParams): OptimizeCutLayoutResult {
+}: OptimizeCutLayoutParams, tryExtraOrders = true): OptimizeCutLayoutResult {
   const overallDeadline = workClock() + timeBudgetMs * WORK_UNITS_PER_MS;
   const normalizedPieces = pieces.map(normalizePiece);
   const minimumPieceArea = normalizedPieces.reduce((minimum, piece) => Math.min(minimum, piece.area), Number.POSITIVE_INFINITY);
@@ -1915,6 +1936,47 @@ function optimizeCutLayoutForVariant({
       const bestAttempts = minimalAttempts.filter((attempt) => attempt.boardCount === minimalBoardCount);
       const selectedAttemptIndex = ((variantBase % bestAttempts.length) + bestAttempts.length) % bestAttempts.length;
 
+      return {
+        boards: bestAttempts[selectedAttemptIndex].boards,
+        unplaced: impossiblePieces,
+        attempts: bestAttempts,
+        lowerBound,
+        minimumPieceArea: resolvedMinimumPieceArea,
+        floorBoardCount,
+        improvementRan,
+        improvementGained: floorBoardCount - bestAttempts[selectedAttemptIndex].boardCount
+      };
+    }
+  }
+
+  // Si con el orden del piso no se pudo bajar una placa, se prueba con los demas ordenes de candidatos,
+  // siempre en el mismo orden y cada uno con su propio presupuesto de trabajo. Solo cuesta tiempo en los
+  // casos que todavia estan a una placa de la cota: una placa menos es plata que el carpintero no paga.
+  if (tryExtraOrders && floorUnplaced.length === impossiblePieces.length && floorBoardCount > lowerBound && floorGap <= 1) {
+    for (const extraOrder of CANDIDATE_ORDERS) {
+      if (extraOrder === improvementOrder) continue;
+      improvementRan = true;
+      const extraDeadline = workClock() + timeBudgetMs * WORK_UNITS_PER_MS * EXTRA_ORDER_BUDGET_SHARE;
+      const attempts = runStrategies(
+        fitPieces,
+        floorBoardCount - 1,
+        usableBoardWidthMm,
+        usableBoardHeightMm,
+        resolvedMinimumPieceArea,
+        variantBase,
+        kerf,
+        extraDeadline,
+        extraOrder
+      );
+      const validAttempts = attempts
+        .map((attempt) => createValidatedAttempt(attempt, impossiblePieces, boardArea, kerf))
+        .filter(({ validation }) => validation.valid)
+        .map(({ attempt }) => attempt);
+      if (!validAttempts.length) continue;
+
+      const minimalAttempts = dedupeAttempts(validAttempts);
+      const bestAttempts = minimalAttempts.filter((attempt) => attempt.boardCount === minimalAttempts[0].boardCount);
+      const selectedAttemptIndex = ((variantBase % bestAttempts.length) + bestAttempts.length) % bestAttempts.length;
       return {
         boards: bestAttempts[selectedAttemptIndex].boards,
         unplaced: impossiblePieces,
