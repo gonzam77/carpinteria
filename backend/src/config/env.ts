@@ -19,7 +19,9 @@ const envSchema = z.object({
   WHATSAPP_NOTIFY_TO: z.string().optional().default(""),
   PUSH_VAPID_PUBLIC_KEY: z.string().optional().default(""),
   PUSH_VAPID_PRIVATE_KEY: z.string().optional().default(""),
-  PUSH_VAPID_SUBJECT: z.string().default("mailto:admin@carpinteria.local")
+  PUSH_VAPID_SUBJECT: z.string().default("mailto:admin@carpinteria.local"),
+  /** Carpeta donde se guardan los archivos subidos (imagenes de modulos). En Docker es un volumen propio. */
+  UPLOADS_DIR: z.string().default("uploads")
 });
 
 const parsedEnv = envSchema.parse(process.env);

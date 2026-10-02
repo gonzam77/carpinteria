@@ -19,3 +19,6 @@ frontend/dist/
 *.backup
 !/carpinteria.backup
 *.dump
+
+# Archivos subidos en desarrollo (imagenes de modulos)
+backend/uploads/

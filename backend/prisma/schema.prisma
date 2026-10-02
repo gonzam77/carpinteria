@@ -303,10 +303,12 @@ model Modulo {
   @@map("modulos")
 }
 
+// La imagen se guarda como archivo en UPLOADS_DIR, no en la base (decision de Gonzalo, DECISIONES 12).
 model ModuloImagen {
   moduloId           String   @id
   mime               String // image/jpeg | image/png | image/webp
-  datos              Bytes
+  archivo            String // nombre del archivo dentro de UPLOADS_DIR/modulos
+  tamanoBytes        Int
   fechaActualizacion DateTime @updatedAt
   modulo             Modulo   @relation(fields: [moduloId], references: [id], onDelete: Cascade)
 

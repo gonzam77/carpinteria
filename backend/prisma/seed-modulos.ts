@@ -12,6 +12,7 @@ import { resolve } from "node:path";
 import { prisma } from "../src/config/prisma.js";
 import { LadoCanto, RolPiezaModulo, TipoParametroModulo } from "../src/generated/prisma/enums.js";
 import { evaluateModule, validateIdentifier } from "../src/shared/moduleFormula.js";
+import { storeModuleImage } from "../src/modules/catalog/module-images.service.js";
 
 type JsonParam = {
   clave: string;
@@ -143,7 +144,7 @@ async function main() {
       ...(module.activo && !activo ? [`No se activo al importar: ${errors.join("; ")}`] : [])
     ].join("\n");
 
-    await prisma.$transaction(async (tx) => {
+    const savedId = await prisma.$transaction(async (tx) => {
       const fields = {
         nombre: module.nombre,
         categoriaId: categoryId.get(module.categoria)!,
@@ -205,16 +206,15 @@ async function main() {
         if (lados.length) await tx.moduloPiezaCanto.createMany({ data: lados });
       }
 
-      const imagePath = module.imagen ? resolve(dataDir, module.imagen) : null;
-      if (imagePath && existsSync(imagePath)) {
-        const datos = readFileSync(imagePath);
-        await tx.moduloImagen.upsert({
-          where: { moduloId: saved.id },
-          update: { mime: "image/jpeg", datos },
-          create: { moduloId: saved.id, mime: "image/jpeg", datos }
-        });
-      }
+      return saved.id;
     });
+
+    // La imagen va como archivo a UPLOADS_DIR (DECISIONES 12), con las mismas validaciones que la subida
+    // desde la pantalla: hasta 1 MB y solo JPEG, PNG o WebP.
+    const imagePath = module.imagen ? resolve(dataDir, module.imagen) : null;
+    if (imagePath && existsSync(imagePath)) {
+      await storeModuleImage(prisma, savedId, readFileSync(imagePath));
+    }
 
     if (existing) summary.actualizados += 1;
     else summary.creados += 1;

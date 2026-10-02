@@ -40,8 +40,13 @@ services:
       PUSH_VAPID_PUBLIC_KEY: ${PUSH_VAPID_PUBLIC_KEY:-}
       PUSH_VAPID_PRIVATE_KEY: ${PUSH_VAPID_PRIVATE_KEY:-}
       PUSH_VAPID_SUBJECT: ${PUSH_VAPID_SUBJECT:-mailto:admin@carpinteria.local}
+      UPLOADS_DIR: /app/uploads
     ports:
       - "127.0.0.1:4000:4000"
+    volumes:
+      # Imagenes de los modulos. Volumen propio para que sobrevivan al reconstruir el contenedor; hay que
+      # incluirlo en los backups junto con la base (docs/modulos/PLAN.md §7).
+      - uploads_data:/app/uploads
 
   web:
     build:
@@ -58,4 +63,5 @@ services:
   
 volumes:
   postgres_data:
+  uploads_data:
 
