@@ -27,6 +27,12 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (2) · equipo Pinformatico15 · rama main
+
+**Decisión de Gonzalo (F0.7):** las 7 constancias desactualizadas se respetan con los importes ya informados a los clientes. No hubo cambios de código. Ver DECISIONES 0.5.
+
+---
+
 ## 2026-10-03 · equipo Pinformatico15 · rama main
 
 **Pasos:** F2.1 terminado.

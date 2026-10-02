@@ -14,7 +14,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
 - **Último paso terminado:** F2.1. Todo el código de la Fase 0 está hecho.
-- **Próximo paso:** **F2.2**, migración de pedidos (`Pedido.numero` con backfill, `tipo`, `PedidoModulo`). De la Fase 0 solo quedan F0.7 y F0.8, que esperan a Gonzalo y al taller, y F0.9, opcional, que depende de F0.8.
+- **Próximo paso:** **F2.2**, migración de pedidos (`Pedido.numero` con backfill, `tipo`, `PedidoModulo`). De la Fase 0 solo queda F0.8, que espera al taller, y F0.9, opcional, que depende de F0.8.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
@@ -26,7 +26,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.4 | Una sola verdad por pedido: detalle por material y orden estable | [x] |
 | F0.5 | Reserva de stock exacta y transiciones de estado | [x] |
 | F0.6 | Plano de cortes coherente con el backend | [x] |
-| F0.7 | Constancias desactualizadas (decisión comercial) | [!] espera a Gonzalo |
+| F0.7 | Constancias desactualizadas (decisión comercial) | [x] se respetan |
 | F0.8 | Validar contra las placas que usó la máquina | [!] espera al taller |
 | F0.9 | Búsqueda extra en pedidos chicos (opcional) | [ ] después de F0.8 |
 | F0.10 | Piezas rotables cargadas al revés | [x] |
@@ -225,7 +225,8 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - en la edición, los materiales y cantos inactivos que usa el pedido no se omiten en silencio.
 - **Terminado cuando:** el plano y la constancia nunca muestran números distintos para el mismo pedido y en el mismo momento.
 
-#### F0.7 Constancias desactualizadas · [!] espera la decisión de Gonzalo
+#### F0.7 Constancias desactualizadas · [x]
+- **Decidido (2026-10-03):** se respetan los importes ya informados a los clientes. No se recalculan. Ver DECISIONES 0.5.
 - 7 pedidos abiertos tienen una constancia calculada con el estimador viejo (DECISIONES 0.5). Diferencia neta de +$583.019 a precios del 2026-10-01.
 - **Decisión:** recalcular esas constancias (y avisar a los clientes) o respetar lo cotizado.
 - **Si se recalcula:** acción de administrador "Recalcular presupuesto", con historial (`RECALCULAR_PRESUPUESTO`) y ajuste de la reserva por la diferencia, que va junto con F0.5.
@@ -445,7 +446,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 | # | Tema | Quién | Por defecto mientras tanto |
 |---|---|---|---|
 | P1 | ¿Se contrató Herrajes? | Gonzalo | Interruptor apagado |
-| P2 | Las 7 constancias desactualizadas (F0.7) | Gonzalo | No se tocan |
+| P2 | Las 7 constancias desactualizadas (F0.7) | Gonzalo | Resuelto: se respetan los importes |
 | P3 | Placas reales usadas por la máquina en 4 pedidos (F0.8) | Taller | El optimizador actual |
 | P4 | Pase a producción (F8), cuando todo esté probado | Gonzalo | Nada se despliega antes |
 | P5 | Cantos, material por pieza, fondos, zócalo y gola, color de canto de los frentes, veta, redondeo y plazos | ROMA | Lo de spec §19 |
