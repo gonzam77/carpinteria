@@ -13,8 +13,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-03
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F2.4. La Fase 0 está completa.
-- **Próximo paso:** **F2.5**, la planilla de revisión para ROMA. Después, la **Fase 3**.
+- **Último paso terminado:** F2.5. Las Fases 0 y 2 están completas.
+- **Próximo paso:** **F3.1**, la API del catálogo.
+- **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
@@ -31,7 +32,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.9 | Optimizador: el mejor resultado posible | [x] |
 | F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
-| F2.1–F2.5 | Modelo de datos, migraciones e importador | [~] F2.1 a F2.4 hechos |
+| F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
 | F3.1–F3.4 | API y pantallas del catálogo | [ ] |
 | F4.1–F4.5 | API y asistente de solicitudes de módulos | [ ] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
@@ -337,7 +338,12 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - scripts `prisma:seed:modulos` para desarrollo y la versión compilada para producción.
 - **Terminado cuando:** correrlo dos veces sobre la copia del backup da el mismo resultado, y la paridad 305/305 sigue en verde. Esa paridad se mide sobre el JSON crudo, sin la transformación del escobero.
 
-#### F2.5 Planilla de revisión para ROMA · [ ] recomendado
+#### F2.5 Planilla de revisión para ROMA · [x]
+- **Hecho (2026-10-03):**
+  - la planilla es `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`, lista para que Gonzalo la mande;
+  - se regenera desde la base con `npm --prefix backend run catalogo:planilla-revision -- <archivo.xlsx>`;
+  - tiene tres hojas: Resumen, Piezas (con material, cantos de los dos perfiles, rotación, fórmulas y columnas para que ROMA corrija) y Cómo revisar;
+  - marca las piezas que no entran con `findPiecesThatDoNotFit`, que ahora exporta `cutOptimizer.ts` (DECISIONES R2). Sobre la placa más común, de 1830 × 2600, son 3: los fondos de los dos placares y las puertas del placard en espejo.
 - **Hacer:** generar un listado por modelo (piezas, rol, cantos propuestos y rotación) para que ROMA revise las heurísticas (spec §16 y §19, puntos 1, 2, 4 y 6). Marcar los dos modelos que no entran en la placa con sus medidas por defecto (§6).
 - **Terminado cuando:** Gonzalo la tiene para mandar.
 

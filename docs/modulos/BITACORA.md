@@ -27,6 +27,27 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (8) · equipo Pinformatico15 · rama main
+
+**Pasos:** F2.5 terminado. La Fase 2 está completa.
+
+**Hecho:**
+- **`findPiecesThatDoNotFit`** en `cutOptimizer.ts`: el encaje con el criterio del optimizador.
+- **Script `catalogo:planilla-revision`** (`backend/src/scripts/planilla-revision-catalogo.ts`).
+- **Planilla generada** en `docs/modulos/revision-roma/`: 33 modelos, 305 piezas y 3 que no entran en 1830 × 2600.
+  - `PLACARD_2_PUERTAS_UN_LADO_PERCHERO`: el fondo de 2498 × 1998.
+  - `PLACARD_EN_ESPEJO_2_PUERTAS`: el fondo de 2000 × 2000, y las puertas de 962 × 1934, que no rotan.
+
+**Para Gonzalo:** mandar la planilla a ROMA. Sus respuestas resuelven P5 y P6.
+
+**Verificaciones:** `tsc` del backend en verde; `check:optimizer` en verde.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F3.1, la API del catálogo (`backend/src/modules/modules/`).
+
+---
+
 ## 2026-10-03 (7) · equipo Pinformatico15 · rama main
 
 **Pasos:** F2.4 terminado.
