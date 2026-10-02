@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { evaluateModule, evaluateModuleDefinition, parseFormula, roundMm, validateIdentifier, type ModuleDef } from "./moduleFormula.ts";
+import { buildModulePieces, evaluateModule, evaluateModuleDefinition, parseFormula, roundMm, validateIdentifier, type ModuleDef, type CatalogModuleDef, type CatalogPieceDef } from "./moduleFormula.ts";
 
 // Mismo archivo que importa el seed del catalogo: si alguien lo modifica, la paridad con el Excel se vuelve a verificar.
 const catalog = JSON.parse(readFileSync(new URL("../../../backend/prisma/data/modulos-muebles.json", import.meta.url), "utf8"));
@@ -177,4 +177,130 @@ test("evaluateModuleDefinition: ESP es el espesor de diseno y el redondeo es el 
   const truncada = evaluateModuleDefinition({ ...definition, espesorDisenoMm: 15 }, { ALTO: 1000.5 }, "TRUNCAR");
   assert.deepEqual([truncada.piezas[0].largo, truncada.piezas[0].ancho], [970, 400]);
   assert.equal(truncada.piezas[0].largoExacto, 970.5);
+});
+
+// ---------------------------------------------------------------- buildModulePieces (DECISIONES R6)
+
+const catalogPiece = (codigo: string, orden: number, extra: Partial<CatalogPieceDef> = {}): CatalogPieceDef => ({
+  codigo,
+  nombre: codigo.toLowerCase(),
+  formulaLargo: "ALTO",
+  formulaAncho: "100",
+  formulaCantidad: "1",
+  rol: "ESQUELETO",
+  permiteRotar: false,
+  orden,
+  cantos: [],
+  ...extra
+});
+const sampleModule = (): CatalogModuleDef => ({
+  parametros: [
+    { clave: "ALTO", tipo: "MEDIDA", valorDefecto: 720 },
+    { clave: "ESTANTES", tipo: "ENTERO", valorDefecto: 1 },
+    { clave: "LUZ", tipo: "CALCULADO", formula: "ALTO - 2 * ESP" }
+  ],
+  perfiles: [{ orden: 1 }, { orden: 2 }],
+  espesorDisenoMm: 18,
+  piezas: [
+    catalogPiece("ESTANTE", 3, { formulaLargo: "LUZ", formulaCantidad: "ESTANTES", permiteRotar: true }),
+    catalogPiece("LATERAL", 1, {
+      formulaCantidad: "2",
+      cantos: [
+        { perfilOrden: 1, lado: "LARGO_1", espesorMm: 2 },
+        { perfilOrden: 2, lado: "LARGO_1", espesorMm: 0.45 },
+        { perfilOrden: 2, lado: "ANCHO_1", espesorMm: 0.45 }
+      ]
+    }),
+    catalogPiece("ZOCALO", 2, { rol: "FIJO", materialFijoId: "negro", formulaLargo: "ALTO / 8.1", formulaCantidad: "SI(ESTANTES > 1; 1; 0)" }),
+    catalogPiece("FONDO", 4, { rol: "FONDO", materialFijoId: "ignorado", formulaLargo: "ALTO - 0.5" })
+  ]
+});
+
+test("buildModulePieces: orden del modulo, orden 1..n sin las piezas de cantidad 0, roles y medidas enteras", () => {
+  const result = buildModulePieces(sampleModule(), { alto: 720.5 }, { redondeo: "REDONDEAR", perfilOrden: 1 });
+  assert.deepEqual(result.errores, []);
+  assert.deepEqual(
+    result.piezas.map((pieza) => [pieza.codigo, pieza.orden, pieza.largo, pieza.ancho, pieza.cantidad]),
+    [
+      ["LATERAL", 1, 721, 100, 2],
+      ["ESTANTE", 2, 685, 100, 1],
+      ["FONDO", 3, 720, 100, 1]
+    ],
+    "ZOCALO no se genera con 1 estante y no ocupa numero de orden"
+  );
+  assert.deepEqual(result.valores, { ALTO: 720.5, ESTANTES: 1 }, "valores efectivos: lo cargado y los defectos");
+  assert.equal(result.piezas[2].materialFijoId, null, "solo FIJO lleva material fijo");
+  assert.equal(result.piezas[1].permiteRotar, true);
+
+  const conZocalo = buildModulePieces(sampleModule(), { ESTANTES: 2 }, { redondeo: "TRUNCAR", perfilOrden: 1 });
+  assert.deepEqual(
+    conZocalo.piezas.map((pieza) => [pieza.codigo, pieza.orden, pieza.largo]),
+    [
+      ["LATERAL", 1, 720],
+      ["ZOCALO", 2, 88],
+      ["ESTANTE", 3, 684],
+      ["FONDO", 4, 719]
+    ],
+    "TRUNCAR: 720 / 8.1 = 88.9 -> 88 y 719.5 -> 719"
+  );
+  assert.equal(conZocalo.piezas[1].materialFijoId, "negro");
+});
+
+test("buildModulePieces: cantos del perfil elegido y cambios a mano", () => {
+  const perfil1 = buildModulePieces(sampleModule(), {}, { redondeo: "REDONDEAR", perfilOrden: 1 });
+  assert.deepEqual(perfil1.piezas[0].cantos, { LARGO_1: 2, LARGO_2: null, ANCHO_1: null, ANCHO_2: null });
+  const perfil2 = buildModulePieces(sampleModule(), {}, { redondeo: "REDONDEAR", perfilOrden: 2 });
+  assert.deepEqual(perfil2.piezas[0].cantos, { LARGO_1: 0.45, LARGO_2: null, ANCHO_1: 0.45, ANCHO_2: null });
+  assert.ok(perfil2.piezas.every((pieza) => !pieza.editado));
+
+  const override = { lateral: { LARGO_1: 2, LARGO_2: 2, ANCHO_1: null, ANCHO_2: null }, ESTANTE: { LARGO_1: null, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } };
+  const editado = buildModulePieces(sampleModule(), {}, { redondeo: "REDONDEAR", perfilOrden: 1, cantosOverride: override });
+  assert.deepEqual(editado.errores, []);
+  assert.deepEqual(editado.piezas[0].cantos, { LARGO_1: 2, LARGO_2: 2, ANCHO_1: null, ANCHO_2: null });
+  assert.equal(editado.piezas[0].editado, true);
+  assert.equal(editado.piezas[1].editado, false, "un cambio igual al perfil no cuenta como editado");
+
+  const zocaloApagado = buildModulePieces(sampleModule(), {}, { redondeo: "REDONDEAR", perfilOrden: 1, cantosOverride: { ZOCALO: override.lateral } });
+  assert.deepEqual(zocaloApagado.errores, [], "un cambio para una pieza que no se genera no es un error");
+  const inexistente = buildModulePieces(sampleModule(), {}, { redondeo: "REDONDEAR", perfilOrden: 1, cantosOverride: { PUERTA: override.lateral } });
+  assert.deepEqual(inexistente.errores, [{ ref: "PUERTA", mensaje: "No existe la pieza PUERTA para cambiarle los cantos" }]);
+});
+
+test("buildModulePieces: es estricto con las medidas y el perfil", () => {
+  const result = buildModulePieces(sampleModule(), { ANCHOO: 600, luz: 10, ALTO: 700 }, { redondeo: "REDONDEAR", perfilOrden: 3 });
+  assert.deepEqual(result.errores.slice(0, 3), [
+    { ref: "ANCHOO", mensaje: "No existe la medida ANCHOO" },
+    { ref: "LUZ", mensaje: "LUZ se calcula sola: no se carga" },
+    { ref: "PERFIL", mensaje: "El modulo no tiene el perfil de canto 3" }
+  ]);
+  const fueraDeRango = buildModulePieces(
+    { ...sampleModule(), parametros: [{ clave: "ALTO", tipo: "MEDIDA", valorDefecto: 720, minimo: 300, maximo: 2400 }, ...sampleModule().parametros.slice(1)] },
+    { ALTO: 2500 },
+    { redondeo: "REDONDEAR", perfilOrden: 1 }
+  );
+  assert.deepEqual(fueraDeRango.errores, [{ ref: "ALTO", mensaje: "Maximo 2400" }]);
+});
+
+test("buildModulePieces da las mismas medidas que el motor en las 305 piezas del catalogo", () => {
+  let checked = 0;
+  for (const module of catalog.modulos) {
+    const definition: CatalogModuleDef = {
+      parametros: module.parametros,
+      perfiles: [{ orden: 1 }],
+      espesorDisenoMm: module.espesorDisenoMm ?? 18,
+      piezas: module.piezas.map((pieza: CatalogPieceDef) => ({ ...pieza, cantos: [] }))
+    };
+    for (const redondeo of ["REDONDEAR", "TRUNCAR"] as const) {
+      const built = buildModulePieces(definition, {}, { redondeo, perfilOrden: 1 });
+      const engine = evaluateModule({ parametros: module.parametros, piezas: module.piezas }, {}, { redondeo, constantes: { ESP: definition.espesorDisenoMm } });
+      assert.deepEqual(built.errores, [], module.codigo);
+      for (const pieza of built.piezas) {
+        const expected = engine.piezas.find((item) => item.codigo === pieza.codigo)!;
+        assert.deepEqual([pieza.largo, pieza.ancho, pieza.cantidad], [expected.largo, expected.ancho, expected.cantidad], `${module.codigo}.${pieza.codigo}`);
+        assert.ok(Number.isInteger(pieza.largo) && Number.isInteger(pieza.ancho) && Number.isInteger(pieza.cantidad));
+        checked++;
+      }
+    }
+  }
+  assert.ok(checked >= 600, `piezas comparadas: ${checked}`);
 });

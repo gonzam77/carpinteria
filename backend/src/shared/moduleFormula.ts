@@ -383,3 +383,129 @@ export function evaluateModuleDefinition(definition: ModuleDefinitionInput, valo
     constantes: { ESP: definition.espesorDisenoMm }
   });
 }
+
+// ---------------------------------------------------------------- piezas de un modulo pedido (DECISIONES R6)
+
+export type EdgeSide = "LARGO_1" | "LARGO_2" | "ANCHO_1" | "ANCHO_2";
+export const EDGE_SIDES: readonly EdgeSide[] = ["LARGO_1", "LARGO_2", "ANCHO_1", "ANCHO_2"];
+/** Espesor del canto de cada lado de una pieza, en mm, o null si ese lado va sin canto. */
+export type PieceEdges = Record<EdgeSide, number | null>;
+export type PieceRole = "ESQUELETO" | "FRENTE" | "FONDO" | "FIJO";
+
+export type CatalogPieceDef = PieceDef & {
+  rol: PieceRole;
+  materialFijoId?: string | null;
+  permiteRotar: boolean;
+  orden: number;
+  cantos: Array<{ perfilOrden: number; lado: EdgeSide; espesorMm: number }>;
+};
+export type CatalogModuleDef = {
+  parametros: ParamDef[];
+  piezas: CatalogPieceDef[];
+  perfiles: Array<{ orden: number }>;
+  espesorDisenoMm: number;
+};
+
+/** Una pieza de un modulo pedido, con medidas en mm enteros: lo que va a DetallePedido, al optimizador y a los m². */
+export type OrderedModulePiece = {
+  codigo: string;
+  nombre: string;
+  rol: PieceRole;
+  materialFijoId: string | null;
+  largo: number;
+  ancho: number;
+  cantidad: number;
+  permiteRotar: boolean;
+  /** 1..n entre las piezas que se generan, en el orden del modulo. Va en el codigo de barra y en la hoja de taller. */
+  orden: number;
+  cantos: PieceEdges;
+  /** true si los cantos se cambiaron a mano y ya no son los del perfil (origen EDITADO). */
+  editado: boolean;
+};
+
+export type ModulePiecesResult = {
+  piezas: OrderedModulePiece[];
+  errores: ModuleError[];
+  /** Las medidas con las que se calculo: lo cargado o, si falta, el valor por defecto. Es lo que se guarda en la solicitud. */
+  valores: Record<string, number>;
+};
+
+/**
+ * Unico armador de las piezas de un modulo pedido (DECISIONES R6). Lo usan la vista previa, el alta, la edicion
+ * y el recalculo de las solicitudes de modulos, y el asistente del navegador, asi las mismas medidas dan
+ * exactamente las mismas piezas en todos lados.
+ * - Las medidas salen de evaluateModuleDefinition, con el redondeo de ConfiguracionModulos (obligatorio).
+ * - Las piezas van en el orden del modulo; las de cantidad 0 no se generan y no ocupan numero de orden.
+ * - Los cantos son los del perfil elegido, salvo los que se cambiaron a mano (cantosOverride, por codigo).
+ * - Es estricto con los valores: una medida que el modulo no tiene, o una calculada, es un error, porque un
+ *   nombre mal escrito haria que se corte con el valor por defecto sin que nadie lo note.
+ */
+export function buildModulePieces(
+  definition: CatalogModuleDef,
+  valores: Record<string, number>,
+  opts: { redondeo: RoundingMode; perfilOrden: number; cantosOverride?: Record<string, PieceEdges> }
+): ModulePiecesResult {
+  const errores: ModuleError[] = [];
+  const params = new Map(definition.parametros.map((param) => [param.clave.toUpperCase(), param]));
+
+  const inputs: Record<string, number> = {};
+  for (const [key, value] of Object.entries(valores ?? {})) {
+    const clave = key.toUpperCase();
+    const param = params.get(clave);
+    if (!param) errores.push({ ref: clave, mensaje: `No existe la medida ${clave}` });
+    else if (param.tipo === "CALCULADO") errores.push({ ref: clave, mensaje: `${clave} se calcula sola: no se carga` });
+    else inputs[clave] = value;
+  }
+  const efectivos: Record<string, number> = {};
+  for (const param of definition.parametros) {
+    if (param.tipo === "CALCULADO") continue;
+    const clave = param.clave.toUpperCase();
+    const value = clave in inputs ? inputs[clave] : param.valorDefecto;
+    if (value !== null && value !== undefined && Number.isFinite(value)) efectivos[clave] = value;
+  }
+
+  if (!definition.perfiles.some((perfil) => perfil.orden === opts.perfilOrden)) {
+    errores.push({ ref: "PERFIL", mensaje: `El modulo no tiene el perfil de canto ${opts.perfilOrden}` });
+  }
+
+  const ordered = definition.piezas
+    .map((pieza, index) => ({ pieza, index }))
+    .sort((a, b) => a.pieza.orden - b.pieza.orden || a.index - b.index)
+    .map(({ pieza }) => pieza);
+  const evaluation = evaluateModuleDefinition({ parametros: definition.parametros, piezas: ordered, espesorDisenoMm: definition.espesorDisenoMm }, inputs, opts.redondeo);
+  errores.push(...evaluation.errores);
+
+  const byCode = new Map(ordered.map((pieza) => [pieza.codigo.toUpperCase(), pieza]));
+  const overrides = new Map<string, PieceEdges>();
+  for (const [code, edges] of Object.entries(opts.cantosOverride ?? {})) {
+    const codigo = code.toUpperCase();
+    // Un cambio para una pieza que existe pero no se genera con estas medidas (cantidad 0) no molesta: puede
+    // venir de un paso anterior del asistente. Uno para una pieza que no existe es un error.
+    if (!byCode.has(codigo)) errores.push({ ref: codigo, mensaje: `No existe la pieza ${codigo} para cambiarle los cantos` });
+    else overrides.set(codigo, edges);
+  }
+
+  const piezas = evaluation.piezas.map((result, index): OrderedModulePiece => {
+    const pieza = byCode.get(result.codigo.toUpperCase())!;
+    const perfil = Object.fromEntries(
+      EDGE_SIDES.map((lado) => [lado, pieza.cantos.find((canto) => canto.perfilOrden === opts.perfilOrden && canto.lado === lado)?.espesorMm ?? null])
+    ) as PieceEdges;
+    const override = overrides.get(result.codigo.toUpperCase());
+    const cantos = override ? (Object.fromEntries(EDGE_SIDES.map((lado) => [lado, override[lado] ?? null])) as PieceEdges) : perfil;
+    return {
+      codigo: pieza.codigo,
+      nombre: pieza.nombre,
+      rol: pieza.rol,
+      materialFijoId: pieza.rol === "FIJO" ? (pieza.materialFijoId ?? null) : null,
+      largo: result.largo,
+      ancho: result.ancho,
+      cantidad: result.cantidad,
+      permiteRotar: pieza.permiteRotar,
+      orden: index + 1,
+      cantos,
+      editado: Boolean(override) && EDGE_SIDES.some((lado) => cantos[lado] !== perfil[lado])
+    };
+  });
+
+  return { piezas, errores, valores: efectivos };
+}
