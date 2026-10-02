@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-03
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F2.3. La Fase 0 está completa.
-- **Próximo paso:** **F2.4**, el importador de los 33 modelos.
+- **Último paso terminado:** F2.4. La Fase 0 está completa.
+- **Próximo paso:** **F2.5**, la planilla de revisión para ROMA. Después, la **Fase 3**.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
@@ -31,7 +31,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.9 | Optimizador: el mejor resultado posible | [x] |
 | F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
-| F2.1–F2.5 | Modelo de datos, migraciones e importador | [~] F2.1 a F2.3 hechos |
+| F2.1–F2.5 | Modelo de datos, migraciones e importador | [~] F2.1 a F2.4 hechos |
 | F3.1–F3.4 | API y pantallas del catálogo | [ ] |
 | F4.1–F4.5 | API y asistente de solicitudes de módulos | [ ] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
@@ -315,7 +315,16 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 - **Leer:** spec §5.6, el ajuste en Materiales.
 - **Hacer:** que `countMaterialLinks` y `canDeletePermanently` cuenten los vínculos nuevos y respondan 409 con un mensaje claro, y avisar al desactivar un color que usa el catálogo.
 
-#### F2.4 Importador de los 33 modelos · [ ]
+#### F2.4 Importador de los 33 modelos · [x]
+- **Hecho (2026-10-03):** `backend/prisma/seed-modulos.ts`, con `npm run prisma:seed:modulos` y `prisma:seed:modulos:prod`.
+- **Validación:** verifica cada módulo con el motor y con `validateIdentifier`; si un módulo activo tiene errores, lo importa inactivo y lo anota.
+- **Resultado sobre la copia:**
+  - 33 módulos (32 activos), 4 categorías, 11 imágenes, 114 medidas, 305 piezas, 66 perfiles y 794 lados de canto;
+  - es idempotente: la segunda corrida da los mismos conteos;
+  - respeta `version > 1`, salvo con `--force`;
+  - desde la base, 303 piezas dan igual que el Excel, y las 2 del fondo partido del escobero quedan apagadas por defecto;
+  - la versión compilada también funciona.
+- **Datos:** se leen de `prisma/data`, relativo al directorio de trabajo, o de `MODULOS_DATA_DIR`.
 - **Depende de:** F2.2.
 - **Leer:** spec §16, la nota del escobero en §19, y DECISIONES 6.
 - **Hacer:**

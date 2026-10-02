@@ -27,6 +27,31 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (7) · equipo Pinformatico15 · rama main
+
+**Pasos:** F2.4 terminado.
+
+**Hecho:** importador `prisma/seed-modulos.ts` (spec §16; DECISIONES 6). Hace:
+- categorías;
+- upsert por código, respetando `version > 1` salvo con `--force`;
+- perfiles Estándar (el predeterminado) y Económico;
+- fondos sin canto;
+- variante de fondo del escobero;
+- imágenes;
+- validación con el motor: un módulo activo con errores se importa inactivo.
+
+Se verificó sobre la copia del backup (ver PLAN F2.4). El catálogo quedó importado en el contenedor `carpinteria-analisis-db`.
+
+**Verificaciones:**
+- `tsc` y build del backend en verde;
+- test de paridad del motor: 12 de 12.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F2.5, planilla de revisión para ROMA: por modelo, piezas, rol, cantos propuestos y rotación, y los dos modelos que no entran en la placa.
+
+---
+
 ## 2026-10-03 (6) · equipo Pinformatico15 · rama main
 
 **Pasos:** F2.3 terminado.
