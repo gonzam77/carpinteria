@@ -27,6 +27,33 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-02 (noche, 2) · equipo Pinformatico15 · rama main
+
+**Pasos:** F0.6 terminado.
+
+**Hecho:** `CutOptimizer.tsx` (DECISIONES 0.10):
+- espera la configuración real del optimizador antes de calcular;
+- muestra como error, y sin costo, lo que el backend rechazaría;
+- busca las placas por nombre solo entre placas;
+- muestra el desglose global igual al de la constancia.
+
+**No probado a mano:** la pantalla en el navegador. Conviene verlo cuando Gonzalo levante el entorno local (PLAN §3.1):
+- el plano en el formulario y en el detalle;
+- un pedido con un material inactivo, en edición.
+
+**Verificaciones:**
+- tests 38, 12 y 5, todos en verde;
+- `check:optimizer` y `tsc` en verde;
+- `npm run build` en verde.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F0.10, piezas rotables cargadas al revés. Después, la Fase 2: modelo de datos del catálogo.
+
+**Esperando a Gonzalo o a ROMA:** P1 a P8, sin cambios.
+
+---
+
 ## 2026-10-02 (noche) · equipo Pinformatico15 · rama main
 
 **Pasos:** F0.5 terminado.

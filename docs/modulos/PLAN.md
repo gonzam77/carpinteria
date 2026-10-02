@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-02
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F0.5.
-- **Próximo paso:** **F0.6**, plano de cortes coherente con el backend.
+- **Último paso terminado:** F0.6.
+- **Próximo paso:** **F0.10**, piezas rotables cargadas al revés. F0.7 y F0.8 esperan a Gonzalo y al taller, y F0.9 depende de F0.8. Después sigue la **Fase 2**.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
@@ -25,7 +25,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.3 | Presupuesto exacto con una función compartida | [x] |
 | F0.4 | Una sola verdad por pedido: detalle por material y orden estable | [x] |
 | F0.5 | Reserva de stock exacta y transiciones de estado | [x] |
-| F0.6 | Plano de cortes coherente con el backend | [ ] |
+| F0.6 | Plano de cortes coherente con el backend | [x] |
 | F0.7 | Constancias desactualizadas (decisión comercial) | [!] espera a Gonzalo |
 | F0.8 | Validar contra las placas que usó la máquina | [!] espera al taller |
 | F0.9 | Búsqueda extra en pedidos chicos (opcional) | [ ] después de F0.8 |
@@ -215,7 +215,8 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 - **Terminado cuando:** reservar, cambiar la configuración y el orden de los detalles, y liberar devuelve el stock al valor inicial; y dos cambios de estado simultáneos no reservan doble.
 - **Verificar:** tests de servicio y §2.1.
 
-#### F0.6 Plano de cortes coherente con el backend · [ ]
+#### F0.6 Plano de cortes coherente con el backend · [x]
+- **Hecho (2026-10-02):** ver DECISIONES 0.10. Todo está en `CutOptimizer.tsx`. No se probó a mano en el navegador: la lógica de placas y costos es la función compartida que cubren los tests.
 - **Depende de:** F0.3.
 - **Hacer:**
   - `CutOptimizer.tsx` no calcula hasta tener la configuración real del optimizador;
