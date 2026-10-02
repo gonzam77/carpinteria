@@ -39,7 +39,8 @@ export type OrigenPlacas = "CONSTANCIA" | "RECALCULADO";
 
 const ZERO_BUDGET = { manoObraPlacaPorPlaca: 0, manoObraCanto045Mm: 0, manoObraCanto1Mm: 0, manoObraCanto2Mm: 0 };
 
-async function getOptimizerSettings(tx: PrismaClient) {
+/** Configuracion del optimizador (sierra y perfilado). La usan el calculo y la validacion de encaje de los modulos. */
+export async function getOptimizerSettings(tx: PrismaClient) {
   return tx.configuracionOptimizador.upsert({
     where: { id: "default" },
     update: {},

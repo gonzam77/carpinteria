@@ -9,6 +9,7 @@ import { budgetSettingsRouter } from "./modules/budget-settings/budget-settings.
 import { catalogRouter } from "./modules/catalog/catalog.routes.js";
 import { companySettingsRouter } from "./modules/company-settings/company-settings.routes.js";
 import { materialsRouter } from "./modules/materials/materials.routes.js";
+import { moduleOrdersRouter } from "./modules/module-orders/module-orders.routes.js";
 import { optimizerSettingsRouter } from "./modules/optimizer-settings/optimizer-settings.routes.js";
 import { ordersRouter } from "./modules/orders/orders.routes.js";
 import { pushNotificationsRouter } from "./modules/push-notifications/push-notifications.routes.js";
@@ -45,6 +46,7 @@ app.use("/api/company-settings", companySettingsRouter);
 app.use("/api/materiales", materialsRouter);
 app.use("/api/modulos", catalogRouter);
 app.use("/api/optimizer-settings", optimizerSettingsRouter);
+app.use("/api/pedidos-modulos", moduleOrdersRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/push-notifications", pushNotificationsRouter);
