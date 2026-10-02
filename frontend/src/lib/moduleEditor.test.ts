@@ -130,8 +130,8 @@ test("encaje: misma funcion que el optimizador, agrupando placas por tamano util
     warnings.map((warning) => warning.codigo),
     ["ENTRA", "ACOSTADA", "ACOSTADA", "LARGA"]
   );
-  assert.match(warnings[0].mensaje, /no entra en Chica \(1810 × 2580 mm utiles\)\.$/);
-  assert.match(warnings[1].mensaje, /no entra en Blanco, Negro \(1810 × 2730 mm utiles\)\. Girada entraria/);
+  assert.match(warnings[0].mensaje, /no entra en Chica \(2580 × 1810 mm utiles\)\.$/);
+  assert.match(warnings[1].mensaje, /no entra en Blanco, Negro \(2730 × 1810 mm utiles\)\. Girada entraria/);
   const muchas = fitWarnings(
     [{ codigo: "X", nombre: "X", largo: 3000, ancho: 100, permiteRotar: false, placas: ["A ", "B", "C", "D", "E"].map((nombre) => placa(nombre, 1830, 2750)) }],
     settings

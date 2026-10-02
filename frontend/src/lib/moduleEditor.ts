@@ -330,7 +330,8 @@ export type FitWarning = { codigo: string; mensaje: string };
 
 /**
  * Piezas que no entran en alguna de las placas en las que se pueden cortar, con la misma funcion de encaje que
- * usa el optimizador (perfilado de borde y rotacion incluidos). Las placas se agrupan por tamano util.
+ * usa el optimizador (perfilado de borde y rotacion incluidos). Las placas se agrupan por tamano util. Pieza y placa
+ * se muestran igual, largo × ancho: el largo de la pieza va contra el alto de la placa (DECISIONES 0.7).
  */
 export function fitWarnings(pieces: FitPiece[], settings: EstimateOptimizerSettings): FitWarning[] {
   return pieces.flatMap((piece) => {
@@ -349,7 +350,7 @@ export function fitWarnings(pieces: FitPiece[], settings: EstimateOptimizerSetti
       .filter((group) => !fits(row, group))
       .map((group) => ({
         codigo: piece.codigo,
-        mensaje: `"${piece.nombre}" (${piece.largo} × ${piece.ancho} mm) no entra en ${plateNames(group.nombres)} (${group.width} × ${group.height} mm utiles)${
+        mensaje: `"${piece.nombre}" (${piece.largo} × ${piece.ancho} mm) no entra en ${plateNames(group.nombres)} (${group.height} × ${group.width} mm utiles)${
           !piece.permiteRotar && fits({ ...row, permiteRotar: true }, group) ? ". Girada entraria: si la veta lo permite, marcala para rotar" : ""
         }.`
       }));
