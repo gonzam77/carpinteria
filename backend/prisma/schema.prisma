@@ -67,14 +67,25 @@ model Pedido {
   // Stock comprometido por el pedido: las placas por material que se descontaron, para devolver exactamente
   // eso. forzada = se avanzo sin descontar. Null si no tiene stock comprometido (o en pedidos anteriores).
   reservaStock Json?
+  // Numero correlativo legible (spec D6). Las solicitudes de modulos se muestran como M-{numero}.
+  numero        Int               @unique @default(autoincrement())
+  tipo          TipoPedido        @default(CORTE)
+  fechaEntrega  DateTime?         @db.Date // fecha comprometida, sin hora (DECISIONES 8)
+  emailContacto String?
+  direccionEntrega String?
+  costoHerrajes Float             @default(0) // aparte de presupuestoEstimado (DECISIONES R1)
   usuarioId     String
   fechaCreacion DateTime          @default(now())
   fechaActualizacion DateTime     @updatedAt
   usuario       Usuario           @relation(fields: [usuarioId], references: [id])
   detalles      DetallePedido[]
   historial     HistorialPedido[]
+  modulos       PedidoModulo[]
+  herrajes      PedidoHerraje[]
 
   @@index([estado])
+  @@index([tipo])
+  @@index([fechaEntrega])
   @@index([cliente])
   @@index([fechaCreacion])
   @@map("pedidos")
@@ -100,6 +111,9 @@ model Material {
   modulosFondo       Modulo[]        @relation("ModuloFondo")
   piezasModuloFijas  ModuloPieza[]   @relation("ModuloPiezaFijo")
   configuracionesModulosFondo ConfiguracionModulos[] @relation("ConfiguracionModulosFondo")
+  pedidosModuloEsqueleto PedidoModulo[] @relation("PMEsqueleto")
+  pedidosModuloFrentes   PedidoModulo[] @relation("PMFrentes")
+  pedidosModuloCanto     PedidoModulo[] @relation("PMCanto")
 
   @@index([tipo])
   @@index([activo])
@@ -136,11 +150,17 @@ model DetallePedido {
   nombreProducto     String?
   // Posicion de la fila dentro del pedido. Todas las lecturas ordenan por este campo.
   indice             Int     @default(0)
+  pedidoModuloId     String? // null = pieza de corte normal o "pieza adicional" de una solicitud de modulos
+  piezaCodigo        String? // codigo de ModuloPieza de donde salio (null si es MANUAL)
+  origen             OrigenDetalle? // null en solicitudes de corte
+  orden              Int     @default(0) // orden de la pieza dentro de su modulo (DECISIONES 11)
   pedido             Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  pedidoModulo       PedidoModulo? @relation(fields: [pedidoModuloId], references: [id], onDelete: Cascade)
   materialRef        Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
 
   @@index([materialId])
   @@index([pedidoId, indice])
+  @@index([pedidoModuloId])
 
   @@map("detalle_pedidos")
 }
@@ -276,6 +296,7 @@ model Modulo {
   piezas             ModuloPieza[]
   perfiles           ModuloPerfilCanto[]
   herrajes           ModuloHerraje[]
+  pedidos            PedidoModulo[]
 
   @@index([categoriaId])
   @@index([activo])
@@ -382,6 +403,7 @@ model Herraje {
   fechaCreacion      DateTime        @default(now())
   fechaActualizacion DateTime        @updatedAt
   modulos            ModuloHerraje[]
+  pedidos            PedidoHerraje[]
 
   @@map("herrajes")
 }
@@ -397,4 +419,59 @@ model ModuloHerraje {
 
   @@unique([moduloId, herrajeId])
   @@map("modulos_herraje")
+}
+
+// ---------------------------------------------------------------- Modulos a medida: solicitudes (F2.2)
+
+enum TipoPedido {
+  CORTE
+  MODULOS
+}
+
+enum OrigenDetalle {
+  CALCULADO // salio del motor sin cambios
+  EDITADO // salio del motor y se modifico a mano
+  MANUAL // se agrego a mano (en un modulo o como pieza adicional)
+}
+
+model PedidoModulo {
+  id                 String          @id @default(uuid())
+  pedidoId           String
+  moduloId           String? // SetNull: si se borra el modulo del catalogo, la solicitud conserva el snapshot
+  posicion           Int // 1..n: "Modulo 1", "Modulo 2"...
+  nombreModulo       String // snapshot
+  valores            Json // { "ANCHO": 1200, "ALTO": 780, "PROFUNDIDAD": 580 }
+  colorEsqueletoId   String
+  colorFrentesId     String
+  colorCantoId       String // Material PLACA cuyo color usan los cantos
+  perfilCantoOrden   Int             @default(1)
+  observaciones      String? // sale en la hoja de taller
+  definicionSnapshot Json // copia completa del modulo usado (parametros, piezas, perfiles, herrajes, version)
+  pedido             Pedido          @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  modulo             Modulo?         @relation(fields: [moduloId], references: [id], onDelete: SetNull)
+  colorEsqueleto     Material        @relation("PMEsqueleto", fields: [colorEsqueletoId], references: [id], onDelete: Restrict)
+  colorFrentes       Material        @relation("PMFrentes", fields: [colorFrentesId], references: [id], onDelete: Restrict)
+  colorCanto         Material        @relation("PMCanto", fields: [colorCantoId], references: [id], onDelete: Restrict)
+  detalles           DetallePedido[]
+  herrajes           PedidoHerraje[]
+
+  @@unique([pedidoId, posicion])
+  @@index([moduloId])
+  @@map("pedidos_modulo")
+}
+
+model PedidoHerraje {
+  id             String        @id @default(uuid())
+  pedidoId       String
+  pedidoModuloId String?
+  herrajeId      String?
+  nombre         String // snapshot
+  unidad         String
+  cantidad       Float
+  valorUnitario  Float // snapshot del precio al crear o editar
+  pedido         Pedido        @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  pedidoModulo   PedidoModulo? @relation(fields: [pedidoModuloId], references: [id], onDelete: Cascade)
+  herraje        Herraje?      @relation(fields: [herrajeId], references: [id], onDelete: SetNull)
+
+  @@map("pedidos_herraje")
 }
