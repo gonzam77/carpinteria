@@ -27,6 +27,16 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (3) · equipo Pinformatico15 · rama main
+
+**Decisiones de Gonzalo:**
+- **F0.8 descartado:** no va a haber datos de las placas que se usaron en pedidos anteriores, y lo de atrás no es prioridad.
+- **Regla nueva, la 2 de CLAUDE.md:** de ahora en adelante, resultados óptimos para el carpintero (menos placas) y reales para el dueño (se pueden cortar), para que nadie pierda plata.
+
+**Consecuencia:** F0.9 se redefinió como "el optimizador da el mejor resultado posible" y pasa a ser el próximo paso, antes de F2.2.
+
+---
+
 ## 2026-10-03 (2) · equipo Pinformatico15 · rama main
 
 **Decisión de Gonzalo (F0.7):** las 7 constancias desactualizadas se respetan con los importes ya informados a los clientes. No hubo cambios de código. Ver DECISIONES 0.5.

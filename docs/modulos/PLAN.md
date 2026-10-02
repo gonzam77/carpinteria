@@ -14,7 +14,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
 - **Último paso terminado:** F2.1. Todo el código de la Fase 0 está hecho.
-- **Próximo paso:** **F2.2**, migración de pedidos (`Pedido.numero` con backfill, `tipo`, `PedidoModulo`). De la Fase 0 solo queda F0.8, que espera al taller, y F0.9, opcional, que depende de F0.8.
+- **Próximo paso:** **F0.9**, el optimizador da el mejor resultado posible (prioridad de Gonzalo, 2026-10-03). Después, **F2.2**, la migración de pedidos.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
@@ -27,8 +27,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.5 | Reserva de stock exacta y transiciones de estado | [x] |
 | F0.6 | Plano de cortes coherente con el backend | [x] |
 | F0.7 | Constancias desactualizadas (decisión comercial) | [x] se respetan |
-| F0.8 | Validar contra las placas que usó la máquina | [!] espera al taller |
-| F0.9 | Búsqueda extra en pedidos chicos (opcional) | [ ] después de F0.8 |
+| F0.8 | Validar contra las placas que usó la máquina | [-] descartado: no hay datos |
+| F0.9 | Optimizador: el mejor resultado posible | [ ] prioridad |
 | F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [~] F2.1 hecho |
@@ -231,7 +231,8 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 - **Decisión:** recalcular esas constancias (y avisar a los clientes) o respetar lo cotizado.
 - **Si se recalcula:** acción de administrador "Recalcular presupuesto", con historial (`RECALCULAR_PRESUPUESTO`) y ajuste de la reserva por la diferencia, que va junto con F0.5.
 
-#### F0.8 Validar contra las placas que usó la máquina · [!] espera al taller
+#### F0.8 Validar contra las placas que usó la máquina · [-] descartado
+- **Gonzalo, 2026-10-03:** no se va a tener el dato de las placas que se usaron en los pedidos anteriores, y lo de atrás no es prioridad. El objetivo pasa a F0.9.
 - Pedir al taller cuántas placas usó la seccionadora en estos pedidos:
 
   | Pedido | Material | Estimador viejo | Optimizador actual |
@@ -243,10 +244,24 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 
 - Si la máquina usó menos que el optimizador actual, se evalúa F0.9 o se mejora el optimizador.
 
-#### F0.9 Búsqueda extra en pedidos chicos · [ ] opcional
-- **Depende de:** F0.8.
-- **Hacer:** si un material queda a una placa de la cota por superficie y tiene pocas piezas, correr la mejora con más presupuesto. Medir los tiempos de la constancia (hubo problemas de demora: commit "Time out constancia").
-- **Terminado cuando:** baja placas sin superar el tiempo aceptable, y los tests de invariancia siguen en verde.
+#### F0.9 Optimizador: el mejor resultado posible · [ ] prioridad
+- **Por qué:** ver la regla 2 de CLAUDE.md, para que nadie pierda plata. Hay margen medido:
+  - en producción, con 10 veces más búsqueda, el pedido `e28a8556` baja de 3 a 2 placas;
+  - en el caso de T36, probar todas las opciones empatadas da 1 placa en lugar de 2 (DECISIONES 0.1 y 0.6).
+- **Hacer:**
+  1. **Banco de pruebas permanente** (`frontend/src/lib/cutOptimizer.bench.ts` o similar). Usa los casos de los tests, pedidos armados con el catálogo de módulos y casos al azar con semilla. Mide placas, distancia a la cota por superficie y tiempo de trabajo. Para pedidos reales, compara contra un backup restaurado (§7).
+  2. **Probar mejoras deterministas,** porque el presupuesto se mide en unidades de trabajo y no en reloj:
+     - correr la mejora con cada orden de candidatos empatado y quedarse con el mínimo;
+     - dar más presupuesto solo cuando el resultado queda a una placa de la cota y el material tiene pocas piezas;
+     - hacer una búsqueda exacta en casos chicos.
+  3. **Quedarse con la combinación** que más placas ahorra sin que la constancia tarde demasiado. Hubo problemas de demora: commit "Time out constancia".
+- **Terminado cuando:**
+  - ningún caso del banco ni de producción da más placas que hoy;
+  - se ahorra donde hay margen;
+  - todas las placas se pueden cortar con guillotina (`herramientas/guillotina.mjs`);
+  - pasan T36 a T39;
+  - el tiempo en el peor pedido real no supera el actual en más de 2 segundos.
+- **Al desplegar (F8):** recalcular los pedidos abiertos para ver cuáles bajan de placas, porque eso cambia presupuestos.
 
 ### Fase 1: Motor de fórmulas · [x]
 - **Hecho:**
@@ -447,7 +462,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 |---|---|---|---|
 | P1 | ¿Se contrató Herrajes? | Gonzalo | Interruptor apagado |
 | P2 | Las 7 constancias desactualizadas (F0.7) | Gonzalo | Resuelto: se respetan los importes |
-| P3 | Placas reales usadas por la máquina en 4 pedidos (F0.8) | Taller | El optimizador actual |
+| P3 | Placas reales usadas por la máquina en 4 pedidos (F0.8) | Taller | Descartado (2026-10-03) |
 | P4 | Pase a producción (F8), cuando todo esté probado | Gonzalo | Nada se despliega antes |
 | P5 | Cantos, material por pieza, fondos, zócalo y gola, color de canto de los frentes, veta, redondeo y plazos | ROMA | Lo de spec §19 |
 | P6 | `PLACARD_EN_ESPEJO_2_PUERTAS` (fondo de 2000×2000 y puertas de 962×1934 sin rotar) y `PLACARD_2_PUERTAS_UN_LADO_PERCHERO` (fondo de 2498×1998) no entran en placas de 1830 de ancho | ROMA | Se importan, con advertencia |

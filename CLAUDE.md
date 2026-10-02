@@ -37,25 +37,29 @@ Sistema de gestión de solicitudes de corte de placas de melamina para ROMA Amob
    - todo cálculo de placas y presupuesto pasa por el código compartido, sin fórmulas duplicadas;
    - cada cambio que toque esos cálculos lleva un test de paridad;
    - el optimizador no puede depender del orden ni de la partición de las filas (tests T36 a T38).
-2. **No romper el flujo de los carpinteros:** listado, carga, edición, exportación, stock, notificaciones y dashboard (spec §0.3 y checklist §15).
-3. **Código compartido:** se edita solo en `frontend/src/lib/` y después se corre `npm run sync:optimizer`. `npm run check:optimizer` tiene que dar verde.
-4. **Base de datos:**
+2. **Resultados óptimos y reales, para que nadie pierda plata** (Gonzalo, 2026-10-03):
+   - el optimizador busca la menor cantidad de placas posible, para que el carpintero no pague de más;
+   - el resultado siempre tiene que poder cortarse con guillotina, para que el dueño no cobre de menos;
+   - toda mejora del optimizador se mide con el banco de pruebas (PLAN F0.9): nunca da más placas que antes en ningún caso medido, y mantiene la invariancia (T36 a T39).
+3. **No romper el flujo de los carpinteros:** listado, carga, edición, exportación, stock, notificaciones y dashboard (spec §0.3 y checklist §15).
+4. **Código compartido:** se edita solo en `frontend/src/lib/` y después se corre `npm run sync:optimizer`. `npm run check:optimizer` tiene que dar verde.
+5. **Base de datos:**
    - toda tabla o columna nueva va con una migración Prisma nueva;
    - nunca editar migraciones viejas;
    - nunca correr `prisma migrate reset` ni borrar `prisma/migrations` (el "reset" del README es solo para una base descartable);
    - las migraciones se prueban sobre una copia de un backup (PLAN §7).
-5. **Datos de producción:**
+6. **Datos de producción:**
    - los backups nunca se versionan;
    - nunca se copian nombres ni teléfonos de clientes a commits, logs ni mensajes;
    - se restauran solo en un contenedor local descartable.
-6. **Commit y push solo con el OK de Gonzalo.**
+7. **Commit y push solo con el OK de Gonzalo.**
    - Se trabaja directo sobre `main`.
    - **La VPS de producción no se toca hasta que todo esté terminado y probado en local (PLAN F8).** Mientras tanto se prueba con Docker y PostgreSQL local (PLAN §3.1). No propongas desplegar antes.
    - Igual, todo commit deja verdes las verificaciones y las migraciones no rompen lo existente, porque el día del pase se aplican sobre la base real.
    - Los commits van separados por paso o por tema.
    - Para deshacer algo ya subido se usa `git revert`, nunca `push --force`.
-7. **Estilo:** sin dependencias nuevas salvo que sean imprescindibles; validación con zod; mensajes de error en español, claros y accionables; MUI y el `theme.ts` existente.
-8. **Antes de la Fase 6 (Herrajes)**, preguntar si el cliente la contrató.
+8. **Estilo:** sin dependencias nuevas salvo que sean imprescindibles; validación con zod; mensajes de error en español, claros y accionables; MUI y el `theme.ts` existente.
+9. **Antes de la Fase 6 (Herrajes)**, preguntar si el cliente la contrató.
 
 ## Comandos
 
