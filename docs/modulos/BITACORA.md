@@ -27,6 +27,28 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (4) · equipo Pinformatico15 · rama main
+
+**Pasos:** F0.9 terminado. La Fase 0 está completa.
+
+**Hecho:**
+- **Banco de pruebas** `frontend/src/lib/cutOptimizer.bench.ts` (`npm run bench:optimizer`): compara contra una versión base con `--base` y suma pedidos reales con `--datos`.
+- **Optimizador** (DECISIONES 0.12): prueba los otros órdenes de candidatos y hace una segunda búsqueda en materiales chicos. Ahorra placas en 2 de 156 casos (uno real), no empeora ninguno y todo se puede cortar.
+- **Gonzalo eligió esperar más a cambio de ahorrar.** Los tiempos se agilizan al final (F7.4).
+- **Script `pedidos:completar-detalle`:** guarda el detalle recalculado de los pedidos anteriores. Sin él, el dashboard superaría los 60 s; con él tarda 67 ms. En la copia completó 65 pedidos y 8 difieren de su constancia: el pedido `e28a8556` ahora coincide.
+- **`guillotina.d.mts`** para usar el verificador desde TypeScript.
+
+**Verificaciones:**
+- tests 39, 12 y 5, todos en verde (el de 40 piezas, con el nuevo límite de 8 s);
+- `check:optimizer` y `tsc` en verde;
+- `npm run build` en verde.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F2.2, migración de pedidos.
+
+---
+
 ## 2026-10-03 (3) · equipo Pinformatico15 · rama main
 
 **Decisiones de Gonzalo:**

@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-03
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F2.1. Todo el código de la Fase 0 está hecho.
-- **Próximo paso:** **F0.9**, el optimizador da el mejor resultado posible (prioridad de Gonzalo, 2026-10-03). Después, **F2.2**, la migración de pedidos.
+- **Último paso terminado:** F0.9. La Fase 0 está completa, y F2.1 también.
+- **Próximo paso:** **F2.2**, la migración de pedidos.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
 
@@ -28,7 +28,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.6 | Plano de cortes coherente con el backend | [x] |
 | F0.7 | Constancias desactualizadas (decisión comercial) | [x] se respetan |
 | F0.8 | Validar contra las placas que usó la máquina | [-] descartado: no hay datos |
-| F0.9 | Optimizador: el mejor resultado posible | [ ] prioridad |
+| F0.9 | Optimizador: el mejor resultado posible | [x] |
 | F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [~] F2.1 hecho |
@@ -244,7 +244,8 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 
 - Si la máquina usó menos que el optimizador actual, se evalúa F0.9 o se mejora el optimizador.
 
-#### F0.9 Optimizador: el mejor resultado posible · [ ] prioridad
+#### F0.9 Optimizador: el mejor resultado posible · [x]
+- **Hecho (2026-10-03):** ver DECISIONES 0.12.
 - **Por qué:** ver la regla 2 de CLAUDE.md, para que nadie pierda plata. Hay margen medido:
   - en producción, con 10 veces más búsqueda, el pedido `e28a8556` baja de 3 a 2 placas;
   - en el caso de T36, probar todas las opciones empatadas da 1 placa en lugar de 2 (DECISIONES 0.1 y 0.6).
@@ -441,6 +442,15 @@ Regenera las piezas de ese módulo y **recalcula el pedido entero** en la misma 
 #### F7.2 Pulido · [ ]
 Autocompletar clientes, estados vacíos y de carga, y accesibilidad (spec §14.5).
 
+#### F7.4 Agilizar los tiempos del optimizador · [ ]
+- **Por qué:** en F0.9 se aceptó esperar más para ahorrar placas (DECISIONES 0.12). Gonzalo pidió ver al final cómo agilizarlo.
+- **Ideas:**
+  - calcular el plano una sola vez y reutilizarlo entre la vista previa y el alta;
+  - caché por multiconjunto canónico de piezas (R5);
+  - mover el cálculo del navegador a un worker;
+  - perfilar la búsqueda extra.
+- **Regla:** ninguna optimización de tiempo puede dar más placas. Se mide con `npm --prefix frontend run bench:optimizer`.
+
 #### F7.3 Aceptación con ROMA · [ ]
 La prueba de spec §17.3 completa, incluida la importación real del Excel en la máquina.
 
@@ -451,9 +461,11 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 - **Hacer:**
   1. Hacer un backup reciente de producción y restaurarlo en local (§7).
   2. Correr `npm --prefix backend run pedidos:recalcular` y revisar las diferencias contra lo guardado (DECISIONES 0.5: constancias del estimador viejo).
-  3. Aplicar todas las migraciones sobre esa copia y probar la app completa.
-  4. Recién ahí, en la VPS: backup, actualizar el código y reconstruir frontend y backend juntos. La API aplica sola las migraciones al arrancar.
-  5. Si algo falla: volver al backup y a la versión anterior.
+  3. Correr `npm --prefix backend run pedidos:completar-detalle`, que guarda el detalle recalculado de los pedidos anteriores. Sin esto, el dashboard tarda más de 60 s (DECISIONES 0.12).
+  4. Aplicar todas las migraciones sobre esa copia y probar la app completa.
+  5. Recién ahí, en la VPS: backup, actualizar el código y reconstruir frontend y backend juntos. La API aplica sola las migraciones al arrancar.
+     Después de desplegar, correr `pedidos:completar-detalle` contra la base de producción.
+  6. Si algo falla: volver al backup y a la versión anterior.
 - **Terminado cuando:** producción corre la versión nueva y los pedidos existentes muestran lo mismo que en la prueba local.
 
 ## 6. Decisiones pendientes (de Gonzalo o de ROMA)
