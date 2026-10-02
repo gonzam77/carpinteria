@@ -2,6 +2,7 @@ import AddIcon from "@mui/icons-material/Add";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EditIcon from "@mui/icons-material/Edit";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import ToggleOffOutlinedIcon from "@mui/icons-material/ToggleOffOutlined";
 import ToggleOnOutlinedIcon from "@mui/icons-material/ToggleOnOutlined";
 import {
@@ -27,13 +28,16 @@ import {
   catalogErrorMessage,
   createModuleCategory,
   duplicateModule,
+  getModulesConfig,
   listModuleCategories,
   listModules,
   setModuleActive,
-  updateModuleCategory
+  updateModuleCategory,
+  updateModulesConfig
 } from "../api/catalog";
+import { api } from "../api/client";
 import { ModuleCard } from "../components/ModuleCard";
-import type { ModuleCategory, ModuleListItem } from "../types";
+import type { Material, ModuleCategory, ModuleListItem, ModulesConfig } from "../types";
 
 type Feedback = { severity: "success" | "error" | "warning"; message: string } | null;
 
@@ -132,6 +136,112 @@ function CategoriesDialog({ open, onClose, categories, onChanged }: { open: bool
   );
 }
 
+/**
+ * Configuracion del catalogo (ConfiguracionModulos): material de fondo por defecto, redondeo de las medidas y
+ * plazos de entrega. El redondeo cambia las medidas de todas las piezas que se calculen desde ahora.
+ */
+function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: (message: string) => void }) {
+  const [config, setConfig] = useState<ModulesConfig | null>(null);
+  const [placas, setPlacas] = useState<Material[]>([]);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setConfig(null);
+    setError("");
+    Promise.all([getModulesConfig(), api.get<Material[]>("/materiales", { params: { incluirInactivos: true } })])
+      .then(([cfg, materials]) => {
+        setConfig(cfg);
+        setPlacas(materials.data.filter((material) => material.tipo === "PLACA" && (material.activo || material.id === cfg.materialFondoId)));
+      })
+      .catch((loadError) => setError(catalogErrorMessage(loadError, "No se pudo cargar la configuracion.")));
+  }, [open]);
+
+  async function save() {
+    if (!config) return;
+    setSaving(true);
+    setError("");
+    try {
+      const { id: _id, ...data } = config;
+      await updateModulesConfig(data);
+      onSaved("Configuracion del catalogo guardada.");
+      onClose();
+    } catch (saveError) {
+      setError(catalogErrorMessage(saveError, "No se pudo guardar la configuracion."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const days = (value: string) => Math.max(0, Math.round(Number(value) || 0));
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Configuracion del catalogo</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          {error && <Alert severity="error">{error}</Alert>}
+          {!config ? (
+            <Skeleton variant="rounded" height={220} />
+          ) : (
+            <>
+              <TextField
+                select
+                label="Material de fondo por defecto"
+                value={config.materialFondoId ?? ""}
+                onChange={(event) => setConfig({ ...config, materialFondoId: event.target.value || null })}
+                slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+                helperText="Para las piezas que van en fondo, salvo que el modulo tenga uno propio. Por ejemplo, fibrofacil blanco de 3 mm."
+              >
+                <MenuItem value="">Sin configurar</MenuItem>
+                {placas.map((material) => (
+                  <MenuItem key={material.id} value={material.id}>
+                    {material.nombre.trim()} · {material.espesorMm.toLocaleString("es-AR")} mm{material.activo ? "" : " (inactiva)"}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Redondeo de las medidas"
+                value={config.redondeo}
+                onChange={(event) => setConfig({ ...config, redondeo: event.target.value as ModulesConfig["redondeo"] })}
+                helperText="Las formulas pueden dar decimales; la maquina corta en mm enteros. Se redondea solo el resultado final de cada pieza. Pendiente de confirmar con ROMA."
+              >
+                <MenuItem value="REDONDEAR">Al mm mas cercano (412,5 → 413)</MenuItem>
+                <MenuItem value="TRUNCAR">Siempre hacia abajo (412,9 → 412)</MenuItem>
+              </TextField>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  label="Dias de entrega por defecto"
+                  type="number"
+                  value={config.diasEntregaDefecto}
+                  onChange={(event) => setConfig({ ...config, diasEntregaDefecto: days(event.target.value) })}
+                  slotProps={{ htmlInput: { min: 0, max: 365 } }}
+                  fullWidth
+                />
+                <TextField
+                  label="Avisar dias antes del vencimiento"
+                  type="number"
+                  value={config.diasAvisoVencimiento}
+                  onChange={(event) => setConfig({ ...config, diasAvisoVencimiento: days(event.target.value) })}
+                  slotProps={{ htmlInput: { min: 0, max: 60 } }}
+                  fullWidth
+                />
+              </Stack>
+            </>
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancelar</Button>
+        <Button variant="contained" onClick={save} disabled={!config || saving}>
+          Guardar
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 export function ModuleCatalogPage() {
   const navigate = useNavigate();
   const [modules, setModules] = useState<ModuleListItem[] | null>(null);
@@ -141,6 +251,7 @@ export function ModuleCatalogPage() {
   const [showInactive, setShowInactive] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -202,7 +313,10 @@ export function ModuleCatalogPage() {
           <Typography variant="h4">Catalogo de modulos</Typography>
           <Typography color="text.secondary">Los muebles que se pueden pedir a medida: medidas, piezas, formulas y cantos de cada uno.</Typography>
         </Stack>
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+          <Button variant="outlined" startIcon={<SettingsOutlinedIcon />} onClick={() => setConfigOpen(true)}>
+            Configuracion
+          </Button>
           <Button variant="outlined" startIcon={<CategoryOutlinedIcon />} onClick={() => setCategoriesOpen(true)}>
             Categorias
           </Button>
@@ -280,6 +394,7 @@ export function ModuleCatalogPage() {
         </Paper>
       )}
 
+      <ConfigDialog open={configOpen} onClose={() => setConfigOpen(false)} onSaved={(message) => setFeedback({ severity: "success", message })} />
       <CategoriesDialog open={categoriesOpen} onClose={() => setCategoriesOpen(false)} categories={categories} onChanged={load} />
     </Stack>
   );
