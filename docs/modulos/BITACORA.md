@@ -27,6 +27,28 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-03 (10) · equipo Pinformatico15 · rama main
+
+**Pasos:**
+- F3.1 terminado.
+- F3.2: el backend está hecho; falta el frontend.
+
+**Hecho:**
+- **API `/api/modulos`** (spec §13.1), en `backend/src/modules/catalog/`. Las rutas fijas van antes de `/:id`.
+- **Validaciones de §5.6** en `validateModuleInput`: devuelve todos los errores juntos. Si el módulo está activo, las fórmulas tienen que evaluar sin errores; inactivo, se guarda como borrador.
+- **Endpoints de imagen** con el almacenamiento en disco: un 413 claro por encima de 1 MB, un 415 si el tipo real no es imagen, `ETag` y 304.
+- **Prueba de punta a punta** `herramientas/e2e-f31.mjs`: 30 de 30, y la base y la carpeta de imágenes quedan como estaban.
+
+**Verificaciones:** `tsc` y build en verde.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:**
+1. F3.2 en el frontend: compresión a 1200 px con WebP o JPEG de hasta 1 MB, y el hook `useModuleImage`.
+2. F3.3: tipos, rutas, menú y pantalla del catálogo.
+
+---
+
 ## 2026-10-03 (9) · equipo Pinformatico15 · rama main
 
 **Decisión de Gonzalo (DECISIONES 12):** las imágenes de los módulos van como archivos en el servidor, comprimidas y con 1 MB como máximo. Cambia la spec D5, que las guardaba en la base. El ABM de módulos ya estaba en la spec, en la sección 6.

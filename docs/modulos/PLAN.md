@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-03
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F2.5. Las Fases 0 y 2 están completas.
-- **Próximo paso:** **F3.1**, la API del catálogo.
+- **Último paso terminado:** F3.1 (y el backend de F3.2). Las Fases 0 y 2 están completas.
+- **Próximo paso:** **F3.2**, la parte de imágenes en el frontend (compresión y `useModuleImage`), y después **F3.3**, la pantalla del catálogo.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -33,7 +33,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.10 | Piezas rotables cargadas al revés | [x] |
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
-| F3.1–F3.4 | API y pantallas del catálogo | [ ] |
+| F3.1–F3.4 | API y pantallas del catálogo | [~] F3.1 y el backend de F3.2 hechos |
 | F4.1–F4.5 | API y asistente de solicitudes de módulos | [ ] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (solo si se contrató) | [!] preguntar a Gonzalo |
@@ -349,7 +349,12 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 
 ### Fase 3: API y pantallas del catálogo (spec §6, §13.1 y §14)
 
-#### F3.1 API del catálogo · [ ]
+#### F3.1 API del catálogo · [x]
+- **Hecho (2026-10-03):** `backend/src/modules/catalog/`, con `catalog.schemas.ts`, `catalog.service.ts` y `catalog.routes.ts`, montada en `/api/modulos`, solo para administradores.
+- **Endpoints:** listado (con `estadoFormulas` y observaciones), detalle, alta, edición (con `version + 1`), activar y desactivar, duplicar (con la imagen), borrar (409 si tiene pedidos), evaluar, categorías y configuración.
+- **Validaciones de §5.6:** juntan todos los errores en `details.errores`.
+- **Auditoría:** cada acción queda registrada.
+- **Prueba:** `herramientas/e2e-f31.mjs`, 30 de 30.
 - **Depende de:** F2.4.
 - **Hacer:**
   - `backend/src/modules/catalog/` con rutas, schemas zod (`moduloSchema`) y servicio;
@@ -360,12 +365,13 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - todo con `authenticate` y `authorize(ADMIN)`.
 - **Terminado cuando:** hay tests de servicio y un carpintero recibe 403 en todas las rutas nuevas.
 
-#### F3.2 Imágenes · [~] almacenamiento hecho
+#### F3.2 Imágenes · [~] backend hecho
 - **Depende de:** F3.1.
-- **Ya hecho (2026-10-03):** el almacenamiento en disco, la migración y el importador (DECISIONES 12).
-- **Hacer:**
-  - endpoints `PUT /api/modulos/:id/imagen` (`express.raw`, hasta 1 MB, con `storeModuleImage`), `GET` (envía el archivo con `ETag` y `Cache-Control`) y `DELETE` (`removeModuleImage`);
-  - en el frontend, achicar a 1200 px en un `<canvas>` y comprimir a WebP o JPEG; si pasa de 1 MB, bajar la calidad, y si no alcanza, avisar;
+- **Ya hecho (2026-10-03):**
+  - el almacenamiento en disco, la migración y el importador (DECISIONES 12);
+  - los endpoints `PUT`, `GET` (con `ETag`, `Cache-Control` y 304) y `DELETE /api/modulos/:id/imagen`, probados en `e2e-f31.mjs`.
+- **Falta, en el frontend:**
+  - achicar a 1200 px en un `<canvas>` y comprimir a WebP o JPEG; si pasa de 1 MB, bajar la calidad, y si no alcanza, avisar;
   - el hook `useModuleImage` con `axios` en modo blob, `createObjectURL` y caché.
 
 #### F3.3 Pantalla del catálogo · [ ]
