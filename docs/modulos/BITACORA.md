@@ -27,6 +27,41 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-02 · equipo Pinformatico15 · rama main
+
+**Pasos:** F0.3 terminado. F0.1b sigue pendiente porque lo despliega Gonzalo en el servidor.
+
+**Hecho:**
+- **`frontend/src/lib/orderEstimate.ts`**, la única función de placas y presupuesto (DECISIONES 0.3 y 0.8). Está sincronizada a `backend/src/shared/`, porque se agregó a `sharedFiles` del script de sincronización.
+- **`order-estimate.service.ts` y `order-stock.service.ts`** la usan para el snapshot, el listado de materiales, el stock y el dashboard. Se eliminó `calculateBoardsForMaterial`.
+- **`CutOptimizer.tsx`** calcula con la misma función y toma el total de ella. Se eliminó `calculateRowEdgeCost`.
+- **`backend/tsconfig.json`** tiene `rewriteRelativeImportExtensions`.
+- **Tests:** `orderEstimate.test.ts`, con la paridad entre modulos, carga fusionada, de a una pieza y permutada, y los casos de redondeo, errores y faltante.
+- **Script `npm --prefix backend run pedidos:recalcular`** (`backend/src/scripts/recalcular-pedidos.ts`).
+- **Medido sobre el backup**, en el contenedor `carpinteria-analisis-db`, con los mismos precios:
+  - 0 cambios de placas;
+  - como mucho 1,2 centavos por importe.
+
+  Contra lo guardado, solo los 9 pedidos ya conocidos del estimador viejo (DECISIONES 0.5) tienen otra cantidad de placas. Las diferencias de plata vienen de aumentos de precios posteriores.
+
+**Verificaciones:**
+- frontend `npm test`: 38 de 38, 12 de 12 y 5 de 5;
+- `check:optimizer` en verde;
+- `tsc` en verde en frontend y backend;
+- `npm run build` en verde, y el backend compilado carga `orderEstimate.js`.
+
+No se probó el plano en el navegador: la lógica es la misma función que cubren los tests.
+
+**Commits:** ver `git log`, si Gonzalo aprobó el commit.
+
+**Próximo paso:**
+1. F0.4: migración con el detalle del cálculo en el snapshot (placas por material y mm por canto) y columna `indice` en `DetallePedido`.
+2. Antes de desplegar, F0.1b: desplegar F0.1 y F0.3 juntos, frontend y backend.
+
+**Esperando a Gonzalo o a ROMA:** P1 a P8 (PLAN §6), sin cambios.
+
+---
+
 ## 2026-10-01 · equipo Pinformatico15 · rama main
 
 **Pasos:**

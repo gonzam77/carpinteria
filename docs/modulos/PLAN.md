@@ -10,11 +10,11 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 ## 1. Estado actual
 
-**Actualizado:** 2026-10-01
+**Actualizado:** 2026-10-02
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido.
-- **Último paso terminado:** F0.2.
-- **Próximo paso:** **F0.1b**, desplegar la corrección del optimizador (frontend y backend juntos). Después, **F0.3**.
+- **Último paso terminado:** F0.3.
+- **Próximo paso:** **F0.4**, una sola verdad por pedido. Además, Gonzalo tiene que desplegar F0.1 y F0.3 juntos (F0.1b): los dos cambian código compartido.
 - **Esperando decisiones:** ver §6.
 
 | Paso | Qué | Estado |
@@ -22,7 +22,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F0.1 | Optimizador independiente del orden de las filas | [x] |
 | F0.1b | Despliegue de F0.1 | [ ] |
 | F0.2 | Medir el impacto con el backup de producción | [x] |
-| F0.3 | Presupuesto exacto con una función compartida | [ ] |
+| F0.3 | Presupuesto exacto con una función compartida | [x] |
 | F0.4 | Una sola verdad por pedido: detalle por material y orden estable | [ ] |
 | F0.5 | Reserva de stock exacta y transiciones de estado | [ ] |
 | F0.6 | Plano de cortes coherente con el backend | [ ] |
@@ -65,7 +65,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 ### 2.1 Verificaciones de siempre
 
 ```bash
-cd frontend && npm test           # optimizador (38 tests) + motor de fórmulas (12)
+cd frontend && npm test           # optimizador (38), motor de fórmulas (12) y presupuesto (5)
 npm run check:optimizer           # desde la raíz: el código compartido está sincronizado
 cd frontend && npx tsc --noEmit
 cd backend && npx tsc --noEmit
@@ -153,7 +153,8 @@ Requisito del dueño (regla 1 de CLAUDE.md): para las mismas piezas, las placas 
 #### F0.2 Medir el impacto con el backup de producción · [x]
 Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición quedaron fuera del repo, salvo el verificador de cortes de guillotina, que está en [herramientas/](herramientas/). F0.3 tiene que dejar un script permanente que recalcule todos los pedidos de un backup y los compare con lo guardado, para repetir la medición antes de cada despliegue que toque cálculos.
 
-#### F0.3 Presupuesto exacto con una función compartida · [ ]
+#### F0.3 Presupuesto exacto con una función compartida · [x]
+- **Hecho (2026-10-02):** ver DECISIONES 0.3 y 0.8. La función está en `frontend/src/lib/orderEstimate.ts`, con sus tests, y la usan el snapshot, el listado de materiales, la reserva de stock, el dashboard y el plano. El script de recálculo es `npm --prefix backend run pedidos:recalcular`.
 - **Depende de:** F0.1b.
 - **Leer:**
   - DECISIONES 0.3;
@@ -452,6 +453,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
   - En Git Bash hay que anteponer `MSYS_NO_PATHCONV=1` a los comandos `docker cp` y `docker exec`.
   - La URL para Prisma es `postgresql://carpinteria:analisis_local@127.0.0.1:55432/carpinteria`.
   - Para borrarlo: `docker rm -f carpinteria-analisis-db`.
+- **Para recalcular todos los pedidos y compararlos con lo guardado** (antes de desplegar un cambio de cálculo): con `DATABASE_URL` apuntando al contenedor, correr `npm --prefix backend run pedidos:recalcular`. Solo lee la base. Antes hay que correr `npx prisma generate` en `backend`.
 - **Para probar una migración:**
   1. Restaurar en un contenedor recién creado.
   2. `cd backend` y luego `DATABASE_URL=<url> npx prisma migrate deploy`. En PowerShell: `$env:DATABASE_URL="<url>"; npx prisma migrate deploy`.
