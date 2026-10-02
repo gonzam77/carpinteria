@@ -1,6 +1,7 @@
 import { TipoMaterial, type DetallePedido, type Material, type PrismaClient } from "../../generated/prisma/client.js";
 import { AppError } from "../../utils/http.js";
 import { computeOrderEstimate, toCentavos, type OrderEstimate } from "../../shared/orderEstimate.js";
+import { heldBoardsByMaterial } from "./order-stock.service.js";
 
 /**
  * Detalle del calculo con el que se armo la constancia. Se guarda en Pedido.estimacionDetalle para que el
@@ -196,7 +197,7 @@ export type OrderMaterialsSummary = {
 
 export async function buildOrderMaterialsSummary(
   tx: PrismaClient,
-  order: { detalles: DetallePedido[]; estimacionDetalle?: unknown }
+  order: { detalles: DetallePedido[]; estimacionDetalle?: unknown; reservaStock?: unknown; stockReservado?: boolean }
 ): Promise<OrderMaterialsSummary> {
   const { detalles } = order;
   const missing = "Material no encontrado para calcular el listado de materiales.";
@@ -206,8 +207,11 @@ export async function buildOrderMaterialsSummary(
   }
 
   const { origen, items } = await orderMaterialBoards(tx, order, missing);
+  // Si el pedido ya desconto su stock, esas placas son suyas: no cuentan como faltantes.
+  const held = await heldBoardsByMaterial(tx, { ...order, stockReservado: order.stockReservado ?? false });
   const placas: MaterialsSummaryPlate[] = items.map(({ material, boards, piezas }) => {
     const stockPlacas = material.stockPlacas ?? null;
+    const disponible = (stockPlacas ?? 0) + (held.get(material.id) ?? 0);
     return {
       materialId: material.id,
       nombre: material.nombre,
@@ -217,7 +221,7 @@ export async function buildOrderMaterialsSummary(
       piezas,
       placas: boards,
       stockPlacas,
-      faltantePlacas: Math.max(0, boards - (stockPlacas ?? 0))
+      faltantePlacas: Math.max(0, boards - disponible)
     };
   });
 

@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { EstadoPedido, Rol, TipoMaterial, type Material } from "../../generated/prisma/client.js";
+import { EstadoPedido, Prisma, Rol, TipoMaterial, type Material } from "../../generated/prisma/client.js";
 import dayjs from "dayjs";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
-import { calculateOrderStockShortages, releaseOrderStock, reserveOrderStock, shouldReleaseStock, shouldReserveStock } from "./order-stock.service.js";
+import { calculateOrderStockShortages, hasStockCommitment, returnOrderStock, stateHoldsStock, takeOrderStock } from "./order-stock.service.js";
 import { AppError, asyncHandler } from "../../utils/http.js";
 import { buildOrdersWorkbook } from "./excel.service.js";
 import { orderFiltersSchema, orderSchema, orderStatusSchema } from "./order.schemas.js";
@@ -187,7 +187,7 @@ ordersRouter.post(
       return created;
     });
 
-    const stockShortages = await calculateOrderStockShortages(prisma as any, order.detalles as any);
+    const stockShortages = await calculateOrderStockShortages(prisma as any, order as any);
 
     // sendNewOrderWhatsappNotification(order).catch((error) => {
     //   console.error("WhatsApp notification error", error);
@@ -270,10 +270,11 @@ ordersRouter.put(
     
     const estimateSnapshot = await buildOrderEstimateSnapshot(prisma as any, detalles as any);
 
+    if (hasStockCommitment(existing)) {
+      throw new AppError(409, "La solicitud tiene stock descontado. Pasala a pendiente antes de editarla.");
+    }
+
     const order = await prisma.$transaction(async (tx) => {
-      if (existing.estado === EstadoPedido.EN_PROCESO && existing.stockReservado) {
-        await releaseOrderStock(tx as any, existing.detalles as any);
-      }
       await tx.detallePedido.deleteMany({ where: { pedidoId: existing.id } });
       const updated = await tx.pedido.update({
         where: { id: existing.id },
@@ -286,9 +287,6 @@ ordersRouter.put(
         },
         include: { detalles: DETALLES_ORDENADOS }
       });
-      if (existing.estado === EstadoPedido.EN_PROCESO && existing.stockReservado) {
-        await reserveOrderStock(tx as any, updated.detalles as any);
-      }
       await tx.historialPedido.create({
         data: { pedidoId: existing.id, usuarioId: req.user.id, accion: "EDITAR_PEDIDO" }
       });
@@ -306,23 +304,32 @@ ordersRouter.patch(
     const previous = await prisma.pedido.findUnique({ where: { id: req.params.id }, include: { detalles: DETALLES_ORDENADOS } });
     if (!previous) throw new AppError(404, "Pedido no encontrado");
     const order = await prisma.$transaction(async (tx) => {
-      let stockReservado = previous.stockReservado;
+      // Se toma el cambio de estado solo si el pedido sigue como se leyo. Si otra pestania u otro usuario lo
+      // cambio entre medio, este pedido responde 409 y no toca el stock: asi no se descuenta dos veces.
+      const claimed = await tx.pedido.updateMany({
+        where: { id: previous.id, estado: previous.estado, fechaActualizacion: previous.fechaActualizacion },
+        data: { estado: schema.estado }
+      });
+      if (claimed.count !== 1) {
+        throw new AppError(409, "La solicitud cambio mientras tanto. Recarga la pagina y volve a intentar.", { code: "ORDER_CHANGED" });
+      }
 
-      if (shouldReleaseStock(previous.estado, schema.estado) && previous.stockReservado) {
-        await releaseOrderStock(tx as any, previous.detalles as any);
-        stockReservado = false;
+      // El stock depende solo de si el estado nuevo lo compromete (en proceso, terminado, entregado) y de si
+      // el pedido ya lo tiene comprometido: se descuenta una vez y se devuelve exactamente lo descontado.
+      const holdsNow = hasStockCommitment(previous);
+      const needsStock = stateHoldsStock(schema.estado);
+      let stockData = {};
+      if (holdsNow && !needsStock) {
+        await returnOrderStock(tx as any, previous as any);
+        stockData = { stockReservado: false, reservaStock: Prisma.DbNull };
+      } else if (!holdsNow && needsStock) {
+        const reserva = await takeOrderStock(tx as any, previous as any, { force: schema.forceWithoutStock });
+        stockData = { stockReservado: !reserva.forzada, reservaStock: reserva };
       }
-      if (shouldReserveStock(previous.estado, schema.estado)) {
-        if (schema.forceWithoutStock) {
-          stockReservado = false;
-        } else {
-          await reserveOrderStock(tx as any, previous.detalles as any);
-          stockReservado = true;
-        }
-      }
+
       const updated = await tx.pedido.update({
         where: { id: req.params.id },
-        data: { estado: schema.estado, stockReservado }
+        data: stockData
       });
       await tx.historialPedido.create({
         data: {
@@ -351,8 +358,8 @@ ordersRouter.delete(
     });
     if (!existing) throw new AppError(404, "Pedido no encontrado");
     await prisma.$transaction(async (tx) => {
-      if (existing.estado === EstadoPedido.EN_PROCESO && existing.stockReservado) {
-        await releaseOrderStock(tx as any, existing.detalles as any);
+      if (hasStockCommitment(existing)) {
+        await returnOrderStock(tx as any, existing as any);
       }
       await tx.pedido.delete({ where: { id: existing.id } });
     });

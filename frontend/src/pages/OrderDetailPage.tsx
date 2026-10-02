@@ -123,7 +123,7 @@ export function OrderDetailPage() {
       await loadOrder();
       setNotificationSeverity(forceWithoutStock ? "warning" : "success");
       setNotification(
-        forceWithoutStock && estado === "EN_PROCESO"
+        forceWithoutStock
           ? `Estado actualizado a ${getStatusStyle(estado).label} sin descontar stock por faltante.`
           : `Estado actualizado a ${getStatusStyle(estado).label}.`
       );
@@ -135,8 +135,8 @@ export function OrderDetailPage() {
       }
     } catch (error) {
       if (
+        // En proceso, terminado y entregado descuentan stock si el pedido todavia no lo tiene descontado.
         !forceWithoutStock &&
-        estado === "EN_PROCESO" &&
         axios.isAxiosError<StatusChangeError>(error) &&
         error.response?.data?.code === "STOCK_SHORTAGE_CONFIRMATION_REQUIRED"
       ) {
@@ -309,7 +309,7 @@ export function OrderDetailPage() {
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 0.5 }}>
             <Alert severity="warning" variant="outlined">
-              No hay stock suficiente para pasar esta solicitud a En proceso. Puedes continuar de todos modos y el stock no se descontara.
+              No hay stock suficiente para pasar esta solicitud a {pendingStatus ? getStatusStyle(pendingStatus).label : "ese estado"}. Puedes continuar de todos modos y el stock no se descontara.
             </Alert>
             <Stack spacing={1}>
               {stockShortages.map((item) => (

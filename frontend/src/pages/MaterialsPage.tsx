@@ -43,6 +43,8 @@ type MaterialForm = {
   anchoPlaca: string;
   altoPlaca: string;
   stockPlacas: string;
+  /** Stock al abrir el formulario: el backend aplica solo la diferencia y no pisa las reservas hechas mientras tanto. */
+  stockPlacasAnterior?: string;
 };
 
 type BulkValueForm = {
@@ -131,7 +133,8 @@ export function MaterialsPage() {
       espesorMm: String(material.espesorMm),
       anchoPlaca: material.anchoPlaca ? String(material.anchoPlaca) : "",
       altoPlaca: material.altoPlaca ? String(material.altoPlaca) : "",
-      stockPlacas: material.stockPlacas != null ? String(material.stockPlacas) : "0"
+      stockPlacas: material.stockPlacas != null ? String(material.stockPlacas) : "0",
+      stockPlacasAnterior: material.stockPlacas != null ? String(material.stockPlacas) : "0"
     });
   }
 
@@ -173,6 +176,7 @@ export function MaterialsPage() {
             anchoPlaca: Number(form.anchoPlaca),
             altoPlaca: Number(form.altoPlaca),
             stockPlacas: Number(form.stockPlacas),
+            ...(editingId && form.stockPlacasAnterior !== undefined ? { stockPlacasAnterior: Number(form.stockPlacasAnterior) } : {}),
             activo: true
           }
         : {

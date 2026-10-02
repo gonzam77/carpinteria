@@ -18,6 +18,9 @@ const placaSchema = z.object({
   anchoPlaca: z.coerce.number().int().positive(),
   altoPlaca: z.coerce.number().int().positive(),
   stockPlacas: z.coerce.number().int().nonnegative().optional(),
+  // Stock que tenia el formulario al abrirse. Si viene, se aplica solo la diferencia que cargo el usuario,
+  // para no pisar las reservas de pedidos que se hicieron mientras el formulario estaba abierto.
+  stockPlacasAnterior: z.coerce.number().int().nonnegative().optional(),
   activo: z.boolean().optional()
 });
 
@@ -211,7 +214,8 @@ materialsRouter.post(
       parsed.tipo === TipoMaterial.PLACA
         ? await (async () => {
             await ensureMaterialNameAvailable(parsed.nombre);
-            return { ...parsed, colorCanto: null, placaMaterialId: null, stockPlacas: parsed.stockPlacas ?? 0 };
+            const { stockPlacasAnterior: _ignorado, ...placa } = parsed;
+            return { ...placa, colorCanto: null, placaMaterialId: null, stockPlacas: parsed.stockPlacas ?? 0 };
           })()
         : await (async () => {
             const placa = await findCantoPlate(parsed.placaMaterialId);
@@ -293,7 +297,15 @@ materialsRouter.put(
       parsed.tipo === TipoMaterial.PLACA
         ? await (async () => {
             await ensureMaterialNameAvailable(parsed.nombre, req.params.id);
-            return { ...parsed, colorCanto: null, placaMaterialId: null, stockPlacas: parsed.stockPlacas ?? 0, activo: existing.activo };
+            const { stockPlacasAnterior, ...placa } = parsed;
+            return {
+              ...placa,
+              colorCanto: null,
+              placaMaterialId: null,
+              // Con stockPlacasAnterior el stock se ajusta despues, por diferencia y dentro de la transaccion.
+              ...(stockPlacasAnterior === undefined ? { stockPlacas: parsed.stockPlacas ?? 0 } : { stockPlacas: undefined }),
+              activo: existing.activo
+            };
           })()
         : await (async () => {
             const placa = await findCantoPlate(parsed.placaMaterialId);
@@ -319,6 +331,17 @@ materialsRouter.put(
         data
       });
 
+      let result = updatedMaterial;
+      if (parsed.tipo === TipoMaterial.PLACA && parsed.stockPlacasAnterior !== undefined) {
+        const delta = (parsed.stockPlacas ?? 0) - parsed.stockPlacasAnterior;
+        if (delta !== 0) {
+          result = await tx.material.update({ where: { id: updatedMaterial.id }, data: { stockPlacas: { increment: delta } } });
+          if ((result.stockPlacas ?? 0) < 0) {
+            throw new AppError(409, "El stock no puede quedar negativo: cambio mientras editabas por las reservas de pedidos. Volve a abrir el material.");
+          }
+        }
+      }
+
       if (updatedMaterial.tipo === TipoMaterial.PLACA) {
         await syncLinkedCantoNames(tx, updatedMaterial.id, updatedMaterial.nombre);
       }
@@ -327,7 +350,7 @@ materialsRouter.put(
         data: { usuarioId: req.user.id, accion: "EDITAR_MATERIAL", entidad: "Material", entidadId: updatedMaterial.id }
       });
 
-      return updatedMaterial;
+      return result;
     });
     res.json(material);
   })
