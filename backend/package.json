@@ -12,6 +12,8 @@
                     "prisma:deploy":  "prisma migrate deploy",
                     "prisma:seed":  "tsx prisma/seed.ts",
                     "prisma:seed:prod":  "node dist/prisma/seed.js",
+                    "prisma:seed:modulos":  "tsx prisma/seed-modulos.ts",
+                    "prisma:seed:modulos:prod":  "node dist/prisma/seed-modulos.js",
                     "pedidos:recalcular":  "tsx src/scripts/recalcular-pedidos.ts",
                     "pedidos:completar-detalle":  "tsx src/scripts/completar-detalle-pedidos.ts"
                 },
