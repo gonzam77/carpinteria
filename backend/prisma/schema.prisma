@@ -61,6 +61,9 @@ model Pedido {
   metrosCanto   Float             @default(0)
   presupuestoEstimado Float       @default(0)
   faltanteStock Boolean           @default(false)
+  // Detalle del calculo con el que se armo la constancia: placas por material, mm por canto, y los precios
+  // y la configuracion usados. Lo leen el listado de materiales y el dashboard. Null en pedidos anteriores.
+  estimacionDetalle Json?
   usuarioId     String
   fechaCreacion DateTime          @default(now())
   fechaActualizacion DateTime     @updatedAt
@@ -125,10 +128,13 @@ model DetallePedido {
   numeroCliente      String?
   nombreCliente      String?
   nombreProducto     String?
+  // Posicion de la fila dentro del pedido. Todas las lecturas ordenan por este campo.
+  indice             Int     @default(0)
   pedido             Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   materialRef        Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
 
   @@index([materialId])
+  @@index([pedidoId, indice])
 
   @@map("detalle_pedidos")
 }
