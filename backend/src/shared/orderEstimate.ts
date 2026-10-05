@@ -48,6 +48,11 @@ export type MaterialEstimate = {
   materialId: string;
   placa: EstimatePlate | null;
   piezas: number;
+  /**
+   * Superficie de las piezas en mm² enteros (DECISIONES R3): de aca salen los m² que se muestran. Nunca se
+   * estiman placas a partir de la superficie: las placas las da el optimizador.
+   */
+  mm2: number;
   /** Placas usadas. Si alguna pieza no entra, cuenta solo las placas del acomodo parcial. */
   placas: number;
   entra: boolean;
@@ -185,6 +190,7 @@ export function computeOrderEstimate({
     const materialRows = rows.filter((row) => row.materialId === materialId);
     const plate = plateById.get(materialId) ?? null;
     const piezas = materialRows.reduce((total, row) => total + (Number(row.cantidad) || 0), 0);
+    const mm2 = materialRows.reduce((total, row) => total + (Number(row.largo) || 0) * (Number(row.ancho) || 0) * (Number(row.cantidad) || 0), 0);
 
     // mm de canto por canto, en enteros: no dependen del orden ni de la particion de las filas.
     const mmByMaterialCanto = new Map<string, number>();
@@ -219,6 +225,7 @@ export function computeOrderEstimate({
         materialId,
         placa: null,
         piezas,
+        mm2,
         placas: 0,
         entra: false,
         boards: [],
@@ -248,6 +255,7 @@ export function computeOrderEstimate({
       materialId,
       placa: plate,
       piezas,
+      mm2,
       placas: boards.placas,
       entra: boards.entra,
       boards: boards.boards,

@@ -84,7 +84,7 @@ function signature(rows: EstimateRow[]) {
   return {
     totales: result.totales,
     porMaterial: result.porMaterial
-      .map((material) => ({ materialId: material.materialId, placas: material.placas, totalCentavos: material.totalCentavos, cantos: material.cantos }))
+      .map((material) => ({ materialId: material.materialId, placas: material.placas, mm2: material.mm2, totalCentavos: material.totalCentavos, cantos: material.cantos }))
       .sort((a, b) => (a.materialId < b.materialId ? -1 : 1)),
     porCanto: result.porCanto,
     errores: result.errores
@@ -167,4 +167,19 @@ test("faltante de stock cuando las placas superan el stock del material", () => 
   assert.equal(conStock.totales.placasEstimadas, 3);
   assert.equal(conStock.faltanteStock, false);
   assert.equal(sinStock.faltanteStock, true);
+});
+
+test("superficie por material en mm² enteros: la suma exacta de las piezas, sin importar como se carguen", () => {
+  const rows: EstimateRow[] = [
+    { materialId: "esqueleto", largo: 720, ancho: 560, cantidad: 2, permiteRotar: false },
+    { materialId: "esqueleto", largo: 545, ancho: 1164, cantidad: 3, permiteRotar: true },
+    { materialId: "fondo", largo: 717, ancho: 1197, cantidad: 1, permiteRotar: false }
+  ];
+  const result = estimate(rows);
+  const mm2 = Object.fromEntries(result.porMaterial.map((material) => [material.materialId, material.mm2]));
+  assert.deepEqual(mm2, { esqueleto: 720 * 560 * 2 + 545 * 1164 * 3, fondo: 717 * 1197 });
+  assert.ok(Object.values(mm2).every(Number.isInteger));
+  // La pieza rotable cargada al reves (ancho por largo) y de a una da la misma superficie.
+  const swapped = estimate([rows[0], { ...rows[1], largo: 1164, ancho: 545, cantidad: 1 }, { ...rows[1], largo: 1164, ancho: 545, cantidad: 2 }, rows[2]]);
+  assert.deepEqual(Object.fromEntries(swapped.porMaterial.map((material) => [material.materialId, material.mm2])), mm2);
 });

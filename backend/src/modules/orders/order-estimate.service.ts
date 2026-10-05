@@ -10,7 +10,8 @@ import { heldBoardsByMaterial } from "./order-stock.service.js";
  */
 export type EstimacionDetalle = {
   version: 1;
-  porMaterial: Array<{ materialId: string; nombre: string; placas: number; piezas: number; valorCentavos: number }>;
+  /** mm2: superficie de las piezas en mm² enteros (DECISIONES R3); falta en los pedidos guardados antes de F4.3. */
+  porMaterial: Array<{ materialId: string; nombre: string; placas: number; piezas: number; mm2?: number; valorCentavos: number }>;
   porCanto: Array<{ cantoId: string; mm: number; espesorMm: number; valorCentavos: number }>;
   optimizador: { espesorSierraMm: number; perfiladoBordeMm: number };
   tarifas: { manoObraPlacaPorPlaca: number; manoObraCanto045Mm: number; manoObraCanto1Mm: number; manoObraCanto2Mm: number };
@@ -112,6 +113,7 @@ export async function buildOrderEstimateSnapshot(tx: PrismaClient, detalles: Det
         nombre: item.placa?.nombre ?? "",
         placas: item.placas,
         piezas: item.piezas,
+        mm2: item.mm2,
         valorCentavos: toCentavos(item.placa?.valor ?? 0)
       })),
       porCanto: estimate.porCanto.map(({ cantoId, mm }) => ({
