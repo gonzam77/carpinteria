@@ -228,11 +228,22 @@ export function useFormDraft<T>(
     setPendingDraft(null);
   }, [storageKey]);
 
+  /**
+   * Guarda ya, sin esperar la pausa: para un dato que importa aunque se salga de la pantalla enseguida (por ejemplo,
+   * que se esta mandando un alta). Solo si el borrador esta activo y hay algo que valga la pena guardar.
+   */
+  const saveNow = useCallback((next: T) => {
+    const target = targetRef.current;
+    if (!target || !storeRef.current) return;
+    if (writeDraft(target, JSON.stringify(next))) written.current = true;
+  }, []);
+
   return {
     pendingDraft: pendingDraft?.value ?? null,
     draftSavedAt: pendingDraft?.savedAt ?? null,
     restoreDraft,
     dismissDraft,
-    clearDraft
+    clearDraft,
+    saveNow
   };
 }

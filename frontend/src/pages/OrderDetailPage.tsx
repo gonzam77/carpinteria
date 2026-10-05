@@ -241,7 +241,8 @@ export function OrderDetailPage() {
               Eliminar
             </Button>
           )}
-          {canEditOrder(order.estado) && (
+          {/* Una solicitud de modulos se edita desde Modulos a medida (F5.2): el formulario de corte no la puede guardar. */}
+          {canEditOrder(order.estado) && order.tipo !== "MODULOS" && (
             <Button variant="outlined" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Editar
             </Button>

@@ -1,8 +1,8 @@
 import CalculateIcon from "@mui/icons-material/Calculate";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
-import { Alert, Box, Button, Divider, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Divider, Paper, Stack, Typography } from "@mui/material";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { BoardPlan, FreeRect, PlacedPiece, calculateBoardUtilization, getLargestFreeRect } from "../lib/cutOptimizer";
 import { computeOrderEstimate, type EstimateTotals } from "../lib/orderEstimate";
@@ -366,7 +366,7 @@ function boardLargestRemnantLabel(board: BoardPlan) {
   return largestFreeRect ? freeRectLabel(largestFreeRect) : "Sin remanente";
 }
 
-function CutResults({ calculation, settings }: { calculation: CutCalculation; settings: OptimizerSettings }) {
+function CutResults({ calculation, settings, hideCosts = false }: { calculation: CutCalculation; settings: OptimizerSettings; hideCosts?: boolean }) {
   const { results, totalBoards, totals, errores } = calculation;
   const hasErrors = errores.length > 0;
 
@@ -376,9 +376,10 @@ function CutResults({ calculation, settings }: { calculation: CutCalculation; se
         <Box>
           <Typography variant="h6">Optimizador de cortes</Typography>
           <Typography color="text.secondary">
-            Placas necesarias: {totalBoards} - Costo estimado: {hasErrors ? "no se puede calcular hasta corregir los errores" : formatMoney(totals.presupuestoEstimado)}
+            Placas necesarias: {totalBoards}
+            {hideCosts ? "" : ` - Costo estimado: ${hasErrors ? "no se puede calcular hasta corregir los errores" : formatMoney(totals.presupuestoEstimado)}`}
           </Typography>
-          {!hasErrors && (
+          {!hasErrors && !hideCosts && (
             <Typography variant="body2" color="text.secondary">
               Placas: {formatMoney(totals.costoPlacas)} - Mano de obra por cortes: {formatMoney(totals.costoManoObraCortes)} - Material canto: {formatMoney(totals.costoMaterialCantos)} - Pegado canto: {formatMoney(totals.costoPegadoCantos)} ({totals.metrosCanto.toFixed(2)} m de canto)
             </Typography>
@@ -436,7 +437,9 @@ function CutResults({ calculation, settings }: { calculation: CutCalculation; se
               {result.material.nombre} {result.material.espesorMm}mm - Placa {result.material.anchoPlaca}x{result.material.altoPlaca} mm
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {result.entra && !hasErrors
+              {hideCosts
+                ? `${result.optimizedBoards.length} placas en el acomodo`
+                : result.entra && !hasErrors
                 ? <>Costo placas: {formatMoney(result.boardCost)} ({result.optimizedBoards.length} placas) - Mano de obra por cortes: {formatMoney(result.cutCost)} - Material canto: {formatMoney(result.edgeMaterialCost)} - Pegado canto: {formatMoney(result.edgeLaborCost)} - Total cantos: {formatMoney(result.edgeCost)} ({result.edgeMeters.toFixed(2)} m) - TOTAL: {formatMoney(result.cost)}</>
                 : `${result.optimizedBoards.length} placas en el acomodo - sin costo hasta corregir los errores`}
             </Typography>
@@ -512,7 +515,21 @@ function CutResults({ calculation, settings }: { calculation: CutCalculation; se
   );
 }
 
-export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows: OrderDetail[]; materials: Material[]; autoCalculate?: boolean }) {
+/**
+ * Plano de cortes con el optimizador compartido. hideCosts oculta los importes: lo usa el asistente de modulos, donde
+ * el presupuesto oficial es el de la vista previa del servidor (DECISIONES R3). Por defecto se ve igual que siempre.
+ */
+export function CutOptimizer({
+  rows,
+  materials,
+  autoCalculate = false,
+  hideCosts = false
+}: {
+  rows: OrderDetail[];
+  materials: Material[];
+  autoCalculate?: boolean;
+  hideCosts?: boolean;
+}) {
   const [calculation, setCalculation] = useState<CutCalculation | null>(null);
   const results = calculation?.results ?? [];
   const [variant, setVariant] = useState(0);
@@ -558,13 +575,31 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
       });
   }, []);
 
+  // Con muchas piezas el calculo ocupa el navegador unos segundos: primero se muestra "calculando" y despues se calcula.
+  // Si cambian las filas mientras tanto, el calculo pendiente se descarta.
+  const [calculating, setCalculating] = useState(false);
+  const calculationToken = useRef(0);
+
   function calculate(nextVariant = 0) {
-    if (!settings || !budgetSettings) return;
-    setVariant(nextVariant);
-    setCalculation(calculateCuts(rows, materials, nextVariant, settings, budgetSettings));
+    if (!settings || !budgetSettings || calculating) return;
+    const token = ++calculationToken.current;
+    setCalculating(true);
+    window.requestAnimationFrame(() =>
+      window.setTimeout(() => {
+        if (calculationToken.current !== token) return;
+        try {
+          setVariant(nextVariant);
+          setCalculation(calculateCuts(rows, materials, nextVariant, settings, budgetSettings));
+        } finally {
+          setCalculating(false);
+        }
+      }, 0)
+    );
   }
 
   useEffect(() => {
+    calculationToken.current += 1;
+    setCalculating(false);
     setCalculation(null);
     setVariant(0);
     if (autoCalculate && rows.length && materials.length && settings && budgetSettings) {
@@ -576,7 +611,8 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
     <Stack spacing={2}>
       {settingsError && <Alert severity="error">{settingsError}</Alert>}
       {budgetSettingsError && <Alert severity="error">{budgetSettingsError}</Alert>}
-      {budgetSettings &&
+      {!hideCosts &&
+        budgetSettings &&
         budgetSettings.manoObraPlacaPorPlaca === 0 &&
         budgetSettings.manoObraCanto045Mm === 0 &&
         budgetSettings.manoObraCanto1Mm === 0 &&
@@ -586,16 +622,25 @@ export function CutOptimizer({ rows, materials, autoCalculate = false }: { rows:
           </Alert>
         )}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-        <Button type="button" variant="contained" startIcon={<CalculateIcon />} onClick={() => calculate(0)} disabled={!settings || !budgetSettings} sx={{ width: { xs: "100%", sm: "auto" } }}>
-          Optimizar cortes
+        <Button
+          type="button"
+          variant="contained"
+          startIcon={calculating ? <CircularProgress size={16} color="inherit" /> : <CalculateIcon />}
+          onClick={() => calculate(0)}
+          disabled={!settings || !budgetSettings}
+          // Mientras calcula no se deshabilita del todo: el boton conserva el foco del teclado (calculate ignora los clicks).
+          aria-disabled={calculating || undefined}
+          sx={{ width: { xs: "100%", sm: "auto" } }}
+        >
+          {calculating ? "Calculando..." : "Optimizar cortes"}
         </Button>
         {results.length > 0 && (
-          <Button type="button" variant="outlined" startIcon={<CalculateIcon />} onClick={() => calculate(variant + 1)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          <Button type="button" variant="outlined" startIcon={<CalculateIcon />} onClick={() => calculate(variant + 1)} aria-disabled={calculating || undefined} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Recalcular distribucion
           </Button>
         )}
       </Stack>
-      {calculation && settings && (results.length > 0 || calculation.errores.length > 0) && <CutResults calculation={calculation} settings={settings} />}
+      {calculation && settings && (results.length > 0 || calculation.errores.length > 0) && <CutResults calculation={calculation} settings={settings} hideCosts={hideCosts} />}
     </Stack>
   );
 }

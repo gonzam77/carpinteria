@@ -109,6 +109,8 @@ export type Order = {
   numeroContacto?: string;
   observaciones?: string;
   estado: EstadoSolicitud;
+  /** La API lo manda siempre; MODULOS son las solicitudes de modulos a medida. */
+  tipo?: TipoPedido;
   placasEstimadas: number;
   costoPlacas: number;
   costoManoObraCortes?: number;
@@ -260,4 +262,141 @@ export type ModuleEvaluation = {
   piezas: Array<{ codigo: string; nombre: string; largo: number; ancho: number; cantidad: number; largoExacto: number; anchoExacto: number }>;
   errores: ModuleFormulaError[];
   herrajes: Array<{ herrajeId: string; cantidad: number | null }>;
+};
+
+// ---------------------------------------------------------------- Solicitudes de modulos (spec §13.2)
+
+export type TipoPedido = "CORTE" | "MODULOS";
+export type OrigenDetalle = "CALCULADO" | "EDITADO" | "MANUAL";
+export type PieceEdgesInput = Record<LadoCanto, EspesorCanto | null>;
+
+/** Un modulo de la solicitud como lo recibe la API. Es estricto: solo estos campos (DECISIONES 17). */
+export type ModuleOrderLineInput = {
+  moduloId: string;
+  valores: Record<string, number>;
+  colorEsqueletoId: string;
+  colorFrentesId: string;
+  colorCantoId: string;
+  perfilCantoOrden: 1 | 2;
+  /** Opcional: sin elegir, el fondo del modulo o de la configuracion (DECISIONES 32). */
+  materialFondoId?: string | null;
+  observaciones?: string | null;
+  /** Cantos cambiados a mano en el paso 4, por codigo de pieza. */
+  cantosOverride?: Record<string, PieceEdgesInput>;
+  /** La version del modulo que mostro la vista previa: si el catalogo cambio, el alta responde 409. */
+  version?: number;
+};
+
+/** Datos del cliente y de la entrega (paso 1). La fecha es AAAA-MM-DD (DECISIONES 26). */
+export type ModuleOrderClient = {
+  cliente: string;
+  numeroContacto: string;
+  emailContacto?: string | null;
+  direccionEntrega?: string | null;
+  fechaEntrega: string;
+  observaciones?: string | null;
+};
+
+export type ModuleOrderDetail = OrderDetail & {
+  indice: number;
+  piezaCodigo: string | null;
+  origen: OrigenDetalle | null;
+  orden: number;
+  pedidoModuloId?: string | null;
+  /** Solo en la vista previa: a que modulo de la solicitud pertenece la fila. */
+  posicionModulo?: number;
+};
+
+export type EstimacionDetalle = {
+  version: 1;
+  porMaterial: Array<{ materialId: string; nombre: string; placas: number; piezas: number; mm2?: number; valorCentavos: number }>;
+  porCanto: Array<{ cantoId: string; mm: number; espesorMm: number; valorCentavos: number }>;
+  recalculado?: boolean;
+};
+
+export type ModuleOrderEstimate = {
+  placasEstimadas: number;
+  costoPlacas: number;
+  costoManoObraCortes: number;
+  costoMaterialCantos: number;
+  costoPegadoCantos: number;
+  costoCantos: number;
+  metrosCanto: number;
+  presupuestoEstimado: number;
+  faltanteStock: boolean;
+  estimacionDetalle: EstimacionDetalle;
+  costoHerrajes: number;
+  presupuestoConHerrajes: number;
+};
+
+export type ModuleOrderPreviewModule = {
+  posicion: number;
+  moduloId: string;
+  nombreModulo: string;
+  version: number;
+  valores: Record<string, number>;
+  colorEsqueletoId: string;
+  colorFrentesId: string;
+  colorCantoId: string;
+  perfilCantoOrden: 1 | 2;
+  materialFondoId: string | null;
+  observaciones: string | null;
+  /** Cantidad de filas del modulo. */
+  piezas: number;
+};
+
+/** Respuesta de POST /api/pedidos-modulos/preview (DECISIONES 17): el paso 4 muestra solo esto (R3). */
+export type ModuleOrderPreview = ModuleOrderEstimate & {
+  id: "preview";
+  tipo: "MODULOS";
+  numero: null;
+  /** Hora del servidor al calcularla (ISO). */
+  fechaCreacion: string;
+  modulos: ModuleOrderPreviewModule[];
+  detalles: ModuleOrderDetail[];
+  herrajes: unknown[];
+};
+
+type PlateRef = { id: string; nombre: string; espesorMm: number };
+
+export type ModuleOrder = Omit<Order, "detalles"> &
+  ModuleOrderEstimate & {
+    numero: number;
+    tipo: TipoPedido;
+    fechaEntrega: string | null;
+    emailContacto: string | null;
+    direccionEntrega: string | null;
+    modulos: Array<
+      Omit<ModuleOrderPreviewModule, "version" | "piezas" | "moduloId"> & {
+        id: string;
+        moduloId: string | null;
+        definicionSnapshot: Omit<ModuleDefinition, "imagen" | "tienePedidos">;
+        colorEsqueleto: PlateRef;
+        colorFrentes: PlateRef;
+        colorCanto: PlateRef;
+        materialFondo: PlateRef | null;
+      }
+    >;
+    detalles: ModuleOrderDetail[];
+  };
+
+export type ModuleOrderListItem = {
+  id: string;
+  numero: number;
+  cliente: string;
+  numeroContacto: string | null;
+  emailContacto: string | null;
+  observaciones: string | null;
+  estado: EstadoSolicitud;
+  fechaCreacion: string;
+  fechaActualizacion: string;
+  fechaEntrega: string | null;
+  placasEstimadas: number;
+  presupuestoEstimado: number;
+  costoHerrajes: number;
+  presupuestoConHerrajes: number;
+  faltanteStock: boolean;
+  stockReservado: boolean;
+  usuarioId: string;
+  cantidadModulos: number;
 };
