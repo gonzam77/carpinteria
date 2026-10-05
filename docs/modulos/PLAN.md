@@ -68,7 +68,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 ```bash
 cd frontend && npm test           # optimizador (39), motor de fórmulas (17), presupuesto (6), compresión de imágenes (5) y editor de módulos (8)
-cd backend && npm test            # armado de solicitudes de módulos, fechas y esquemas (19), sin base de datos
+cd backend && npm test            # armado de solicitudes de módulos, fechas y esquemas (21), sin base de datos
 npm run check:optimizer           # desde la raíz: el código compartido está sincronizado
 cd frontend && npx tsc --noEmit
 cd backend && npx tsc --noEmit
@@ -488,6 +488,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - el alta manda la `version` de cada módulo que devolvió la vista previa. Si responde 409 `MODULE_CHANGED`, hay que avisar y volver a pedir la vista previa (DECISIONES 25);
   - `fechaEntrega` es `AAAA-MM-DD` y no se convierte a `Date` en el navegador (DECISIONES 26);
   - los m² del panel salen de `estimacionDetalle.porMaterial[].mm2` dividido por 1.000.000. No se calculan en el navegador (R3).
+  - en el paso 3, cada módulo con piezas de fondo tiene un selector opcional "Material de fondo". Por defecto viene "el del catálogo" (del módulo o de la configuración), y se puede elegir cualquier placa activa (DECISIONES 32). Sin elegir, no se manda `materialFondoId`.
 
 #### F4.5 Listado de solicitudes de módulos · [ ]
 - **Depende de:** F4.3.
@@ -512,7 +513,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 - **Hacer:**
   - `OrderItemsTable` con la prop opcional `groups`. Sin la prop, tiene que verse y funcionar idéntico a hoy;
   - `OrderFormPage` reutilizado para módulos;
-  - `PUT` que marca `origen` como EDITADO o MANUAL;
+  - `PUT` que marca `origen` como EDITADO o MANUAL, y que mantiene el fondo guardado de cada módulo (`PedidoModulo.materialFondoId`, DECISIONES 32);
   - el resumen "Cambios detectados";
   - borrador `modules:{id}` (spec §10).
 
@@ -540,7 +541,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 ### Fase 7: Cierre (spec §10.6 y §17.3)
 
 #### F7.1 Recalcular un módulo · [ ]
-Regenera las piezas de ese módulo y **recalcula el pedido entero** en la misma transacción: las placas no se suman por módulo (DECISIONES R4). Lo registra en el historial (`RECALCULAR_MODULO`).
+Regenera las piezas de ese módulo y **recalcula el pedido entero** en la misma transacción: las placas no se suman por módulo (DECISIONES R4). Mantiene los colores y el fondo guardados del módulo (DECISIONES 32). Lo registra en el historial (`RECALCULAR_MODULO`).
 
 #### F7.2 Pulido · [ ]
 Autocompletar clientes, estados vacíos y de carga, y accesibilidad (spec §14.5).

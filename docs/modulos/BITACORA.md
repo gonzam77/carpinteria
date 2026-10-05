@@ -27,6 +27,31 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-05 (18) · equipo Pinformatico15 · rama main
+
+**Pasos:** fondo elegido en la solicitud, pedido por Gonzalo (sigue F4.4).
+
+**Hecho:**
+- Gonzalo pidió poder elegir el material de fondo en cada módulo de una solicitud, por las dudas (DECISIONES 32).
+- Migración `20261005120000_fondo_por_modulo_de_solicitud`: `PedidoModulo.materialFondoId`, opcional, con clave foránea. Se generó con `migrate diff` contra la copia y se aplicó con `migrate deploy`; no queda diferencia.
+- El armado acepta `materialFondoId` en cada módulo. Le gana al fondo del módulo y al de la configuración, se valida como los colores y se guarda el fondo usado.
+- Materiales cuenta el vínculo nuevo.
+- 2 tests unitarios nuevos. Una prueba de mutación con 4 errores introducidos a propósito: los detectaron los 4.
+- e2e-f42 y e2e-f43 suman el fondo elegido. Además, e2e-f42 elige la placa fina en forma determinista: había dos de 5,5 mm y la consulta no fijaba cuál.
+
+**Verificaciones:**
+- backend `npm test`: 21 en verde.
+- e2e contra la copia: e2e-f43 59/59, e2e-f42 93/93, e2e-f23 4/4, e2e-f05 22/22 y e2e-f04 12/12.
+- La copia quedó con 65 pedidos, 0 solicitudes de módulos, 33 módulos y el fondo por defecto en Fibroplus blanco.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F4.4, el asistente de 4 pasos. En el paso 3 va el selector opcional de fondo por módulo (PLAN F4.4).
+
+**Esperando a Gonzalo o a ROMA:** P10, P11, P12, P6, P1, P5, P7, P8 y DECISIONES 15 (tildes).
+
+---
+
 ## 2026-10-05 (17) · equipo Pinformatico15 · rama main
 
 **Pasos:** decisión P9 resuelta, sin cambiar de paso (sigue F4.4).
