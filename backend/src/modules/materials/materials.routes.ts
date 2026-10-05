@@ -163,12 +163,13 @@ async function catalogLinkCounts(materialIds: string[]) {
     if (id) counts.set(id, (counts.get(id) ?? 0) + amount);
   };
   const inIds = { in: materialIds };
-  const [fondos, fijos, esqueletos, frentes, cantos, configuraciones] = await Promise.all([
+  const [fondos, fijos, esqueletos, frentes, cantos, fondosPedidos, configuraciones] = await Promise.all([
     prisma.modulo.groupBy({ by: ["materialFondoId"], where: { materialFondoId: inIds }, _count: { _all: true } }),
     prisma.moduloPieza.groupBy({ by: ["materialFijoId"], where: { materialFijoId: inIds }, _count: { _all: true } }),
     prisma.pedidoModulo.groupBy({ by: ["colorEsqueletoId"], where: { colorEsqueletoId: inIds }, _count: { _all: true } }),
     prisma.pedidoModulo.groupBy({ by: ["colorFrentesId"], where: { colorFrentesId: inIds }, _count: { _all: true } }),
     prisma.pedidoModulo.groupBy({ by: ["colorCantoId"], where: { colorCantoId: inIds }, _count: { _all: true } }),
+    prisma.pedidoModulo.groupBy({ by: ["materialFondoId"], where: { materialFondoId: inIds }, _count: { _all: true } }),
     prisma.configuracionModulos.findMany({ where: { materialFondoId: inIds }, select: { materialFondoId: true } })
   ]);
   fondos.forEach((row) => add(row.materialFondoId, row._count._all));
@@ -176,6 +177,7 @@ async function catalogLinkCounts(materialIds: string[]) {
   esqueletos.forEach((row) => add(row.colorEsqueletoId, row._count._all));
   frentes.forEach((row) => add(row.colorFrentesId, row._count._all));
   cantos.forEach((row) => add(row.colorCantoId, row._count._all));
+  fondosPedidos.forEach((row) => add(row.materialFondoId, row._count._all));
   configuraciones.forEach((row) => add(row.materialFondoId, 1));
   return counts;
 }

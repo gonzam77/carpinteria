@@ -33,6 +33,12 @@ export const moduleLineSchema = z
     colorCantoId: requiredId("Elegi el color de los cantos"),
     // Obligatorio, como en spec §13.2: el asistente manda el que eligio (por defecto, el predeterminado del modulo).
     perfilCantoOrden: z.union([z.literal(1), z.literal(2)], { errorMap: () => ({ message: "Elegi el perfil de cantos del modulo (1 o 2)" }) }),
+    // Opcional (DECISIONES 32): sin elegir, las piezas de fondo van en el material de fondo del modulo o de la configuracion.
+    materialFondoId: z
+      .string({ invalid_type_error: "Elegi el material de fondo" })
+      .uuid("Elegi el material de fondo")
+      .nullable()
+      .optional(),
     observaciones: z.string().trim().max(500, "Las observaciones del modulo tienen como maximo 500 caracteres").optional().nullable(),
     cantosOverride: z.record(z.string(), cantosOverrideSchema).optional().default({}),
     // La version del modulo que mostro la vista previa. Si viene y el catalogo cambio, el alta responde 409.

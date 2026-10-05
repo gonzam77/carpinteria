@@ -58,7 +58,7 @@ const sinCanto2 = psql(`
     and exists (select 1 from materiales c where c."placaMaterialId" = p.id and c.tipo = 'CANTO' and c.activo and abs(c."espesorMm" - 0.45) < 1e-6)
     and not exists (select 1 from materiales c where c."placaMaterialId" = p.id and c.tipo = 'CANTO' and c.activo and abs(c."espesorMm" - 2) < 1e-6)
   order by p.nombre limit 2`).split("\n").filter(Boolean);
-const placaFina = psql(`select id from materiales where tipo = 'PLACA' and activo and "espesorMm" <> 18 and "anchoPlaca" is not null and "altoPlaca" is not null order by "espesorMm" desc limit 1`);
+const placaFina = psql(`select id from materiales where tipo = 'PLACA' and activo and "espesorMm" <> 18 and "anchoPlaca" is not null and "altoPlaca" is not null order by "espesorMm" desc, nombre, id limit 1`);
 const fondo = psql(`select id from materiales where tipo = 'PLACA' and activo and "espesorMm" = 3 limit 1`);
 const fondoAntes = psql(`select coalesce("materialFondoId", 'null') from configuracion_modulos where id = 'default'`);
 const pedidosAntes = psql("select count(*) from pedidos");
@@ -166,10 +166,11 @@ try {
     line(bajo.id),
     line(bajo.id, { valores: { ANCHO: 900 }, colorFrentesId: colorC, colorCantoId: colorB, perfilCantoOrden: 2 }),
     line(bajo.id, { valores: { ancho: 600 }, cantosOverride: { [piso]: { LARGO_1: 2, LARGO_2: 2, ANCHO_1: 0.45, ANCHO_2: null } } }),
-    ...modules.filter((module) => conFondo.has(module.id)).slice(0, 3).map((module) => line(module.id, { colorEsqueletoId: colorB })),
+    // El primero de estos, con el fondo elegido en la solicitud (DECISIONES 32).
+    ...modules.filter((module) => conFondo.has(module.id)).slice(0, 3).map((module, index) => line(module.id, { colorEsqueletoId: colorB, ...(index === 0 ? { materialFondoId: placaFina } : {}) })),
     ...modules.filter((module) => !conFondo.has(module.id)).slice(0, 2).map((module) => line(module.id, { colorCantoId: colorC }))
   ];
-  const result = await parity(`solicitud de ${varios.length} modulos con colores, medidas y cantos cambiados`, varios);
+  const result = await parity(`solicitud de ${varios.length} modulos con colores, medidas, cantos y un fondo cambiados`, varios);
 
   if (result) {
     // Filas: codigo de barra, remark, nombre, pieza de origen, orden, indice y agrupacion por modulo (spec §8.2)
@@ -209,13 +210,23 @@ try {
       const pedido = varios[row.posicionModulo - 1];
       const definicion = definiciones.get(pedido.moduloId);
       const pieza = definicion.piezas.find((item) => item.codigo === row.piezaCodigo);
-      const esperado = { ESQUELETO: pedido.colorEsqueletoId, FRENTE: pedido.colorFrentesId, FONDO: definicion.materialFondoId ?? fondoConfig, FIJO: pieza.materialFijoId }[pieza.rol];
+      const esperado = { ESQUELETO: pedido.colorEsqueletoId, FRENTE: pedido.colorFrentesId, FONDO: pedido.materialFondoId ?? definicion.materialFondoId ?? fondoConfig, FIJO: pieza.materialFijoId }[pieza.rol];
       if (row.materialId !== esperado) malMaterial.push(`M${row.posicionModulo} ${row.piezaCodigo} (${pieza.rol})`);
       for (const id of [row.cantoLargo1Id, row.cantoLargo2Id, row.cantoAncho1Id, row.cantoAncho2Id].filter(Boolean)) {
         if (colorDeCanto.get(id) !== pedido.colorCantoId) malCanto.push(`M${row.posicionModulo} ${row.piezaCodigo}`);
       }
     }
-    check("cada fila en el material de su rol (esqueleto, frentes, fondo)", malMaterial.length === 0, malMaterial.slice(0, 4).join(", ") || `${filas.length} filas`);
+    check("cada fila en el material de su rol (esqueleto, frentes, fondo, incluido el fondo elegido)", malMaterial.length === 0, malMaterial.slice(0, 4).join(", ") || `${filas.length} filas`);
+    const fondoEsperado = (pedido) => {
+      const definicion = definiciones.get(pedido.moduloId);
+      const tieneFondo = filas.some((row) => varios[row.posicionModulo - 1] === pedido && definicion.piezas.find((item) => item.codigo === row.piezaCodigo)?.rol === "FONDO");
+      return tieneFondo ? pedido.materialFondoId ?? definicion.materialFondoId ?? fondoConfig : null;
+    };
+    check(
+      "cada modulo informa el fondo que usa (el elegido, el de la configuracion o ninguno)",
+      result.modulos.every((modulo, index) => modulo.materialFondoId === fondoEsperado(varios[index])) && result.modulos.some((modulo) => modulo.materialFondoId === placaFina),
+      result.modulos.map((modulo) => (modulo.materialFondoId === placaFina ? "elegido" : modulo.materialFondoId ? "config" : "-")).join(" ")
+    );
     check("cada canto del color de cantos de su modulo", malCanto.length === 0, malCanto.slice(0, 4).join(", "));
     check(
       "la prueba distingue esqueleto de frentes y usa varios colores de canto",

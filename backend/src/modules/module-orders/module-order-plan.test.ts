@@ -337,3 +337,30 @@ test("faltantes ordenados por color y espesor aunque aparezcan en otro orden", (
     [0.45, 2]
   );
 });
+
+test("fondo elegido en la solicitud: le gana al del modulo y al de la configuracion (DECISIONES 32)", () => {
+  const conFondoPropio = sampleModule({ materialFondoId: "fibro" });
+  const [elegido] = okPlan(planModuleOrder(input([line({ materialFondoId: "fina" })], {}, [conFondoPropio]))).lines;
+  assert.equal(byCode(elegido.rows, "FONDO").materialId, "fina");
+  assert.equal(elegido.materialFondoId, "fina", "se guarda el que se uso");
+
+  const [delModulo] = okPlan(planModuleOrder(input([line()], {}, [sampleModule({ materialFondoId: "fina" })]))).lines;
+  assert.equal(delModulo.materialFondoId, "fina");
+  const [deLaConfiguracion] = okPlan(planModuleOrder(input([line({ materialFondoId: null })]))).lines;
+  assert.equal(deLaConfiguracion.materialFondoId, "fibro");
+  assert.equal(byCode(deLaConfiguracion.rows, "FONDO").materialId, "fibro");
+
+  // Se puede elegir aunque la configuracion no tenga fondo.
+  const sinConfig = okPlan(planModuleOrder(input([line({ materialFondoId: "fibro" })], { config: { redondeo: "REDONDEAR", materialFondoId: null } })));
+  assert.equal(sinConfig.lines[0].materialFondoId, "fibro");
+});
+
+test("el fondo elegido se revisa aunque el modulo no tenga piezas de fondo, y si no hay fondo no se guarda", () => {
+  const sinFondo = sampleModule({ piezas: sampleModule().piezas.filter((pieza) => pieza.rol !== "FONDO") });
+  const error = errorOf(planModuleOrder(input([line({ materialFondoId: "inactiva" })], {}, [sinFondo])));
+  assert.deepEqual(error.problems, ['Modulo 1 (Bajo mesada): el material de fondo elegido "Roble" esta inactivo.']);
+  const noEsPlaca = errorOf(planModuleOrder(input([line({ materialFondoId: "canto-blanco-045" })])));
+  assert.deepEqual(noEsPlaca.problems, ["Modulo 1 (Bajo mesada): el material de fondo elegido no es una placa del sistema."]);
+  const [sinPiezasDeFondo] = okPlan(planModuleOrder(input([line({ materialFondoId: "fina" })], {}, [sinFondo]))).lines;
+  assert.equal(sinPiezasDeFondo.materialFondoId, null);
+});

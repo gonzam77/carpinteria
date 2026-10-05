@@ -41,6 +41,8 @@ export type PlannedLine = {
   piezas: OrderedModulePiece[];
   /** Medidas con las que se calculo (lo cargado o el valor por defecto). */
   valores: Record<string, number>;
+  /** Placa que usan las piezas de fondo (la elegida, la del modulo o la de la configuracion); null si no tiene fondo. */
+  materialFondoId: string | null;
   /** Una fila por pieza, en el mismo orden que `piezas`, lista para normalizeDetails. */
   rows: DetailInput[];
 };
@@ -66,8 +68,12 @@ export function moduleBarcode(numero: number | null, posicion: number, orden: nu
 /** Remark de las filas de un modulo: lo lee el operario en la maquina. */
 export const moduleRemark = (posicion: number, nombreModulo: string) => `Modulo ${posicion} · ${nombreModulo}`;
 
-/** Material de fondo de un modulo: el propio o, si no tiene, el de la configuracion del catalogo. */
-export const fondoIdOf = (module: Pick<PlanModule, "materialFondoId">, config: PlanInput["config"]) => module.materialFondoId ?? config.materialFondoId ?? null;
+/**
+ * Material de las piezas de fondo de un modulo de la solicitud (DECISIONES 32): el elegido en la solicitud, si no el
+ * del modulo y si no el de la configuracion del catalogo.
+ */
+export const fondoIdFor = (line: Pick<ModuleOrderLine, "materialFondoId">, module: Pick<PlanModule, "materialFondoId">, config: PlanInput["config"]) =>
+  line.materialFondoId ?? module.materialFondoId ?? config.materialFondoId ?? null;
 
 const failure = (code: string, problems: string[], details: Record<string, unknown> = {}, message?: string): Plan => ({
   ok: false,
@@ -129,8 +135,10 @@ export function planModuleOrder(input: PlanInput): Plan {
     checkPlate(line.colorEsqueletoId, where, "el color de esqueleto", module.espesorDisenoMm);
     checkPlate(line.colorFrentesId, where, "el color de frentes", module.espesorDisenoMm);
     checkPlate(line.colorCantoId, where, "el color de los cantos");
-    if (piezas.some((pieza) => pieza.rol === "FONDO")) {
-      const fondoId = fondoIdOf(module, config);
+    // El fondo elegido en la solicitud se revisa siempre, como los colores, aunque el modulo no tenga piezas de fondo.
+    if (line.materialFondoId) checkPlate(line.materialFondoId, where, "el material de fondo elegido");
+    else if (piezas.some((pieza) => pieza.rol === "FONDO")) {
+      const fondoId = fondoIdFor(line, module, config);
       if (!fondoId) materialProblems.push(`${where}: tiene piezas de fondo y no hay material de fondo. Configuralo en Catalogo de modulos > Configuracion.`);
       else checkPlate(fondoId, where, "el material de fondo");
     }
@@ -147,9 +155,10 @@ export function planModuleOrder(input: PlanInput): Plan {
     module,
     piezas,
     valores,
+    materialFondoId: piezas.some((pieza) => pieza.rol === "FONDO") ? fondoIdFor(line, module, config) : null,
     rows: piezas.map((pieza): DetailInput => {
       const materialId =
-        pieza.rol === "ESQUELETO" ? line.colorEsqueletoId : pieza.rol === "FRENTE" ? line.colorFrentesId : pieza.rol === "FONDO" ? fondoIdOf(module, config)! : pieza.materialFijoId!;
+        pieza.rol === "ESQUELETO" ? line.colorEsqueletoId : pieza.rol === "FRENTE" ? line.colorFrentesId : pieza.rol === "FONDO" ? fondoIdFor(line, module, config)! : pieza.materialFijoId!;
       const edgeIds = Object.fromEntries(
         EDGE_SIDES.map((lado) => {
           const espesor = pieza.cantos[lado];

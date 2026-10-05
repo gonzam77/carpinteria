@@ -114,6 +114,7 @@ model Material {
   pedidosModuloEsqueleto PedidoModulo[] @relation("PMEsqueleto")
   pedidosModuloFrentes   PedidoModulo[] @relation("PMFrentes")
   pedidosModuloCanto     PedidoModulo[] @relation("PMCanto")
+  pedidosModuloFondo     PedidoModulo[] @relation("PMFondo")
 
   @@index([tipo])
   @@index([activo])
@@ -447,6 +448,9 @@ model PedidoModulo {
   colorFrentesId     String
   colorCantoId       String // Material PLACA cuyo color usan los cantos
   perfilCantoOrden   Int             @default(1)
+  // Placa que usaron las piezas de fondo: la elegida en la solicitud o, si no se eligio, la del modulo o la de la
+  // configuracion. Se guarda la usada, como los colores (DECISIONES 32). Null si el modulo no tiene piezas de fondo.
+  materialFondoId    String?
   observaciones      String? // sale en la hoja de taller
   definicionSnapshot Json // copia completa del modulo usado (parametros, piezas, perfiles, herrajes, version)
   pedido             Pedido          @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
@@ -454,6 +458,7 @@ model PedidoModulo {
   colorEsqueleto     Material        @relation("PMEsqueleto", fields: [colorEsqueletoId], references: [id], onDelete: Restrict)
   colorFrentes       Material        @relation("PMFrentes", fields: [colorFrentesId], references: [id], onDelete: Restrict)
   colorCanto         Material        @relation("PMCanto", fields: [colorCantoId], references: [id], onDelete: Restrict)
+  materialFondo      Material?       @relation("PMFondo", fields: [materialFondoId], references: [id], onDelete: Restrict)
   detalles           DetallePedido[]
   herrajes           PedidoHerraje[]
 

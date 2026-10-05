@@ -38,6 +38,8 @@ export type BuiltModuleLine = {
   colorFrentesId: string;
   colorCantoId: string;
   perfilCantoOrden: 1 | 2;
+  /** Placa que usaron las piezas de fondo (la elegida, la del modulo o la de la configuracion); null si no tiene fondo. */
+  materialFondoId: string | null;
   observaciones: string | null;
   definicionSnapshot: ReturnType<typeof snapshotOf>;
   piezas: OrderedModulePiece[];
@@ -58,7 +60,7 @@ export async function buildModuleOrder(tx: Tx, lines: ModuleOrderLine[], context
   const modules = new Map(rawModules.map((module) => [module.id, { raw: module, definition: toDefinition(module) satisfies PlanModule }]));
 
   // Todas las placas que la solicitud puede usar: colores, fondos (del modulo y de la configuracion) y fijos.
-  const materialIds = new Set<string>(lines.flatMap((line) => [line.colorEsqueletoId, line.colorFrentesId, line.colorCantoId]));
+  const materialIds = new Set<string>(lines.flatMap((line) => [line.colorEsqueletoId, line.colorFrentesId, line.colorCantoId, ...(line.materialFondoId ? [line.materialFondoId] : [])]));
   if (config.materialFondoId) materialIds.add(config.materialFondoId);
   for (const { definition } of modules.values()) {
     if (definition.materialFondoId) materialIds.add(definition.materialFondoId);
@@ -89,7 +91,7 @@ export async function buildModuleOrder(tx: Tx, lines: ModuleOrderLine[], context
   const flat = plan.lines.flatMap((item) => item.rows).map((row, indice) => ({ ...row, indice }));
   const detalles = await normalizeDetails(flat, context.cliente, context.numeroContacto, tx);
   let offset = 0;
-  const lineas: BuiltModuleLine[] = plan.lines.map(({ posicion, line, module, piezas, valores }) => {
+  const lineas: BuiltModuleLine[] = plan.lines.map(({ posicion, line, module, piezas, valores, materialFondoId }) => {
     const item: BuiltModuleLine = {
       posicion,
       moduloId: module.id,
@@ -100,6 +102,7 @@ export async function buildModuleOrder(tx: Tx, lines: ModuleOrderLine[], context
       colorFrentesId: line.colorFrentesId,
       colorCantoId: line.colorCantoId,
       perfilCantoOrden: line.perfilCantoOrden,
+      materialFondoId,
       observaciones: line.observaciones?.trim() || null,
       definicionSnapshot: snapshotOf(modules.get(module.id)!.raw),
       piezas,
@@ -133,7 +136,12 @@ export const MODULE_ORDER_INCLUDE = {
   usuario: { select: { id: true, nombre: true, apellido: true, email: true, telefono: true } },
   modulos: {
     orderBy: { posicion: "asc" },
-    include: { colorEsqueleto: { select: PLATE_SELECT }, colorFrentes: { select: PLATE_SELECT }, colorCanto: { select: PLATE_SELECT } }
+    include: {
+      colorEsqueleto: { select: PLATE_SELECT },
+      colorFrentes: { select: PLATE_SELECT },
+      colorCanto: { select: PLATE_SELECT },
+      materialFondo: { select: PLATE_SELECT }
+    }
   },
   detalles: DETALLES_ORDENADOS,
   herrajes: true,
@@ -223,6 +231,7 @@ export async function createModuleOrder(prisma: PrismaClient, input: ModuleOrder
         colorFrentesId: linea.colorFrentesId,
         colorCantoId: linea.colorCantoId,
         perfilCantoOrden: linea.perfilCantoOrden,
+        materialFondoId: linea.materialFondoId,
         observaciones: linea.observaciones,
         definicionSnapshot: linea.definicionSnapshot as unknown as Prisma.InputJsonValue
       })),

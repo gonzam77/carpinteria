@@ -78,14 +78,16 @@ const colores = psql(`
     and exists (select 1 from materiales c where c."placaMaterialId" = p.id and c.tipo = 'CANTO' and c.activo and abs(c."espesorMm" - 2) < 1e-6)
   order by p.nombre limit 2`).split("\n");
 const fondo = psql(`select id from materiales where tipo = 'PLACA' and activo and "espesorMm" = 3 and "anchoPlaca" is not null limit 1`);
+// Un fondo elegido en la solicitud, distinto del de la configuracion (DECISIONES 32).
+const fondoElegido = psql(`select id from materiales where tipo = 'PLACA' and activo and "espesorMm" = 5.5 and "anchoPlaca" is not null order by nombre limit 1`);
 const fondoAntes = psql(`select coalesce("materialFondoId", 'null') from configuracion_modulos where id = 'default'`);
 const fondoConfig = fondoAntes === "null" ? fondo : fondoAntes;
 const pedidosAntes = psql("select count(*) from pedidos");
 const modulosPedidosAntes = psql("select count(*) from pedidos_modulo");
-const usados = [...new Set([...colores, fondoConfig])];
+const usados = [...new Set([...colores, fondoConfig, fondoElegido])];
 const lista = (ids) => ids.map((id) => `'${id}'`).join(",");
 const stockAntes = new Map(psql(`select id, coalesce("stockPlacas"::text, 'null') from materiales where id in (${lista(usados)})`).split("\n").map((row) => row.split("|")));
-check("datos de prueba", colores.length === 2 && Boolean(fondoConfig) && stockAntes.size === usados.length);
+check("datos de prueba", colores.length === 2 && Boolean(fondoConfig) && Boolean(fondoElegido) && fondoElegido !== fondoConfig && stockAntes.size === usados.length);
 
 const codigos = ["BAJO_MESADA_2_PUERTAS", "ALACENA_2_PUERTAS", "PLACARD_3_PUERTAS_DE_EMBUTIR"];
 const modulos = new Map(psql(`select codigo, id from modulos where codigo in (${codigos.map((c) => `'${c}'`).join(",")})`).split("\n").map((row) => row.split("|")));
@@ -94,7 +96,7 @@ const bajo = modulos.get("BAJO_MESADA_2_PUERTAS");
 const placard = modulos.get("PLACARD_3_PUERTAS_DE_EMBUTIR");
 const piso = (await call("GET", `/modulos/${bajo}`)).data.piezas[0].codigo;
 const lines = [
-  { moduloId: bajo, valores: {}, colorEsqueletoId: colorA, colorFrentesId: colorB, colorCantoId: colorA, perfilCantoOrden: 1, observaciones: "Va contra la pared" },
+  { moduloId: bajo, valores: {}, colorEsqueletoId: colorA, colorFrentesId: colorB, colorCantoId: colorA, perfilCantoOrden: 1, observaciones: "Va contra la pared", materialFondoId: fondoElegido },
   { moduloId: modulos.get("ALACENA_2_PUERTAS"), valores: {}, colorEsqueletoId: colorA, colorFrentesId: colorB, colorCantoId: colorB, perfilCantoOrden: 2 },
   { moduloId: placard, valores: {}, colorEsqueletoId: colorB, colorFrentesId: colorA, colorCantoId: colorA, perfilCantoOrden: 1 },
   { moduloId: bajo, valores: { ANCHO: 900 }, colorEsqueletoId: colorA, colorFrentesId: colorB, colorCantoId: colorA, perfilCantoOrden: 1, cantosOverride: { [piso]: { LARGO_1: 2, LARGO_2: 2, ANCHO_1: null, ANCHO_2: null } } }
@@ -117,7 +119,7 @@ const ROW_FIELDS = [
   "numeroCliente", "nombreCliente", "nombreProducto", "indice", "piezaCodigo", "origen", "orden"
 ];
 const pick = (row, fields) => Object.fromEntries(fields.map((field) => [field, row[field] ?? null]));
-const MODULE_FIELDS = ["posicion", "moduloId", "nombreModulo", "valores", "colorEsqueletoId", "colorFrentesId", "colorCantoId", "perfilCantoOrden", "observaciones"];
+const MODULE_FIELDS = ["posicion", "moduloId", "nombreModulo", "valores", "colorEsqueletoId", "colorFrentesId", "colorCantoId", "perfilCantoOrden", "materialFondoId", "observaciones"];
 
 const creados = [];
 const crear = async (body) => {
@@ -175,6 +177,22 @@ try {
         modulo.perfilCantoOrden === lines[index].perfilCantoOrden
     )
   );
+  // Fondo usado: el elegido (modulo 1), el de la configuracion (modulos 2 y 4) y ninguno en el placard, que no tiene fondo.
+  check(
+    "cada modulo guarda el fondo que uso",
+    order.modulos[0].materialFondoId === fondoElegido &&
+      order.modulos[0].materialFondo?.id === fondoElegido &&
+      order.modulos[1].materialFondoId === fondoConfig &&
+      order.modulos[2].materialFondoId === null &&
+      order.modulos[3].materialFondoId === fondoConfig,
+    order.modulos.map((modulo) => (modulo.materialFondoId === fondoElegido ? "elegido" : modulo.materialFondoId ? "config" : "-")).join(" ")
+  );
+  const fondoDelModulo1 = order.detalles.filter((row) => row.pedidoModuloId === order.modulos[0].id && row.piezaCodigo && row.materialId === fondoElegido);
+  check("las piezas de fondo del modulo 1 van en el fondo elegido", fondoDelModulo1.length > 0, `${fondoDelModulo1.length} filas`);
+  const materiales = (await call("GET", "/materiales?incluirInactivos=true")).data;
+  const elegidoEnMateriales = materiales.find((material) => material.id === fondoElegido);
+  check("Materiales cuenta el fondo elegido como vinculo (no se puede borrar)", elegidoEnMateriales?.linkedModulesCount >= 1 && elegidoEnMateriales.canDeletePermanently === false);
+
   const definiciones = new Map();
   for (const line of lines) if (!definiciones.has(line.moduloId)) definiciones.set(line.moduloId, (await call("GET", `/modulos/${line.moduloId}`)).data);
   const sinExtras = ({ imagen: _i, tienePedidos: _t, estadoFormulas: _e, errores: _r, ...rest }) => rest;
