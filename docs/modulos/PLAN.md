@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-05
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido. Lo posterior está en commits locales sin push: el push espera el OK de Gonzalo.
-- **Último paso terminado:** F4.3. Las Fases 0 a 3 están completas.
-- **Próximo paso:** **F4.4**, el asistente de 4 pasos para cargar una solicitud de módulos.
+- **Último paso terminado:** F4.4. Las Fases 0 a 3 están completas.
+- **Próximo paso:** **F4.5**, el listado de solicitudes de módulos (`/modulos`).
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -34,7 +34,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
-| F4.1–F4.5 | API y asistente de solicitudes de módulos | [~] F4.1 a F4.3 hechos |
+| F4.1–F4.5 | API y asistente de solicitudes de módulos | [~] F4.1 a F4.4 hechos |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (solo si se contrató) | [!] preguntar a Gonzalo |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
@@ -472,7 +472,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - `GET /api/orders` sigue sin mostrar los de módulos;
   - e2e contra la copia, que deja la base como estaba.
 
-#### F4.4 Asistente de 4 pasos · [ ]
+#### F4.4 Asistente de 4 pasos · [x]
 - **Depende de:** F4.3.
 - **Hacer:**
   - `/modulos/nueva` con `Stepper`;
@@ -489,10 +489,21 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - `fechaEntrega` es `AAAA-MM-DD` y no se convierte a `Date` en el navegador (DECISIONES 26);
   - los m² del panel salen de `estimacionDetalle.porMaterial[].mm2` dividido por 1.000.000. No se calculan en el navegador (R3).
   - en el paso 3, cada módulo con piezas de fondo tiene un selector opcional "Material de fondo". Por defecto viene "el del catálogo" (del módulo o de la configuración), y se puede elegir cualquier placa activa (DECISIONES 32). Sin elegir, no se manda `materialFondoId`.
+- **Hecho (2026-10-05):**
+  - `/modulos/nueva` (solo ADMIN) con los 4 pasos: `ModuleOrderWizardPage` y `components/moduleOrderWizard/` (ClientStep, ModulePickerStep, UnitsStep y ReviewStep). La lógica sin React está en `lib/moduleOrderWizard.ts`, con 21 tests (`npm run test:module-order-wizard`). La API está en `api/moduleOrders.ts`.
+  - Menú "Modulos a medida", debajo de "Solicitar cortes", y `/modulos` en la sección admin de `ProtectedRoute` (DECISIONES 39).
+  - Vista previa de a una, con espera corta, y cantos tomados del perfil (DECISIONES 33). El catálogo y los materiales se revisan de nuevo antes de calcular (DECISIONES 34). El alta se protege contra duplicados y respuestas perdidas con una clave de alta (DECISIONES 35 y 40): es el único cambio de backend del paso, con la migración `20261005180000_clave_alta_pedido`. Hay borrador (DECISIONES 36), y validación igual a la del alta (DECISIONES 37).
+  - Plano y resumen (DECISIONES 38). `CutOptimizer` suma la prop `hideCosts` y un estado "Calculando...". `EdgeToggleButtons` marca cada lado y avisa los espesores que faltan. El detalle común no ofrece "Editar" en solicitudes MODULOS.
+  - Cuatro revisiones, cada una sobre los arreglos de la anterior: 38, 13, 8 y 4 hallazgos confirmados. Se arreglaron todos menos el título de la barra superior, que pasa a F4.5 (ver la bitácora).
+  - Prueba en el navegador: `herramientas/e2e-f44-navegador.mjs` (Edge y Vite), 96 de 96. e2e-f43 suma la clave de alta: 66 de 66.
 
 #### F4.5 Listado de solicitudes de módulos · [ ]
 - **Depende de:** F4.3.
 - **Hacer:** `/modulos` con indicadores, semáforo (en la zona horaria `America/Argentina/Buenos_Aires`), filtros, orden y exportación (spec §9.1).
+- **Tener en cuenta (de F4.4):**
+  - el ítem "Modulos a medida" del menú hoy abre `/modulos/nueva`: pasarlo a `/modulos` (`AppLayout`, `mainNavItems`);
+  - el título de la barra superior sigue fijo en "Panel de solicitudes". Spec §14.2 pide que cambie según la sección (DECISIONES 39; hallazgo C37 de la revisión);
+  - el asistente ya usa `GET /api/pedidos-modulos?clave=<uuid>` para saber si un alta sin respuesta entró (clave de alta, DECISIONES 35 y 40). El listado puede usar `listModuleOrders` de `api/moduleOrders.ts`.
 
 ### Fase 5: Detalle, edición y salidas (spec §9.3, §10 y §11)
 
@@ -507,6 +518,10 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 - **Tener en cuenta (de F4.3):**
   - el detalle sale de `GET /api/pedidos-modulos/:id`, con la fecha como `AAAA-MM-DD`;
   - borrar puede responder 409 `ORDER_CHANGED` (DECISIONES 30), igual que cambiar el estado. Hay que mostrarlo; hoy las pantallas de corte no muestran ningún error al borrar.
+- **Tener en cuenta (de F4.4):**
+  - después de crear, el asistente muestra una pantalla de éxito, y "Ver la solicitud" abre el detalle común `/pedidos/:id` (DECISIONES 35). Con el detalle propio, navegar a `/modulos/:id` con la notificación "Solicitud M-N creada" (spec §9.2) y redirigir `/pedidos/:id` de una solicitud MODULOS;
+  - `OrderDetailPage` oculta "Editar" cuando `order.tipo === "MODULOS"`;
+  - para los cantos por pieza conviene reusar `unitPieceEdges`, `changedSides` y `EdgeToggleButtons` (con `editedSides`): los cantos salen del perfil o del cambio a mano, no de la lista de materiales.
 
 #### F5.2 Edición, igual que la actual · [ ]
 - **Depende de:** F5.1.
@@ -587,7 +602,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 | P9 | Material de fondo por defecto (spec §19: ¿3 mm, 5,5 mm o 18 mm?). 31 de los 32 módulos activos tienen piezas de fondo | Gonzalo | **Resuelto (2026-10-05):** la placa de 3 mm "Fibroplus blanco", que se puede cambiar en Catálogo de módulos > Configuración, y cada módulo puede tener la suya. La pone el importador si la configuración no tiene una (DECISIONES 31) |
 | P10 | De los 60 colores de 18 mm activos, 14 no tienen canto de 0,45 y de 2 mm (los que usa el perfil Estándar) y 11 no tienen ninguno | Gonzalo | Con esos colores de canto la vista previa responde `MISSING_EDGE_MATERIAL`, con todos los faltantes juntos. Cargar los cantos en Materiales o no ofrecer esos colores |
 | P11 | ¿La máquina lee bien el Remark "Modulo N · Nombre" (largo máximo y caracteres)? Hoy ninguna fila de producción lo usa | Taller | Se manda así (DECISIONES 20). Probarlo antes de F7.3 |
-| P12 | La vista previa de 20 módulos tarda de 1,5 a 8,4 s, según las piezas (100 módulos: unos 28 s). Spec §20 pide caché si pasa de 2 s | Gonzalo | Se acepta y se trabaja en F7.4 (DECISIONES 0.12 y 24); F4.4 no la llama en cada clic sin control |
+| P12 | La vista previa de 20 módulos tarda de 1,5 a 8,4 s, según las piezas (100 módulos: unos 28 s). Spec §20 pide caché si pasa de 2 s | Gonzalo | Se acepta y se trabaja en F7.4 (DECISIONES 0.12 y 24). F4.4 pide una sola vista previa a la vez, con 700 ms de espera tras cada cambio de canto (DECISIONES 33) |
 | P7 | La placa "metal cepillado bronce" figura como 1830×26000, con un cero de más | Gonzalo | Corregirla en Materiales |
 | P8 | ¿Se conserva el contenedor `carpinteria-analisis-db` con el backup en la PC de la primera sesión? | Gonzalo | Se conserva hasta F2.4 |
 

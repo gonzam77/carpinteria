@@ -27,6 +27,57 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-05 (19) · equipo Pinformatico15 · rama main
+
+**Pasos:** F4.4 terminado.
+
+**Hecho:**
+- El asistente "Nueva solicitud de modulos" en `/modulos/nueva`, solo para ADMIN:
+  - **Paso 1:** cliente y entrega.
+  - **Paso 2:** grilla del catálogo, con búsqueda, categorías y teclado.
+  - **Paso 3:** una tarjeta por unidad, con colores por defecto, fondo por módulo, perfil, copiar medidas y validación en vivo con el armador compartido.
+  - **Paso 4:** despiece y resumen de la vista previa del servidor, cantos por pieza y plano.
+  - Borrador y pantalla de éxito.
+- Menú "Modulos a medida" y `/modulos` en la sección admin de `ProtectedRoute`.
+- Componentes compartidos:
+  - `CutOptimizer`: prop `hideCosts` y estado "Calculando...".
+  - `EdgeToggleButtons`, sacado de `PieceEdgesToggles`.
+  - `ModuleCard`: se puede elegir.
+  - `useFormDraft`: `saveNow`.
+  - El detalle común ya no ofrece "Editar" en solicitudes MODULOS.
+- **Clave de alta (DECISIONES 40), el único cambio de backend del paso:**
+  - `Pedido.claveAlta`, con la migración `20261005180000_clave_alta_pedido`: aditiva, generada con `migrate diff` contra la copia, aplicada con `migrate deploy` y sin diferencias después.
+  - El alta con una clave que ya entró devuelve esa (200). También si llegan dos a la vez, o si el reintento trae una fecha vencida.
+  - `GET /api/pedidos-modulos?clave=`.
+- **Cuatro revisiones, cada una sobre los arreglos de la anterior:** 38, 13, 8 y 4 hallazgos confirmados, y ninguno descartado en las tres últimas. Se arreglaron todos menos el título de la barra superior, que pasa a F4.5. Los más importantes:
+  - Los cantos del paso 4 se deducían de la lista de materiales cargada al abrir. Un canto cargado después se veía "sin canto" y, al tocar otro lado de la pieza, se borraba del pedido. Ahora salen del perfil o del cambio a mano (DECISIONES 33). Al cambiar de perfil, un cambio a mano arrastraba los lados del perfil viejo.
+  - Mientras se creaba se podían tocar cantos, y el cambio se perdía.
+  - El catálogo o la configuración podían cambiar con el asistente abierto y dejarlo trabado (DECISIONES 34).
+  - Con una respuesta perdida, al salir mientras se creaba, o con un 5xx después de guardar, se podía crear dos veces. Primero se resolvió buscando la solicitud por parecido. La tercera revisión mostró que eso no alcanzaba, y lo reemplazó la clave de alta (DECISIONES 35 y 40).
+  - El paso 1 aceptaba emails que el alta rechaza (DECISIONES 37).
+  - "1.200" se leía como 1,2 mm.
+  - El paso 3 decía "Listo" en módulos que el servidor rechaza: color de canto sin un espesor, o sin fondo activo.
+  - Errores fuera de la vista, foco, accesibilidad y textos.
+- Prueba en el navegador `docs/modulos/herramientas/e2e-f44-navegador.mjs` (Edge y Vite), que queda para repetir. Necesita `playwright-core` aparte (LEEME).
+- e2e-f43 suma la clave de alta.
+
+**Decisiones nuevas:** DECISIONES 33 a 40.
+
+**Verificaciones:**
+- frontend `npm test`: 39, 17, 6, 5, 8 y 21 (asistente) en verde.
+- backend `npm test`: 22 en verde.
+- `tsc` de frontend y backend, `check:optimizer` y build en verde.
+- e2e contra la copia: e2e-f44-navegador 96/96, e2e-f43 66/66, e2e-f42 93/93, e2e-f05 22/22, e2e-f04 12/12 y e2e-f23 4/4.
+- La copia quedó con 65 pedidos, 0 solicitudes de módulos, 1404 filas y 145 entradas de historial, y con las versiones y el estado de los módulos de antes. Tiene aplicada la migración nueva.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F4.5, el listado `/modulos`. Lo primero: llevar el ítem del menú a `/modulos` y hacer que el título de la barra superior cambie según la sección (PLAN F4.5).
+
+**Esperando a Gonzalo o a ROMA:** P10, P11, P12, P6, P1, P5, P7, P8 y DECISIONES 15 (tildes).
+
+---
+
 ## 2026-10-05 (18) · equipo Pinformatico15 · rama main
 
 **Pasos:** fondo elegido en la solicitud, pedido por Gonzalo (sigue F4.4).
