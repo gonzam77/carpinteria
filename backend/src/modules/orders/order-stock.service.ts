@@ -127,3 +127,23 @@ export async function heldBoardsByMaterial(tx: PrismaClient, order: OrderForStoc
       : [];
   return new Map(items.map(({ materialId, placas }) => [materialId, placas]));
 }
+
+/**
+ * Borra un pedido y devuelve el stock que tenia comprometido, en una transaccion. Se borra solo si sigue como se
+ * leyo (mismo estado y fechaActualizacion), igual que el cambio de estado: si otro cambio de estado entro en el
+ * medio, el stock comprometido ya no es el leido, y devolverlo perderia o duplicaria placas. En ese caso, 409.
+ */
+export async function deleteOrderReturningStock(
+  prisma: PrismaClient,
+  existing: OrderForStock & { id: string; estado: EstadoPedido; fechaActualizacion: Date }
+) {
+  await prisma.$transaction(async (tx) => {
+    const claimed = await tx.pedido.deleteMany({
+      where: { id: existing.id, estado: existing.estado, fechaActualizacion: existing.fechaActualizacion }
+    });
+    if (claimed.count !== 1) {
+      throw new AppError(409, "La solicitud cambio mientras tanto. Recarga la pagina y volve a intentar.", { code: "ORDER_CHANGED" });
+    }
+    if (hasStockCommitment(existing)) await returnOrderStock(tx as unknown as PrismaClient, existing);
+  });
+}

@@ -3,7 +3,7 @@ import { EstadoPedido, Prisma, Rol, TipoPedido } from "../../generated/prisma/cl
 import dayjs from "dayjs";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
-import { calculateOrderStockShortages, hasStockCommitment, returnOrderStock, stateHoldsStock, takeOrderStock } from "./order-stock.service.js";
+import { calculateOrderStockShortages, deleteOrderReturningStock, hasStockCommitment, returnOrderStock, stateHoldsStock, takeOrderStock } from "./order-stock.service.js";
 import { AppError, asyncHandler } from "../../utils/http.js";
 import { buildOrdersWorkbook } from "./excel.service.js";
 import { orderFiltersSchema, orderSchema, orderStatusSchema } from "./order.schemas.js";
@@ -278,12 +278,8 @@ ordersRouter.delete(
       include: { detalles: DETALLES_ORDENADOS }
     });
     if (!existing) throw new AppError(404, "Pedido no encontrado");
-    await prisma.$transaction(async (tx) => {
-      if (hasStockCommitment(existing)) {
-        await returnOrderStock(tx as any, existing as any);
-      }
-      await tx.pedido.delete({ where: { id: existing.id } });
-    });
+    // Si el pedido cambio entre la lectura y el borrado, 409 y no se toca el stock (ver deleteOrderReturningStock).
+    await deleteOrderReturningStock(prisma, existing);
     res.status(204).send();
   })
 );
