@@ -567,9 +567,9 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
   2. Correr `npm --prefix backend run pedidos:recalcular` y revisar las diferencias contra lo guardado (DECISIONES 0.5: constancias del estimador viejo).
   3. Correr `npm --prefix backend run pedidos:completar-detalle`, que guarda el detalle recalculado de los pedidos anteriores. Sin esto, el dashboard tarda más de 60 s (DECISIONES 0.12).
   4. Aplicar todas las migraciones sobre esa copia y probar la app completa.
-     Cargar el material de fondo por defecto en Catálogo de módulos > Configuración y los cantos que falten (P9 y P10). Sin fondo, no se puede pedir ningún módulo que tenga piezas de fondo.
+     Importar el catálogo con `npm --prefix backend run prisma:seed:modulos:prod` (con `UPLOADS_DIR` apuntando al volumen de imágenes). También pone el material de fondo por defecto, "Fibroplus blanco" de 3 mm, si la configuración no tiene uno (DECISIONES 31); el resumen lo informa, y si esa placa no existe avisa para cargarlo a mano. Cargar los cantos que falten (P10).
   5. Recién ahí, en la VPS: backup, actualizar el código y reconstruir frontend y backend juntos. La API aplica sola las migraciones al arrancar.
-     Después de desplegar, correr `pedidos:completar-detalle` contra la base de producción.
+     Después de desplegar, correr `pedidos:completar-detalle` y el importador del catálogo (`prisma:seed:modulos:prod`) contra la base de producción.
   6. Si algo falla: volver al backup y a la versión anterior.
 - **Terminado cuando:** producción corre la versión nueva y los pedidos existentes muestran lo mismo que en la prueba local.
 
@@ -583,7 +583,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 | P4 | Pase a producción (F8), cuando todo esté probado | Gonzalo | Nada se despliega antes |
 | P5 | Cantos, material por pieza, fondos, zócalo y gola, color de canto de los frentes, veta, redondeo y plazos | ROMA | Lo de spec §19 |
 | P6 | `PLACARD_EN_ESPEJO_2_PUERTAS` (fondo de 2000×2000 y puertas de 962×1934 sin rotar) y `PLACARD_2_PUERTAS_UN_LADO_PERCHERO` (fondo de 2498×1998) no entran en placas de 1830 de ancho. Preguntas: ¿esas puertas se pueden girar según la veta? ¿Cómo arman esos fondos (partidos, como la variante del escobero)? | ROMA | Se importan, con advertencia. Desde F4.2, con sus medidas por defecto la vista previa responde 400 `MODULE_PIECES_DO_NOT_FIT` |
-| P9 | Material de fondo por defecto (spec §19: ¿3 mm, 5,5 mm o 18 mm?). 31 de los 32 módulos activos tienen piezas de fondo | Gonzalo o ROMA | Sin cargar: esos módulos no se pueden pedir hasta configurarlo en Catálogo de módulos > Configuración |
+| P9 | Material de fondo por defecto (spec §19: ¿3 mm, 5,5 mm o 18 mm?). 31 de los 32 módulos activos tienen piezas de fondo | Gonzalo | **Resuelto (2026-10-05):** la placa de 3 mm "Fibroplus blanco", que se puede cambiar en Catálogo de módulos > Configuración, y cada módulo puede tener la suya. La pone el importador si la configuración no tiene una (DECISIONES 31) |
 | P10 | De los 60 colores de 18 mm activos, 14 no tienen canto de 0,45 y de 2 mm (los que usa el perfil Estándar) y 11 no tienen ninguno | Gonzalo | Con esos colores de canto la vista previa responde `MISSING_EDGE_MATERIAL`, con todos los faltantes juntos. Cargar los cantos en Materiales o no ofrecer esos colores |
 | P11 | ¿La máquina lee bien el Remark "Modulo N · Nombre" (largo máximo y caracteres)? Hoy ninguna fila de producción lo usa | Taller | Se manda así (DECISIONES 20). Probarlo antes de F7.3 |
 | P12 | La vista previa de 20 módulos tarda de 1,5 a 8,4 s, según las piezas (100 módulos: unos 28 s). Spec §20 pide caché si pasa de 2 s | Gonzalo | Se acepta y se trabaja en F7.4 (DECISIONES 0.12 y 24); F4.4 no la llama en cada clic sin control |

@@ -27,6 +27,28 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-05 (17) · equipo Pinformatico15 · rama main
+
+**Pasos:** decisión P9 resuelta, sin cambiar de paso (sigue F4.4).
+
+**Hecho:**
+- Gonzalo eligió el material de fondo por defecto: la placa de 3 mm "Fibroplus blanco", que se puede cambiar (DECISIONES 31).
+- El importador del catálogo la pone si la configuración no tiene una, respeta la que ya haya y acepta otra con `MODULOS_FONDO`.
+- PLAN F8 ahora incluye correr el importador en producción. Antes no estaba listado.
+
+**Verificaciones:**
+- `tsc` del backend en verde.
+- Importador corrido dos veces sobre la copia: la primera puso el fondo y la segunda lo respetó. Siguen 33 módulos en versión 1 y 11 imágenes.
+- Vista previa de los 31 módulos activos con fondo: 29 ok y 2 que no entran (los placares de P6), sin otros errores.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F4.4, el asistente de 4 pasos.
+
+**Esperando a Gonzalo o a ROMA:** P10, P11, P12, P6, P1, P5, P7, P8 y DECISIONES 15 (tildes).
+
+---
+
 ## 2026-10-05 (16) · equipo Pinformatico15 · rama main
 
 **Pasos:** F4.3 terminado.
