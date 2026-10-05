@@ -190,7 +190,11 @@ function assertSameVersions(expected: Array<{ posicion: number; moduloId: string
  * escribe: el Pedido (para tener su numero), los PedidoModulo con su copia de la definicion y las filas con el
  * codigo de barra definitivo. No manda push ni WhatsApp (spec §15). Guarda exactamente lo que da la vista previa.
  */
-export async function createModuleOrder(prisma: PrismaClient, input: ModuleOrderCreateInput, userId: string) {
+export async function createModuleOrder(prisma: PrismaClient, input: ModuleOrderCreateInput, userId: string): Promise<{ order: ModuleOrderView; created: boolean }> {
+  // Un intento que ya entro (se perdio la respuesta y el navegador lo manda otra vez con la misma clave): se devuelve.
+  const previous = input.claveAlta ? await findModuleOrderByAltaKey(prisma, input.claveAlta, userId) : null;
+  if (previous) return { order: previous, created: false };
+
   const order = await buildModuleOrder(prisma, input.modulos, { cliente: input.cliente, numeroContacto: input.numeroContacto });
   // La version que vio quien carga (la de la vista previa) contra la que se acaba de usar para calcular.
   assertSameVersions(
@@ -199,7 +203,43 @@ export async function createModuleOrder(prisma: PrismaClient, input: ModuleOrder
   );
   const { costoHerrajes, presupuestoConHerrajes: _total, ...snapshot } = await buildModuleOrderEstimate(prisma, order.detalles);
 
-  const id = await prisma.$transaction(async (tx) => {
+  let id: string;
+  try {
+    id = await insertModuleOrder(prisma, input, userId, order, snapshot, costoHerrajes);
+  } catch (error) {
+    // Dos intentos con la misma clave a la vez (el primero todavia calculaba): el segundo choca con el indice unico y
+    // devuelve el que entro.
+    if (input.claveAlta && error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const winner = await findModuleOrderByAltaKey(prisma, input.claveAlta, userId);
+      if (winner) return { order: winner, created: false };
+    }
+    throw error;
+  }
+  return { order: await getModuleOrder(prisma, id), created: true };
+}
+
+type ModuleOrderView = Awaited<ReturnType<typeof getModuleOrder>>;
+
+/** La solicitud de un intento de alta, si ya entro. Una clave de otro usuario o de otro tipo de pedido es un error. */
+export async function findModuleOrderByAltaKey(prisma: PrismaClient, claveAlta: string, userId: string): Promise<ModuleOrderView | null> {
+  const existing = await prisma.pedido.findUnique({ where: { claveAlta }, select: { id: true, usuarioId: true, tipo: true } });
+  if (!existing) return null;
+  if (existing.usuarioId !== userId || existing.tipo !== TipoPedido.MODULOS) {
+    throw new AppError(409, "Esa clave de alta ya se uso en otra solicitud. Volve a tocar Crear solicitud.", { code: "ALTA_KEY_CONFLICT" });
+  }
+  return getModuleOrder(prisma, existing.id);
+}
+
+/** Escribe la solicitud ya calculada, en una transaccion. Devuelve su id. */
+async function insertModuleOrder(
+  prisma: PrismaClient,
+  input: ModuleOrderCreateInput,
+  userId: string,
+  order: Awaited<ReturnType<typeof buildModuleOrder>>,
+  snapshot: Omit<Awaited<ReturnType<typeof buildModuleOrderEstimate>>, "costoHerrajes" | "presupuestoConHerrajes">,
+  costoHerrajes: number
+) {
+  return prisma.$transaction(async (tx) => {
     // Y la que se uso para calcular contra el catalogo de este momento: si alguien guardo el modulo mientras tanto, 409.
     const current = await tx.modulo.findMany({ where: { id: { in: order.lineas.map((linea) => linea.moduloId) } }, select: { id: true, version: true } });
     assertSameVersions(order.lineas, new Map(current.map((module) => [module.id, module.version])));
@@ -216,6 +256,7 @@ export async function createModuleOrder(prisma: PrismaClient, input: ModuleOrder
         observaciones: input.observaciones ?? null,
         usuarioId: userId,
         costoHerrajes,
+        claveAlta: input.claveAlta ?? null,
         ...snapshot
       },
       select: { id: true, numero: true }
@@ -251,8 +292,6 @@ export async function createModuleOrder(prisma: PrismaClient, input: ModuleOrder
     await tx.historialPedido.create({ data: { pedidoId: pedido.id, usuarioId: userId, accion: "CREAR_PEDIDO_MODULOS" } });
     return pedido.id;
   });
-
-  return getModuleOrder(prisma, id);
 }
 
 /**
@@ -261,6 +300,7 @@ export async function createModuleOrder(prisma: PrismaClient, input: ModuleOrder
  */
 export async function listModuleOrders(tx: Tx, filters: ModuleOrderFilters) {
   const where: Prisma.PedidoWhereInput = { tipo: TipoPedido.MODULOS };
+  if (filters.clave) where.claveAlta = filters.clave;
   if (filters.estado) where.estado = filters.estado;
   if (filters.entregaDesde || filters.entregaHasta) {
     where.fechaEntrega = {

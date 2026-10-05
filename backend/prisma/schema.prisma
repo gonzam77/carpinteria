@@ -74,6 +74,9 @@ model Pedido {
   emailContacto String?
   direccionEntrega String?
   costoHerrajes Float             @default(0) // aparte de presupuestoEstimado (DECISIONES R1)
+  // Clave de alta del asistente de modulos (UUID del navegador, DECISIONES 40): si el mismo intento llega dos veces,
+  // se devuelve la solicitud ya creada en vez de crear otra.
+  claveAlta     String?           @unique
   usuarioId     String
   fechaCreacion DateTime          @default(now())
   fechaActualizacion DateTime     @updatedAt

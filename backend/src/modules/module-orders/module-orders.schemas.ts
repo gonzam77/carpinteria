@@ -84,6 +84,9 @@ export const moduleOrderCreateSchema = z
     direccionEntrega: optionalText(300, "La direccion de entrega tiene como maximo 300 caracteres"),
     fechaEntrega: dateOnly("Elegi la fecha de entrega (AAAA-MM-DD)").refine((value) => value >= todayInBusinessZone(), "La fecha de entrega no puede ser anterior a hoy"),
     observaciones: optionalText(1000, "La referencia del trabajo tiene como maximo 1000 caracteres"),
+    // Clave de alta (DECISIONES 40): la genera el navegador por cada intento. Si el mismo intento llega dos veces, se
+    // devuelve la solicitud ya creada en vez de crear otra.
+    claveAlta: z.string({ invalid_type_error: "La clave de alta no es valida" }).uuid("La clave de alta no es valida").optional(),
     modulos: modulosSchema
   })
   .strict("Hay datos de la solicitud que no se reconocen: revisa los nombres de los campos");
@@ -95,7 +98,9 @@ export const moduleOrderFiltersSchema = z.object({
   estado: z.nativeEnum(EstadoPedido, { errorMap: () => ({ message: "Estado desconocido" }) }).optional(),
   search: z.string().trim().optional(),
   entregaDesde: dateOnly("La fecha desde tiene que ser AAAA-MM-DD").optional(),
-  entregaHasta: dateOnly("La fecha hasta tiene que ser AAAA-MM-DD").optional()
+  entregaHasta: dateOnly("La fecha hasta tiene que ser AAAA-MM-DD").optional(),
+  /** La solicitud de un intento de alta (DECISIONES 40): para saber si un alta sin respuesta entro. */
+  clave: z.string().uuid("La clave de alta no es valida").optional()
 });
 
 export type ModuleOrderFilters = z.infer<typeof moduleOrderFiltersSchema>;

@@ -7,7 +7,7 @@ import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
 import { asyncHandler } from "../../utils/http.js";
 import { moduleOrderCreateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema } from "./module-orders.schemas.js";
-import { buildModuleOrder, buildModuleOrderEstimate, createModuleOrder, getModuleOrder, listModuleOrders } from "./module-orders.service.js";
+import { buildModuleOrder, buildModuleOrderEstimate, createModuleOrder, findModuleOrderByAltaKey, getModuleOrder, listModuleOrders } from "./module-orders.service.js";
 
 export const moduleOrdersRouter = Router();
 moduleOrdersRouter.use(authenticate, authorize(Rol.ADMIN));
@@ -49,12 +49,23 @@ moduleOrdersRouter.post(
   })
 );
 
-/** Crea la solicitud (spec §13.2). Responde la solicitud guardada, con su numero, como GET /:id. */
+/**
+ * Crea la solicitud (spec §13.2). Responde la solicitud guardada, con su numero, como GET /:id: 201 si la creo, 200 si
+ * ese intento (claveAlta) ya habia entrado (DECISIONES 40).
+ */
 moduleOrdersRouter.post(
   "/",
   asyncHandler(async (req: any, res: any) => {
+    // Un intento que ya entro se devuelve antes de validar el resto: el reintento puede traer datos que hoy ya no pasan
+    // (por ejemplo, una fecha de entrega que vencio a la medianoche), y un 400 haria creer que no se creo.
+    const clave = moduleOrderCreateSchema.shape.claveAlta.safeParse(req.body?.claveAlta);
+    if (clave.success && clave.data) {
+      const previous = await findModuleOrderByAltaKey(prisma, clave.data, req.user.id);
+      if (previous) return res.status(200).json(previous);
+    }
     const data = moduleOrderCreateSchema.parse(req.body);
-    res.status(201).json(await createModuleOrder(prisma, data, req.user.id));
+    const { order, created } = await createModuleOrder(prisma, data, req.user.id);
+    res.status(created ? 201 : 200).json(order);
   })
 );
 

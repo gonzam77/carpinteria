@@ -13,6 +13,7 @@
 // "Prueba F4.3 ..."). Si encuentra restos de una corrida anterior que se corto, no toca nada y avisa.
 // No imprime datos de clientes.
 import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -352,6 +353,36 @@ await prisma.$disconnect();
   await carrera("PENDIENTE", "EN_PROCESO", placardLine);
   await carrera("EN_PROCESO", "PENDIENTE", lines[1]);
 
+  // ---------------------------------------------------------------- clave de alta (DECISIONES 40)
+  // El mismo intento otra vez (respuesta perdida y reintento) da la misma solicitud; dos a la vez, tambien.
+  const clave = randomUUID();
+  const conClave = { ...datos({ cliente: `${PREFIJO} clave` }), claveAlta: clave, modulos: [placardLine] };
+  const antesClave = Number(psql("select count(*) from pedidos"));
+  const primero = await crear(conClave);
+  const segundo = await call("POST", "/pedidos-modulos", conClave);
+  check(
+    "clave de alta: el mismo intento otra vez devuelve la misma solicitud (200) y no crea otra",
+    primero.status === 201 && segundo.status === 200 && segundo.data.id === primero.data.id && Number(psql("select count(*) from pedidos")) === antesClave + 1,
+    `${primero.status} ${segundo.status}`
+  );
+  check("clave de alta: se guarda en la solicitud", psql(`select "claveAlta" from pedidos where id = '${primero.data.id}'`) === clave);
+  const buscada = await call("GET", `/pedidos-modulos?clave=${clave}`);
+  check("clave de alta: el listado la encuentra por clave", buscada.status === 200 && buscada.data.length === 1 && buscada.data[0].id === primero.data.id);
+  check("clave de alta: una clave que no entro no trae nada", (await call("GET", `/pedidos-modulos?clave=${randomUUID()}`)).data.length === 0);
+  // Un reintento puede traer datos que hoy ya no pasan (la fecha de entrega vencio a la medianoche): igual devuelve la
+  // que entro, porque la clave se busca antes de validar el resto.
+  const vencida = await call("POST", "/pedidos-modulos", { ...conClave, fechaEntrega: enDias(-1) });
+  check("clave de alta: un reintento con datos que hoy no pasan devuelve la que entro (no 400)", vencida.status === 200 && vencida.data.id === primero.data.id, String(vencida.status));
+  const paralela = randomUUID();
+  const antesParalela = Number(psql("select count(*) from pedidos"));
+  const [p1, p2] = await Promise.all([call("POST", "/pedidos-modulos", { ...conClave, claveAlta: paralela }), call("POST", "/pedidos-modulos", { ...conClave, claveAlta: paralela })]);
+  for (const result of [p1, p2]) if (result.status === 201) creados.push(result.data.id);
+  check(
+    "clave de alta: dos a la vez dan una sola solicitud",
+    [p1.status, p2.status].sort().join(",") === "200,201" && p1.data.id === p2.data.id && Number(psql("select count(*) from pedidos")) === antesParalela + 1,
+    `${p1.status} ${p2.status}`
+  );
+
   // ---------------------------------------------------------------- errores
   const intento = async (label, body, status, test = () => true) => {
     const before = psql("select count(*) from pedidos");
@@ -372,6 +403,7 @@ await prisma.$disconnect();
     (data) => data.code === "MODULE_CHANGED" && data.details.modulos[0].posicion === 2
   );
   await intento("sin modulos: 400", { ...datos(), modulos: [] }, 400);
+  await intento("clave de alta mal formada: 400", { ...datos(), claveAlta: "no-es-uuid", modulos: [placardLine] }, 400, (data) => texto(data).includes("La clave de alta no es valida"));
   const prohibido = await call("POST", "/pedidos-modulos", { ...datos(), modulos: lines }, carpintero);
   check("un carpintero no accede (403)", prohibido.status === 403 && (await call("GET", "/pedidos-modulos", undefined, carpintero)).status === 403);
 } catch (error) {
