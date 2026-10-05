@@ -1,15 +1,23 @@
 // API de las solicitudes de modulos (/api/pedidos-modulos, spec §13.2). Solo para ADMIN.
-// F4.2: vista previa. El alta, el detalle y el listado llegan en F4.3.
+// Estado, materiales, exportacion y borrado se hacen con las rutas de /api/orders, que sirven para los dos tipos
+// (spec §13.3). La edicion (PUT) es de F5.2 y la fecha de entrega (PATCH) de F5.1.
 import { Router } from "express";
 import { EstadoPedido, Rol, TipoPedido } from "../../generated/prisma/client.js";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
 import { asyncHandler } from "../../utils/http.js";
-import { moduleOrderPreviewSchema } from "./module-orders.schemas.js";
-import { buildModuleOrder, buildModuleOrderEstimate } from "./module-orders.service.js";
+import { moduleOrderCreateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema } from "./module-orders.schemas.js";
+import { buildModuleOrder, buildModuleOrderEstimate, createModuleOrder, getModuleOrder, listModuleOrders } from "./module-orders.service.js";
 
 export const moduleOrdersRouter = Router();
 moduleOrdersRouter.use(authenticate, authorize(Rol.ADMIN));
+
+moduleOrdersRouter.get(
+  "/",
+  asyncHandler(async (req: any, res: any) => {
+    res.json(await listModuleOrders(prisma, moduleOrderFiltersSchema.parse(req.query)));
+  })
+);
 
 /**
  * Calcula la solicitud completa sin guardarla (spec §8.5): modulos, filas, placas y presupuesto. El paso 4 del
@@ -38,5 +46,21 @@ moduleOrdersRouter.post(
       herrajes: [],
       ...estimate
     });
+  })
+);
+
+/** Crea la solicitud (spec §13.2). Responde la solicitud guardada, con su numero, como GET /:id. */
+moduleOrdersRouter.post(
+  "/",
+  asyncHandler(async (req: any, res: any) => {
+    const data = moduleOrderCreateSchema.parse(req.body);
+    res.status(201).json(await createModuleOrder(prisma, data, req.user.id));
+  })
+);
+
+moduleOrdersRouter.get(
+  "/:id",
+  asyncHandler(async (req: any, res: any) => {
+    res.json(await getModuleOrder(prisma, req.params.id));
   })
 );
