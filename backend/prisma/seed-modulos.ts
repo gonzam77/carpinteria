@@ -3,6 +3,8 @@
 //   npm run prisma:seed:modulos              desarrollo (tsx)
 //   npm run prisma:seed:modulos:prod         produccion (compilado en dist)
 //   ... -- --force                           pisa tambien los modulos que alguien ya edito en el sistema
+//   MODULOS_FONDO="<placa>" ...                material de fondo por defecto, si la configuracion no tiene
+//                                            (si no se indica, la placa de 3 mm "Fibroplus blanco")
 //
 // Lee prisma/data/modulos-muebles.json y prisma/data/imagenes/*.jpg (se puede cambiar con MODULOS_DATA_DIR).
 // Es idempotente: actualiza por codigo, y no pisa un modulo con version > 1 (editado en el sistema) salvo con
@@ -53,6 +55,7 @@ const CATEGORIAS = ["Bajo mesada", "Alacenas", "Placares y torres", "Dormitorio 
 const LADOS = [LadoCanto.LARGO_1, LadoCanto.LARGO_2, LadoCanto.ANCHO_1, LadoCanto.ANCHO_2];
 const force = process.argv.includes("--force");
 const dataDir = process.env.MODULOS_DATA_DIR ?? resolve(process.cwd(), "prisma/data");
+const fondoPorDefecto = process.env.MODULOS_FONDO ?? "Fibroplus blanco";
 
 // Escobero: el Excel trae dos variantes de fondo (entero, o partido en dos). Se modelan como un parametro
 // OPCION y cantidades condicionales (spec §19, nota del escobero; DECISIONES 6). El JSON queda intacto porque
@@ -111,10 +114,28 @@ function validationErrors(module: JsonModule) {
   return errors;
 }
 
+/**
+ * Material de fondo por defecto (PLAN P9, Gonzalo 2026-10-05): la placa de 3 mm "Fibroplus blanco", o la que diga
+ * MODULOS_FONDO. Solo se pone si la configuracion no tiene uno: si el administrador ya eligio otro en Catalogo de
+ * modulos > Configuracion, se respeta. Cada modulo puede tener ademas su propio fondo. Devuelve el texto del resumen.
+ */
+async function setDefaultBackMaterial(current: string | null) {
+  if (current) {
+    const material = await prisma.material.findUnique({ where: { id: current } });
+    return `ya configurado, se respeta (${material?.nombre.trim() ?? current})`;
+  }
+  const plates = await prisma.material.findMany({ where: { tipo: "PLACA", activo: true }, orderBy: [{ nombre: "asc" }, { id: "asc" }] });
+  const material = plates.find((plate) => plate.nombre.trim().toLowerCase() === fondoPorDefecto.trim().toLowerCase());
+  if (!material) return `no hay una placa activa "${fondoPorDefecto}". Configuralo en Catalogo de modulos > Configuracion`;
+  await prisma.configuracionModulos.update({ where: { id: "default" }, data: { materialFondoId: material.id } });
+  return `${material.nombre.trim()} (${material.espesorMm} mm), puesto por defecto`;
+}
+
 async function main() {
   const data = JSON.parse(readFileSync(resolve(dataDir, "modulos-muebles.json"), "utf8")) as { modulos: JsonModule[] };
 
-  await prisma.configuracionModulos.upsert({ where: { id: "default" }, update: {}, create: { id: "default" } });
+  const config = await prisma.configuracionModulos.upsert({ where: { id: "default" }, update: {}, create: { id: "default" } });
+  const fondo = await setDefaultBackMaterial(config.materialFondoId);
 
   const categoryId = new Map<string, string>();
   for (const [index, nombre] of [...new Set([...CATEGORIAS, ...data.modulos.map((module) => module.categoria)])].entries()) {
@@ -221,6 +242,7 @@ async function main() {
   }
 
   console.log(`Modulos: ${summary.creados} creados, ${summary.actualizados} actualizados, ${summary.omitidos.length} omitidos.`);
+  console.log(`Material de fondo: ${fondo}.`);
   summary.omitidos.forEach((line) => console.log(`  omitido: ${line}`));
   summary.inactivosPorErrores.forEach((line) => console.log(`  inactivo por errores: ${line}`));
 }
