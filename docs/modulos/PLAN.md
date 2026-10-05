@@ -10,11 +10,11 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 ## 1. Estado actual
 
-**Actualizado:** 2026-10-03
+**Actualizado:** 2026-10-05
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido. Lo posterior está en commits locales sin push: el push espera el OK de Gonzalo.
-- **Último paso terminado:** F4.2. Las Fases 0 a 3 están completas.
-- **Próximo paso:** **F4.3**, alta, detalle y listado de `/api/pedidos-modulos` (la vista previa ya está).
+- **Último paso terminado:** F4.3. Las Fases 0 a 3 están completas.
+- **Próximo paso:** **F4.4**, el asistente de 4 pasos para cargar una solicitud de módulos.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -34,7 +34,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
-| F4.1–F4.5 | API y asistente de solicitudes de módulos | [~] F4.1 y F4.2 hechos |
+| F4.1–F4.5 | API y asistente de solicitudes de módulos | [~] F4.1 a F4.3 hechos |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (solo si se contrató) | [!] preguntar a Gonzalo |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
@@ -67,8 +67,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 ### 2.1 Verificaciones de siempre
 
 ```bash
-cd frontend && npm test           # optimizador (39), motor de fórmulas (17), presupuesto (5), compresión de imágenes (5) y editor de módulos (8)
-cd backend && npm test            # armado de solicitudes de módulos (14), sin base de datos
+cd frontend && npm test           # optimizador (39), motor de fórmulas (17), presupuesto (6), compresión de imágenes (5) y editor de módulos (8)
+cd backend && npm test            # armado de solicitudes de módulos, fechas y esquemas (19), sin base de datos
 npm run check:optimizer           # desde la raíz: el código compartido está sincronizado
 cd frontend && npx tsc --noEmit
 cd backend && npx tsc --noEmit
@@ -442,10 +442,25 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
      - `costoHerrajes` y el total con herrajes van en campos aparte (DECISIONES R1).
 - **Terminado cuando:** pasa el **test de paridad corte contra módulos**. Las mismas piezas por `POST /api/orders/preview` y por `POST /api/pedidos-modulos/preview`, y la carga a mano equivalente (agregada y en otro orden), dan `===` en placas y en cada componente.
 
-#### F4.3 Endpoints de solicitudes · [ ]
+#### F4.3 Endpoints de solicitudes · [x]
+- **Hecho (2026-10-05):**
+  - `POST /api/pedidos-modulos`, `GET /api/pedidos-modulos` y `GET /api/pedidos-modulos/:id` (solo ADMIN), en `module-orders.service.ts` (DECISIONES 25 a 27).
+  - El alta calcula afuera de la transacción y adentro solo escribe; si el módulo cambió desde la vista previa, responde 409 `MODULE_CHANGED`.
+  - `fechaEntrega` va y vuelve como `AAAA-MM-DD`, y "hoy" es el de Argentina (`backend/src/utils/dates.ts`, DECISIONES 26).
+  - Los m² por material, como `mm2` entero, en `computeOrderEstimate` y en `estimacionDetalle` (DECISIONES 28).
+  - **Fuera del paso, de la revisión con agentes:**
+    - las transacciones tienen hasta 30 s (DECISIONES 29);
+    - `DELETE /api/orders/:id` tiene bloqueo optimista, que arregla una carrera que podía perder o duplicar placas (DECISIONES 30).
+- **Comprobado:** `herramientas/e2e-f43.mjs`, 56/56 contra la copia:
+  - el alta guarda exactamente lo que mostró la vista previa (placas, cada componente, detalle, filas y módulos con su copia de la definición);
+  - los m² cuadran con las piezas;
+  - el stock se reserva y se devuelve exacto, y la carrera entre borrar y cambiar de estado se prueba por concurrencia y en forma determinista;
+  - cada búsqueda y filtro excluye lo que no corresponde, y el orden tiene las entregadas al final;
+  - los errores responden lo que tienen que responder.
+  También siguen en verde e2e-f42 (92), e2e-f05 (22) y e2e-f04 (12).
 - **Depende de:** F4.2. La vista previa ya existe (`POST /api/pedidos-modulos/preview`).
 - **Leer:** spec §13.2 y §8.5; DECISIONES 17, 18 y R5.
-- **Hacer:**
+- **Era:**
   - el schema de alta: `moduleOrderPreviewSchema` más cliente (mínimo 2), numeroContacto (mínimo 6), emailContacto, direccionEntrega, fechaEntrega (YYYY-MM-DD, desde hoy en `America/Argentina/Buenos_Aires`) y observaciones;
   - `POST /api/pedidos-modulos` en una transacción: `buildModuleOrder(tx)` y `buildModuleOrderEstimate(tx)`, crear el `Pedido` MODULOS, leer su `numero`, reescribir los códigos con `moduleBarcode(numero, posicion, orden)`, crear los `PedidoModulo` (con `definicionSnapshot` y los `valores` efectivos) y los `DetallePedido` con su `pedidoModuloId`, e historial `CREAR_PEDIDO_MODULOS`. Sin push ni WhatsApp;
   - decidir qué pasa si el módulo cambió de versión entre la vista previa y el alta (la vista previa devuelve `version`);
@@ -469,6 +484,10 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - el perfil de cantos viene marcado con el predeterminado del módulo y siempre se manda;
   - la vista previa tarda de 1,5 a 8,4 s con 20 módulos (P12): no llamarla en cada clic de canto sin control (por ejemplo, un botón "Recalcular" o una espera corta), y mostrar que está calculando;
   - marcar en el selector los colores que no tienen los cantos que pide el perfil (P10).
+- **Tener en cuenta (de F4.3):**
+  - el alta manda la `version` de cada módulo que devolvió la vista previa. Si responde 409 `MODULE_CHANGED`, hay que avisar y volver a pedir la vista previa (DECISIONES 25);
+  - `fechaEntrega` es `AAAA-MM-DD` y no se convierte a `Date` en el navegador (DECISIONES 26);
+  - los m² del panel salen de `estimacionDetalle.porMaterial[].mm2` dividido por 1.000.000. No se calculan en el navegador (R3).
 
 #### F4.5 Listado de solicitudes de módulos · [ ]
 - **Depende de:** F4.3.
@@ -484,6 +503,9 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - fecha de entrega editable (`PATCH` con historial `CAMBIAR_FECHA_ENTREGA`);
   - stepper de estados con el manejo del 409 de stock;
   - pestañas e historial.
+- **Tener en cuenta (de F4.3):**
+  - el detalle sale de `GET /api/pedidos-modulos/:id`, con la fecha como `AAAA-MM-DD`;
+  - borrar puede responder 409 `ORDER_CHANGED` (DECISIONES 30), igual que cambiar el estado. Hay que mostrarlo; hoy las pantallas de corte no muestran ningún error al borrar.
 
 #### F5.2 Edición, igual que la actual · [ ]
 - **Depende de:** F5.1.
@@ -529,6 +551,7 @@ Autocompletar clientes, estados vacíos y de carga, y accesibilidad (spec §14.5
   - calcular el plano una sola vez y reutilizarlo entre la vista previa y el alta;
   - caché por multiconjunto canónico de piezas (R5);
   - mover el cálculo del navegador a un worker;
+  - mover el optimizador del backend a `worker_threads`: hoy corre en el hilo de Node y, mientras calcula, frena las demás solicitudes y las transacciones abiertas (DECISIONES 29);
   - perfilar la búsqueda extra.
 - **Regla:** ninguna optimización de tiempo puede dar más placas. Se mide con `npm --prefix frontend run bench:optimizer`.
 

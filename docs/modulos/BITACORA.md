@@ -27,6 +27,40 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-05 (16) · equipo Pinformatico15 · rama main
+
+**Pasos:** F4.3 terminado.
+
+**Hecho:**
+- `POST`, `GET` y `GET /:id` de `/api/pedidos-modulos`, con el alta en una transacción que solo escribe. Hay control de versión del módulo (409 `MODULE_CHANGED`), copia de la definición e historial `CREAR_PEDIDO_MODULOS` (DECISIONES 25 a 27).
+- `backend/src/utils/dates.ts`: fechas `AAAA-MM-DD` y "hoy" en Argentina (DECISIONES 26).
+- `mm2` por material en el cálculo compartido y en `estimacionDetalle` (DECISIONES 28).
+- **Revisión con 8 agentes** (spec, integridad, robustez y pruebas, con verificación escéptica): 16 hallazgos, 6 confirmados, todos corregidos:
+  - la limpieza del e2e ahora resiste un corte y detecta restos de una corrida anterior;
+  - búsquedas, filtros y orden del listado con controles negativos;
+  - los módulos guardados y su copia de la definición, comparados campo por campo;
+  - test del "hoy" de Argentina con reloj simulado y el proceso en UTC (detecta un "hoy" en UTC y uno con hora local);
+  - transacciones de hasta 30 s (DECISIONES 29);
+  - `DELETE /api/orders/:id` con bloqueo optimista (DECISIONES 30). Era una carrera de F0.5 que podía perder o duplicar placas; ahora tiene prueba determinista, que detecta el código anterior.
+
+**Decisiones nuevas:** DECISIONES 25 a 30, y dos filas nuevas en "Hallazgos menores".
+
+**Verificaciones:**
+- backend `npm test`: 19; frontend `npm test`: 39, 17, 6, 5 y 8. Todo en verde.
+- `tsc` de frontend y backend, `check:optimizer` y `npm run build`, en verde.
+- e2e contra la copia: e2e-f43 56/56, e2e-f42 92/92, e2e-f05 22/22 y e2e-f04 12/12.
+- Al terminar, la copia quedó con 65 pedidos, 33 módulos, 0 solicitudes de módulos y la configuración sin fondo.
+
+**Commits:** locales. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F4.4, el asistente de 4 pasos (`/modulos/nueva`). Ver lo que dice PLAN F4.4 en "Tener en cuenta (de F4.2)" y "(de F4.3)".
+
+**Esperando a Gonzalo o a ROMA:**
+- P9: el material de fondo por defecto, que bloquea pedir módulos con fondo;
+- P10, P11, P12, P6, P1, P5, P7, P8 y DECISIONES 15 (tildes).
+
+---
+
 ## 2026-10-03 (15) · equipo Pinformatico15 · rama main
 
 **Pasos:** F4.2 terminado.
