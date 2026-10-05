@@ -5,6 +5,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import GroupIcon from "@mui/icons-material/Group";
 import BusinessIcon from "@mui/icons-material/Business";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import KitchenIcon from "@mui/icons-material/Kitchen";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import PostAddIcon from "@mui/icons-material/PostAdd";
@@ -43,7 +44,18 @@ export function AppLayout() {
       to: user?.rol === "ADMIN" ? "/pedidos/nuevo" : "/solicitar",
       icon: <PostAddIcon />,
       match: (pathname: string) => pathname === "/pedidos/nuevo" || pathname === "/solicitar"
-    }
+    },
+    // Solo ADMIN (spec §14.2). Abre el asistente hasta que exista el listado /modulos (F4.5).
+    ...(user?.rol === "ADMIN"
+      ? [
+          {
+            label: "Modulos a medida",
+            to: "/modulos/nueva",
+            icon: <KitchenIcon />,
+            match: (pathname: string) => pathname === "/modulos" || pathname.startsWith("/modulos/")
+          }
+        ]
+      : [])
   ];
 
   const settingsNavItems = useMemo(
@@ -231,7 +243,19 @@ export function AppLayout() {
         }}>
         {drawerContent}
       </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, maxWidth: "100%", overflowX: "hidden", p: { xs: 2, sm: 2.5, md: 3.5 }, width: { xs: "100%", md: `calc(100% - ${drawerWidth}px)` } }}>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          maxWidth: "100%",
+          overflowX: "hidden",
+          // clip recorta igual que hidden pero no crea un contenedor de scroll: asi funciona position: sticky
+          // (resumen del asistente de modulos). Los navegadores sin clip siguen con hidden.
+          "@supports (overflow-x: clip)": { overflowX: "clip" },
+          p: { xs: 2, sm: 2.5, md: 3.5 },
+          width: { xs: "100%", md: `calc(100% - ${drawerWidth}px)` }
+        }}
+      >
         <Toolbar />
         {/* La `key` con el id del usuario remonta la pantalla si cambia quien
             esta logueado. Pasa cuando vence una sesion y en el dialogo de

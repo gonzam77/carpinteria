@@ -8,6 +8,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { MaterialsPage } from "./pages/MaterialsPage";
 import { ModuleCatalogPage } from "./pages/ModuleCatalogPage";
 import { ModuleEditorPage } from "./pages/ModuleEditorPage";
+import { ModuleOrderWizardPage } from "./pages/ModuleOrderWizardPage";
 import { OrderDetailPage } from "./pages/OrderDetailPage";
 import { OrderFormPage } from "./pages/OrderFormPage";
 import { OptimizerSettingsPage } from "./pages/OptimizerSettingsPage";
@@ -34,6 +35,14 @@ export function App() {
         <Route path="mis-solicitudes" element={<OrdersPage />} />
         <Route path="pedidos/:id" element={<OrderDetailPage />} />
         <Route path="pedidos/:id/editar" element={<OrderFormPage />} />
+        <Route
+          path="modulos/nueva"
+          element={
+            <ProtectedRoute roles={["ADMIN"]}>
+              <ModuleOrderWizardPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="materiales"
           element={

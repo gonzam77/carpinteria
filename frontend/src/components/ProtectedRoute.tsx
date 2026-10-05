@@ -8,7 +8,7 @@ export function ProtectedRoute({ children, roles }: { children: React.ReactNode;
 
   if (loading) return null;
   if (!user) {
-    const adminSection = roles?.includes("ADMIN") || location.pathname.startsWith("/usuarios") || location.pathname.startsWith("/materiales") || location.pathname.startsWith("/configuracion-");
+    const adminSection = roles?.includes("ADMIN") || location.pathname.startsWith("/usuarios") || location.pathname.startsWith("/materiales") || location.pathname.startsWith("/configuracion-") || location.pathname.startsWith("/modulos");
     return <Navigate to={adminSection ? "/admin" : "/login"} replace />;
   }
   if (roles && !roles.includes(user.rol)) return <Navigate to="/" replace />;
