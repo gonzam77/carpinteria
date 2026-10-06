@@ -13,6 +13,7 @@ import { getModulesConfig, MODULE_INCLUDE, toDefinition } from "../catalog/catal
 import { normalizeDetails, type NormalizedDetail } from "../orders/order-details.service.js";
 import { buildOrderEstimateSnapshot, getOptimizerSettings } from "../orders/order-estimate.service.js";
 import { DETALLES_ORDENADOS } from "../orders/order-queries.js";
+import { compareForList } from "./module-order-list.js";
 import { moduleBarcode, planModuleOrder, type PlanModule } from "./module-order-plan.js";
 import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderLine } from "./module-orders.schemas.js";
 
@@ -296,7 +297,8 @@ async function insertModuleOrder(
 
 /**
  * Listado de solicitudes de modulos (spec §13.2 y §9.1). La busqueda mira cliente, telefono, referencia y numero
- * (1044 o M-1044). Orden: primero las que no estan entregadas, por fecha de entrega (sin fecha al final) y numero.
+ * (1044 o M-1044). Orden (compareForList): primero las que siguen en curso, por fecha de entrega (sin fecha al final)
+ * y numero; despues las rechazadas y al final las entregadas.
  */
 export async function listModuleOrders(tx: Tx, filters: ModuleOrderFilters) {
   const where: Prisma.PedidoWhereInput = { tipo: TipoPedido.MODULOS };
@@ -335,14 +337,8 @@ export async function listModuleOrders(tx: Tx, filters: ModuleOrderFilters) {
       _count: { select: { modulos: true } }
     }
   });
-  const delivered = (estado: EstadoPedido) => (estado === EstadoPedido.ENTREGADA ? 1 : 0);
   return orders
-    .sort(
-      (a, b) =>
-        delivered(a.estado) - delivered(b.estado) ||
-        (a.fechaEntrega?.getTime() ?? Number.POSITIVE_INFINITY) - (b.fechaEntrega?.getTime() ?? Number.POSITIVE_INFINITY) ||
-        a.numero - b.numero
-    )
+    .sort(compareForList)
     .map(({ _count, ...order }) => ({
       ...order,
       fechaEntrega: toDateOnly(order.fechaEntrega),
