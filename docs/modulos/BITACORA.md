@@ -27,6 +27,50 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-06 (20) · equipo Pinformatico15 · rama main
+
+**Pasos:** F4.5 terminado.
+
+**Hecho:**
+- El listado `/modulos` (`ModuleOrdersPage`), solo para ADMIN:
+  - indicadores, semáforo de plazo (`DeliveryChip`) y orden (DECISIONES 41);
+  - filtros en la URL (estado, búsqueda y rango de entrega), con borradores para la búsqueda y las fechas (DECISIONES 42);
+  - selección y exportación a Excel: `pedido-M{numero}.xlsx` con una sola y `pedidos-carpinteria.xlsx` con varias;
+  - accesibilidad de la grilla (DECISIONES 44).
+- La lógica sin React está en `lib/moduleOrdersList.ts`, con 11 tests, que también corren en otras zonas horarias y en los cambios de horario. "Hoy" es el de Argentina (`useTodayInArgentina`) y cambia solo a la medianoche.
+- El menú "Modulos a medida" abre `/modulos`, y el título de la barra cambia según la sección, solo en las de ADMIN (DECISIONES 43).
+- Detalle provisorio en `/modulos/:id`: el detalle común, con redirección entre `/pedidos/:id` y `/modulos/:id` según el tipo. "Volver" y "Eliminar" vuelven al listado con los filtros. El éxito del asistente y "Ver M-N" ya van ahí.
+- **Backend:** el orden por defecto pone las rechazadas después de las en curso (`compareForList`, con 3 tests; DECISIONES 27 y 41). Sin migraciones.
+- **Cinco revisiones, cada una sobre los arreglos de la anterior:** 34, 21, 20, 17 y 7 hallazgos confirmados, todos arreglados. Los más importantes:
+  - Las fechas no se podían escribir con el teclado. Después aparecieron, de a una por revisión: cada dígito filtraba por un día intermedio, borrar un segmento sacaba el filtro, recorrer el calendario con las flechas filtraba por los días recorridos, una pausa que terminaba tarde deshacía el menú o atrás, y una fecha elegida no se aplicaba si enseguida se recorría el calendario y se volvía con Escape. Quedó una regla simple: la pausa aplica lo que estaba elegido cuando empezó (DECISIONES 42).
+  - Un error de búsqueda quedaba pegado y tapaba el estado vacío.
+  - La selección exportaba filas que no se veían (con un error o un rango invertido), y el pie de la grilla las contaba.
+  - Las rechazadas aparecían arriba de las atrasadas.
+  - Pasada la medianoche, el semáforo seguía con el día anterior.
+  - Saltar con el historial del navegador entre el detalle de una solicitud de módulos y uno de corte entraba en un ciclo de redirecciones.
+  - Los indicadores podían quedar cargando para siempre.
+  - La grilla, que se desmonta con el catálogo vacío, volvía a montarse con una referencia vieja: ahora `ModuleOrdersGrid` tiene la suya.
+  - En una notebook, Plazo y Estado no se veían sin desplazar la tabla; el foco del teclado no se veía y la grilla no tenía nombre.
+- Prueba en el navegador `herramientas/e2e-f45-navegador.mjs` (137 chequeos), que queda para repetir. Cada arreglo de las revisiones 2 a 5 se comprobó metiendo el defecto a propósito (pruebas de mutación): la prueba lo detecta.
+- e2e-f44 ajustada al detalle en `/modulos/:id`.
+
+**Decisiones nuevas:** DECISIONES 41 a 44. Cambian la 27 (orden) y la 39 (menú).
+
+**Verificaciones:**
+- frontend `npm test`: 39, 17, 6, 5, 8, 21 y 11 (listado) en verde.
+- backend `npm test`: 25 en verde.
+- `tsc` de frontend y backend, `check:optimizer` y build en verde.
+- e2e contra la copia: e2e-f45-navegador 137/137, e2e-f44-navegador 98/98 y e2e-f43 66/66.
+- La copia quedó con 65 pedidos, 0 solicitudes de módulos, 1404 filas, 145 entradas de historial y el stock de antes. Un corte del backend de prueba a mitad de una corrida dejó 7 solicitudes "Prueba F4.5"; se borraron por la API.
+
+**Commits:** cinco commits locales (orden del backend, lógica del listado, pantalla, pruebas y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F5.1, el detalle de la solicitud de módulos. Lo primero: leer "Tener en cuenta (de F4.5)" en PLAN F5.1 (la ruta `/modulos/:id` ya existe, `returnTo` y los chequeos del detalle en e2e-f45).
+
+**Esperando a Gonzalo o a ROMA:** P10, P11, P12, P6, P1, P5, P7, P8 y DECISIONES 15 (tildes).
+
+---
+
 ## 2026-10-05 (19) · equipo Pinformatico15 · rama main
 
 **Pasos:** F4.4 terminado.

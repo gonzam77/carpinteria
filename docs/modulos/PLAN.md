@@ -10,11 +10,11 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 ## 1. Estado actual
 
-**Actualizado:** 2026-10-05
+**Actualizado:** 2026-10-06
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido. Lo posterior está en commits locales sin push: el push espera el OK de Gonzalo.
-- **Último paso terminado:** F4.4. Las Fases 0 a 3 están completas.
-- **Próximo paso:** **F4.5**, el listado de solicitudes de módulos (`/modulos`).
+- **Último paso terminado:** F4.5. Las Fases 0 a 4 están completas.
+- **Próximo paso:** **F5.1**, el detalle de la solicitud de módulos (`/modulos/:id`, que hoy muestra el detalle común).
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -34,7 +34,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F1 | Motor de fórmulas | [x] |
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
-| F4.1–F4.5 | API y asistente de solicitudes de módulos | [~] F4.1 a F4.4 hechos |
+| F4.1–F4.5 | API, asistente y listado de solicitudes de módulos | [x] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (solo si se contrató) | [!] preguntar a Gonzalo |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
@@ -497,13 +497,28 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - Cuatro revisiones, cada una sobre los arreglos de la anterior: 38, 13, 8 y 4 hallazgos confirmados. Se arreglaron todos menos el título de la barra superior, que pasa a F4.5 (ver la bitácora).
   - Prueba en el navegador: `herramientas/e2e-f44-navegador.mjs` (Edge y Vite), 96 de 96. e2e-f43 suma la clave de alta: 66 de 66.
 
-#### F4.5 Listado de solicitudes de módulos · [ ]
+#### F4.5 Listado de solicitudes de módulos · [x]
 - **Depende de:** F4.3.
 - **Hacer:** `/modulos` con indicadores, semáforo (en la zona horaria `America/Argentina/Buenos_Aires`), filtros, orden y exportación (spec §9.1).
 - **Tener en cuenta (de F4.4):**
   - el ítem "Modulos a medida" del menú hoy abre `/modulos/nueva`: pasarlo a `/modulos` (`AppLayout`, `mainNavItems`);
   - el título de la barra superior sigue fijo en "Panel de solicitudes". Spec §14.2 pide que cambie según la sección (DECISIONES 39; hallazgo C37 de la revisión);
   - el asistente ya usa `GET /api/pedidos-modulos?clave=<uuid>` para saber si un alta sin respuesta entró (clave de alta, DECISIONES 35 y 40). El listado puede usar `listModuleOrders` de `api/moduleOrders.ts`.
+- **Hecho (2026-10-06):**
+  - `/modulos` (solo ADMIN), en `ModuleOrdersPage`:
+    - los indicadores, el semáforo (`DeliveryChip`) y el orden (DECISIONES 41);
+    - los filtros en la URL, con borradores para la búsqueda y las fechas;
+    - la selección y la exportación (DECISIONES 42).
+  - La lógica sin React está en `lib/moduleOrdersList.ts`, con 11 tests (`npm run test:module-orders-list`). "Hoy" sale de `hooks/useTodayInArgentina.ts`.
+  - Menú "Modulos a medida" a `/modulos` y título de la barra por sección, solo en las secciones de ADMIN.
+  - Detalle provisorio en `/modulos/:id`: el detalle común, con redirección entre `/pedidos/:id` y `/modulos/:id` según el tipo, y "Volver" con los filtros (DECISIONES 43).
+  - Accesibilidad de la grilla (DECISIONES 44).
+  - **Backend:** el orden por defecto de `GET /api/pedidos-modulos` pone las rechazadas después de las en curso (`compareForList`, con 3 tests; DECISIONES 27 y 41). No hay migraciones.
+  - Cinco revisiones, cada una sobre los arreglos de la anterior: 34, 21, 20, 17 y 7 hallazgos confirmados, todos arreglados. Entre ellos: las fechas que no se podían escribir, un error de búsqueda que quedaba pegado, la selección que exportaba filas ocultas, una pausa que deshacía el menú o atrás, los indicadores que quedaban cargando y una fecha elegida que no se aplicaba después de cerrar el calendario con Escape (ver la bitácora). Cada arreglo se comprobó metiendo el defecto a propósito: la prueba en el navegador lo detecta.
+  - Pruebas en el navegador:
+    - `herramientas/e2e-f45-navegador.mjs` (Edge, con barras de desplazamiento reales): 137 de 137;
+    - e2e-f44 ajustada al detalle en `/modulos/:id`: 98 de 98;
+    - e2e-f43: 66 de 66.
 
 ### Fase 5: Detalle, edición y salidas (spec §9.3, §10 y §11)
 
@@ -519,9 +534,14 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - el detalle sale de `GET /api/pedidos-modulos/:id`, con la fecha como `AAAA-MM-DD`;
   - borrar puede responder 409 `ORDER_CHANGED` (DECISIONES 30), igual que cambiar el estado. Hay que mostrarlo; hoy las pantallas de corte no muestran ningún error al borrar.
 - **Tener en cuenta (de F4.4):**
-  - después de crear, el asistente muestra una pantalla de éxito, y "Ver la solicitud" abre el detalle común `/pedidos/:id` (DECISIONES 35). Con el detalle propio, navegar a `/modulos/:id` con la notificación "Solicitud M-N creada" (spec §9.2) y redirigir `/pedidos/:id` de una solicitud MODULOS;
+  - después de crear, el asistente muestra una pantalla de éxito, y "Ver la solicitud" abre el detalle común, desde F4.5 en `/modulos/:id` (DECISIONES 35 y 43). Con el detalle propio, navegar a `/modulos/:id` con la notificación "Solicitud M-N creada" (spec §9.2);
   - `OrderDetailPage` oculta "Editar" cuando `order.tipo === "MODULOS"`;
   - para los cantos por pieza conviene reusar `unitPieceEdges`, `changedSides` y `EdgeToggleButtons` (con `editedSides`): los cantos salen del perfil o del cambio a mano, no de la lista de materiales.
+- **Tener en cuenta (de F4.5):**
+  - la ruta `/modulos/:id` ya existe y muestra el detalle común (`OrderDetailPage`), que redirige entre `/pedidos/:id` y `/modulos/:id` según el tipo (DECISIONES 43). En F5.1 cambia el componente de la ruta. La redirección de `/pedidos/:id` de una solicitud MODULOS tiene que quedar, o pasar a un componente chico;
+  - el listado, el éxito del asistente y "Ver M-N" navegan con `state.returnTo`. "Volver" y "Eliminar" del detalle nuevo tienen que respetarlo, para volver al listado con sus filtros. Hay que validarlo como en `OrderDetailPage`: que empiece con `/` y no con `//`;
+  - la notificación de AppLayout reemplaza el `state` por `{}`. Si el asistente navega al detalle con "Solicitud M-N creada" (spec §9.2), el `returnTo` se pierde: hay que decidir a dónde vuelve en ese caso (por defecto, `/modulos`);
+  - e2e-f45 recorre el detalle (abrir, Volver, atrás, Eliminar con filtros, redirecciones): ajustar esos chequeos al detalle nuevo.
 
 #### F5.2 Edición, igual que la actual · [ ]
 - **Depende de:** F5.1.
@@ -539,6 +559,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - filtro `?tipo` opcional;
   - nombre de archivo `pedido-M{numero}.xlsx` cuando se exporta un único pedido de módulos (spec §11.1).
 - **Terminado cuando:** exportar solicitudes de corte da el mismo Excel que antes.
+- **Tener en cuenta (de F4.5):** el nombre del archivo que ve el usuario lo pone el navegador (`saveAs`), no el `Content-Disposition` del servidor: el CORS no expone ese encabezado. El listado de módulos ya baja `pedido-M{numero}.xlsx` con una sola solicitud y `pedidos-carpinteria.xlsx` con varias (DECISIONES 42); el detalle común sigue con `<cliente>-<fecha>.xlsx`.
 
 #### F5.4 Hoja de taller · [ ]
 - **Depende de:** F5.1.
@@ -560,6 +581,11 @@ Regenera las piezas de ese módulo y **recalcula el pedido entero** en la misma 
 
 #### F7.2 Pulido · [ ]
 Autocompletar clientes, estados vacíos y de carga, y accesibilidad (spec §14.5).
+- **Pendiente de F4.5 (DECISIONES 44):**
+  - el contraste de los chips de semáforo y de estado: es la paleta del prototipo, con algunos pares apenas debajo de 4,5:1. Si se cambia, va en todo el sistema;
+  - los textos con tilde de las grillas de MUI ("Filas por página"): se corrigen en `theme.ts` según lo que decida Gonzalo en DECISIONES 15;
+  - el foco del teclado no se ve en las otras grillas (el tema lo saca): en el listado de módulos se agregó solo ahí;
+  - los botones principales deshabilitados conservan el degradado del tema y parecen activos: en el listado de módulos se sacó solo en "Exportar seleccion".
 
 #### F7.4 Agilizar los tiempos del optimizador · [ ]
 - **Por qué:** en F0.9 se aceptó esperar más para ahorrar placas (DECISIONES 0.12). Gonzalo pidió ver al final cómo agilizarlo.
