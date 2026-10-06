@@ -6,13 +6,14 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
-    "test": "npm run test:cut-optimizer && npm run test:module-formula && npm run test:order-estimate && npm run test:image-compression && npm run test:module-editor && npm run test:module-order-wizard",
+    "test": "npm run test:cut-optimizer && npm run test:module-formula && npm run test:order-estimate && npm run test:image-compression && npm run test:module-editor && npm run test:module-order-wizard && npm run test:module-orders-list",
     "test:cut-optimizer": "node --test --experimental-strip-types src/lib/cutOptimizer.test.ts",
     "test:module-formula": "node --test --experimental-strip-types src/lib/moduleFormula.test.ts",
     "test:order-estimate": "node --test --experimental-strip-types src/lib/orderEstimate.test.ts",
     "test:image-compression": "node --test --experimental-strip-types src/lib/imageCompression.test.ts",
     "test:module-editor": "node --test --experimental-strip-types src/lib/moduleEditor.test.ts",
     "test:module-order-wizard": "node --test --experimental-strip-types src/lib/moduleOrderWizard.test.ts",
+    "test:module-orders-list": "node --test --experimental-strip-types src/lib/moduleOrdersList.test.ts",
     "bench:optimizer": "node --experimental-strip-types --no-warnings src/lib/cutOptimizer.bench.ts",
     "preview": "vite preview --host 0.0.0.0"
   },
