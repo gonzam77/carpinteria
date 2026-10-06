@@ -31,6 +31,14 @@ export function AppLayout() {
   const [notification, setNotification] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Solo ADMIN (spec §14.2): el listado, y desde ahi el asistente y el detalle.
+  const modulesNavItem = {
+    label: "Modulos a medida",
+    to: "/modulos",
+    icon: <KitchenIcon />,
+    match: (pathname: string) => pathname === "/modulos" || pathname.startsWith("/modulos/")
+  };
+
   const mainNavItems = [
     { label: "Dashboard", to: "/", icon: <AssessmentIcon />, match: (pathname: string) => pathname === "/" },
     {
@@ -45,17 +53,7 @@ export function AppLayout() {
       icon: <PostAddIcon />,
       match: (pathname: string) => pathname === "/pedidos/nuevo" || pathname === "/solicitar"
     },
-    // Solo ADMIN (spec §14.2). Abre el asistente hasta que exista el listado /modulos (F4.5).
-    ...(user?.rol === "ADMIN"
-      ? [
-          {
-            label: "Modulos a medida",
-            to: "/modulos/nueva",
-            icon: <KitchenIcon />,
-            match: (pathname: string) => pathname === "/modulos" || pathname.startsWith("/modulos/")
-          }
-        ]
-      : [])
+    ...(user?.rol === "ADMIN" ? [modulesNavItem] : [])
   ];
 
   const settingsNavItems = useMemo(
@@ -79,6 +77,10 @@ export function AppLayout() {
   );
 
   const settingsSectionActive = settingsNavItems.some((item) => item.match(location.pathname));
+  // El titulo de la barra cambia segun la seccion (spec §14.2) en las secciones de ADMIN. Las que se comparten con los
+  // carpinteros (dashboard, solicitudes y solicitar cortes) siguen con el de siempre, para no cambiarles nada (DECISIONES 43).
+  const sectionTitle =
+    (user?.rol === "ADMIN" ? [modulesNavItem, ...settingsNavItems] : []).find((item) => item.match(location.pathname))?.label ?? "Panel de solicitudes";
   const [settingsOpen, setSettingsOpen] = useState(settingsSectionActive);
 
   useEffect(() => {
@@ -199,8 +201,9 @@ export function AppLayout() {
             <Typography variant="overline" sx={{ color: "text.secondary", display: { xs: "none", sm: "block" }, fontWeight: 900, letterSpacing: 1.2 }}>
               {companySettings.nombre}
             </Typography>
-            <Typography noWrap variant="h6" sx={{ color: "text.primary", fontSize: { xs: "1rem", sm: "1.25rem" }, fontWeight: 900, letterSpacing: 0, lineHeight: 1.1 }}>
-              Panel de solicitudes
+            {/* No es un encabezado: el de cada pantalla es su titulo, y asi no se repiten dos iguales. */}
+            <Typography noWrap variant="h6" component="div" sx={{ color: "text.primary", fontSize: { xs: "1rem", sm: "1.25rem" }, fontWeight: 900, letterSpacing: 0, lineHeight: 1.1 }}>
+              {sectionTitle}
             </Typography>
           </Box>
           <PushNotificationsControl />

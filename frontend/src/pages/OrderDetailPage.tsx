@@ -27,7 +27,7 @@ import {
 import axios from "axios";
 import { saveAs } from "file-saver";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { CutOptimizer } from "../components/CutOptimizer";
 import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
@@ -93,6 +93,18 @@ export function OrderDetailPage() {
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // A donde vuelve: la pantalla que lo abrio (por ejemplo el listado de modulos con sus filtros) o el listado de siempre.
+  // Una solicitud de modulos vuelve a su listado mientras no tenga su propio detalle (F5.1).
+  const returnTo = (location.state as { returnTo?: unknown } | null)?.returnTo;
+  const backTo =
+    typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//")
+      ? returnTo
+      : order?.tipo === "MODULOS"
+        ? "/modulos"
+        : user?.rol === "ADMIN"
+          ? "/pedidos"
+          : "/mis-solicitudes";
 
   async function loadOrder() {
     const response = await api.get<Order>(`/orders/${id}`);
@@ -102,6 +114,16 @@ export function OrderDetailPage() {
   useEffect(() => {
     loadOrder();
   }, [id]);
+
+  // Una solicitud de modulos se ve en /modulos/:id, con el menu y la barra de su seccion, y una de corte en
+  // /pedidos/:id. Un link a la otra ruta se corrige sin sumar un paso al historial (DECISIONES 43).
+  useEffect(() => {
+    // Solo con la solicitud de la URL: nunca se redirige por una que quedo de otra pantalla.
+    if (!order || order.id !== id) return;
+    const inModules = location.pathname.startsWith("/modulos/");
+    if (order.tipo === "MODULOS" && !inModules) navigate(`/modulos/${order.id}`, { replace: true, state: location.state });
+    else if (order.tipo !== "MODULOS" && inModules) navigate(`/pedidos/${order.id}`, { replace: true, state: location.state });
+  }, [order, id, location.pathname]);
 
   useEffect(() => {
     if (user?.rol !== "ADMIN") return;
@@ -171,7 +193,7 @@ export function OrderDetailPage() {
     setDeleting(true);
     try {
       await api.delete(`/orders/${order.id}`);
-      navigate(user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes", {
+      navigate(backTo, {
         state: { notification: "Solicitud eliminada correctamente." }
       });
     } finally {
@@ -216,7 +238,7 @@ export function OrderDetailPage() {
           </Typography>
         </div>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap sx={{ flexWrap: "wrap", width: { xs: "100%", md: "auto" } }}>
-          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes")} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(backTo)} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Volver
           </Button>
           {user?.rol === "ADMIN" ? (

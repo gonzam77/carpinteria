@@ -830,7 +830,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
             </Typography>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ width: { xs: "100%", sm: "auto" } }}>
               {/* Hasta que exista el detalle de modulos (F5.1), el estado, el stock y el Excel se manejan desde el detalle comun. */}
-              <Button variant="contained" onClick={() => navigate(`/pedidos/${created.id}`)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              <Button variant="contained" onClick={() => navigate(`/modulos/${created.id}`, { state: { returnTo: "/modulos" } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
                 Ver la solicitud
               </Button>
               <Button variant="outlined" onClick={onRestart} sx={{ width: { xs: "100%", sm: "auto" } }}>
@@ -864,8 +864,8 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
           <Button variant="contained" startIcon={<RefreshIcon />} onClick={() => setLoadAttempt((value) => value + 1)}>
             Reintentar
           </Button>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/")}>
-            Volver al inicio
+          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/modulos")}>
+            Volver al listado
           </Button>
         </Stack>
       </Stack>
@@ -1007,7 +1007,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
           onClose={() => setCreateError(null)}
           action={
             createError.code === "ALREADY_CREATED" && typeof createError.details?.id === "string" ? (
-              <Button color="inherit" size="small" onClick={() => navigate(`/pedidos/${createError.details!.id as string}`)}>
+              <Button color="inherit" size="small" onClick={() => navigate(`/modulos/${createError.details!.id as string}`, { state: { returnTo: "/modulos" } })}>
                 Ver M-{String(createError.details.numero)}
               </Button>
             ) : undefined
