@@ -190,7 +190,12 @@ try {
     await page.getByRole("option", { name: option, exact: true }).click();
     await page.waitForTimeout(120);
   };
-  const noHorizontalScroll = () => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+  // Sobre <main>: tiene overflow-x clip, asi que en la pagina nunca hay scroll horizontal aunque algo se salga.
+  const noHorizontalScroll = () =>
+    page.evaluate(() => {
+      const main = document.querySelector("main");
+      return document.documentElement.scrollWidth <= document.documentElement.clientWidth && main.scrollWidth <= main.clientWidth;
+    });
   const card = (n, nombre) => page.getByRole("region", { name: `Modulo ${n} · ${nombre}`, exact: true });
   const estados = async () => (await page.locator("section[data-modulo] .MuiChip-label").allInnerTexts()).filter((label) => label === "Listo" || label === "Revisar");
   const moduleButton = (nombre) => page.getByRole("button", { name: nombre, exact: true });
@@ -200,7 +205,10 @@ try {
   await menu.waitFor();
   const menuItems = await page.locator("nav a, .MuiDrawer-root a").evaluateAll((links) => [...new Set(links.map((link) => link.textContent.trim()))]);
   check("menu: Modulos a medida debajo de Solicitar cortes", menuItems.indexOf("Modulos a medida") === menuItems.indexOf("Solicitar cortes") + 1, menuItems.join(" / "));
+  // El menu lleva al listado (F4.5); desde ahi se entra al asistente.
   await menu.click();
+  await page.waitForURL(`${APP}/modulos`);
+  await page.getByRole("button", { name: "Nueva solicitud de modulos" }).click();
   await page.waitForURL("**/modulos/nueva");
   await page.getByRole("heading", { name: "Nueva solicitud de modulos" }).waitFor();
   check("menu: queda marcado en el asistente", await menu.evaluate((link) => link.classList.contains("Mui-selected")));
@@ -562,7 +570,9 @@ try {
   // Doble click: un solo alta. Mientras se crea, la tabla no se toca.
   const postsPrevios = posts.length;
   let creadaA = null;
+  // Solo el alta (POST): el GET sin parametros del listado /modulos tiene la misma URL.
   const perdida = async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
     await sleep(1500);
     const answer = await route.fetch();
     creadaA = await answer.json().catch(() => null);
@@ -671,6 +681,7 @@ try {
   await response;
   await page.getByText("Despiece y resumen calculados por el servidor.").waitFor();
   const lenta = async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
     await sleep(3000);
     await route.continue().catch(() => undefined);
   };
@@ -680,6 +691,7 @@ try {
   await page.getByRole("link", { name: "Dashboard" }).click();
   await page.waitForURL(`${APP}/`);
   await page.getByRole("link", { name: "Modulos a medida" }).click();
+  await page.getByRole("button", { name: "Nueva solicitud de modulos" }).click();
   const esperando = await page
     .getByText("Se esta terminando de crear la solicitud que mandaste antes de salir de la pantalla.")
     .waitFor({ state: "visible", timeout: 2500 })
@@ -705,6 +717,7 @@ try {
   await page.getByText("Despiece y resumen calculados por el servidor.").waitFor();
   let creadaC = null;
   const perdidaLenta = async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
     await sleep(2000);
     const answer = await route.fetch();
     creadaC = await answer.json().catch(() => null);
@@ -717,6 +730,7 @@ try {
   await page.getByRole("link", { name: "Dashboard" }).click();
   await page.waitForURL(`${APP}/`);
   await page.getByRole("link", { name: "Modulos a medida" }).click();
+  await page.getByRole("button", { name: "Nueva solicitud de modulos" }).click();
   const bannerPerdida = page.locator(".MuiAlert-root", { hasText: "Tenes una solicitud sin terminar" });
   await bannerPerdida.waitFor({ timeout: 60000 });
   await page.unroute("**/pedidos-modulos", perdidaLenta);
@@ -740,7 +754,21 @@ try {
       norm(await page.getByRole("heading", { name: /^Solicitud M-\d+ creada$/ }).innerText()) === `Solicitud M-${creadaC.numero} creada` &&
       psql(`select count(*) from pedidos where cliente = '${PREFIJO} perdida'`) === "1"
   );
-  await page.getByRole("button", { name: "Cargar otra solicitud" }).click();
+  // "Ver la solicitud" abre el detalle en /modulos/:id (el comun hasta F5.1), con la barra de la seccion, y "Volver"
+  // lleva al listado. Desde ahi se vuelve al asistente, que arranca vacio.
+  await page.getByRole("button", { name: "Ver la solicitud" }).click();
+  await page.waitForURL(`**/modulos/${creadaC.id}`, { timeout: 15000 }).catch(() => undefined);
+  await page.getByRole("button", { name: "Volver" }).waitFor({ timeout: 30000 });
+  let barraDetalle = "";
+  for (let waited = 0; waited < 5000 && barraDetalle !== "Modulos a medida"; waited += 100) {
+    barraDetalle = norm(await page.locator("header .MuiTypography-h6").innerText());
+    await page.waitForTimeout(100);
+  }
+  check("exito: Ver la solicitud abre /modulos/:id con la barra de la seccion", new URL(page.url()).pathname === `/modulos/${creadaC.id}` && barraDetalle === "Modulos a medida", barraDetalle);
+  await page.getByRole("button", { name: "Volver" }).click();
+  await page.waitForURL(`${APP}/modulos`, { timeout: 15000 }).catch(() => undefined);
+  check("exito: Volver del detalle lleva al listado de modulos", new URL(page.url()).pathname === "/modulos");
+  await page.getByRole("button", { name: "Nueva solicitud de modulos" }).click();
   await page.getByLabel("Nombre o razon social").waitFor();
 
   // ---------------------------------------------------------------- D. catalogo que cambia con el asistente abierto
@@ -848,9 +876,9 @@ try {
   check("borrador: despues de descartar no vuelve a aparecer", (await banner.count()) === 0);
 
   // ---------------------------------------------------------------- F. otras pantallas
-  // Mientras no exista el detalle de modulos (F5.1), "Ver la solicitud" lleva al detalle comun: tiene que andar, sin
+  // Mientras no exista el detalle de modulos (F5.1), /modulos/:id muestra el detalle comun: tiene que andar, sin
   // "Editar" (el formulario de corte no la puede guardar), y el plano tiene que dar las mismas placas e importe guardados.
-  await page.goto(`${APP}/pedidos/${order.id}`);
+  await page.goto(`${APP}/modulos/${order.id}`);
   const planoDetalle = page.getByText(/^Placas necesarias: \d+ - Costo estimado: /);
   await planoDetalle.waitFor({ timeout: 60000 });
   const detalleTexto = norm(await planoDetalle.innerText());
