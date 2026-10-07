@@ -27,6 +27,31 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-07 (23) · equipo Pinformatico15 · rama main
+
+**Pasos:** F4.7 terminado. La Fase 4 está completa.
+
+**Hecho:**
+- Gonzalo decidió que cada pieza se configure libremente, como en la solicitud de corte: por defecto el canto del color de la placa de la pieza, y un lado sin canto de su color queda sin canto, con la opción de elegir uno o dejarlo así (DECISIONES 45). También decidió que las solicitudes de módulos sigan en su propio listado; se editan en F5.2 con el mismo formulario que las de corte.
+- Backend: el armado elige el canto por defecto por pieza y lado, acepta cambios a mano por lado con cualquier canto activo o ninguno, avisa los lados sin canto (`cantosSinElegir`) y ya no responde `MISSING_EDGE_MATERIAL`. Migración `20261007120000_cantos_por_pieza`: saca `pedidos_modulo.colorCantoId`.
+- Código compartido: `buildModulePieces` da solo los espesores del perfil (sincronizado con `sync:optimizer`).
+- Asistente: sin color de cantos en el paso 3; en el paso 4, un selector por lado con todos los cantos activos. La tabla del despiece se reacomodó para que entre en una notebook.
+- Las pruebas de punta a punta f42, f43 y f44 se reescribieron para la regla nueva (tres agentes en paralelo, uno por archivo); f45 sacó el color de canto de sus datos de prueba.
+
+**Decisiones nuevas:** DECISIONES 45 (aplicada); cambia la 33.
+
+**Verificaciones:**
+- frontend `npm test` (39, 17, 6, 5, 8, 21 y 11), backend `npm test` (25), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f42 106/106, f43 80/80, f44 110/110, f45 137/137, f31 30/30, f05 22/22, f04 12/12 y f23 4/4. La copia quedó como estaba, con la migración nueva aplicada.
+
+**Commits:** tres commits locales (código, pruebas y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F5.1, el detalle de la solicitud de módulos. Lo primero: leer "Tener en cuenta (de F4.5)" en PLAN F5.1.
+
+**Esperando a Gonzalo o a ROMA:** P5 y P6.
+
+---
+
 ## 2026-10-07 (22) · equipo Pinformatico15 · rama main
 
 **Pasos:** F4.6 terminado.

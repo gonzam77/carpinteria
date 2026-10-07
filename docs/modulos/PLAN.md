@@ -13,9 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-07
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F4.5 está commiteado y subido (2026-10-07, con el OK de Gonzalo). Cada push espera su OK.
-- **Pasos anteriores:** las Fases 0 a 3 y F4.1 a F4.5 están completas.
-- **Último paso terminado:** F4.6 (tildes, colores de estado y sin Remark).
-- **Próximo paso:** **F4.7**, el color de los cantos por tipo de placa (DECISIONES 45). Lo primero: proponer el diseño a Gonzalo. Después, F5.1.
+- **Último paso terminado:** F4.7 (cantos por pieza). Las Fases 0 a 4 están completas.
+- **Próximo paso:** **F5.1**, el detalle de la solicitud de módulos (`/modulos/:id`, que hoy muestra el detalle común).
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -36,7 +35,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
 | F4.1–F4.5 | API, asistente y listado de solicitudes de módulos | [x] |
-| F4.6–F4.7 | Tildes, colores de estado, sin Remark y color de los cantos por tipo de placa | [~] F4.6 hecho |
+| F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (contratados, DECISIONES 10) | [ ] |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
@@ -531,10 +530,15 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 - **Terminado cuando:** no queda ningún texto visible sin tilde (búsqueda en el código), los colores de estado son distintos y con contraste, y las pruebas dan verde.
 - **Hecho (2026-10-07):** tildes en los textos de 64 archivos del frontend y del backend, con voseo en todos lados (DECISIONES 15); un color por estado (DECISIONES 46); filas de módulos sin Remark (DECISIONES 20). Una revisión buscó en todos los textos del código palabras sin tilde o con tilde de más y cambios que no fueran textos: no quedó nada. Pruebas: tests unitarios, `tsc` y build en verde; e2e-f45 137/137, e2e-f44 98/98, e2e-f43 66/66, e2e-f42 93/93, e2e-f31 30/30, e2e-f05 22/22, e2e-f04 12/12 y e2e-f23 4/4, con sus textos ajustados.
 
-#### F4.7 Color de los cantos por tipo de placa · [ ]
+#### F4.7 Cantos por pieza · [x]
 - **Depende de:** F4.6.
 - **Hacer:** lo de DECISIONES 45. Color de canto por separado para esqueleto y frentes, propuesto por defecto del mismo color que la placa si existe; si no, sin elegir y con la lista de cantos cargados. Cambian el armado (`buildModulePieces` y `planModuleOrder`), la vista previa, el alta (con su migración si se guarda por rol), el paso 3 del asistente y sus pruebas. Paridad: las mismas piezas tienen que dar las mismas placas y el mismo presupuesto (regla 1).
 - **Antes de empezar:** proponer el diseño (qué se guarda y cómo se elige) y esperar el OK.
+- **Hecho (2026-10-07):** Gonzalo pidió que cada pieza se configure libremente, como en corte, con el canto del mismo tipo que la pieza por defecto, y que un lado sin canto de su color quede sin canto (DECISIONES 45).
+  - Backend: canto por defecto de la placa de cada pieza, cambios a mano por lado con cualquier canto activo o ninguno, `cantosSinElegir` en la vista previa y sin `MISSING_EDGE_MATERIAL`. Migración `20261007120000_cantos_por_pieza` (saca `pedidos_modulo.colorCantoId`), probada en la copia sin diferencias con el esquema.
+  - `buildModulePieces` (código compartido) da solo los espesores del perfil; tests ajustados.
+  - Asistente: sin el selector de color de cantos en el paso 3; en el paso 4, un selector por lado con todos los cantos activos, el de por defecto marcado, azul lo elegido a mano y ámbar lo que quedó sin canto. La tabla del despiece junta material y medidas en la celda de la pieza para que los cuatro lados entren en una notebook.
+  - Pruebas: tests unitarios (backend 25, asistente 21) y de punta a punta: e2e-f42 106/106, e2e-f43 80/80, e2e-f44 110/110, e2e-f45 137/137, e2e-f31 30/30, e2e-f05 22/22, e2e-f04 12/12 y e2e-f23 4/4.
 
 ### Fase 5: Detalle, edición y salidas (spec §9.3, §10 y §11)
 
