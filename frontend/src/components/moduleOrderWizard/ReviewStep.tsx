@@ -29,7 +29,7 @@ import {
 import { useId, useMemo, useState } from "react";
 import type { ModuleOrderApiError } from "../../api/moduleOrders";
 import { changedSides, defaultEdgeId, edgeSummary, materialSummary, rowsByModule, type EdgeDefaultsContext, type WizardUnit } from "../../lib/moduleOrderWizard";
-import type { LadoCanto, Material, MissingDefaultEdge, ModuleDefinition, ModuleOrderDetail, ModuleOrderPreview } from "../../types";
+import type { LadoCanto, Material, MissingDefaultEdge, ModuleDefinition, ModuleOrderDetail, ModuleOrderEstimate, ModuleOrderPreview } from "../../types";
 import { CutOptimizer } from "../CutOptimizer";
 import { EDITED_BLUE } from "../PieceEdgesToggles";
 
@@ -126,14 +126,18 @@ function PieceEdgeSelects({
   );
 }
 
-function SummaryPanel({
+/** Lo que muestra el resumen: una vista previa o una solicitud guardada (sus numeros guardados, DECISIONES R3). */
+export type SummaryData = ModuleOrderEstimate & { detalles: ModuleOrderDetail[] };
+
+/** El resumen de placas, cantos y presupuesto. Lo usan el paso 4 del asistente y el detalle de la solicitud. */
+export function SummaryPanel({
   preview,
   status,
   units,
   materials,
   herrajesHabilitados
 }: {
-  preview: ModuleOrderPreview | null;
+  preview: SummaryData | null;
   status: PreviewStatus;
   units: number;
   materials: Material[];

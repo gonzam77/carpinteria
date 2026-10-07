@@ -1,6 +1,5 @@
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SaveIcon from "@mui/icons-material/Save";
 import { Alert, Box, Button, CircularProgress, Paper, Skeleton, Stack, Step, StepLabel, Stepper, Typography } from "@mui/material";
@@ -57,7 +56,6 @@ const CREATED_AWAY_MAX_MS = 10 * 60_000;
 /** Errores de la vista previa que pueden venir de un catalogo o materiales que cambiaron con el asistente abierto. */
 const CATALOG_ERRORS = new Set(["MODULE_NOT_AVAILABLE", "MODULE_FORMULA_ERRORS", "MODULE_MATERIAL_INVALID"]);
 const EMPTY_DEFAULTS: DefaultColors = { colorEsqueletoId: "", colorFrentesId: "" };
-const money = (value: number) => value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
 type CatalogData = { modules: ModuleListItem[]; categories: ModuleCategory[]; config: ModulesConfig };
 
@@ -80,12 +78,10 @@ function unitProblems(index: number, nombre: string, validation: UnitValidation 
 
 /** Asistente "Nueva solicitud de modulos" (spec §9.2), en /modulos/nueva. Solo ADMIN. */
 export function ModuleOrderWizardPage() {
-  // "Cargar otra solicitud" vuelve a montar el asistente: el borrador queda cerrado despues de crear (useFormDraft).
-  const [session, setSession] = useState(0);
-  return <ModuleOrderWizard key={session} onRestart={() => setSession((value) => value + 1)} />;
+  return <ModuleOrderWizard />;
 }
 
-function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
+function ModuleOrderWizard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const userId = user?.id ?? "";
@@ -798,48 +794,16 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
   };
 
   // ---------------------------------------------------------------- pantalla
-  const successRef = useRef<HTMLHeadingElement | null>(null);
+  // Creada: al detalle, con la notificacion (spec §9.2). Reemplaza al asistente en el historial: atras vuelve al listado.
   useEffect(() => {
     if (!created) return;
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    successRef.current?.focus();
+    navigate(`/modulos/${created.id}`, { replace: true, state: { notification: `Solicitud M-${created.numero} creada` } });
+    // Solo cuando se crea.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [created]);
 
-  // El exito y la espera de un alta anterior no necesitan el catalogo: se muestran antes de que cargue.
-  if (created) {
-    return (
-      <Stack spacing={3}>
-        <Paper role="status" sx={{ p: { xs: 2.5, sm: 3 }, borderRadius: "10px" }}>
-          <Stack spacing={2} alignItems="flex-start">
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <CheckCircleOutlineIcon color="primary" sx={{ fontSize: 40 }} />
-              <Box>
-                <Typography ref={successRef} tabIndex={-1} variant="h4" component="h1" sx={{ outline: "none" }}>
-                  Solicitud M-{created.numero} creada
-                </Typography>
-                <Typography color="text.secondary">
-                  {created.cliente} · entrega {created.fechaEntrega?.split("-").reverse().join("/")} · {created.modulos.length}{" "}
-                  {created.modulos.length === 1 ? "módulo" : "módulos"}
-                </Typography>
-              </Box>
-            </Stack>
-            <Typography>
-              {created.placasEstimadas} {created.placasEstimadas === 1 ? "placa" : "placas"} · presupuesto estimado {money(created.presupuestoConHerrajes)}
-            </Typography>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ width: { xs: "100%", sm: "auto" } }}>
-              {/* Hasta que exista el detalle de modulos (F5.1), el estado, el stock y el Excel se manejan desde el detalle comun. */}
-              <Button variant="contained" onClick={() => navigate(`/modulos/${created.id}`, { state: { returnTo: "/modulos" } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
-                Ver la solicitud
-              </Button>
-              <Button variant="outlined" onClick={onRestart} sx={{ width: { xs: "100%", sm: "auto" } }}>
-                Cargar otra solicitud
-              </Button>
-            </Stack>
-          </Stack>
-        </Paper>
-      </Stack>
-    );
-  }
+  // Mientras navega al detalle.
+  if (created) return null;
 
   if (waitingPrevious) {
     return (

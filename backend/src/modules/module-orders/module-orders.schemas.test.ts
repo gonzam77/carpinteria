@@ -4,7 +4,7 @@ process.env.TZ = "UTC";
 
 import assert from "node:assert/strict";
 import test, { mock } from "node:test";
-import { moduleOrderCreateSchema, moduleOrderFiltersSchema } from "./module-orders.schemas.js";
+import { moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema } from "./module-orders.schemas.js";
 
 const fechaEntrega = moduleOrderCreateSchema.shape.fechaEntrega;
 
@@ -36,4 +36,14 @@ test("la clave de alta es opcional y tiene que ser un UUID (DECISIONES 40)", () 
   }
   assert.equal(moduleOrderFiltersSchema.safeParse({ clave: "3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b" }).success, true);
   assert.equal(moduleOrderFiltersSchema.safeParse({ clave: "x" }).success, false);
+});
+
+test("cambio de fecha de entrega (spec §9.3): desde hoy en Argentina y solo la fecha", (t) => {
+  mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-10-06T01:30:00Z") });
+  t.after(() => mock.timers.reset());
+  assert.equal(moduleOrderDeliveryDateSchema.safeParse({ fechaEntrega: "2026-10-05" }).success, true, "hoy en Argentina");
+  assert.equal(moduleOrderDeliveryDateSchema.safeParse({ fechaEntrega: "2026-10-04" }).success, false, "ayer");
+  assert.equal(moduleOrderDeliveryDateSchema.safeParse({ fechaEntrega: "15/10/2026" }).success, false);
+  assert.equal(moduleOrderDeliveryDateSchema.safeParse({}).success, false, "sin fecha");
+  assert.equal(moduleOrderDeliveryDateSchema.safeParse({ fechaEntrega: "2026-10-20", estado: "ENTREGADA" }).success, false, "solo la fecha");
 });

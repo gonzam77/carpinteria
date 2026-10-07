@@ -170,6 +170,33 @@ export async function getModuleOrder(tx: Tx, id: string) {
   return serializeModuleOrder(order);
 }
 
+/**
+ * Cambia la fecha de entrega (spec §9.3) y lo deja en el historial: CAMBIAR_FECHA_ENTREGA, con la fecha anterior y la
+ * nueva como AAAA-MM-DD. Una solicitud entregada ya no cambia de fecha; la misma fecha no hace nada. Se aplica solo si
+ * la solicitud no cambio desde que se leyo, como el cambio de estado: si cambio, 409 ORDER_CHANGED.
+ */
+export async function changeModuleOrderDeliveryDate(prisma: PrismaClient, id: string, fechaEntrega: string, userId: string) {
+  await prisma.$transaction(async (tx) => {
+    const order = await tx.pedido.findFirst({
+      where: { id, tipo: TipoPedido.MODULOS },
+      select: { estado: true, fechaEntrega: true, fechaActualizacion: true }
+    });
+    if (!order) throw new AppError(404, "Solicitud de módulos no encontrada.");
+    if (order.estado === EstadoPedido.ENTREGADA) {
+      throw new AppError(409, "La solicitud ya se entregó: no se puede cambiar la fecha de entrega.", { code: "ORDER_DELIVERED" });
+    }
+    const anterior = toDateOnly(order.fechaEntrega);
+    if (anterior === fechaEntrega) return;
+    const updated = await tx.pedido.updateMany({
+      where: { id, estado: order.estado, fechaActualizacion: order.fechaActualizacion },
+      data: { fechaEntrega: fromDateOnly(fechaEntrega) }
+    });
+    if (updated.count !== 1) throw new AppError(409, "La solicitud cambió mientras tanto. Recargá la página y volvé a intentar.", { code: "ORDER_CHANGED" });
+    await tx.historialPedido.create({ data: { pedidoId: id, usuarioId: userId, accion: "CAMBIAR_FECHA_ENTREGA", valorAnterior: anterior, valorNuevo: fechaEntrega } });
+  });
+  return getModuleOrder(prisma, id);
+}
+
 /** 409 si algun modulo no esta en la version esperada (la que mostro la vista previa, o la que se uso para calcular). */
 function assertSameVersions(expected: Array<{ posicion: number; moduloId: string; nombreModulo: string; version?: number }>, current: Map<string, number>) {
   const changed = expected.filter((item) => item.version !== undefined && current.get(item.moduloId) !== item.version);

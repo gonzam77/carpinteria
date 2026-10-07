@@ -94,6 +94,11 @@ export const moduleOrderCreateSchema = z
 
 export type ModuleOrderCreateInput = z.infer<typeof moduleOrderCreateSchema>;
 
+/** Nueva fecha de entrega (spec §9.3): un dia desde hoy en la zona del negocio, como en el alta. */
+export const moduleOrderDeliveryDateSchema = z
+  .object({ fechaEntrega: moduleOrderCreateSchema.shape.fechaEntrega })
+  .strict("Solo se puede mandar la fecha de entrega");
+
 /** Filtros del listado (spec §13.2 y §9.1). */
 export const moduleOrderFiltersSchema = z.object({
   estado: z.nativeEnum(EstadoPedido, { errorMap: () => ({ message: "Estado desconocido" }) }).optional(),

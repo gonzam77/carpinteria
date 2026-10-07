@@ -16,6 +16,10 @@ export const createModuleOrder = async (data: ModuleOrderClient & { modulos: Mod
 
 export const getModuleOrder = async (id: string) => (await api.get<ModuleOrder>(`/pedidos-modulos/${id}`)).data;
 
+/** Cambia la fecha de entrega (AAAA-MM-DD, spec §9.3). Responde la solicitud como GET /:id, con el historial. */
+export const changeModuleOrderDeliveryDate = async (id: string, fechaEntrega: string) =>
+  (await api.patch<ModuleOrder>(`/pedidos-modulos/${id}/fecha-entrega`, { fechaEntrega })).data;
+
 /** Listado (spec §9.1). La senal corta una busqueda vieja cuando se pide otra. */
 export async function listModuleOrders(
   filters: { estado?: EstadoSolicitud; search?: string; entregaDesde?: string; entregaHasta?: string; clave?: string } = {},

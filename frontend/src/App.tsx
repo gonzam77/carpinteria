@@ -8,6 +8,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { MaterialsPage } from "./pages/MaterialsPage";
 import { ModuleCatalogPage } from "./pages/ModuleCatalogPage";
 import { ModuleEditorPage } from "./pages/ModuleEditorPage";
+import { ModuleOrderDetailPage } from "./pages/ModuleOrderDetailPage";
 import { ModuleOrderWizardPage } from "./pages/ModuleOrderWizardPage";
 import { ModuleOrdersPage } from "./pages/ModuleOrdersPage";
 import { OrderDetailPage } from "./pages/OrderDetailPage";
@@ -15,24 +16,18 @@ import { OrderFormPage } from "./pages/OrderFormPage";
 import { OptimizerSettingsPage } from "./pages/OptimizerSettingsPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { UsersPage } from "./pages/UsersPage";
-import type { Rol } from "./types";
 
 // Un detalle por solicitud: al pasar de una a otra (por ejemplo, saltando con el historial del navegador) se monta uno
-// nuevo, sin la anterior cargada mientras llega la otra.
+// nuevo, sin la anterior cargada mientras llega la otra. Una solicitud de modulos abierta en /pedidos/:id pasa a
+// /modulos/:id, y una de corte abierta en /modulos/:id pasa a /pedidos/:id (DECISIONES 43).
 function OrderDetailRoute() {
   const { id } = useParams();
   return <OrderDetailPage key={id} />;
 }
-
-// Las dos rutas del detalle arman el mismo arbol (ProtectedRoute > OrderDetailRoute). Asi, cuando la misma solicitud
-// pasa de /pedidos/:id a /modulos/:id o al reves segun su tipo (DECISIONES 43), React conserva la pantalla ya cargada en
-// vez de montarla de nuevo y pedir todo otra vez. Sin roles, ProtectedRoute solo muestra la pantalla: la ruta padre ya
-// exige la sesion.
-const orderDetail = (roles?: Rol[]) => (
-  <ProtectedRoute roles={roles}>
-    <OrderDetailRoute />
-  </ProtectedRoute>
-);
+function ModuleOrderDetailRoute() {
+  const { id } = useParams();
+  return <ModuleOrderDetailPage key={id} />;
+}
 
 export function App() {
   return (
@@ -52,7 +47,7 @@ export function App() {
         <Route path="pedidos/nuevo" element={<OrderFormPage />} />
         <Route path="solicitar" element={<OrderFormPage />} />
         <Route path="mis-solicitudes" element={<OrdersPage />} />
-        <Route path="pedidos/:id" element={orderDetail()} />
+        <Route path="pedidos/:id" element={<OrderDetailRoute />} />
         <Route path="pedidos/:id/editar" element={<OrderFormPage />} />
         <Route
           path="modulos"
@@ -70,8 +65,15 @@ export function App() {
             </ProtectedRoute>
           }
         />
-        {/* Hasta el detalle de modulos (F5.1), el detalle comun en la URL de la seccion (DECISIONES 43). */}
-        <Route path="modulos/:id" element={orderDetail(["ADMIN"])} />
+        {/* El detalle de una solicitud de modulos (spec §9.3). */}
+        <Route
+          path="modulos/:id"
+          element={
+            <ProtectedRoute roles={["ADMIN"]}>
+              <ModuleOrderDetailRoute />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="materiales"
           element={

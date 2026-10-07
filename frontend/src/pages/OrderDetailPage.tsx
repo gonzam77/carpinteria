@@ -2,20 +2,13 @@ import DownloadIcon from "@mui/icons-material/Download";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import {
-  Alert,
   type AlertColor,
   Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   MenuItem,
   Paper,
   Select,
-  Snackbar,
   Stack,
   Table,
   TableBody,
@@ -31,19 +24,13 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { CutOptimizer } from "../components/CutOptimizer";
 import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
+import { ActionSnackbar, OrderCompletedDialog, StockShortageDialog, type StockShortage } from "../components/OrderStatusDialogs";
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
+import { buildWhatsappLink } from "../lib/whatsapp";
 import { EstadoSolicitud, Material, Order } from "../types";
 
 const estados: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
-
-type StockShortage = {
-  materialId: string;
-  materialNombre: string;
-  disponible: number;
-  requerido: number;
-  faltante: number;
-};
 
 type StatusChangeError = {
   message?: string;
@@ -55,27 +42,6 @@ type StatusChangeError = {
 
 function canEditOrder(estado: EstadoSolicitud) {
   return estado !== "EN_PROCESO" && estado !== "TERMINADA" && estado !== "ENTREGADA";
-}
-
-function normalizeWhatsappPhone(phone?: string | null) {
-  const digits = (phone ?? "").replace(/\D/g, "");
-  if (!digits) return "";
-  if (digits.startsWith("549")) return digits;
-  if (digits.startsWith("54")) {
-    const rest = digits.slice(2);
-    return rest.startsWith("9") ? digits : `549${rest}`;
-  }
-  const withoutLeadingZero = digits.replace(/^0+/, "");
-  return `549${withoutLeadingZero}`;
-}
-
-function buildWhatsappLink(order: Order) {
-  const phone = normalizeWhatsappPhone(order.numeroContacto ?? order.usuario?.telefono);
-  if (!phone) return "";
-
-  const orderLabel = order.id.slice(0, 8).toUpperCase();
-  const message = `Hola ${order.cliente}, te avisamos que tu pedido ${orderLabel} ya está listo para retirar. Cuando quieras podés pasar a buscarlo. Si necesitás coordinar horario o tenés alguna consulta, escribinos por este medio.`;
-  return `https://api.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
 }
 
 export function OrderDetailPage() {
@@ -94,17 +60,10 @@ export function OrderDetailPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  // A donde vuelve: la pantalla que lo abrio (por ejemplo el listado de modulos con sus filtros) o el listado de siempre.
-  // Una solicitud de modulos vuelve a su listado mientras no tenga su propio detalle (F5.1).
+  // A donde vuelve: la pantalla que lo abrio o el listado de siempre.
   const returnTo = (location.state as { returnTo?: unknown } | null)?.returnTo;
   const backTo =
-    typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//")
-      ? returnTo
-      : order?.tipo === "MODULOS"
-        ? "/modulos"
-        : user?.rol === "ADMIN"
-          ? "/pedidos"
-          : "/mis-solicitudes";
+    typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes";
 
   async function loadOrder() {
     const response = await api.get<Order>(`/orders/${id}`);
@@ -115,15 +74,12 @@ export function OrderDetailPage() {
     loadOrder();
   }, [id]);
 
-  // Una solicitud de modulos se ve en /modulos/:id, con el menu y la barra de su seccion, y una de corte en
-  // /pedidos/:id. Un link a la otra ruta se corrige sin sumar un paso al historial (DECISIONES 43).
+  // Una solicitud de modulos tiene su propio detalle en /modulos/:id (spec §9.3): un link viejo a /pedidos/:id se
+  // corrige sin sumar un paso al historial (DECISIONES 43).
   useEffect(() => {
     // Solo con la solicitud de la URL: nunca se redirige por una que quedo de otra pantalla.
-    if (!order || order.id !== id) return;
-    const inModules = location.pathname.startsWith("/modulos/");
-    if (order.tipo === "MODULOS" && !inModules) navigate(`/modulos/${order.id}`, { replace: true, state: location.state });
-    else if (order.tipo !== "MODULOS" && inModules) navigate(`/pedidos/${order.id}`, { replace: true, state: location.state });
-  }, [order, id, location.pathname]);
+    if (order?.tipo === "MODULOS" && order.id === id) navigate(`/modulos/${order.id}`, { replace: true, state: location.state });
+  }, [order, id]);
 
   useEffect(() => {
     if (user?.rol !== "ADMIN") return;
@@ -204,8 +160,7 @@ export function OrderDetailPage() {
 
   if (!order) return null;
 
-  const whatsappLink = buildWhatsappLink(order);
-  const canNotifyByWhatsapp = Boolean(whatsappLink);
+  const whatsappLink = buildWhatsappLink(order.numeroContacto ?? order.usuario?.telefono, order.cliente, order.id.slice(0, 8).toUpperCase());
 
   function cantoLabel(active: boolean, name?: string | null) {
     return active ? name || "Canto" : "";
@@ -263,7 +218,7 @@ export function OrderDetailPage() {
               Eliminar
             </Button>
           )}
-          {/* Una solicitud de modulos se edita desde Modulos a medida (F5.2): el formulario de corte no la puede guardar. */}
+          {/* Una solicitud de modulos tiene su detalle aparte: aca no se edita (el formulario de corte no la puede guardar). */}
           {canEditOrder(order.estado) && order.tipo !== "MODULOS" && (
             <Button variant="outlined" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Editar
@@ -327,120 +282,16 @@ export function OrderDetailPage() {
           ))}
         </Stack>
       </Paper>
-      <Dialog open={stockDialogOpen} onClose={() => !changingStatus && setStockDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Stock insuficiente</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 0.5 }}>
-            <Alert severity="warning" variant="outlined">
-              No hay stock suficiente para pasar esta solicitud a {pendingStatus ? getStatusStyle(pendingStatus).label : "ese estado"}. Podés continuar de todos modos y el stock no se descontará.
-            </Alert>
-            <Stack spacing={1}>
-              {stockShortages.map((item) => (
-                <Box key={item.materialId} sx={{ p: 1.25, border: "1px solid #f3d27a", borderRadius: "8px", bgcolor: "#fff8e6" }}>
-                  <Typography variant="subtitle2">{item.materialNombre}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Disponible: {item.disponible} placas. Requerido: {item.requerido}. Faltante: {item.faltante}.
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setStockDialogOpen(false)} disabled={changingStatus}>
-            Cancelar
-          </Button>
-          <Button variant="contained" color="warning" onClick={confirmStatusWithoutStock} disabled={changingStatus}>
-            Continuar sin descontar stock
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog open={completionDialogOpen} onClose={() => setCompletionDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Pedido terminado</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 0.5 }}>
-            <Alert severity="success" variant="outlined">
-              La solicitud ya fue marcada como terminada.
-            </Alert>
-            <Box
-              sx={{
-                p: 2,
-                borderRadius: "10px",
-                border: "1px solid rgba(33, 195, 131, 0.2)",
-                background: "linear-gradient(135deg, rgba(33, 195, 131, 0.08) 0%, rgba(35, 214, 200, 0.12) 100%)"
-              }}
-            >
-              <Typography variant="subtitle1" fontWeight={800}>
-                Avisar al cliente
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                Podés enviarle un WhatsApp para avisarle que el pedido ya está terminado y lo puede pasar a retirar.
-              </Typography>
-              {!canNotifyByWhatsapp && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25 }}>
-                  Esta solicitud no tiene un teléfono de contacto disponible.
-                </Typography>
-              )}
-            </Box>
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setCompletionDialogOpen(false)}>Cerrar</Button>
-          <Button
-            variant="contained"
-            startIcon={<WhatsAppIcon />}
-            disabled={!canNotifyByWhatsapp}
-            onClick={() => {
-              if (!whatsappLink) return;
-              window.open(whatsappLink, "_blank", "noopener,noreferrer");
-            }}
-            sx={{
-              bgcolor: "#25D366",
-              color: "#fff",
-              "&:hover": { bgcolor: "#1ebe5a" },
-              "&.Mui-disabled": {
-                bgcolor: "rgba(37, 211, 102, 0.28)",
-                color: "rgba(255, 255, 255, 0.8)"
-              }
-            }}
-          >
-            Avisar por WhatsApp
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Snackbar
-        open={Boolean(notification)}
-        autoHideDuration={4200}
-        onClose={() => setNotification("")}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-        sx={{ mt: 8 }}
-      >
-        <Alert
-          severity={notificationSeverity}
-          variant="filled"
-          onClose={() => setNotification("")}
-          sx={{
-            alignItems: "center",
-            background:
-              notificationSeverity === "success"
-                ? "linear-gradient(135deg, #21c383 0%, #23d6c8 100%)"
-                : notificationSeverity === "warning"
-                  ? "linear-gradient(135deg, #e6a117 0%, #ffcc4d 100%)"
-                  : "linear-gradient(135deg, #d84b63 0%, #f07d62 100%)",
-            borderRadius: "8px",
-            boxShadow:
-              notificationSeverity === "success"
-                ? "0 18px 42px rgba(33, 195, 131, 0.28)"
-                : notificationSeverity === "warning"
-                  ? "0 18px 42px rgba(230, 161, 23, 0.28)"
-                  : "0 18px 42px rgba(216, 75, 99, 0.28)",
-            color: notificationSeverity === "warning" ? "#2b1a00" : undefined,
-            fontWeight: 800
-          }}
-        >
-          {notification}
-        </Alert>
-      </Snackbar>
+      <StockShortageDialog
+        open={stockDialogOpen}
+        estadoLabel={pendingStatus ? getStatusStyle(pendingStatus).label : "ese estado"}
+        shortages={stockShortages}
+        busy={changingStatus}
+        onCancel={() => setStockDialogOpen(false)}
+        onConfirm={confirmStatusWithoutStock}
+      />
+      <OrderCompletedDialog open={completionDialogOpen} whatsappLink={whatsappLink} onClose={() => setCompletionDialogOpen(false)} />
+      <ActionSnackbar message={notification} severity={notificationSeverity} onClose={() => setNotification("")} />
       {user?.rol === "ADMIN" && <DeleteOrderDialog order={order} open={deleteOpen} loading={deleting} onCancel={() => setDeleteOpen(false)} onConfirm={deleteOrder} />}
     </Stack>
   );

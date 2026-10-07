@@ -1,13 +1,21 @@
 // API de las solicitudes de modulos (/api/pedidos-modulos, spec §13.2). Solo para ADMIN.
 // Estado, materiales, exportacion y borrado se hacen con las rutas de /api/orders, que sirven para los dos tipos
-// (spec §13.3). La edicion (PUT) es de F5.2 y la fecha de entrega (PATCH) de F5.1.
+// (spec §13.3). La edicion (PUT) es de F5.2.
 import { Router } from "express";
 import { EstadoPedido, Rol, TipoPedido } from "../../generated/prisma/client.js";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
 import { asyncHandler } from "../../utils/http.js";
-import { moduleOrderCreateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema } from "./module-orders.schemas.js";
-import { buildModuleOrder, buildModuleOrderEstimate, createModuleOrder, findModuleOrderByAltaKey, getModuleOrder, listModuleOrders } from "./module-orders.service.js";
+import { moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema } from "./module-orders.schemas.js";
+import {
+  buildModuleOrder,
+  buildModuleOrderEstimate,
+  changeModuleOrderDeliveryDate,
+  createModuleOrder,
+  findModuleOrderByAltaKey,
+  getModuleOrder,
+  listModuleOrders
+} from "./module-orders.service.js";
 
 export const moduleOrdersRouter = Router();
 moduleOrdersRouter.use(authenticate, authorize(Rol.ADMIN));
@@ -73,5 +81,14 @@ moduleOrdersRouter.get(
   "/:id",
   asyncHandler(async (req: any, res: any) => {
     res.json(await getModuleOrder(prisma, req.params.id));
+  })
+);
+
+/** Cambia la fecha de entrega (spec §9.3), con historial. Responde la solicitud como GET /:id. */
+moduleOrdersRouter.patch(
+  "/:id/fecha-entrega",
+  asyncHandler(async (req: any, res: any) => {
+    const { fechaEntrega } = moduleOrderDeliveryDateSchema.parse(req.body);
+    res.json(await changeModuleOrderDeliveryDate(prisma, req.params.id, fechaEntrega, req.user.id));
   })
 );
