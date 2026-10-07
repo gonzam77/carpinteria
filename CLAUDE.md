@@ -59,7 +59,8 @@ Sistema de gestión de solicitudes de corte de placas de melamina para ROMA Amob
    - Los commits van separados por paso o por tema.
    - Para deshacer algo ya subido se usa `git revert`, nunca `push --force`.
 8. **Estilo:** sin dependencias nuevas salvo que sean imprescindibles; validación con zod; mensajes de error en español, claros y accionables; MUI y el `theme.ts` existente.
-9. **Antes de la Fase 6 (Herrajes)**, preguntar si el cliente la contrató.
+9. **La Fase 6 (Herrajes) se hace:** el cliente la contrató (DECISIONES 10). Las reglas de cada herraje las pasa ROMA.
+10. **La interfaz lleva tildes** (DECISIONES 15). Lo que va a la máquina (el Excel) no cambia.
 
 ## Comandos
 

@@ -27,6 +27,35 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-07 (21) · equipo Pinformatico15 · rama main
+
+**Pasos:** respuestas de Gonzalo a las decisiones pendientes. Se agregan F4.6 y F4.7.
+
+**Hecho:**
+- Push de los 68 commits locales (hasta F4.5), con el OK de Gonzalo.
+- Se borró el contenedor `carpinteria-analisis-db` con su volumen, como pidió Gonzalo. El archivo del backup sigue en la carpeta Descargas de este equipo.
+- Decisiones registradas:
+  - Herrajes contratados: la Fase 6 se hace (DECISIONES 10).
+  - La interfaz lleva tildes (DECISIONES 15).
+  - Las filas de módulos van sin Remark por ahora (DECISIONES 20).
+  - La vista previa se acepta como está (DECISIONES 24).
+  - Color de los cantos por tipo de placa, por defecto el de la placa si existe (DECISIONES 45).
+  - Un color por estado (DECISIONES 46).
+  - Pase a producción, la placa con el cero de más y el contenedor (DECISIONES 47).
+- PLAN §6 al día. Pasos nuevos: F4.6 (tildes, colores de estado, sin Remark) y F4.7 (cantos por tipo de placa).
+
+**Decisiones nuevas:** DECISIONES 45 a 47; cambian la 10, 15, 20 y 24.
+
+**Verificaciones:** solo documentación; no cambió código.
+
+**Commits:** un commit local de documentación. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F4.6. Antes, que Gonzalo decida P13: con qué base corren las pruebas de punta a punta.
+
+**Esperando a Gonzalo o a ROMA:** P13, P5 y P6.
+
+---
+
 ## 2026-10-06 (20) · equipo Pinformatico15 · rama main
 
 **Pasos:** F4.5 terminado.

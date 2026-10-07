@@ -10,11 +10,11 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 ## 1. Estado actual
 
-**Actualizado:** 2026-10-06
+**Actualizado:** 2026-10-07
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta el 2026-10-01 está commiteado y subido. Lo posterior está en commits locales sin push: el push espera el OK de Gonzalo.
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F4.5 está commiteado y subido (2026-10-07, con el OK de Gonzalo). Cada push espera su OK.
 - **Último paso terminado:** F4.5. Las Fases 0 a 4 están completas.
-- **Próximo paso:** **F5.1**, el detalle de la solicitud de módulos (`/modulos/:id`, que hoy muestra el detalle común).
+- **Próximo paso:** **F4.6**, tildes en toda la interfaz, un color por estado y las filas de módulos sin Remark (respuestas de Gonzalo del 2026-10-07). Después F4.7 (color de los cantos por tipo de placa) y F5.1.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -35,8 +35,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
 | F4.1–F4.5 | API, asistente y listado de solicitudes de módulos | [x] |
+| F4.6–F4.7 | Tildes, colores de estado, sin Remark y color de los cantos por tipo de placa | [ ] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
-| F6 | Herrajes (solo si se contrató) | [!] preguntar a Gonzalo |
+| F6 | Herrajes (contratados, DECISIONES 10) | [ ] |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
 | F8 | Pase a producción (VPS), al final | [ ] |
 
@@ -520,6 +521,19 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
     - e2e-f44 ajustada al detalle en `/modulos/:id`: 98 de 98;
     - e2e-f43: 66 de 66.
 
+#### F4.6 Tildes, colores de estado y sin Remark · [ ]
+- **Depende de:** F4.5.
+- **Hacer:**
+  - tildes en todos los textos de la interfaz, también en las pantallas de los carpinteros y en los mensajes del backend que se muestran (DECISIONES 15). Lo que va a la máquina (el Excel) no cambia. Hay que ajustar los textos que buscan las pruebas en el navegador y los tests;
+  - un color distinto para cada estado en `StatusChip` (DECISIONES 46);
+  - las filas de las solicitudes de módulos sin Remark (DECISIONES 20): `moduleRemark` deja de usarse y sus tests cambian.
+- **Terminado cuando:** no queda ningún texto visible sin tilde (búsqueda en el código), los colores de estado son distintos y con contraste, y las pruebas dan verde.
+
+#### F4.7 Color de los cantos por tipo de placa · [ ]
+- **Depende de:** F4.6.
+- **Hacer:** lo de DECISIONES 45. Color de canto por separado para esqueleto y frentes, propuesto por defecto del mismo color que la placa si existe; si no, sin elegir y con la lista de cantos cargados. Cambian el armado (`buildModulePieces` y `planModuleOrder`), la vista previa, el alta (con su migración si se guarda por rol), el paso 3 del asistente y sus pruebas. Paridad: las mismas piezas tienen que dar las mismas placas y el mismo presupuesto (regla 1).
+- **Antes de empezar:** proponer el diseño (qué se guarda y cómo se elige) y esperar el OK.
+
 ### Fase 5: Detalle, edición y salidas (spec §9.3, §10 y §11)
 
 #### F5.1 Detalle de la solicitud · [ ]
@@ -619,18 +633,19 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 
 | # | Tema | Quién | Por defecto mientras tanto |
 |---|---|---|---|
-| P1 | ¿Se contrató Herrajes? | Gonzalo | Interruptor apagado |
+| P1 | ¿Se contrató Herrajes? | Gonzalo | **Resuelto (2026-10-07):** sí. La Fase 6 se hace (DECISIONES 10) |
 | P2 | Las 7 constancias desactualizadas (F0.7) | Gonzalo | Resuelto: se respetan los importes |
 | P3 | Placas reales usadas por la máquina en 4 pedidos (F0.8) | Taller | Descartado (2026-10-03) |
-| P4 | Pase a producción (F8), cuando todo esté probado | Gonzalo | Nada se despliega antes |
+| P4 | Pase a producción (F8), cuando todo esté probado | Gonzalo | **Resuelto (2026-10-07):** al terminar el plan y después de que Gonzalo lo pruebe en local, él hace el `git pull` en la VPS y corre las migraciones (DECISIONES 47) |
 | P5 | Cantos, material por pieza, fondos, zócalo y gola, color de canto de los frentes, veta, redondeo y plazos | ROMA | Lo de spec §19 |
 | P6 | `PLACARD_EN_ESPEJO_2_PUERTAS` (fondo de 2000×2000 y puertas de 962×1934 sin rotar) y `PLACARD_2_PUERTAS_UN_LADO_PERCHERO` (fondo de 2498×1998) no entran en placas de 1830 de ancho. Preguntas: ¿esas puertas se pueden girar según la veta? ¿Cómo arman esos fondos (partidos, como la variante del escobero)? | ROMA | Se importan, con advertencia. Desde F4.2, con sus medidas por defecto la vista previa responde 400 `MODULE_PIECES_DO_NOT_FIT` |
 | P9 | Material de fondo por defecto (spec §19: ¿3 mm, 5,5 mm o 18 mm?). 31 de los 32 módulos activos tienen piezas de fondo | Gonzalo | **Resuelto (2026-10-05):** la placa de 3 mm "Fibroplus blanco", que se puede cambiar en Catálogo de módulos > Configuración, y cada módulo puede tener la suya. La pone el importador si la configuración no tiene una (DECISIONES 31) |
-| P10 | De los 60 colores de 18 mm activos, 14 no tienen canto de 0,45 y de 2 mm (los que usa el perfil Estándar) y 11 no tienen ninguno | Gonzalo | Con esos colores de canto la vista previa responde `MISSING_EDGE_MATERIAL`, con todos los faltantes juntos. Cargar los cantos en Materiales o no ofrecer esos colores |
-| P11 | ¿La máquina lee bien el Remark "Modulo N · Nombre" (largo máximo y caracteres)? Hoy ninguna fila de producción lo usa | Taller | Se manda así (DECISIONES 20). Probarlo antes de F7.3 |
-| P12 | La vista previa de 20 módulos tarda de 1,5 a 8,4 s, según las piezas (100 módulos: unos 28 s). Spec §20 pide caché si pasa de 2 s | Gonzalo | Se acepta y se trabaja en F7.4 (DECISIONES 0.12 y 24). F4.4 pide una sola vista previa a la vez, con 700 ms de espera tras cada cambio de canto (DECISIONES 33) |
-| P7 | La placa "metal cepillado bronce" figura como 1830×26000, con un cero de más | Gonzalo | Corregirla en Materiales |
-| P8 | ¿Se conserva el contenedor `carpinteria-analisis-db` con el backup en la PC de la primera sesión? | Gonzalo | Se conserva hasta F2.4 |
+| P10 | De los 60 colores de 18 mm activos, 14 no tienen canto de 0,45 y de 2 mm (los que usa el perfil Estándar) y 11 no tienen ninguno | Gonzalo | **Resuelto (2026-10-07):** canto por defecto del color de la placa si existe; si no, sin elegir y con la lista de cantos cargados (DECISIONES 45, F4.7) |
+| P11 | ¿La máquina lee bien el Remark "Modulo N · Nombre" (largo máximo y caracteres)? Hoy ninguna fila de producción lo usa | Taller | **Resuelto (2026-10-07):** por ahora no se usa el Remark (DECISIONES 20, F4.6) |
+| P12 | La vista previa de 20 módulos tarda de 1,5 a 8,4 s, según las piezas (100 módulos: unos 28 s). Spec §20 pide caché si pasa de 2 s | Gonzalo | **Resuelto (2026-10-07):** se acepta como está; los tiempos se optimizan en F7.4 (DECISIONES 24) |
+| P7 | La placa "metal cepillado bronce" figura como 1830×26000, con un cero de más | Gonzalo | **Resuelto (2026-10-07):** se deja como está; se le avisa al cliente (DECISIONES 47) |
+| P8 | ¿Se conserva el contenedor `carpinteria-analisis-db` con el backup en la PC de la primera sesión? | Gonzalo | **Resuelto (2026-10-07):** se borró, con su volumen (DECISIONES 47) |
+| P13 | Base para las pruebas de punta a punta, ahora que no está el contenedor con el backup: ¿restaurar el backup en un contenedor nuevo cada vez que haga falta probar (y borrarlo al terminar) o armar una base local con datos inventados? | Gonzalo | Sin base, solo corren los tests unitarios, `tsc` y el build |
 
 ---
 
