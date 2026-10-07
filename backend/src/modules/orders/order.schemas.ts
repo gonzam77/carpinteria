@@ -47,6 +47,12 @@ export const orderFiltersSchema = z.object({
   tipo: z.nativeEnum(TipoPedido).optional().default(TipoPedido.CORTE)
 });
 
+/** Exportacion al Excel de la maquina (spec §11.1): sin ids, todos; tipo es opcional (el frontend no lo manda). */
+export const orderExportSchema = z.object({
+  ids: z.string().optional().default(""),
+  tipo: z.nativeEnum(TipoPedido, { errorMap: () => ({ message: "El tipo de solicitud es CORTE o MODULOS" }) }).optional()
+});
+
 export const orderStatusSchema = z.object({
   estado: z.nativeEnum(EstadoPedido),
   forceWithoutStock: z.boolean().optional().default(false)

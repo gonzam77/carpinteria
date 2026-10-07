@@ -6,7 +6,8 @@ import { authenticate, authorize } from "../../middlewares/auth.js";
 import { calculateOrderStockShortages, deleteOrderReturningStock, hasStockCommitment, returnOrderStock, stateHoldsStock, takeOrderStock } from "./order-stock.service.js";
 import { AppError, asyncHandler } from "../../utils/http.js";
 import { buildOrdersWorkbook } from "./excel.service.js";
-import { orderFiltersSchema, orderSchema, orderStatusSchema } from "./order.schemas.js";
+import { orderExportSchema, orderFiltersSchema, orderSchema, orderStatusSchema } from "./order.schemas.js";
+import { exportFileName, machineRows } from "./export-order.js";
 import { sendNewOrderWhatsappNotification } from "./whatsapp.service.js";
 import { sendNewOrderPushNotification, sendOrderStockShortagePushNotification } from "../push-notifications/push-notifications.service.js";
 import { buildOrderEstimateSnapshot, buildOrderMaterialsSummary } from "./order-estimate.service.js";
@@ -124,16 +125,18 @@ ordersRouter.get(
   "/export",
   authorize(Rol.ADMIN),
   asyncHandler(async (req: any, res: any) => {
-    const ids = String(req.query.ids ?? "")
+    const query = orderExportSchema.parse(req.query);
+    const ids = query.ids
       .split(",")
       .map((id) => id.trim())
       .filter(Boolean);
-    const where: any = { ...orderAccessWhere(req.user), ...(ids.length ? { id: { in: ids } } : {}) };
-    const orders = await prisma.pedido.findMany({ where, include: { detalles: DETALLES_ORDENADOS } });
-    const workbook = await buildOrdersWorkbook(orders);
+    const where: any = { ...orderAccessWhere(req.user), ...(ids.length ? { id: { in: ids } } : {}), ...(query.tipo ? { tipo: query.tipo } : {}) };
+    // El modulo de cada fila solo hace falta para ordenar las de modulos; las de corte salen como siempre (export-order.ts).
+    const orders = await prisma.pedido.findMany({ where, include: { detalles: { ...DETALLES_ORDENADOS, include: { pedidoModulo: { select: { posicion: true } } } } } });
+    const workbook = await buildOrdersWorkbook(orders.map((order) => ({ ...order, detalles: machineRows(order) })));
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="pedidos-carpinteria.xlsx"`);
+    res.setHeader("Content-Disposition", `attachment; filename="${exportFileName(orders)}"`);
     await workbook.xlsx.write(res);
     res.end();
   })
