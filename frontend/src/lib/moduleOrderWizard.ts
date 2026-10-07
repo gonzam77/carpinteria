@@ -3,16 +3,7 @@
 // colores y cantos disponibles, y los cambios de canto del paso 4. Los numeros de placas y presupuesto NO se
 // calculan aca: el paso 4 muestra solo lo que devuelve la vista previa del servidor (DECISIONES R3).
 import { buildModulePieces, EDGE_SIDES, type CatalogModuleDef, type PieceEdges, type RoundingMode } from "./moduleFormula.ts";
-import type {
-  EspesorCanto,
-  LadoCanto,
-  Material,
-  ModuleDefinition,
-  ModuleOrderDetail,
-  ModuleOrderLineInput,
-  ModuleOrderPreview,
-  PieceEdgesInput
-} from "../types/index.ts";
+import type { LadoCanto, Material, ModuleDefinition, ModuleOrderDetail, ModuleOrderLineInput, ModuleOrderPreview, PieceEdgeChoice } from "../types/index.ts";
 
 /** Un modulo de la solicitud en el asistente: una tarjeta por unidad (spec §9.2 paso 3). */
 export type WizardUnit = {
@@ -22,16 +13,18 @@ export type WizardUnit = {
   valores: Record<string, string>;
   colorEsqueletoId: string;
   colorFrentesId: string;
-  colorCantoId: string;
   perfilCantoOrden: 1 | 2;
   /** null = el fondo del catalogo (el del modulo o el de la configuracion, DECISIONES 32). */
   materialFondoId: string | null;
   observaciones: string;
-  /** Cantos cambiados a mano en el paso 4, por codigo de pieza. */
-  cantosOverride: Record<string, PieceEdgesInput>;
+  /**
+   * Cantos elegidos a mano en el paso 4, por codigo de pieza (DECISIONES 45): solo los lados que se tocaron, con el
+   * canto elegido o null (sin canto). Los demas lados llevan el de por defecto: el de la placa de la pieza.
+   */
+  cantosOverride: Record<string, PieceEdgeChoice>;
 };
 
-export type DefaultColors = { colorEsqueletoId: string; colorFrentesId: string; colorCantoId: string };
+export type DefaultColors = { colorEsqueletoId: string; colorFrentesId: string };
 
 let nextUid = 0;
 export const newUnitUid = () => `modulo-${Date.now().toString(36)}-${++nextUid}`;
@@ -63,24 +56,14 @@ const byName = (a: Material, b: Material) => a.nombre.trim().localeCompare(b.nom
 export const designPlates = (materials: Material[], espesorDisenoMm: number) =>
   materials.filter((material) => material.tipo === "PLACA" && material.activo && sameThickness(material.espesorMm, espesorDisenoMm)).sort(byName);
 
-/** Placas activas de cualquier espesor: para el color de los cantos y el fondo elegido. */
+/** Placas activas de cualquier espesor: para el fondo elegido. */
 export const activePlates = (materials: Material[]) => materials.filter((material) => material.tipo === "PLACA" && material.activo).sort(byName);
 
-/** Espesores de canto activos de cada color (placaMaterialId). */
-export function edgeThicknessesByColor(materials: Material[]) {
-  const byColor = new Map<string, number[]>();
-  for (const material of materials) {
-    if (material.tipo !== "CANTO" || !material.activo || !material.placaMaterialId) continue;
-    byColor.set(material.placaMaterialId, [...(byColor.get(material.placaMaterialId) ?? []), material.espesorMm]);
-  }
-  return byColor;
-}
-
-/** Espesores que faltan en un color, o [] si los tiene todos (PLAN P10). Los que se usan los da validateUnit. */
-export function missingEdgeThicknesses(colorId: string, required: number[], coverage: Map<string, number[]>) {
-  const available = coverage.get(colorId) ?? [];
-  return required.filter((thickness) => !available.some((value) => sameThickness(value, thickness)));
-}
+/** Cantos activos, en el orden en que el servidor elige el de por defecto si hubiera dos iguales (por nombre e id). */
+export const activeEdges = (materials: Material[]) =>
+  materials
+    .filter((material) => material.tipo === "CANTO" && material.activo)
+    .sort((a, b) => (a.nombre < b.nombre ? -1 : a.nombre > b.nombre ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
 /** El modulo tiene piezas de fondo: muestra el selector de fondo (DECISIONES 32). */
 export const hasBackPieces = (definition: Pick<ModuleDefinition, "piezas">) => definition.piezas.some((pieza) => pieza.rol === "FONDO");
@@ -103,14 +86,12 @@ const defaultProfile = (definition: Pick<ModuleDefinition, "perfiles">) =>
  */
 export function newUnit(definition: ModuleDefinition, defaults: DefaultColors, materials: Material[]): WizardUnit {
   const design = new Set(designPlates(materials, definition.espesorDisenoMm).map((material) => material.id));
-  const plates = new Set(activePlates(materials).map((material) => material.id));
   return {
     uid: newUnitUid(),
     moduloId: definition.id,
     valores: Object.fromEntries(pedibles(definition).map((param) => [param.clave.toUpperCase(), defaultText(param)])),
     colorEsqueletoId: design.has(defaults.colorEsqueletoId) ? defaults.colorEsqueletoId : "",
     colorFrentesId: design.has(defaults.colorFrentesId) ? defaults.colorFrentesId : "",
-    colorCantoId: plates.has(defaults.colorCantoId) ? defaults.colorCantoId : "",
     perfilCantoOrden: defaultProfile(definition),
     materialFondoId: null,
     observaciones: "",
@@ -141,8 +122,7 @@ export function syncUnits(
  * Una tarjeta contra la definicion de hoy (borrador recuperado o catalogo que cambio con el asistente abierto):
  * descarta medidas y cambios de canto de piezas que el modulo ya no tiene (si no, la API responde 400,
  * DECISIONES 18), agrega las medidas nuevas con su valor por defecto, vuelve al perfil predeterminado si el elegido
- * ya no existe, saca el fondo elegido si el modulo ya no tiene piezas de fondo y los cambios de canto que quedaron
- * iguales al perfil.
+ * ya no existe y saca el fondo elegido si el modulo ya no tiene piezas de fondo.
  */
 export function sanitizeUnit(unit: WizardUnit, definition: ModuleDefinition): WizardUnit {
   const valores = Object.fromEntries(
@@ -186,34 +166,40 @@ export function reconcileUnits(units: WizardUnit[], fresh: Map<string, ModuleDef
 }
 
 /**
- * Una tarjeta contra la definicion nueva de su modulo: los cambios de canto se pasan de la definicion anterior a la
- * nueva (rebaseOverrides) y despues se limpia (sanitizeUnit).
+ * Una tarjeta contra la definicion nueva de su modulo. Los cambios de canto guardan solo los lados que se tocaron
+ * (DECISIONES 45): los demas siguen al perfil y a la placa nuevos sin tener que pasarlos.
  */
-export function reconcileUnit(unit: WizardUnit, definition: ModuleDefinition, previous?: ModuleDefinition) {
-  const perfil = definition.perfiles.some((item) => item.orden === unit.perfilCantoOrden) ? unit.perfilCantoOrden : defaultProfile(definition);
-  const rebased = previous ? rebaseOverrides(unit, { definition: previous, perfil: unit.perfilCantoOrden }, { definition, perfil }) : unit;
-  return sanitizeUnit(rebased, definition);
+export function reconcileUnit(unit: WizardUnit, definition: ModuleDefinition, _previous?: ModuleDefinition) {
+  return sanitizeUnit(unit, definition);
 }
 
 /**
- * Limpia los colores que ya no sirven: esqueleto y frentes tienen que ser placas activas del espesor de diseno; cantos y
- * fondo elegido, placas activas. Lo que no sirve queda sin elegir (el fondo vuelve al del catalogo).
+ * Limpia los colores que ya no sirven: esqueleto y frentes tienen que ser placas activas del espesor de diseno; el fondo
+ * elegido, una placa activa; los cantos elegidos a mano, cantos activos. Lo que no sirve queda sin elegir (el fondo
+ * vuelve al del catalogo y el canto, al de por defecto).
  */
 export function withAvailableColors(unit: WizardUnit, definition: Pick<ModuleDefinition, "espesorDisenoMm">, materials: Material[]) {
   const design = new Set(designPlates(materials, definition.espesorDisenoMm).map((material) => material.id));
   const plates = new Set(activePlates(materials).map((material) => material.id));
+  const edges = new Set(activeEdges(materials).map((material) => material.id));
   const colores = {
     colorEsqueletoId: design.has(unit.colorEsqueletoId) ? unit.colorEsqueletoId : "",
     colorFrentesId: design.has(unit.colorFrentesId) ? unit.colorFrentesId : "",
-    colorCantoId: plates.has(unit.colorCantoId) ? unit.colorCantoId : "",
     materialFondoId: unit.materialFondoId && plates.has(unit.materialFondoId) ? unit.materialFondoId : null
   };
+  let cantosChanged = false;
+  const cantosOverride: Record<string, PieceEdgeChoice> = {};
+  for (const [codigo, lados] of Object.entries(unit.cantosOverride)) {
+    const kept = Object.fromEntries(Object.entries(lados).filter(([, cantoId]) => cantoId === null || edges.has(cantoId as string)));
+    if (Object.keys(kept).length !== Object.keys(lados).length) cantosChanged = true;
+    if (Object.keys(kept).length) cantosOverride[codigo] = kept;
+  }
   const changed =
     colores.colorEsqueletoId !== unit.colorEsqueletoId ||
     colores.colorFrentesId !== unit.colorFrentesId ||
-    colores.colorCantoId !== unit.colorCantoId ||
-    colores.materialFondoId !== unit.materialFondoId;
-  return { unit: changed ? { ...unit, ...colores } : unit, changed };
+    colores.materialFondoId !== unit.materialFondoId ||
+    cantosChanged;
+  return { unit: changed ? { ...unit, ...colores, cantosOverride: cantosChanged ? cantosOverride : unit.cantosOverride } : unit, changed };
 }
 
 /** "Copiar medidas a los N iguales" (spec §9.2 paso 3): copia solo las medidas a las demas tarjetas del mismo modulo. */
@@ -225,7 +211,6 @@ export function copyMeasuresToSameModel(units: WizardUnit[], uid: string) {
 
 /** "Aplicar a todos": pone los colores por defecto en cada tarjeta donde sirven (el esqueleto y los frentes, del espesor de diseno). */
 export function applyColorsToAll(units: WizardUnit[], defaults: DefaultColors, definitions: Map<string, ModuleDefinition>, materials: Material[]) {
-  const plates = new Set(activePlates(materials).map((material) => material.id));
   return units.map((unit) => {
     const definition = definitions.get(unit.moduloId);
     if (!definition) return unit;
@@ -233,8 +218,7 @@ export function applyColorsToAll(units: WizardUnit[], defaults: DefaultColors, d
     return {
       ...unit,
       colorEsqueletoId: design.has(defaults.colorEsqueletoId) ? defaults.colorEsqueletoId : unit.colorEsqueletoId,
-      colorFrentesId: design.has(defaults.colorFrentesId) ? defaults.colorFrentesId : unit.colorFrentesId,
-      colorCantoId: plates.has(defaults.colorCantoId) ? defaults.colorCantoId : unit.colorCantoId
+      colorFrentesId: design.has(defaults.colorFrentesId) ? defaults.colorFrentesId : unit.colorFrentesId
     };
   });
 }
@@ -277,19 +261,13 @@ export type UnitValidation = {
   generales: string[];
   /** Colores sin elegir. */
   faltantes: string[];
-  /** Espesores de canto que usan las piezas que se generan con estas medidas, este perfil y los cambios del paso 4. */
-  espesoresCanto: number[];
-  /** De esos, los que el color de cantos elegido no tiene (el servidor responderia MISSING_EDGE_MATERIAL). */
-  cantosFaltantes: number[];
   /** Que le falta al fondo (para marcar su selector), o null si esta bien. */
   fondo: string | null;
   ok: boolean;
 };
 
-/** Datos para revisar una tarjeta como el servidor (module-order-plan.ts): cantos, fondo y materiales fijos. */
+/** Datos para revisar una tarjeta como el servidor (module-order-plan.ts): fondo y materiales fijos. */
 export type UnitCheckContext = {
-  /** Espesores de canto activos por color (edgeThicknessesByColor). */
-  coverage?: Map<string, number[]>;
   /** Placas activas (activePlates): el fondo del catalogo y los materiales fijos tienen que estar entre ellas. */
   activePlateIds?: Set<string>;
   /** Fondo de la configuracion del catalogo (DECISIONES 31). */
@@ -298,15 +276,14 @@ export type UnitCheckContext = {
 
 /**
  * Valida una tarjeta con el armador compartido y el redondeo de la configuracion, igual que el servidor
- * (DECISIONES R6), incluidos los cambios de canto. Con el contexto revisa tambien lo que el servidor revisa de los
- * materiales: que el color de cantos tenga los espesores que se usan y que haya un fondo y materiales fijos activos.
+ * (DECISIONES R6). Con el contexto revisa tambien lo que el servidor revisa de los materiales: que haya un fondo y
+ * materiales fijos activos. Los cantos no se validan: un lado sin canto de su color va sin canto (DECISIONES 45).
  * No calcula placas ni presupuesto: eso lo da la vista previa.
  */
 export function validateUnit(unit: WizardUnit, definition: ModuleDefinition, redondeo: RoundingMode, context: UnitCheckContext = {}): UnitValidation {
   const result = buildModulePieces(definition as unknown as CatalogModuleDef, numericValues(unit, definition), {
     redondeo,
-    perfilOrden: unit.perfilCantoOrden,
-    cantosOverride: unit.cantosOverride
+    perfilOrden: unit.perfilCantoOrden
   });
   const claves = new Set(pedibles(definition).map((param) => param.clave.toUpperCase()));
   const porMedida: Record<string, string[]> = {};
@@ -329,20 +306,9 @@ export function validateUnit(unit: WizardUnit, definition: ModuleDefinition, red
   generales.splice(0, generales.length, ...visibles);
   const faltantes = [
     ...(unit.colorEsqueletoId ? [] : ["el color de esqueleto"]),
-    ...(unit.colorFrentesId ? [] : ["el color de frentes"]),
-    ...(unit.colorCantoId ? [] : ["el color de los cantos"])
+    ...(unit.colorFrentesId ? [] : ["el color de frentes"])
   ];
-  const espesoresCanto: number[] = [];
-  for (const pieza of result.piezas) {
-    if (!(pieza.cantidad > 0)) continue;
-    for (const lado of EDGE_SIDES) {
-      const espesor = pieza.cantos[lado];
-      if (espesor !== null && !espesoresCanto.some((value) => sameThickness(value, espesor))) espesoresCanto.push(espesor);
-    }
-  }
-  espesoresCanto.sort((a, b) => a - b);
-  const { coverage, activePlateIds, configFondoId = null } = context;
-  const cantosFaltantes = coverage && unit.colorCantoId ? missingEdgeThicknesses(unit.colorCantoId, espesoresCanto, coverage) : [];
+  const { activePlateIds, configFondoId = null } = context;
   // Fondo y materiales fijos, como el servidor: si no hay uno activo, la vista previa responde MODULE_MATERIAL_INVALID.
   const materiales: string[] = [];
   let fondo: string | null = null;
@@ -363,10 +329,8 @@ export function validateUnit(unit: WizardUnit, definition: ModuleDefinition, red
     porMedida,
     generales,
     faltantes,
-    espesoresCanto,
-    cantosFaltantes,
     fondo,
-    ok: !result.errores.length && !Object.keys(porMedida).length && !faltantes.length && !cantosFaltantes.length && !materiales.length
+    ok: !result.errores.length && !Object.keys(porMedida).length && !faltantes.length && !materiales.length
   };
 }
 
@@ -385,15 +349,13 @@ export function linePayload(unit: WizardUnit, definition: ModuleDefinition, vers
       .filter((clave) => Number.isFinite(numbers[clave]))
       .map((clave) => [clave, numbers[clave]])
   );
-  const codes = new Set(definition.piezas.map((pieza) => pieza.codigo.toUpperCase()));
-  const cantosOverride = Object.fromEntries(Object.entries(unit.cantosOverride).filter(([codigo]) => codes.has(codigo.toUpperCase())));
+  const cantosOverride = normalizeOverrides(unit, definition).cantosOverride;
   const observaciones = unit.observaciones.trim();
   return {
     moduloId: unit.moduloId,
     valores,
     colorEsqueletoId: unit.colorEsqueletoId,
     colorFrentesId: unit.colorFrentesId,
-    colorCantoId: unit.colorCantoId,
     perfilCantoOrden: unit.perfilCantoOrden,
     ...(unit.materialFondoId ? { materialFondoId: unit.materialFondoId } : {}),
     ...(observaciones ? { observaciones } : {}),
@@ -421,83 +383,115 @@ const SIDE_FIELD: Record<LadoCanto, "cantoLargo1Id" | "cantoLargo2Id" | "cantoAn
   ANCHO_2: "cantoAncho2Id"
 };
 
-const sameEdge = (a: number | null, b: number | null) => (a === null || b === null ? a === b : sameThickness(a, b));
-const sameEdges = (a: PieceEdgesInput, b: PieceEdgesInput) => (EDGE_SIDES as readonly LadoCanto[]).every((lado) => sameEdge(a[lado], b[lado]));
-
-/**
- * Cantos de una pieza en un perfil del catalogo: los mismos que usa el armador del servidor (buildModulePieces), que no
- * gira las piezas ni cambia los lados. No dependen de la lista de materiales: un canto cargado despues de abrir el
- * asistente se ve igual.
- */
-export function profileEdges(definition: Pick<ModuleDefinition, "piezas">, perfilOrden: number, piezaCodigo: string): PieceEdgesInput {
+/** Espesor de cada lado de una pieza en un perfil del catalogo: los mismos que usa el armador del servidor. */
+export function profileEdges(definition: Pick<ModuleDefinition, "piezas">, perfilOrden: number, piezaCodigo: string): PieceEdges {
   const codigo = piezaCodigo.toUpperCase();
   const pieza = definition.piezas.find((item) => item.codigo.toUpperCase() === codigo);
   return Object.fromEntries(
-    (EDGE_SIDES as readonly LadoCanto[]).map((lado) => [lado, (pieza?.cantos.find((canto) => canto.perfilOrden === perfilOrden && canto.lado === lado)?.espesorMm ?? null) as EspesorCanto | null])
-  ) as PieceEdgesInput;
+    (EDGE_SIDES as readonly LadoCanto[]).map((lado) => [lado, pieza?.cantos.find((canto) => canto.perfilOrden === perfilOrden && canto.lado === lado)?.espesorMm ?? null])
+  ) as PieceEdges;
 }
 
-/** Cantos que lleva hoy una pieza de una tarjeta (paso 4): el cambio a mano o, si no hay, los del perfil elegido. */
-export function unitPieceEdges(unit: WizardUnit, definition: Pick<ModuleDefinition, "piezas">, piezaCodigo: string): PieceEdgesInput {
-  return unit.cantosOverride[piezaCodigo.toUpperCase()] ?? profileEdges(definition, unit.perfilCantoOrden, piezaCodigo);
-}
+/** Lo que hace falta para saber el canto por defecto de un lado, como el servidor (module-order-plan.ts). */
+export type EdgeDefaultsContext = {
+  /** Cantos activos (activeEdges). */
+  cantos: Material[];
+  /** Fondo de la configuracion del catalogo (DECISIONES 31). */
+  configFondoId: string | null;
+};
 
-/** Lados cambiados a mano: los que difieren del perfil. Una pieza "Editada" tiene al menos uno (como origen EDITADO). */
-export function changedSides(unit: WizardUnit, definition: Pick<ModuleDefinition, "piezas">, piezaCodigo: string): LadoCanto[] {
-  const override = unit.cantosOverride[piezaCodigo.toUpperCase()];
-  if (!override) return [];
-  const perfil = profileEdges(definition, unit.perfilCantoOrden, piezaCodigo);
-  return (EDGE_SIDES as readonly LadoCanto[]).filter((lado) => !sameEdge(override[lado], perfil[lado]));
+/** La placa de una pieza: esqueleto, frentes, fondo (el elegido, el del modulo o el de la configuracion) o su material fijo. */
+export function pieceBoardId(unit: WizardUnit, definition: Pick<ModuleDefinition, "piezas" | "materialFondoId">, piezaCodigo: string, configFondoId: string | null) {
+  const codigo = piezaCodigo.toUpperCase();
+  const pieza = definition.piezas.find((item) => item.codigo.toUpperCase() === codigo);
+  if (!pieza) return null;
+  if (pieza.rol === "ESQUELETO") return unit.colorEsqueletoId || null;
+  if (pieza.rol === "FRENTE") return unit.colorFrentesId || null;
+  if (pieza.rol === "FONDO") return unit.materialFondoId ?? definition.materialFondoId ?? configFondoId ?? null;
+  return pieza.materialFijoId ?? null;
 }
 
 /**
- * Saca los cambios de canto de piezas que el modulo ya no tiene y los que quedaron iguales al perfil (por ejemplo,
- * despues de cambiar de perfil): el servidor los guardaria como CALCULADO y la pantalla los marcaria como editados.
+ * Canto por defecto de un lado (DECISIONES 45): el de la placa de la pieza con el espesor del perfil, o null si el
+ * perfil no pide canto ahi o la placa no tiene uno de su color (entonces va sin canto).
  */
-export function normalizeOverrides(unit: WizardUnit, definition: Pick<ModuleDefinition, "piezas">): WizardUnit {
+export function defaultEdgeId(
+  unit: WizardUnit,
+  definition: Pick<ModuleDefinition, "piezas" | "materialFondoId">,
+  piezaCodigo: string,
+  lado: LadoCanto,
+  context: EdgeDefaultsContext
+) {
+  const espesor = profileEdges(definition, unit.perfilCantoOrden, piezaCodigo)[lado];
+  const placaId = pieceBoardId(unit, definition, piezaCodigo, context.configFondoId);
+  if (espesor === null || !placaId) return null;
+  return context.cantos.find((canto) => canto.placaMaterialId === placaId && sameThickness(canto.espesorMm, espesor))?.id ?? null;
+}
+
+/** Lados elegidos a mano en una pieza. Una pieza con alguno queda "Editada" (origen EDITADO). */
+export function changedSides(unit: WizardUnit, piezaCodigo: string): LadoCanto[] {
+  const override = unit.cantosOverride[piezaCodigo.toUpperCase()];
+  return override ? (EDGE_SIDES as readonly LadoCanto[]).filter((lado) => override[lado] !== undefined) : [];
+}
+
+/** Un valor guardado para un lado sirve si es el id de un canto (texto) o null (sin canto). */
+const validChoice = (value: unknown) => value === null || (typeof value === "string" && value !== "");
+
+/**
+ * Limpia los cambios de canto: saca las piezas que el modulo ya no tiene, las de un borrador de antes de DECISIONES 45
+ * (guardaba espesores) y los lados mal guardados. Con el contexto, saca tambien los lados que quedaron
+ * iguales al de por defecto: el servidor los guardaria como CALCULADO y la pantalla los marcaria como cambiados.
+ */
+export function normalizeOverrides(unit: WizardUnit, definition: Pick<ModuleDefinition, "piezas" | "materialFondoId">, context?: EdgeDefaultsContext): WizardUnit {
   const codes = new Set(definition.piezas.map((pieza) => pieza.codigo.toUpperCase()));
   const entries = Object.entries(unit.cantosOverride ?? {});
-  const kept = entries.filter(
-    ([codigo, edges]) => Boolean(edges) && typeof edges === "object" && codes.has(codigo.toUpperCase()) && !sameEdges(edges, profileEdges(definition, unit.perfilCantoOrden, codigo))
-  );
-  return kept.length === entries.length ? unit : { ...unit, cantosOverride: Object.fromEntries(kept) };
+  const result: Record<string, PieceEdgeChoice> = {};
+  let changed = false;
+  for (const [code, lados] of entries) {
+    const codigo = code.toUpperCase();
+    // Una pieza de un borrador de antes de DECISIONES 45 guardaba espesores por lado: se descarta entera (sus null eran
+    // "sin canto" del perfil de entonces, no una eleccion de hoy).
+    const viejo = Boolean(lados) && typeof lados === "object" && Object.values(lados).some((value) => typeof value === "number");
+    if (!codes.has(codigo) || !lados || typeof lados !== "object" || viejo) {
+      changed = true;
+      continue;
+    }
+    const kept: PieceEdgeChoice = {};
+    for (const [lado, value] of Object.entries(lados)) {
+      const valid = (EDGE_SIDES as readonly string[]).includes(lado) && validChoice(value);
+      const sameAsDefault = valid && context !== undefined && value === defaultEdgeId(unit, definition, codigo, lado as LadoCanto, context);
+      if (valid && !sameAsDefault) kept[lado as LadoCanto] = value as string | null;
+    }
+    if (Object.keys(kept).length !== Object.keys(lados).length || codigo !== code) changed = true;
+    if (Object.keys(kept).length) result[codigo] = kept;
+  }
+  return changed ? { ...unit, cantosOverride: result } : unit;
 }
 
 /**
- * Cambia un lado de una pieza (paso 4) y guarda los 4 lados, partiendo de los que lleva hoy (unitPieceEdges).
- * Si el lado ya tenia ese espesor devuelve la misma tarjeta (no hace falta recalcular), y si la pieza queda igual al
- * perfil, saca el cambio.
+ * Elige el canto de un lado de una pieza (paso 4): un canto, o null para dejarlo sin canto. Elegir el de por defecto
+ * saca el cambio. Si el lado ya tenia ese canto devuelve la misma tarjeta (no hace falta recalcular).
  */
-export function withEdgeOverride(unit: WizardUnit, definition: Pick<ModuleDefinition, "piezas">, piezaCodigo: string, lado: LadoCanto, espesor: EspesorCanto | null): WizardUnit {
-  const codigo = piezaCodigo.toUpperCase();
-  const base = unitPieceEdges(unit, definition, codigo);
-  if (sameEdge(base[lado], espesor)) return unit;
-  return normalizeOverrides({ ...unit, cantosOverride: { ...unit.cantosOverride, [codigo]: { ...base, [lado]: espesor } } }, definition);
-}
-
-/**
- * Pasa los cambios de canto de un perfil (o de una definicion) a otro: de cada pieza quedan solo los lados que se
- * habian cambiado a mano respecto del perfil anterior, puestos sobre los cantos del perfil nuevo. Asi, al cambiar de
- * perfil, un cambio no arrastra los lados del perfil viejo que nadie toco.
- */
-export function rebaseOverrides(
+export function withEdgeChoice(
   unit: WizardUnit,
-  from: { definition: Pick<ModuleDefinition, "piezas">; perfil: number },
-  to: { definition: Pick<ModuleDefinition, "piezas">; perfil: 1 | 2 }
+  definition: Pick<ModuleDefinition, "piezas" | "materialFondoId">,
+  piezaCodigo: string,
+  lado: LadoCanto,
+  cantoId: string | null,
+  context: EdgeDefaultsContext
 ): WizardUnit {
-  const entries = Object.entries(unit.cantosOverride ?? {}).filter(([, edges]) => Boolean(edges) && typeof edges === "object");
-  const cantosOverride = Object.fromEntries(
-    entries.map(([codigo, edges]) => {
-      const before = profileEdges(from.definition, from.perfil, codigo);
-      const rebased = { ...profileEdges(to.definition, to.perfil, codigo) };
-      for (const lado of EDGE_SIDES as readonly LadoCanto[]) if (!sameEdge(edges[lado], before[lado])) rebased[lado] = edges[lado];
-      return [codigo, rebased];
-    })
-  );
-  return normalizeOverrides({ ...unit, perfilCantoOrden: to.perfil, cantosOverride }, to.definition);
+  const codigo = piezaCodigo.toUpperCase();
+  const current = unit.cantosOverride[codigo] ?? {};
+  const porDefecto = defaultEdgeId(unit, definition, codigo, lado, context);
+  const actual = current[lado] !== undefined ? current[lado] : porDefecto;
+  if (actual === cantoId) return unit;
+  const { [lado]: _previo, ...rest } = current;
+  const next: PieceEdgeChoice = cantoId === porDefecto ? rest : { ...rest, [lado]: cantoId };
+  const { [codigo]: _pieza, ...others } = unit.cantosOverride;
+  return { ...unit, cantosOverride: Object.keys(next).length ? { ...others, [codigo]: next } : others };
 }
 
-/** Vuelve una pieza a los cantos del perfil. */
+/** Vuelve una pieza a los cantos por defecto. */
 export function withoutEdgeOverride(unit: WizardUnit, piezaCodigo: string): WizardUnit {
   const codigo = piezaCodigo.toUpperCase();
   if (!(codigo in unit.cantosOverride)) return unit;
@@ -628,6 +622,7 @@ export function restoreWizardDraft(
   const avisos: string[] = [];
   const { definitions, materials } = context;
   const plates = new Set(activePlates(materials).map((material) => material.id));
+  let cantosViejos = false;
   const selecciones = (Array.isArray(raw.selecciones) ? raw.selecciones : []).filter(
     (item) => item && typeof item.moduloId === "string" && Number.isInteger(item.cantidad) && item.cantidad > 0
   );
@@ -645,24 +640,29 @@ export function restoreWizardDraft(
         valores: unit.valores && typeof unit.valores === "object" ? unit.valores : {},
         colorEsqueletoId: asText(unit.colorEsqueletoId),
         colorFrentesId: asText(unit.colorFrentesId),
-        colorCantoId: asText(unit.colorCantoId),
         perfilCantoOrden: unit.perfilCantoOrden === 2 ? 2 : 1,
         materialFondoId: typeof unit.materialFondoId === "string" ? unit.materialFondoId : null,
         observaciones: asText(unit.observaciones),
         cantosOverride: unit.cantosOverride && typeof unit.cantosOverride === "object" ? unit.cantosOverride : {}
       };
-      const { unit: clean, changed } = withAvailableColors(sanitizeUnit(base, definition), definition, materials);
+      // Un borrador de antes de DECISIONES 45 guardaba espesores por lado: esos cambios no se pueden recuperar.
+      const sanitized = sanitizeUnit(base, definition);
+      if (JSON.stringify(sanitized.cantosOverride) !== JSON.stringify(Object.fromEntries(Object.entries(base.cantosOverride).map(([codigo, lados]) => [codigo.toUpperCase(), lados])))) {
+        cantosViejos = true;
+      }
+      const { unit: clean, changed } = withAvailableColors(sanitized, definition, materials);
       if (changed) coloresLimpios = true;
       return clean;
     });
-  if (coloresLimpios) avisos.push("Algunos colores o fondos ya no están disponibles: elegilos de nuevo.");
+  if (coloresLimpios) avisos.push("Algunos colores, fondos o cantos ya no están disponibles: elegilos de nuevo.");
+  if (cantosViejos) avisos.push("Algunos cantos cambiados a mano no se pudieron recuperar: revisalos en el paso 4.");
 
   let fechaEntrega = asText(raw.fechaEntrega);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaEntrega) || fechaEntrega < context.today) {
     if (fechaEntrega) avisos.push("La fecha de entrega del borrador ya pasó: se puso la de por defecto.");
     fechaEntrega = context.defaultFecha;
   }
-  const defaults = raw.defaults ?? { colorEsqueletoId: "", colorFrentesId: "", colorCantoId: "" };
+  const defaults = raw.defaults ?? { colorEsqueletoId: "", colorFrentesId: "" };
   const color = (value: unknown) => (plates.has(asText(value)) ? asText(value) : "");
   return {
     draft: {
@@ -674,7 +674,7 @@ export function restoreWizardDraft(
       observaciones: asText(raw.observaciones),
       selecciones: disponibles,
       units,
-      defaults: { colorEsqueletoId: color(defaults.colorEsqueletoId), colorFrentesId: color(defaults.colorFrentesId), colorCantoId: color(defaults.colorCantoId) },
+      defaults: { colorEsqueletoId: color(defaults.colorEsqueletoId), colorFrentesId: color(defaults.colorFrentesId) },
       step: Math.max(0, Math.min(typeof raw.step === "number" ? raw.step : 0, disponibles.length ? 2 : 1)),
       enviado: asSentMark(raw.enviado)
     },

@@ -1,20 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  activeEdges,
   activePlates,
   addDays,
   applyColorsToAll,
   copyMeasuresToSameModel,
   defaultDeliveryDate,
+  defaultEdgeId,
   describeAge,
   designPlates,
   edgeSummary,
-  edgeThicknessesByColor,
   hasBackPieces,
   hasWizardContent,
   linePayload,
   materialSummary,
-  missingEdgeThicknesses,
   changedSides,
   isValidDay,
   measureTextError,
@@ -23,18 +23,17 @@ import {
   normalizeOverrides,
   numericValues,
   orderSignature,
+  pieceBoardId,
   profileEdges,
-  rebaseOverrides,
   reconcileUnits,
   restoreWizardDraft,
   sanitizeUnit,
   syncUnits,
   todayInArgentina,
-  unitPieceEdges,
   validateClient,
   validateUnit,
   withAvailableColors,
-  withEdgeOverride,
+  withEdgeChoice,
   withoutEdgeOverride,
   type WizardUnit
 } from "./moduleOrderWizard.ts";
@@ -132,7 +131,9 @@ function definition(extra: Partial<ModuleDefinition> = {}): ModuleDefinition {
     ...extra
   };
 }
-const DEFAULTS = { colorEsqueletoId: "blanco", colorFrentesId: "negro", colorCantoId: "blanco" };
+const DEFAULTS = { colorEsqueletoId: "blanco", colorFrentesId: "negro" };
+/** Cantos activos y fondo de la configuracion, como los usa la pagina para el canto por defecto. */
+const EDGES = { cantos: activeEdges(MATERIALS), configFondoId: "fibro" };
 
 test("fecha de entrega por defecto: hoy en Argentina mas los dias de la configuracion", () => {
   // 01:30 UTC del 6 son las 22:30 del 5 en Buenos Aires.
@@ -144,13 +145,10 @@ test("fecha de entrega por defecto: hoy en Argentina mas los dias de la configur
   assert.equal(defaultDeliveryDate(-3, now), "2026-10-05", "nunca antes de hoy");
 });
 
-test("colores: esqueleto y frentes del espesor de diseno, ordenados; cantos y fondo de cualquier placa activa", () => {
+test("colores: esqueleto y frentes del espesor de diseno, ordenados; fondo de cualquier placa activa; cantos activos", () => {
   assert.deepEqual(designPlates(MATERIALS, 18).map((item) => item.id), ["blanco", "negro"]);
   assert.deepEqual(activePlates(MATERIALS).map((item) => item.id), ["blanco", "fino", "fibro", "negro"]);
-  const coverage = edgeThicknessesByColor(MATERIALS);
-  assert.deepEqual(missingEdgeThicknesses("blanco", [0.45, 2], coverage), []);
-  assert.deepEqual(missingEdgeThicknesses("negro", [0.45, 2], coverage), [2], "el canto inactivo no cuenta");
-  assert.deepEqual(missingEdgeThicknesses("fibro", [0.45], coverage), [0.45]);
+  assert.deepEqual(activeEdges(MATERIALS).map((item) => item.id), ["c-blanco-045", "c-blanco-2", "c-negro-045"], "el canto inactivo no se ofrece");
   assert.equal(hasBackPieces(definition()), true);
   assert.equal(hasBackPieces(definition({ piezas: definition().piezas.filter((pieza) => pieza.rol !== "FONDO") })), false);
 });
@@ -159,7 +157,7 @@ test("tarjeta nueva: medidas por defecto, perfil predeterminado y solo los color
   const unit = newUnit(definition(), DEFAULTS, MATERIALS);
   assert.deepEqual(unit.valores, { ANCHO: "800", ALTO: "720" }, "sin la medida calculada");
   assert.equal(unit.perfilCantoOrden, 1);
-  assert.deepEqual([unit.colorEsqueletoId, unit.colorFrentesId, unit.colorCantoId], ["blanco", "negro", "blanco"]);
+  assert.deepEqual([unit.colorEsqueletoId, unit.colorFrentesId], ["blanco", "negro"]);
   assert.equal(unit.materialFondoId, null);
 
   const economico = definition({ perfiles: definition().perfiles.map((perfil) => ({ ...perfil, predeterminado: perfil.orden === 2 })) });
@@ -189,7 +187,7 @@ test("borrador viejo contra el catalogo de hoy: descarta lo que ya no existe y c
     ...newUnit(definition(), DEFAULTS, MATERIALS),
     valores: { ANCHO: "900", PROFUNDIDAD: "580" },
     perfilCantoOrden: 2,
-    cantosOverride: { PUERTA: { LARGO_1: 2, LARGO_2: null, ANCHO_1: null, ANCHO_2: null }, ZOCALO: { LARGO_1: 2, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } }
+    cantosOverride: { PUERTA: { LARGO_1: "c-blanco-2" }, ZOCALO: { LARGO_1: "c-blanco-2" } }
   };
   const today = definition({ perfiles: [{ orden: 1, nombre: "Estandar", descripcion: null, predeterminado: true }] });
   const clean = sanitizeUnit(unit, today);
@@ -209,10 +207,9 @@ test("copiar medidas a los iguales y aplicar colores a todos", () => {
   assert.deepEqual(copied.slice(0, 3).map((unit) => unit.valores.ANCHO), ["1000", "1000", "1000"]);
   assert.equal(copied[3].valores.ANCHO, "800", "otro modelo no cambia");
 
-  const applied = applyColorsToAll(copied, { colorEsqueletoId: "negro", colorFrentesId: "blanco", colorCantoId: "fibro" }, defs, MATERIALS);
-  assert.deepEqual([applied[0].colorEsqueletoId, applied[0].colorFrentesId, applied[0].colorCantoId], ["negro", "blanco", "fibro"]);
+  const applied = applyColorsToAll(copied, { colorEsqueletoId: "negro", colorFrentesId: "blanco" }, defs, MATERIALS);
+  assert.deepEqual([applied[0].colorEsqueletoId, applied[0].colorFrentesId], ["negro", "blanco"]);
   assert.equal(applied[3].colorEsqueletoId, "", "un modulo de 5,5 mm no recibe un color de 18 mm");
-  assert.equal(applied[3].colorCantoId, "fibro", "el color de cantos sirve para todos");
 });
 
 test("validacion en vivo con el armador compartido: medidas, piezas y colores", () => {
@@ -244,17 +241,16 @@ test("pedido para la API: solo los campos de la spec, medidas numericas y lo opc
     ...newUnit(definition(), DEFAULTS, MATERIALS),
     valores: { ANCHO: "900,5", ALTO: "", VIEJA: "3" },
     observaciones: "  contra la pared ",
-    cantosOverride: { PUERTA: { LARGO_1: 0.45, LARGO_2: null, ANCHO_1: null, ANCHO_2: null }, ZOCALO: { LARGO_1: 2, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } }
+    cantosOverride: { puerta: { LARGO_1: "c-blanco-045", ANCHO_1: null }, ZOCALO: { LARGO_1: "c-blanco-2" } }
   };
   assert.deepEqual(linePayload(unit, definition()), {
     moduloId: "bajo",
     valores: { ANCHO: 900.5 },
     colorEsqueletoId: "blanco",
     colorFrentesId: "negro",
-    colorCantoId: "blanco",
     perfilCantoOrden: 1,
     observaciones: "contra la pared",
-    cantosOverride: { PUERTA: { LARGO_1: 0.45, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } }
+    cantosOverride: { PUERTA: { LARGO_1: "c-blanco-045", ANCHO_1: null } }
   });
   const conFondo = linePayload({ ...unit, materialFondoId: "fino", observaciones: "", cantosOverride: {} }, definition(), 2);
   assert.equal(conFondo.materialFondoId, "fino");
@@ -282,36 +278,50 @@ const row = (extra: Partial<ModuleOrderDetail>): ModuleOrderDetail => ({
   ...extra
 });
 
-test("paso 4: cantos del perfil (no de la lista de materiales) y cambios a mano por pieza", () => {
+test("paso 4: canto por defecto de la placa de cada pieza y cambios a mano lado por lado (DECISIONES 45)", () => {
   const def = definition();
   let unit = newUnit(def, DEFAULTS, MATERIALS);
   assert.deepEqual(profileEdges(def, 1, "puerta"), { LARGO_1: 2, LARGO_2: null, ANCHO_1: 2, ANCHO_2: null });
   assert.deepEqual(profileEdges(def, 2, "PUERTA"), { LARGO_1: null, LARGO_2: null, ANCHO_1: null, ANCHO_2: null });
   assert.deepEqual(profileEdges(def, 1, "NO_EXISTE"), { LARGO_1: null, LARGO_2: null, ANCHO_1: null, ANCHO_2: null });
-  assert.deepEqual(unitPieceEdges(unit, def, "LATERAL"), { LARGO_1: 0.45, LARGO_2: null, ANCHO_1: null, ANCHO_2: null });
 
-  // Elegir el espesor que ya tiene no cambia nada: la misma tarjeta (la pagina no recalcula).
-  assert.equal(withEdgeOverride(unit, def, "lateral", "LARGO_1", 0.45), unit);
-  unit = withEdgeOverride(unit, def, "lateral", "LARGO_2", 2);
-  assert.deepEqual(unit.cantosOverride.LATERAL, { LARGO_1: 0.45, LARGO_2: 2, ANCHO_1: null, ANCHO_2: null });
-  assert.deepEqual(changedSides(unit, def, "LATERAL"), ["LARGO_2"], "solo el lado cambiado se marca");
-  unit = withEdgeOverride(unit, def, "LATERAL", "LARGO_1", null);
-  assert.deepEqual(unit.cantosOverride.LATERAL, { LARGO_1: null, LARGO_2: 2, ANCHO_1: null, ANCHO_2: null }, "parte de lo ya cambiado");
-  assert.deepEqual(unitPieceEdges(unit, def, "lateral"), unit.cantosOverride.LATERAL);
-  // Volver a dejarla como el perfil saca el cambio: el servidor la guardaria como CALCULADO.
-  unit = withEdgeOverride(withEdgeOverride(unit, def, "LATERAL", "LARGO_1", 0.45), def, "LATERAL", "LARGO_2", null);
+  // La placa de cada pieza: esqueleto, frentes y fondo (el elegido, el del modulo o el de la configuracion).
+  assert.deepEqual(["LATERAL", "PUERTA", "FONDO"].map((codigo) => pieceBoardId(unit, def, codigo, "fibro")), ["blanco", "negro", "fibro"]);
+  assert.equal(pieceBoardId({ ...unit, materialFondoId: "fino" }, def, "fondo", "fibro"), "fino");
+  // Por defecto, el canto de esa placa con el espesor del perfil. El negro no tiene uno de 2 mm activo: sin canto.
+  assert.equal(defaultEdgeId(unit, def, "lateral", "LARGO_1", EDGES), "c-blanco-045");
+  assert.equal(defaultEdgeId(unit, def, "LATERAL", "LARGO_2", EDGES), null, "el perfil no pide canto ahi");
+  assert.equal(defaultEdgeId(unit, def, "PUERTA", "LARGO_1", EDGES), null);
+  assert.equal(defaultEdgeId({ ...unit, colorFrentesId: "blanco" }, def, "PUERTA", "LARGO_1", EDGES), "c-blanco-2");
+
+  // Elegir el que ya lleva no cambia nada: la misma tarjeta (la pagina no recalcula).
+  assert.equal(withEdgeChoice(unit, def, "lateral", "LARGO_1", "c-blanco-045", EDGES), unit);
+  unit = withEdgeChoice(unit, def, "lateral", "LARGO_2", "c-negro-045", EDGES);
+  assert.deepEqual(unit.cantosOverride, { LATERAL: { LARGO_2: "c-negro-045" } }, "solo el lado tocado, con cualquier canto activo");
+  assert.deepEqual(changedSides(unit, "lateral"), ["LARGO_2"]);
+  unit = withEdgeChoice(unit, def, "LATERAL", "LARGO_1", null, EDGES);
+  assert.deepEqual(unit.cantosOverride.LATERAL, { LARGO_2: "c-negro-045", LARGO_1: null }, "sin canto tambien es una eleccion");
+  // Volver al de por defecto saca el cambio: el servidor la guardaria como CALCULADO.
+  unit = withEdgeChoice(withEdgeChoice(unit, def, "LATERAL", "LARGO_1", "c-blanco-045", EDGES), def, "LATERAL", "LARGO_2", null, EDGES);
   assert.deepEqual(unit.cantosOverride, {});
-  assert.deepEqual(changedSides(unit, def, "LATERAL"), []);
+  assert.deepEqual(changedSides(unit, "LATERAL"), []);
 
-  unit = withEdgeOverride(unit, def, "PUERTA", "ANCHO_1", null);
+  // Un lado sin canto de su color se puede completar con cualquiera.
+  unit = withEdgeChoice(unit, def, "PUERTA", "LARGO_1", "c-negro-045", EDGES);
+  assert.deepEqual(unit.cantosOverride, { PUERTA: { LARGO_1: "c-negro-045" } });
   assert.equal(withoutEdgeOverride(unit, "puerta").cantosOverride.PUERTA, undefined);
   assert.equal(withoutEdgeOverride(unit, "LATERAL"), unit, "sin cambio en esa pieza, la misma tarjeta");
 
-  // Con otro perfil, un cambio que quedo igual al perfil nuevo deja de serlo; y uno de una pieza que no existe se va.
-  const sinPuertaEnB: WizardUnit = { ...unit, perfilCantoOrden: 2, cantosOverride: { PUERTA: { LARGO_1: null, LARGO_2: null, ANCHO_1: null, ANCHO_2: null }, ZOCALO: { LARGO_1: 2, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } } };
-  assert.deepEqual(normalizeOverrides(sinPuertaEnB, def).cantosOverride, {});
-  const conCambio: WizardUnit = { ...unit, cantosOverride: { PUERTA: { LARGO_1: 0.45, LARGO_2: null, ANCHO_1: 2, ANCHO_2: null } } };
-  assert.equal(normalizeOverrides(conCambio, def), conCambio, "si no hay nada para sacar, la misma tarjeta");
+  // Limpieza: piezas que no existen, lados mal guardados (espesores de un borrador viejo) y, con los cantos, los iguales
+  // al de por defecto.
+  const sucia: WizardUnit = {
+    ...unit,
+    cantosOverride: { puerta: { LARGO_1: 2, ANCHO_1: null } as never, ZOCALO: { LARGO_1: "c-blanco-2" }, LATERAL: { LARGO_1: "c-blanco-045", LARGO_2: "c-blanco-2" } }
+  };
+  assert.deepEqual(normalizeOverrides(sucia, def).cantosOverride, { LATERAL: { LARGO_1: "c-blanco-045", LARGO_2: "c-blanco-2" } }, "la pieza del formato viejo se va entera");
+  // La puerta negra no tiene canto de 2 mm: "sin canto" en ANCHO_1 es el de por defecto y tambien se va.
+  assert.deepEqual(normalizeOverrides(sucia, def, EDGES).cantosOverride, { LATERAL: { LARGO_2: "c-blanco-2" } });
+  assert.equal(normalizeOverrides(unit, def, EDGES), unit, "si no hay nada para sacar, la misma tarjeta");
 });
 
 test("medidas mal escritas: se dice que tienen y no se leen mal", () => {
@@ -333,32 +343,14 @@ test("medidas mal escritas: se dice que tienen y no se leen mal", () => {
   assert.equal(validation.ok, false);
 });
 
-test("cantos que se usan y los que le faltan al color: con las piezas que se generan y los cambios a mano", () => {
-  const coverage = edgeThicknessesByColor(MATERIALS);
+test("los cantos no frenan el paso 3: un lado sin canto de su color va sin canto (DECISIONES 45)", () => {
   const unit = newUnit(definition(), DEFAULTS, MATERIALS);
-  const blanco = validateUnit(unit, definition(), "REDONDEAR", { coverage });
-  assert.deepEqual(blanco.espesoresCanto, [0.45, 2]);
-  assert.deepEqual(blanco.cantosFaltantes, []);
-  assert.equal(blanco.ok, true);
-
-  const negro = validateUnit({ ...unit, colorCantoId: "negro" }, definition(), "REDONDEAR", { coverage });
-  assert.deepEqual(negro.cantosFaltantes, [2], "el canto de 2 mm del negro esta inactivo");
-  assert.equal(negro.ok, false);
-  assert.equal(validateUnit({ ...unit, colorCantoId: "negro" }, definition(), "REDONDEAR").ok, true, "sin datos de cantos no se revisa");
-
-  // Sin cantos de 2 mm en las puertas (cambio a mano), el negro alcanza.
-  const sinDos = withEdgeOverride(withEdgeOverride({ ...unit, colorCantoId: "negro" }, definition(), "PUERTA", "LARGO_1", null), definition(), "PUERTA", "ANCHO_1", null);
-  const conCambios = validateUnit(sinDos, definition(), "REDONDEAR", { coverage });
-  assert.deepEqual(conCambios.espesoresCanto, [0.45]);
-  assert.equal(conCambios.ok, true);
-
-  // Una pieza que con estas medidas no se genera (cantidad 0) no pide sus cantos.
-  const sinPuertas = definition({ piezas: definition().piezas.map((pieza) => (pieza.codigo === "PUERTA" ? { ...pieza, formulaCantidad: "0" } : pieza)) });
-  assert.deepEqual(validateUnit({ ...unit, colorCantoId: "negro" }, sinPuertas, "REDONDEAR", { coverage }).espesoresCanto, [0.45]);
-
-  // Un cambio de canto de una pieza que no existe se informa (el servidor responderia 400).
-  const fantasma: WizardUnit = { ...unit, cantosOverride: { ZOCALO: { LARGO_1: 2, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } } };
-  assert.ok(validateUnit(fantasma, definition(), "REDONDEAR").generales.some((message) => message.startsWith("ZOCALO:")));
+  // Frentes negros: no hay canto negro de 2 mm activo. No es un error.
+  const negro = validateUnit(unit, definition(), "REDONDEAR", { activePlateIds: new Set(activePlates(MATERIALS).map((item) => item.id)), configFondoId: "fibro" });
+  assert.equal(negro.ok, true);
+  // Un cambio de canto de una pieza que no existe no se manda (el servidor responderia 400).
+  const fantasma: WizardUnit = { ...unit, cantosOverride: { ZOCALO: { LARGO_1: "c-blanco-2" } } };
+  assert.ok(!("cantosOverride" in linePayload(fantasma, definition())));
 });
 
 test("catalogo que cambio con el asistente abierto: modulos que ya no estan, tarjetas y colores", () => {
@@ -383,10 +375,15 @@ test("catalogo que cambio con el asistente abierto: modulos que ya no estan, tar
   const inactivo = reconcileUnits(units.slice(0, 1), new Map([["bajo", definition({ activo: false })]]), before);
   assert.deepEqual(inactivo.quitados, ["Bajo mesada"]);
 
-  const colores = withAvailableColors({ ...units[0], colorFrentesId: "viejo", materialFondoId: "fino" }, definition(), MATERIALS);
+  const colores = withAvailableColors(
+    { ...units[0], colorFrentesId: "viejo", materialFondoId: "fino", cantosOverride: { PUERTA: { LARGO_1: "c-negro-2-inactivo", ANCHO_1: null } } },
+    definition(),
+    MATERIALS
+  );
   assert.equal(colores.changed, true);
   assert.equal(colores.unit.colorFrentesId, "");
   assert.equal(colores.unit.materialFondoId, "fino");
+  assert.deepEqual(colores.unit.cantosOverride, { PUERTA: { ANCHO_1: null } }, "un canto elegido que se desactivo vuelve al de por defecto");
   const igual = withAvailableColors(units[0], definition(), MATERIALS);
   assert.equal(igual.unit, units[0]);
 
@@ -451,7 +448,14 @@ test("borrador recuperado contra el catalogo de hoy: modulos, colores, fecha y p
     ["bajo", definition()],
     ["inactivo", definition({ id: "inactivo", activo: false })]
   ]);
-  const unit = { ...newUnit(definition(), DEFAULTS, MATERIALS), colorFrentesId: "viejo", materialFondoId: "fino", valores: { ANCHO: "900", BORRADA: "1" } };
+  // Un borrador de antes de DECISIONES 45 guardaba espesores: esos lados vuelven al de por defecto, con un aviso.
+  const unit = {
+    ...newUnit(definition(), DEFAULTS, MATERIALS),
+    colorFrentesId: "viejo",
+    materialFondoId: "fino",
+    valores: { ANCHO: "900", BORRADA: "1" },
+    cantosOverride: { PUERTA: { LARGO_1: 2, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } } as never
+  };
   const { draft, avisos } = restoreWizardDraft(
     {
       cliente: "Ana",
@@ -462,7 +466,7 @@ test("borrador recuperado contra el catalogo de hoy: modulos, colores, fecha y p
         { moduloId: "no-existe", cantidad: 1 }
       ],
       units: [unit, newUnit(definition({ id: "inactivo" }), DEFAULTS, MATERIALS)],
-      defaults: { colorEsqueletoId: "blanco", colorFrentesId: "viejo", colorCantoId: "blanco" },
+      defaults: { colorEsqueletoId: "blanco", colorFrentesId: "viejo" },
       step: 3
     },
     { definitions: defs, materials: MATERIALS, today: "2026-10-05", defaultFecha: "2026-10-20" }
@@ -476,7 +480,9 @@ test("borrador recuperado contra el catalogo de hoy: modulos, colores, fecha y p
   assert.equal(draft.step, 2, "nunca directo al paso 4");
   assert.equal(draft.defaults.colorFrentesId, "");
   assert.equal(draft.numeroContacto, "", "un campo que faltaba queda vacio");
-  assert.equal(avisos.length, 3);
+  assert.deepEqual(draft.units[0].cantosOverride, {}, "la pieza del formato viejo se descarta entera");
+  assert.equal(avisos.length, 4);
+  assert.ok(avisos.includes("Algunos cantos cambiados a mano no se pudieron recuperar: revisalos en el paso 4."));
 });
 
 test("paso 1: las mismas reglas que el alta (email como zod, fecha que existe, largos maximos)", () => {
@@ -511,30 +517,27 @@ test("borrador con un alta sin respuesta: la marca vuelve, con lo que se mando, 
   assert.notEqual(orderSignature({ a: 1, b: [1, 2] }), orderSignature({ a: 1, b: [2, 1] }));
 });
 
-test("cambiar de perfil: los cambios de canto quedan solo en los lados tocados, sobre el perfil nuevo", () => {
+test("cambiar de perfil, de color o de catalogo: los lados elegidos a mano quedan y los demas siguen al de por defecto", () => {
   const def = definition();
-  // Perfil A (1): PUERTA lleva L1 y A1 de 2 mm. Se cambia L2 a 1 mm.
-  let unit = withEdgeOverride(newUnit(def, DEFAULTS, MATERIALS), def, "PUERTA", "LARGO_2", 1);
-  assert.deepEqual(unit.cantosOverride.PUERTA, { LARGO_1: 2, LARGO_2: 1, ANCHO_1: 2, ANCHO_2: null });
-  // Perfil B (2): PUERTA no lleva cantos. Queda solo L2 = 1, no los 2 mm del perfil A que nadie toco.
-  unit = rebaseOverrides(unit, { definition: def, perfil: 1 }, { definition: def, perfil: 2 });
-  assert.equal(unit.perfilCantoOrden, 2);
-  assert.deepEqual(unit.cantosOverride.PUERTA, { LARGO_1: null, LARGO_2: 1, ANCHO_1: null, ANCHO_2: null });
-  assert.deepEqual(changedSides(unit, def, "PUERTA"), ["LARGO_2"]);
-  // Volver al perfil A con el mismo cambio: se mantiene solo L2.
-  const back = rebaseOverrides(unit, { definition: def, perfil: 2 }, { definition: def, perfil: 1 });
-  assert.deepEqual(back.cantosOverride.PUERTA, { LARGO_1: 2, LARGO_2: 1, ANCHO_1: 2, ANCHO_2: null });
-  // Un cambio que en el perfil nuevo coincide con el perfil se va.
-  const igual = withEdgeOverride(newUnit(def, DEFAULTS, MATERIALS), def, "LATERAL", "LARGO_1", null);
-  const enB = rebaseOverrides({ ...igual, cantosOverride: { LATERAL: { LARGO_1: 0.45, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } } }, { definition: def, perfil: 1 }, { definition: def, perfil: 2 });
-  assert.deepEqual(enB.cantosOverride, {});
-  // El catalogo cambia los cantos del perfil: los lados tocados se conservan y los demas toman lo nuevo.
+  let unit = withEdgeChoice(newUnit(def, DEFAULTS, MATERIALS), def, "PUERTA", "LARGO_2", "c-blanco-045", EDGES);
+  assert.deepEqual(unit.cantosOverride, { PUERTA: { LARGO_2: "c-blanco-045" } });
+  // Perfil B (2): la puerta no lleva cantos por defecto; el lado elegido a mano sigue.
+  unit = { ...unit, perfilCantoOrden: 2 };
+  assert.deepEqual(changedSides(unit, "PUERTA"), ["LARGO_2"]);
+  assert.equal(defaultEdgeId(unit, def, "PUERTA", "LARGO_1", EDGES), null);
+
+  // Un canto elegido que con otro color de frentes queda igual al de por defecto deja de ser un cambio.
+  const elegido = withEdgeChoice(newUnit(def, DEFAULTS, MATERIALS), def, "PUERTA", "LARGO_1", "c-blanco-2", EDGES);
+  assert.deepEqual(elegido.cantosOverride, { PUERTA: { LARGO_1: "c-blanco-2" } });
+  assert.deepEqual(normalizeOverrides({ ...elegido, colorFrentesId: "blanco" }, def, EDGES).cantosOverride, {});
+
+  // El catalogo cambia los cantos del perfil: el lado elegido se conserva, sin pasar nada.
   const nuevo = definition({
     piezas: def.piezas.map((pieza) => (pieza.codigo === "PUERTA" ? { ...pieza, cantos: [...pieza.cantos, { perfilOrden: 1, lado: "ANCHO_2" as const, espesorMm: 2 }] } : pieza))
   });
-  const conCambio = withEdgeOverride(newUnit(def, DEFAULTS, MATERIALS), def, "PUERTA", "LARGO_1", null);
+  const conCambio = withEdgeChoice(newUnit(def, DEFAULTS, MATERIALS), def, "PUERTA", "LARGO_1", "c-negro-045", EDGES);
   const reconciled = reconcileUnits([conCambio], new Map([["bajo", nuevo]]), new Map([["bajo", def]]));
-  assert.deepEqual(reconciled.units[0].cantosOverride.PUERTA, { LARGO_1: null, LARGO_2: null, ANCHO_1: 2, ANCHO_2: 2 });
+  assert.deepEqual(reconciled.units[0].cantosOverride, { PUERTA: { LARGO_1: "c-negro-045" } });
   // Un modulo que no se volvio a traer queda como esta y no se cuenta como quitado.
   const sinTraer = reconcileUnits([conCambio], new Map(), new Map([["bajo", def]]));
   assert.deepEqual(sinTraer, { units: [conCambio], quitados: [], cambiados: [] });

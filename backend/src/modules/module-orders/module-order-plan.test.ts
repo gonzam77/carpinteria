@@ -1,5 +1,5 @@
-// Tests de planModuleOrder (spec §17.1): material por rol, cantos por perfil y color, faltantes todos juntos,
-// codigo de barra, remark, orden, origen y encaje en la placa. Datos armados a mano, sin base de datos.
+// Tests de planModuleOrder (spec §17.1): material por rol, cantos por pieza (DECISIONES 45), codigo de barra, sin
+// remark, orden, origen y encaje en la placa. Datos armados a mano, sin base de datos.
 import assert from "node:assert/strict";
 import test from "node:test";
 import { moduleBarcode, planModuleOrder, type PlanCanto, type PlanInput, type PlanMaterial, type PlanModule } from "./module-order-plan.js";
@@ -89,7 +89,6 @@ const line = (extra: Partial<ModuleOrderLine> = {}): ModuleOrderLine => ({
   valores: {},
   colorEsqueletoId: "blanco",
   colorFrentesId: "negro",
-  colorCantoId: "blanco",
   perfilCantoOrden: 1,
   observaciones: null,
   cantosOverride: {},
@@ -145,20 +144,64 @@ test("el fondo propio del modulo gana al de la configuracion", () => {
   assert.equal(byCode(sinConfig.lines[0].rows, "FONDO").materialId, "fina", "alcanza con el fondo del modulo");
 });
 
-test("cantos del perfil elegido y del color de canto, con tolerancia en el espesor", () => {
+test("cada pieza lleva por defecto el canto del color de su placa y del espesor del perfil, con tolerancia", () => {
   const [perfil1] = okPlan(planModuleOrder(input([line()]))).lines;
   const lateral = byCode(perfil1.rows, "LATERAL");
   assert.deepEqual([lateral.cantoLargo1Id, lateral.cantoLargo2Id, lateral.cantoAncho1Id, lateral.cantoAncho2Id], ["canto-blanco-045", null, null, null]);
   assert.deepEqual([lateral.cantoLargo1, lateral.cantoLargo2], [true, false]);
+  // La puerta es negra y no hay canto negro de 2 mm: va sin canto, se avisa y no es un error (DECISIONES 45).
   const puerta = byCode(perfil1.rows, "PUERTA");
-  assert.deepEqual([puerta.cantoLargo1Id, puerta.cantoLargo2Id, puerta.cantoAncho1Id, puerta.cantoAncho2Id], Array(4).fill("canto-blanco-2"));
+  assert.deepEqual([puerta.cantoLargo1Id, puerta.cantoLargo2Id, puerta.cantoAncho1Id, puerta.cantoAncho2Id], [null, null, null, null]);
+  assert.equal(puerta.origen, "CALCULADO");
+  assert.deepEqual(
+    perfil1.sinCanto.map((item) => [item.piezaCodigo, item.lado, item.espesorMm, item.placa]),
+    [
+      ["PUERTA", "LARGO_1", 2, "Negro"],
+      ["PUERTA", "LARGO_2", 2, "Negro"],
+      ["PUERTA", "ANCHO_1", 2, "Negro"],
+      ["PUERTA", "ANCHO_2", 2, "Negro"]
+    ]
+  );
 
   const [perfil2] = okPlan(planModuleOrder(input([line({ perfilCantoOrden: 2 })]))).lines;
   assert.deepEqual(
     ["cantoLargo1Id", "cantoLargo2Id", "cantoAncho1Id", "cantoAncho2Id"].map((field) => byCode(perfil2.rows, "PUERTA")[field as "cantoLargo1Id"]),
-    Array(4).fill("canto-blanco-045")
+    Array(4).fill("canto-negro-045")
   );
   assert.equal(byCode(perfil2.rows, "ESTANTE").cantoLargo1Id, null);
+  assert.deepEqual(perfil2.sinCanto, []);
+
+  // Con frentes blancos, la puerta lleva el canto blanco de 2 mm (guardado con ruido de punto flotante).
+  const [blanca] = okPlan(planModuleOrder(input([line({ colorFrentesId: "blanco" })]))).lines;
+  assert.deepEqual(
+    ["cantoLargo1Id", "cantoAncho2Id"].map((field) => byCode(blanca.rows, "PUERTA")[field as "cantoLargo1Id"]),
+    ["canto-blanco-2", "canto-blanco-2"]
+  );
+});
+
+test("a mano se elige cualquier canto activo o ninguno, lado por lado; los lados que no se tocan siguen al de por defecto", () => {
+  const [planned] = okPlan(
+    planModuleOrder(
+      input([
+        line({
+          perfilCantoOrden: 2,
+          cantosOverride: {
+            puerta: { LARGO_1: "canto-blanco-2", ANCHO_2: null },
+            LATERAL: { LARGO_1: "canto-blanco-045" }
+          }
+        })
+      ])
+    )
+  ).lines;
+  const puerta = byCode(planned.rows, "PUERTA");
+  assert.deepEqual([puerta.cantoLargo1Id, puerta.cantoLargo2Id, puerta.cantoAncho1Id, puerta.cantoAncho2Id], ["canto-blanco-2", "canto-negro-045", "canto-negro-045", null]);
+  assert.deepEqual([puerta.cantoLargo1, puerta.cantoAncho2], [true, false]);
+  assert.equal(puerta.origen, "EDITADO");
+  assert.equal(byCode(planned.rows, "LATERAL").origen, "CALCULADO", "elegir el mismo canto que el de por defecto no es un cambio");
+  // Un lado sin canto de su color que se elige a mano ya no se avisa.
+  const [elegido] = okPlan(planModuleOrder(input([line({ cantosOverride: { PUERTA: { LARGO_1: "canto-negro-045", LARGO_2: null, ANCHO_1: null, ANCHO_2: null } } })]))).lines;
+  assert.deepEqual(elegido.sinCanto, []);
+  assert.equal(byCode(elegido.rows, "PUERTA").cantoLargo1Id, "canto-negro-045");
 });
 
 test("codigo de barra, remark, nombre, pieza de origen, orden y origen", () => {
@@ -166,7 +209,7 @@ test("codigo de barra, remark, nombre, pieza de origen, orden y origen", () => {
     planModuleOrder(
       input([
         line(),
-        line({ valores: { ESTANTES: 0 }, cantosOverride: { puerta: { LARGO_1: 0.45, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } } })
+        line({ valores: { ESTANTES: 0 }, cantosOverride: { puerta: { LARGO_1: "canto-blanco-045" } } })
       ])
     )
   );
@@ -193,28 +236,13 @@ test("codigo de barra, remark, nombre, pieza de origen, orden y origen", () => {
   assert.equal(moduleBarcode(null, 12, 7), "M----12-07");
 });
 
-test("faltan cantos: todos juntos, sin repetir y ordenados", () => {
-  const error = errorOf(planModuleOrder(input([line({ colorCantoId: "negro" }), line({ colorCantoId: "gris" }), line({ colorCantoId: "negro" })])));
-  assert.equal(error.code, "MISSING_EDGE_MATERIAL");
-  assert.deepEqual(error.details.faltantes, [
-    { colorId: "gris", colorNombre: "Gris", espesorMm: 0.45 },
-    { colorId: "gris", colorNombre: "Gris", espesorMm: 2 },
-    { colorId: "negro", colorNombre: "Negro", espesorMm: 2 }
-  ]);
-  assert.equal(
-    error.message,
-    'Falta el canto de 0,45 mm para "Gris". Falta el canto de 2 mm para "Gris". Falta el canto de 2 mm para "Negro". Cargalo en Materiales.'
-  );
-  assert.equal(error.problems.length, 3);
-});
-
 test("materiales que no sirven: todos juntos y sin repetir", () => {
   const error = errorOf(
     planModuleOrder(
       input(
         [
-          line({ colorEsqueletoId: "fina", colorFrentesId: "inactiva", colorCantoId: "canto-blanco-045" }),
-          line({ colorEsqueletoId: "fina", colorFrentesId: "inactiva", colorCantoId: "canto-blanco-045" })
+          line({ colorEsqueletoId: "fina", colorFrentesId: "inactiva", cantosOverride: { PUERTA: { LARGO_1: "inactiva" } } }),
+          line({ colorEsqueletoId: "fina", colorFrentesId: "inactiva" })
         ],
         { config: { redondeo: "REDONDEAR", materialFondoId: null } },
         [sampleModule({ piezas: sampleModule().piezas.map((pieza) => (pieza.rol === "FIJO" ? { ...pieza, materialFijoId: "inactiva" } : pieza)) })]
@@ -225,15 +253,15 @@ test("materiales que no sirven: todos juntos y sin repetir", () => {
   assert.deepEqual(error.problems.slice(0, 5), [
     'Módulo 1 (Bajo mesada): el color de esqueleto "Blanco 5,5" es de 5,5 mm y el módulo está pensado para placas de 18 mm.',
     'Módulo 1 (Bajo mesada): el color de frentes "Roble" está inactivo.',
-    "Módulo 1 (Bajo mesada): el color de los cantos no es una placa del sistema.",
     "Módulo 1 (Bajo mesada): tiene piezas de fondo y no hay material de fondo. Configuralo en Catálogo de módulos > Configuración.",
-    'Módulo 1 (Bajo mesada): el material fijo de "Zocalo" "Roble" está inactivo.'
+    'Módulo 1 (Bajo mesada): el material fijo de "Zocalo" "Roble" está inactivo.',
+    'Módulo 1 (Bajo mesada): el canto elegido para "Puerta" (Largo 1) no es un canto activo del sistema.'
   ]);
-  assert.equal(error.problems.length, 10, "cada modulo informa lo suyo");
+  assert.equal(error.problems.length, 9, "cada modulo informa lo suyo");
 });
 
 test("orden de los errores: primero los modulos, despues las formulas", () => {
-  const inactivo = errorOf(planModuleOrder(input([line({ moduloId: "m2" }), line({ moduloId: "no-existe", colorCantoId: "gris" })], {}, [sampleModule({ id: "m2", activo: false })])));
+  const inactivo = errorOf(planModuleOrder(input([line({ moduloId: "m2" }), line({ moduloId: "no-existe" })], {}, [sampleModule({ id: "m2", activo: false })])));
   assert.equal(inactivo.code, "MODULE_NOT_AVAILABLE");
   assert.deepEqual(inactivo.problems, ["El módulo 1 (Bajo mesada) está inactivo: no se puede pedir.", "El módulo 2 no existe en el catálogo."]);
 
@@ -304,7 +332,7 @@ test("el espesor de diseno se exige a esqueleto y frentes, mas fino o mas grueso
   assert.deepEqual(frentes.problems, ['Módulo 1 (Bajo mesada): el color de frentes "Blanco 5,5" es de 5,5 mm y el módulo está pensado para placas de 18 mm.']);
   const gruesa = errorOf(planModuleOrder(input([line({ colorEsqueletoId: "gruesa" })])));
   assert.deepEqual(gruesa.problems, ['Módulo 1 (Bajo mesada): el color de esqueleto "Gruesa" es de 25 mm y el módulo está pensado para placas de 18 mm.']);
-  okPlan(planModuleOrder(input([line({ colorCantoId: "blanco" })])));
+  okPlan(planModuleOrder(input([line()])));
 });
 
 test("sin piezas de fondo no hace falta material de fondo", () => {
@@ -322,20 +350,11 @@ test("si hay dos cantos del mismo color y espesor, gana el primero de la lista",
   assert.equal(lateral.cantoLargo1Id, "canto-blanco-045-b");
 });
 
-test("faltantes ordenados por color y espesor aunque aparezcan en otro orden", () => {
-  // La primera linea pide 2 mm (cambio a mano del lateral y puertas); la segunda, 0,45 (perfil 2).
-  const error = errorOf(
-    planModuleOrder(
-      input([
-        line({ colorCantoId: "gris", cantosOverride: { LATERAL: { LARGO_1: 2, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } } }),
-        line({ colorCantoId: "gris", perfilCantoOrden: 2 })
-      ])
-    )
-  );
-  assert.deepEqual(
-    (error.details.faltantes as Array<{ espesorMm: number }>).map((item) => item.espesorMm),
-    [0.45, 2]
-  );
+test("un cambio de cantos para una pieza que no existe es un error; para una que no se genera, no", () => {
+  const error = errorOf(planModuleOrder(input([line({ cantosOverride: { PUERTITA: { LARGO_1: null } } })])));
+  assert.equal(error.code, "MODULE_FORMULA_ERRORS");
+  assert.deepEqual(error.problems, ["Módulo 1 (Bajo mesada), PUERTITA: No existe la pieza PUERTITA para cambiarle los cantos."]);
+  okPlan(planModuleOrder(input([line({ valores: { ESTANTES: 0 }, cantosOverride: { ESTANTE: { LARGO_1: "canto-blanco-045" } } })])));
 });
 
 test("fondo elegido en la solicitud: le gana al del modulo y al de la configuracion (DECISIONES 32)", () => {

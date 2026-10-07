@@ -14,20 +14,19 @@ import { ensureSession } from "../api/session";
 import { ClientStep } from "../components/moduleOrderWizard/ClientStep";
 import { ModulePickerStep, type Seleccion } from "../components/moduleOrderWizard/ModulePickerStep";
 import { ReviewStep, type PreviewStatus } from "../components/moduleOrderWizard/ReviewStep";
-import { missingEdgesText, UnitsStep, useUnitValidations } from "../components/moduleOrderWizard/UnitsStep";
+import { UnitsStep, useUnitValidations } from "../components/moduleOrderWizard/UnitsStep";
 import { useAuth } from "../context/AuthContext";
 import { draftScope, useFormDraft } from "../hooks/useFormDraft";
 import type { RoundingMode } from "../lib/moduleFormula";
 import {
+  activeEdges,
   activePlates,
   applyColorsToAll,
   orderSignature,
-  rebaseOverrides,
   reconcileUnit,
   copyMeasuresToSameModel,
   defaultDeliveryDate,
   describeAge,
-  edgeThicknessesByColor,
   hasWizardContent,
   linePayload,
   newAltaKey,
@@ -38,7 +37,8 @@ import {
   validateClient,
   validateUnit,
   withAvailableColors,
-  withEdgeOverride,
+  normalizeOverrides,
+  withEdgeChoice,
   withoutEdgeOverride,
   type DefaultColors,
   type SentMark,
@@ -47,7 +47,7 @@ import {
   type WizardDraft,
   type WizardUnit
 } from "../lib/moduleOrderWizard";
-import type { EspesorCanto, LadoCanto, Material, ModuleCategory, ModuleDefinition, ModuleListItem, ModuleOrder, ModuleOrderPreview, ModulesConfig } from "../types";
+import type { LadoCanto, Material, ModuleCategory, ModuleDefinition, ModuleListItem, ModuleOrder, ModuleOrderPreview, ModulesConfig } from "../types";
 
 const STEPS = ["Cliente y entrega", "Elegir módulos", "Medidas y colores", "Revisar despiece"];
 /** Espera antes de recalcular despues de cambiar un canto: no se calcula en cada click (PLAN P12). */
@@ -55,8 +55,8 @@ const RECALC_DELAY_MS = 700;
 /** Un alta que termino fuera de la pantalla se muestra al volver solo si es reciente. */
 const CREATED_AWAY_MAX_MS = 10 * 60_000;
 /** Errores de la vista previa que pueden venir de un catalogo o materiales que cambiaron con el asistente abierto. */
-const CATALOG_ERRORS = new Set(["MODULE_NOT_AVAILABLE", "MODULE_FORMULA_ERRORS", "MODULE_MATERIAL_INVALID", "MISSING_EDGE_MATERIAL"]);
-const EMPTY_DEFAULTS: DefaultColors = { colorEsqueletoId: "", colorFrentesId: "", colorCantoId: "" };
+const CATALOG_ERRORS = new Set(["MODULE_NOT_AVAILABLE", "MODULE_FORMULA_ERRORS", "MODULE_MATERIAL_INVALID"]);
+const EMPTY_DEFAULTS: DefaultColors = { colorEsqueletoId: "", colorFrentesId: "" };
 const money = (value: number) => value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
 type CatalogData = { modules: ModuleListItem[]; categories: ModuleCategory[]; config: ModulesConfig };
@@ -73,8 +73,7 @@ function unitProblems(index: number, nombre: string, validation: UnitValidation 
   const detalle = [
     ...(validation?.faltantes.length ? [`falta elegir ${validation.faltantes.join(", ")}`] : []),
     ...Object.entries(validation?.porMedida ?? {}).map(([clave, mensajes]) => `${clave}: ${mensajes.join(", ")}`),
-    ...(validation?.generales ?? []),
-    ...(validation?.cantosFaltantes.length ? [`el color de cantos está ${missingEdgesText(validation.cantosFaltantes)} (cargalo en Materiales o elegí otro)`] : [])
+    ...(validation?.generales ?? [])
   ];
   return `Módulo ${index + 1} (${nombre}): ${detalle.join("; ")}.`;
 }
@@ -128,11 +127,12 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
 
   const today = todayInArgentina();
   const redondeo = (data?.config.redondeo ?? "REDONDEAR") as RoundingMode;
-  const coverage = useMemo(() => edgeThicknessesByColor(materials), [materials]);
+  // Para el canto por defecto de cada lado, como el servidor: el de la placa de la pieza (DECISIONES 45).
+  const edgeContext = useMemo(() => ({ cantos: activeEdges(materials), configFondoId: data?.config.materialFondoId ?? null }), [materials, data]);
   // Lo que el servidor revisa de los materiales, para que el paso 3 no diga "Listo" en algo que se va a rechazar.
   const checkContext: UnitCheckContext = useMemo(
-    () => ({ coverage, activePlateIds: new Set(activePlates(materials).map((material) => material.id)), configFondoId: data?.config.materialFondoId ?? null }),
-    [coverage, materials, data]
+    () => ({ activePlateIds: new Set(activePlates(materials).map((material) => material.id)), configFondoId: data?.config.materialFondoId ?? null }),
+    [materials, data]
   );
 
   const mounted = useRef(true);
@@ -574,7 +574,6 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
         if (refresh.needsReview) return;
         const { units: currentUnits, definitions: defs, materials: currentMaterials } = latest.current;
         const freshContext: UnitCheckContext = {
-          coverage: edgeThicknessesByColor(currentMaterials),
           activePlateIds: new Set(activePlates(currentMaterials).map((material) => material.id)),
           configFondoId: refresh.config.materialFondoId
         };
@@ -772,18 +771,17 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
         if (unit.uid !== uid) return unit;
         const next = { ...unit, ...patch };
         const definition = definitions.get(unit.moduloId);
-        // Con otro perfil, los cambios de canto quedan solo en los lados que se tocaron, sobre el perfil nuevo.
-        if (patch.perfilCantoOrden === undefined || patch.perfilCantoOrden === unit.perfilCantoOrden || !definition) return next;
-        return rebaseOverrides(next, { definition, perfil: unit.perfilCantoOrden }, { definition, perfil: patch.perfilCantoOrden });
+        // Con otro perfil, color o fondo, un canto elegido a mano que quedo igual al de por defecto deja de ser un cambio.
+        return definition ? normalizeOverrides(next, definition, edgeContext) : next;
       })
     );
 
-  const onEdgeChange = (uid: string, codigo: string, lado: LadoCanto, espesor: EspesorCanto | null) => {
+  const onEdgeChange = (uid: string, codigo: string, lado: LadoCanto, cantoId: string | null) => {
     if (creatingRef.current) return;
     const unit = latest.current.units.find((item) => item.uid === uid);
     const definition = unit ? definitions.get(unit.moduloId) : undefined;
     if (!unit || !definition) return;
-    const next = withEdgeOverride(unit, definition, codigo, lado, espesor);
+    const next = withEdgeChoice(unit, definition, codigo, lado, cantoId, edgeContext);
     // Si no cambio nada, no hay nada que recalcular.
     if (next === unit) return;
     setUnits((list) => list.map((item) => (item.uid === uid ? next : item)));
@@ -974,7 +972,6 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
           definitions={definitions}
           validations={validations}
           materials={materials}
-          coverage={coverage}
           configFondoId={data.config.materialFondoId}
           defaults={defaults}
           onDefaultsChange={(patch) => setDefaults((current) => ({ ...current, ...patch }))}
@@ -991,7 +988,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
           units={units}
           definitions={definitions}
           materials={materials}
-          edgeCoverage={coverage}
+          edgeContext={edgeContext}
           planMaterials={materials}
           herrajesHabilitados={data.config.herrajesHabilitados}
           locked={creating}

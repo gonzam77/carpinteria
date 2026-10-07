@@ -388,7 +388,7 @@ export function evaluateModuleDefinition(definition: ModuleDefinitionInput, valo
 
 export type EdgeSide = "LARGO_1" | "LARGO_2" | "ANCHO_1" | "ANCHO_2";
 export const EDGE_SIDES: readonly EdgeSide[] = ["LARGO_1", "LARGO_2", "ANCHO_1", "ANCHO_2"];
-/** Espesor del canto de cada lado de una pieza, en mm, o null si ese lado va sin canto. */
+/** Espesor del canto de cada lado de una pieza segun su perfil, en mm, o null si ese lado va sin canto. */
 export type PieceEdges = Record<EdgeSide, number | null>;
 export type PieceRole = "ESQUELETO" | "FRENTE" | "FONDO" | "FIJO";
 
@@ -418,9 +418,8 @@ export type OrderedModulePiece = {
   permiteRotar: boolean;
   /** 1..n entre las piezas que se generan, en el orden del modulo. Va en el codigo de barra y en la hoja de taller. */
   orden: number;
+  /** Los del perfil elegido. El canto concreto de cada lado (y los cambios a mano) se eligen despues (DECISIONES 45). */
   cantos: PieceEdges;
-  /** true si los cantos se cambiaron a mano y ya no son los del perfil (origen EDITADO). */
-  editado: boolean;
 };
 
 export type ModulePiecesResult = {
@@ -436,14 +435,15 @@ export type ModulePiecesResult = {
  * exactamente las mismas piezas en todos lados.
  * - Las medidas salen de evaluateModuleDefinition, con el redondeo de ConfiguracionModulos (obligatorio).
  * - Las piezas van en el orden del modulo; las de cantidad 0 no se generan y no ocupan numero de orden.
- * - Los cantos son los del perfil elegido, salvo los que se cambiaron a mano (cantosOverride, por codigo).
+ * - Los cantos son los del perfil elegido. Que canto lleva cada lado, y los cambios a mano, los resuelven el armado
+ *   de la solicitud (module-order-plan.ts) y el asistente, con el canto concreto (DECISIONES 45).
  * - Es estricto con los valores: una medida que el modulo no tiene, o una calculada, es un error, porque un
  *   nombre mal escrito haria que se corte con el valor por defecto sin que nadie lo note.
  */
 export function buildModulePieces(
   definition: CatalogModuleDef,
   valores: Record<string, number>,
-  opts: { redondeo: RoundingMode; perfilOrden: number; cantosOverride?: Record<string, PieceEdges> }
+  opts: { redondeo: RoundingMode; perfilOrden: number }
 ): ModulePiecesResult {
   const errores: ModuleError[] = [];
   const params = new Map(definition.parametros.map((param) => [param.clave.toUpperCase(), param]));
@@ -476,22 +476,12 @@ export function buildModulePieces(
   errores.push(...evaluation.errores);
 
   const byCode = new Map(ordered.map((pieza) => [pieza.codigo.toUpperCase(), pieza]));
-  const overrides = new Map<string, PieceEdges>();
-  for (const [code, edges] of Object.entries(opts.cantosOverride ?? {})) {
-    const codigo = code.toUpperCase();
-    // Un cambio para una pieza que existe pero no se genera con estas medidas (cantidad 0) no molesta: puede
-    // venir de un paso anterior del asistente. Uno para una pieza que no existe es un error.
-    if (!byCode.has(codigo)) errores.push({ ref: codigo, mensaje: `No existe la pieza ${codigo} para cambiarle los cantos` });
-    else overrides.set(codigo, edges);
-  }
 
   const piezas = evaluation.piezas.map((result, index): OrderedModulePiece => {
     const pieza = byCode.get(result.codigo.toUpperCase())!;
-    const perfil = Object.fromEntries(
+    const cantos = Object.fromEntries(
       EDGE_SIDES.map((lado) => [lado, pieza.cantos.find((canto) => canto.perfilOrden === opts.perfilOrden && canto.lado === lado)?.espesorMm ?? null])
     ) as PieceEdges;
-    const override = overrides.get(result.codigo.toUpperCase());
-    const cantos = override ? (Object.fromEntries(EDGE_SIDES.map((lado) => [lado, override[lado] ?? null])) as PieceEdges) : perfil;
     return {
       codigo: pieza.codigo,
       nombre: pieza.nombre,
@@ -502,8 +492,7 @@ export function buildModulePieces(
       cantidad: result.cantidad,
       permiteRotar: pieza.permiteRotar,
       orden: index + 1,
-      cantos,
-      editado: Boolean(override) && EDGE_SIDES.some((lado) => cantos[lado] !== perfil[lado])
+      cantos
     };
   });
 

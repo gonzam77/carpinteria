@@ -246,24 +246,11 @@ test("buildModulePieces: orden del modulo, orden 1..n sin las piezas de cantidad
   assert.equal(conZocalo.piezas[1].materialFijoId, "negro");
 });
 
-test("buildModulePieces: cantos del perfil elegido y cambios a mano", () => {
+test("buildModulePieces: cantos del perfil elegido", () => {
   const perfil1 = buildModulePieces(sampleModule(), {}, { redondeo: "REDONDEAR", perfilOrden: 1 });
   assert.deepEqual(perfil1.piezas[0].cantos, { LARGO_1: 2, LARGO_2: null, ANCHO_1: null, ANCHO_2: null });
   const perfil2 = buildModulePieces(sampleModule(), {}, { redondeo: "REDONDEAR", perfilOrden: 2 });
   assert.deepEqual(perfil2.piezas[0].cantos, { LARGO_1: 0.45, LARGO_2: null, ANCHO_1: 0.45, ANCHO_2: null });
-  assert.ok(perfil2.piezas.every((pieza) => !pieza.editado));
-
-  const override = { lateral: { LARGO_1: 2, LARGO_2: 2, ANCHO_1: null, ANCHO_2: null }, ESTANTE: { LARGO_1: null, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } };
-  const editado = buildModulePieces(sampleModule(), {}, { redondeo: "REDONDEAR", perfilOrden: 1, cantosOverride: override });
-  assert.deepEqual(editado.errores, []);
-  assert.deepEqual(editado.piezas[0].cantos, { LARGO_1: 2, LARGO_2: 2, ANCHO_1: null, ANCHO_2: null });
-  assert.equal(editado.piezas[0].editado, true);
-  assert.equal(editado.piezas[1].editado, false, "un cambio igual al perfil no cuenta como editado");
-
-  const zocaloApagado = buildModulePieces(sampleModule(), {}, { redondeo: "REDONDEAR", perfilOrden: 1, cantosOverride: { ZOCALO: override.lateral } });
-  assert.deepEqual(zocaloApagado.errores, [], "un cambio para una pieza que no se genera no es un error");
-  const inexistente = buildModulePieces(sampleModule(), {}, { redondeo: "REDONDEAR", perfilOrden: 1, cantosOverride: { PUERTA: override.lateral } });
-  assert.deepEqual(inexistente.errores, [{ ref: "PUERTA", mensaje: "No existe la pieza PUERTA para cambiarle los cantos" }]);
 });
 
 test("buildModulePieces: es estricto con las medidas y el perfil", () => {

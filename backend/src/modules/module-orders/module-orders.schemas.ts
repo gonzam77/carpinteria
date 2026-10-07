@@ -7,17 +7,19 @@ import { todayInBusinessZone } from "../../utils/dates.js";
 /** Un id obligatorio, con el mismo mensaje si falta, si no es texto o si no tiene formato de id. */
 const requiredId = (message: string) => z.string({ required_error: message, invalid_type_error: message }).uuid(message);
 
-const espesorCanto = z.union([z.literal(0.45), z.literal(1), z.literal(2)], {
-  errorMap: () => ({ message: "Cada lado va sin canto (null) o con canto de 0,45, 1 o 2 mm" })
-});
+const cantoElegido = z
+  .string({ invalid_type_error: "Cada lado lleva el canto elegido o null (sin canto)" })
+  .uuid("Cada lado lleva el canto elegido o null (sin canto)")
+  .nullable()
+  .optional();
 
-/** Cantos cambiados a mano en el paso 4 del asistente: el espesor de cada lado, o null si va sin canto. */
-const cantosOverrideSchema = z.object({
-  LARGO_1: espesorCanto.nullable(),
-  LARGO_2: espesorCanto.nullable(),
-  ANCHO_1: espesorCanto.nullable(),
-  ANCHO_2: espesorCanto.nullable()
-});
+/**
+ * Cantos cambiados a mano en el paso 4 del asistente (DECISIONES 45): solo los lados que se tocaron, cada uno con el
+ * canto elegido (cualquier canto activo) o null si va sin canto. Los otros lados siguen al perfil y al color de la placa.
+ */
+const cantosOverrideSchema = z
+  .object({ LARGO_1: cantoElegido, LARGO_2: cantoElegido, ANCHO_1: cantoElegido, ANCHO_2: cantoElegido })
+  .strict("Los lados de una pieza son LARGO_1, LARGO_2, ANCHO_1 y ANCHO_2");
 
 const medida = z
   .number({ required_error: "Falta el valor de una medida", invalid_type_error: "Las medidas tienen que ser números" })
@@ -30,7 +32,6 @@ export const moduleLineSchema = z
     valores: z.record(z.string(), medida, { required_error: "Faltan las medidas del módulo", invalid_type_error: "Faltan las medidas del módulo" }),
     colorEsqueletoId: requiredId("Elegí el color de esqueleto"),
     colorFrentesId: requiredId("Elegí el color de frentes"),
-    colorCantoId: requiredId("Elegí el color de los cantos"),
     // Obligatorio, como en spec §13.2: el asistente manda el que eligio (por defecto, el predeterminado del modulo).
     perfilCantoOrden: z.union([z.literal(1), z.literal(2)], { errorMap: () => ({ message: "Elegí el perfil de cantos del módulo (1 o 2)" }) }),
     // Opcional (DECISIONES 32): sin elegir, las piezas de fondo van en el material de fondo del modulo o de la configuracion.

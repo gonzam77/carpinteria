@@ -8,7 +8,6 @@ import {
   activePlates,
   designPlates,
   hasBackPieces,
-  missingEdgeThicknesses,
   validateUnit,
   type DefaultColors,
   type UnitCheckContext,
@@ -21,7 +20,6 @@ import { EDITED_BLUE } from "../PieceEdgesToggles";
 
 const mmText = (value: number) => value.toLocaleString("es-AR", { useGrouping: false, maximumFractionDigits: 2 });
 const plateLabel = (material: Material) => `${material.nombre.trim()} · ${mmText(material.espesorMm)} mm`;
-export const missingEdgesText = (missing: number[]) => `sin canto de ${missing.map((value) => `${mmText(value)} mm`).join(" ni ")}`;
 
 /**
  * Valida todas las tarjetas con el motor compartido (lo usa tambien la pagina para no dejar avanzar). Con el contexto
@@ -53,7 +51,6 @@ function DefaultColorsBar({
 }) {
   // Esqueleto y frentes: las placas de los espesores de diseno de los modulos elegidos (spec §8.6).
   const design = espesores.flatMap((espesor) => designPlates(materials, espesor));
-  const plates = activePlates(materials);
   return (
     <Paper sx={{ p: 2, borderRadius: "10px" }}>
       <Typography component="h2" fontWeight={800} fontSize="1rem" gutterBottom>
@@ -74,13 +71,6 @@ function DefaultColorsBar({
             </MenuItem>
           ))}
         </TextField>
-        <TextField select size="small" label="Cantos" value={defaults.colorCantoId} onChange={(event) => onChange({ colorCantoId: event.target.value })} sx={{ flex: 1 }}>
-          {plates.map((material) => (
-            <MenuItem key={material.id} value={material.id}>
-              {plateLabel(material)}
-            </MenuItem>
-          ))}
-        </TextField>
         <Button variant="outlined" startIcon={<FormatPaintIcon />} onClick={onApply} sx={{ flexShrink: 0, width: { xs: "100%", md: "auto" } }}>
           Aplicar a todos
         </Button>
@@ -95,7 +85,6 @@ function UnitCard({
   definition,
   validation,
   materials,
-  coverage,
   catalogFondoName,
   sameModelCount,
   showCopy,
@@ -107,7 +96,6 @@ function UnitCard({
   definition: ModuleDefinition;
   validation: UnitValidation | undefined;
   materials: Material[];
-  coverage: Map<string, number[]>;
   catalogFondoName: string;
   sameModelCount: number;
   showCopy: boolean;
@@ -116,9 +104,6 @@ function UnitCard({
 }) {
   const design = designPlates(materials, definition.espesorDisenoMm);
   const plates = activePlates(materials);
-  // Los espesores que usan las piezas que se generan con estas medidas, este perfil y los cambios del paso 4.
-  const required = validation?.espesoresCanto ?? [];
-  const missingForCanto = validation?.cantosFaltantes ?? [];
   const editados = Object.keys(unit.cantosOverride).length;
   const pedibles = definition.parametros.filter((param) => param.tipo !== "CALCULADO");
   const hasErrors = Boolean(validation && !validation.ok);
@@ -217,27 +202,6 @@ function UnitCard({
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            select
-            size="small"
-            label="Cantos"
-            value={unit.colorCantoId}
-            onChange={(event) => onChange({ colorCantoId: event.target.value })}
-            error={!unit.colorCantoId || missingForCanto.length > 0}
-            helperText={
-              missingForCanto.length ? `Este color está ${missingEdgesText(missingForCanto)}: cargalo en Materiales o elegí otro.` : unit.colorCantoId ? " " : "Elegí un color"
-            }
-          >
-            {plates.map((material) => {
-              const missing = missingEdgeThicknesses(material.id, required, coverage);
-              return (
-                <MenuItem key={material.id} value={material.id}>
-                  {plateLabel(material)}
-                  {missing.length ? ` (${missingEdgesText(missing)})` : ""}
-                </MenuItem>
-              );
-            })}
-          </TextField>
           {hasBackPieces(definition) && (
             <TextField
               select
@@ -280,7 +244,7 @@ function UnitCard({
             <Stack direction="row" spacing={0.5} alignItems="center" useFlexGap flexWrap="wrap">
               <Chip size="small" variant="outlined" label={`${editados} ${editados === 1 ? "pieza" : "piezas"} con cantos cambiados`} sx={{ borderColor: EDITED_BLUE, color: EDITED_BLUE }} />
               <Button size="small" startIcon={<RestartAltIcon />} onClick={() => onChange({ cantosOverride: {} })} sx={{ color: EDITED_BLUE }}>
-                Volver todas al perfil
+                Volver todas a los cantos por defecto
               </Button>
             </Stack>
           )}
@@ -316,7 +280,6 @@ export function UnitsStep({
   definitions,
   validations,
   materials,
-  coverage,
   configFondoId,
   defaults,
   onDefaultsChange,
@@ -329,7 +292,6 @@ export function UnitsStep({
   validations: Map<string, UnitValidation>;
   materials: Material[];
   /** Espesores de canto activos por color (edgeThicknessesByColor). */
-  coverage: Map<string, number[]>;
   configFondoId: string | null;
   defaults: DefaultColors;
   onDefaultsChange: (patch: Partial<DefaultColors>) => void;
@@ -366,7 +328,6 @@ export function UnitsStep({
               definition={definition}
               validation={validations.get(unit.uid)}
               materials={materials}
-              coverage={coverage}
               catalogFondoName={fondoLabel(definition.materialFondoId ?? configFondoId)}
               sameModelCount={sameModel.length - 1}
               showCopy={sameModel.length > 1 && sameModel[0].uid === unit.uid}

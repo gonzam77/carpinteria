@@ -14,7 +14,7 @@ import { normalizeDetails, type NormalizedDetail } from "../orders/order-details
 import { buildOrderEstimateSnapshot, getOptimizerSettings } from "../orders/order-estimate.service.js";
 import { DETALLES_ORDENADOS } from "../orders/order-queries.js";
 import { compareForList } from "./module-order-list.js";
-import { moduleBarcode, planModuleOrder, type PlanModule } from "./module-order-plan.js";
+import { moduleBarcode, planModuleOrder, type MissingDefaultEdge, type PlanModule } from "./module-order-plan.js";
 import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderLine } from "./module-orders.schemas.js";
 
 export { moduleBarcode } from "./module-order-plan.js";
@@ -37,7 +37,6 @@ export type BuiltModuleLine = {
   valores: Record<string, number>;
   colorEsqueletoId: string;
   colorFrentesId: string;
-  colorCantoId: string;
   perfilCantoOrden: 1 | 2;
   /** Placa que usaron las piezas de fondo (la elegida, la del modulo o la de la configuracion); null si no tiene fondo. */
   materialFondoId: string | null;
@@ -45,6 +44,8 @@ export type BuiltModuleLine = {
   definicionSnapshot: ReturnType<typeof snapshotOf>;
   piezas: OrderedModulePiece[];
   detalles: NormalizedDetail[];
+  /** Lados que van sin canto porque la placa de la pieza no tiene uno de su color (DECISIONES 45): se avisan. */
+  cantosSinElegir: MissingDefaultEdge[];
 };
 
 /**
@@ -61,7 +62,7 @@ export async function buildModuleOrder(tx: Tx, lines: ModuleOrderLine[], context
   const modules = new Map(rawModules.map((module) => [module.id, { raw: module, definition: toDefinition(module) satisfies PlanModule }]));
 
   // Todas las placas que la solicitud puede usar: colores, fondos (del modulo y de la configuracion) y fijos.
-  const materialIds = new Set<string>(lines.flatMap((line) => [line.colorEsqueletoId, line.colorFrentesId, line.colorCantoId, ...(line.materialFondoId ? [line.materialFondoId] : [])]));
+  const materialIds = new Set<string>(lines.flatMap((line) => [line.colorEsqueletoId, line.colorFrentesId, ...(line.materialFondoId ? [line.materialFondoId] : [])]));
   if (config.materialFondoId) materialIds.add(config.materialFondoId);
   for (const { definition } of modules.values()) {
     if (definition.materialFondoId) materialIds.add(definition.materialFondoId);
@@ -69,9 +70,10 @@ export async function buildModuleOrder(tx: Tx, lines: ModuleOrderLine[], context
   }
   const [materials, cantos] = await Promise.all([
     tx.material.findMany({ where: { id: { in: [...materialIds] } } }),
+    // Todos los cantos activos: por defecto cada pieza lleva el de su placa, y a mano se puede elegir cualquiera.
     tx.material.findMany({
-      where: { tipo: TipoMaterial.CANTO, activo: true, placaMaterialId: { in: [...new Set(lines.map((line) => line.colorCantoId))] } },
-      orderBy: [{ nombre: "asc" }, { id: "asc" }] // si hubiera dos del mismo color y espesor, siempre el mismo
+      where: { tipo: TipoMaterial.CANTO, activo: true },
+      orderBy: [{ nombre: "asc" }, { id: "asc" }] // si hubiera dos de la misma placa y espesor, siempre el mismo
     })
   ]);
 
@@ -92,7 +94,7 @@ export async function buildModuleOrder(tx: Tx, lines: ModuleOrderLine[], context
   const flat = plan.lines.flatMap((item) => item.rows).map((row, indice) => ({ ...row, indice }));
   const detalles = await normalizeDetails(flat, context.cliente, context.numeroContacto, tx);
   let offset = 0;
-  const lineas: BuiltModuleLine[] = plan.lines.map(({ posicion, line, module, piezas, valores, materialFondoId }) => {
+  const lineas: BuiltModuleLine[] = plan.lines.map(({ posicion, line, module, piezas, valores, materialFondoId, sinCanto }) => {
     const item: BuiltModuleLine = {
       posicion,
       moduloId: module.id,
@@ -101,13 +103,13 @@ export async function buildModuleOrder(tx: Tx, lines: ModuleOrderLine[], context
       valores,
       colorEsqueletoId: line.colorEsqueletoId,
       colorFrentesId: line.colorFrentesId,
-      colorCantoId: line.colorCantoId,
       perfilCantoOrden: line.perfilCantoOrden,
       materialFondoId,
       observaciones: line.observaciones?.trim() || null,
       definicionSnapshot: snapshotOf(modules.get(module.id)!.raw),
       piezas,
-      detalles: detalles.slice(offset, offset + piezas.length)
+      detalles: detalles.slice(offset, offset + piezas.length),
+      cantosSinElegir: sinCanto
     };
     offset += piezas.length;
     return item;
@@ -140,7 +142,6 @@ export const MODULE_ORDER_INCLUDE = {
     include: {
       colorEsqueleto: { select: PLATE_SELECT },
       colorFrentes: { select: PLATE_SELECT },
-      colorCanto: { select: PLATE_SELECT },
       materialFondo: { select: PLATE_SELECT }
     }
   },
@@ -271,7 +272,6 @@ async function insertModuleOrder(
         valores: linea.valores,
         colorEsqueletoId: linea.colorEsqueletoId,
         colorFrentesId: linea.colorFrentesId,
-        colorCantoId: linea.colorCantoId,
         perfilCantoOrden: linea.perfilCantoOrden,
         materialFondoId: linea.materialFondoId,
         observaciones: linea.observaciones,

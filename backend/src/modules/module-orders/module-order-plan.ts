@@ -18,15 +18,18 @@ export type PlanMaterial = {
   anchoPlaca: number | null;
   altoPlaca: number | null;
 };
-/** Un CANTO activo: se elige por el color (placaMaterialId) y el espesor de cada lado. */
+/** Un CANTO activo. Por defecto cada lado lleva el de la placa de la pieza (placaMaterialId) y el espesor del perfil. */
 export type PlanCanto = { id: string; nombre: string; placaMaterialId: string | null; espesorMm: number };
+
+/** Un lado que el perfil pide con canto, pero la placa de la pieza no tiene canto de su color y espesor: va sin canto. */
+export type MissingDefaultEdge = { piezaCodigo: string; pieza: string; lado: EdgeSide; espesorMm: number; placa: string };
 
 export type PlanInput = {
   lines: ModuleOrderLine[];
   modules: Map<string, PlanModule>;
   /** Placas que puede usar la solicitud: colores, fondos y materiales fijos (puede traer de mas). */
   materials: Map<string, PlanMaterial>;
-  /** CANTO activos de los colores de canto elegidos. Si hubiera dos del mismo color y espesor, gana el primero. */
+  /** Todos los CANTO activos. Si hubiera dos de la misma placa y espesor, el de por defecto es el primero. */
   cantos: PlanCanto[];
   config: { redondeo: RoundingMode; materialFondoId: string | null };
   optimizer: { espesorSierraMm: number; perfiladoBordeMm: number };
@@ -45,6 +48,8 @@ export type PlannedLine = {
   materialFondoId: string | null;
   /** Una fila por pieza, en el mismo orden que `piezas`, lista para normalizeDetails. */
   rows: DetailInput[];
+  /** Lados que van sin canto porque la placa de la pieza no tiene uno de su color: se avisan, no son un error. */
+  sinCanto: MissingDefaultEdge[];
 };
 
 export type Plan = { ok: true; lines: PlannedLine[] } | { ok: false; error: PlanError };
@@ -55,6 +60,7 @@ const SIDE_FIELD: Record<EdgeSide, "cantoLargo1Id" | "cantoLargo2Id" | "cantoAnc
   ANCHO_1: "cantoAncho1Id",
   ANCHO_2: "cantoAncho2Id"
 };
+const SIDE_LABEL: Record<EdgeSide, string> = { LARGO_1: "Largo 1", LARGO_2: "Largo 2", ANCHO_1: "Ancho 1", ANCHO_2: "Ancho 2" };
 
 export const sameThickness = (a: number, b: number) => Math.abs(a - b) < 1e-6;
 const mm = (value: number) => value.toLocaleString("es-AR", { useGrouping: false, maximumFractionDigits: 2 });
@@ -82,9 +88,11 @@ const failure = (code: string, problems: string[], details: Record<string, unkno
  * responder, para que el asistente los muestre de una vez, en este orden:
  * 1. modulos que no existen o estan inactivos (MODULE_NOT_AVAILABLE);
  * 2. errores de formulas o de medidas (MODULE_FORMULA_ERRORS);
- * 3. colores, fondo o material fijo que no sirven (MODULE_MATERIAL_INVALID);
- * 4. cantos que faltan para un color y un espesor, todos juntos (MISSING_EDGE_MATERIAL);
- * 5. piezas que no entran en su placa, con la funcion de encaje del optimizador (MODULE_PIECES_DO_NOT_FIT, R2).
+ * 3. colores, fondo, material fijo o cantos elegidos que no sirven (MODULE_MATERIAL_INVALID);
+ * 4. piezas que no entran en su placa, con la funcion de encaje del optimizador (MODULE_PIECES_DO_NOT_FIT, R2).
+ * Cada lado lleva por defecto el canto del color de la placa de su pieza y del espesor del perfil; si esa placa no
+ * tiene uno, va sin canto y se avisa (sinCanto), sin error. Un cambio a mano elige cualquier canto activo, o ninguno
+ * (DECISIONES 45).
  * Las filas no tienen numero de pedido ni pedidoModuloId: el alta los completa dentro de su transaccion.
  */
 export function planModuleOrder(input: PlanInput): Plan {
@@ -102,7 +110,13 @@ export function planModuleOrder(input: PlanInput): Plan {
   // 2. Piezas, con el armador compartido (R6)
   const built = lines.map((line, index) => {
     const module = modules.get(line.moduloId)!;
-    const result = buildModulePieces(module, line.valores, { redondeo: config.redondeo, perfilOrden: line.perfilCantoOrden, cantosOverride: line.cantosOverride });
+    const result = buildModulePieces(module, line.valores, { redondeo: config.redondeo, perfilOrden: line.perfilCantoOrden });
+    // Un cambio para una pieza que existe pero no se genera con estas medidas (cantidad 0) no molesta: puede venir de un
+    // paso anterior del asistente. Uno para una pieza que no existe es un error.
+    const codes = new Set(module.piezas.map((pieza) => pieza.codigo.toUpperCase()));
+    for (const codigo of Object.keys(line.cantosOverride ?? {}).map((code) => code.toUpperCase())) {
+      if (!codes.has(codigo)) result.errores.push({ ref: codigo, mensaje: `No existe la pieza ${codigo} para cambiarle los cantos` });
+    }
     return { posicion: index + 1, line, module, ...result };
   });
   const withErrors = built.filter((item) => item.errores.length);
@@ -118,6 +132,7 @@ export function planModuleOrder(input: PlanInput): Plan {
 
   // 3. Materiales: colores de la solicitud, fondo y materiales fijos
   const materialProblems: string[] = [];
+  const cantoById = new Map(cantos.map((canto) => [canto.id, canto]));
   const checkPlate = (id: string | null, where: string, rotulo: string, espesorDisenoMm?: number) => {
     const plate = id ? materials.get(id) : undefined;
     if (!plate || plate.tipo !== "PLACA") materialProblems.push(`${where}: ${rotulo} no es una placa del sistema.`);
@@ -131,7 +146,6 @@ export function planModuleOrder(input: PlanInput): Plan {
     const where = `Módulo ${posicion} (${module.nombre})`;
     checkPlate(line.colorEsqueletoId, where, "el color de esqueleto", module.espesorDisenoMm);
     checkPlate(line.colorFrentesId, where, "el color de frentes", module.espesorDisenoMm);
-    checkPlate(line.colorCantoId, where, "el color de los cantos");
     // El fondo elegido en la solicitud se revisa siempre, como los colores, aunque el modulo no tenga piezas de fondo.
     if (line.materialFondoId) checkPlate(line.materialFondoId, where, "el material de fondo elegido");
     else if (piezas.some((pieza) => pieza.rol === "FONDO")) {
@@ -140,32 +154,42 @@ export function planModuleOrder(input: PlanInput): Plan {
       else checkPlate(fondoId, where, "el material de fondo");
     }
     for (const pieza of piezas.filter((item) => item.rol === "FIJO")) checkPlate(pieza.materialFijoId, where, `el material fijo de "${pieza.nombre}"`);
+    // Los cantos elegidos a mano: cualquier canto activo (DECISIONES 45).
+    for (const [codigo, lados] of Object.entries(line.cantosOverride ?? {})) {
+      const nombre = module.piezas.find((pieza) => pieza.codigo.toUpperCase() === codigo.toUpperCase())?.nombre ?? codigo;
+      for (const lado of EDGE_SIDES) {
+        const cantoId = lados[lado];
+        if (cantoId && !cantoById.has(cantoId)) materialProblems.push(`${where}: el canto elegido para "${nombre}" (${SIDE_LABEL[lado]}) no es un canto activo del sistema.`);
+      }
+    }
   }
   if (materialProblems.length) return failure("MODULE_MATERIAL_INVALID", [...new Set(materialProblems)]);
 
-  // 4. Filas, con el canto del color elegido y del espesor de cada lado (spec §8.2)
-  const cantoFor = (colorId: string, espesorMm: number) => cantos.find((canto) => canto.placaMaterialId === colorId && sameThickness(canto.espesorMm, espesorMm)) ?? null;
-  const missing = new Map<string, { colorId: string; colorNombre: string; espesorMm: number }>();
-  const planned: PlannedLine[] = built.map(({ posicion, line, module, piezas, valores }) => ({
-    posicion,
-    line,
-    module,
-    piezas,
-    valores,
-    materialFondoId: piezas.some((pieza) => pieza.rol === "FONDO") ? fondoIdFor(line, module, config) : null,
-    rows: piezas.map((pieza): DetailInput => {
+  // Filas: cada lado con el canto elegido a mano o, si no se toco, el de la placa de la pieza (spec §8.2, DECISIONES 45)
+  const defaultCanto = (placaId: string, espesorMm: number) =>
+    cantos.find((canto) => canto.placaMaterialId === placaId && sameThickness(canto.espesorMm, espesorMm)) ?? null;
+  const planned: PlannedLine[] = built.map(({ posicion, line, module, piezas, valores }) => {
+    const sinCanto: MissingDefaultEdge[] = [];
+    const overrides = new Map(Object.entries(line.cantosOverride ?? {}).map(([codigo, lados]) => [codigo.toUpperCase(), lados]));
+    const rows = piezas.map((pieza): DetailInput => {
       const materialId =
         pieza.rol === "ESQUELETO" ? line.colorEsqueletoId : pieza.rol === "FRENTE" ? line.colorFrentesId : pieza.rol === "FONDO" ? fondoIdFor(line, module, config)! : pieza.materialFijoId!;
+      const override = overrides.get(pieza.codigo.toUpperCase()) ?? {};
+      let editado = false;
       const edgeIds = Object.fromEntries(
         EDGE_SIDES.map((lado) => {
           const espesor = pieza.cantos[lado];
-          if (espesor === null) return [SIDE_FIELD[lado], null];
-          const canto = cantoFor(line.colorCantoId, espesor);
-          if (!canto) {
-            const color = materials.get(line.colorCantoId)!;
-            missing.set(`${color.id}:${espesor}`, { colorId: color.id, colorNombre: color.nombre.trim(), espesorMm: espesor });
+          const porDefecto = espesor === null ? null : (defaultCanto(materialId, espesor)?.id ?? null);
+          const elegido = override[lado];
+          if (elegido !== undefined) {
+            // Elegido a mano: la pieza queda EDITADO solo si es distinto del que llevaria por defecto.
+            if (elegido !== porDefecto) editado = true;
+            return [SIDE_FIELD[lado], elegido];
           }
-          return [SIDE_FIELD[lado], canto?.id ?? null];
+          if (espesor !== null && !porDefecto) {
+            sinCanto.push({ piezaCodigo: pieza.codigo, pieza: pieza.nombre, lado, espesorMm: espesor, placa: materials.get(materialId)!.nombre.trim() });
+          }
+          return [SIDE_FIELD[lado], porDefecto];
         })
       ) as Pick<DetailInput, "cantoLargo1Id" | "cantoLargo2Id" | "cantoAncho1Id" | "cantoAncho2Id">;
       return {
@@ -187,18 +211,23 @@ export function planModuleOrder(input: PlanInput): Plan {
         nombreCliente: null,
         nombreProducto: pieza.nombre,
         piezaCodigo: pieza.codigo,
-        origen: pieza.editado ? "EDITADO" : "CALCULADO",
+        origen: editado ? "EDITADO" : "CALCULADO",
         orden: pieza.orden
       };
-    })
-  }));
-  if (missing.size) {
-    const faltantes = [...missing.values()].sort((a, b) => a.colorNombre.localeCompare(b.colorNombre, "es") || a.espesorMm - b.espesorMm);
-    const problems = faltantes.map((item) => `Falta el canto de ${mm(item.espesorMm)} mm para "${item.colorNombre}".`);
-    return failure("MISSING_EDGE_MATERIAL", problems, { faltantes }, `${problems.join(" ")} Cargalo en Materiales.`);
-  }
+    });
+    return {
+      posicion,
+      line,
+      module,
+      piezas,
+      valores,
+      materialFondoId: piezas.some((pieza) => pieza.rol === "FONDO") ? fondoIdFor(line, module, config) : null,
+      rows,
+      sinCanto
+    };
+  });
 
-  // 5. Encaje en la placa (spec §8.3), con la misma funcion que usa el optimizador (DECISIONES R2)
+  // 4. Encaje en la placa (spec §8.3), con la misma funcion que usa el optimizador (DECISIONES R2)
   const fitProblems: string[] = [];
   for (const { posicion, piezas, rows } of planned) {
     rows.forEach((row, index) => {

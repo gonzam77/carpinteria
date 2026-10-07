@@ -268,7 +268,14 @@ export type ModuleEvaluation = {
 
 export type TipoPedido = "CORTE" | "MODULOS";
 export type OrigenDetalle = "CALCULADO" | "EDITADO" | "MANUAL";
-export type PieceEdgesInput = Record<LadoCanto, EspesorCanto | null>;
+/**
+ * Cantos elegidos a mano para una pieza (DECISIONES 45): solo los lados que se tocaron, cada uno con el canto elegido
+ * (id de un material CANTO) o null si va sin canto. Los demas lados llevan el de por defecto.
+ */
+export type PieceEdgeChoice = Partial<Record<LadoCanto, string | null>>;
+
+/** Un lado que el perfil pide con canto, pero la placa de la pieza no tiene canto de su color: va sin canto. */
+export type MissingDefaultEdge = { piezaCodigo: string; pieza: string; lado: LadoCanto; espesorMm: number; placa: string };
 
 /** Un modulo de la solicitud como lo recibe la API. Es estricto: solo estos campos (DECISIONES 17). */
 export type ModuleOrderLineInput = {
@@ -276,13 +283,12 @@ export type ModuleOrderLineInput = {
   valores: Record<string, number>;
   colorEsqueletoId: string;
   colorFrentesId: string;
-  colorCantoId: string;
   perfilCantoOrden: 1 | 2;
   /** Opcional: sin elegir, el fondo del modulo o de la configuracion (DECISIONES 32). */
   materialFondoId?: string | null;
   observaciones?: string | null;
-  /** Cantos cambiados a mano en el paso 4, por codigo de pieza. */
-  cantosOverride?: Record<string, PieceEdgesInput>;
+  /** Cantos elegidos a mano en el paso 4, por codigo de pieza (DECISIONES 45). */
+  cantosOverride?: Record<string, PieceEdgeChoice>;
   /** La version del modulo que mostro la vista previa: si el catalogo cambio, el alta responde 409. */
   version?: number;
 };
@@ -337,12 +343,13 @@ export type ModuleOrderPreviewModule = {
   valores: Record<string, number>;
   colorEsqueletoId: string;
   colorFrentesId: string;
-  colorCantoId: string;
   perfilCantoOrden: 1 | 2;
   materialFondoId: string | null;
   observaciones: string | null;
   /** Cantidad de filas del modulo. */
   piezas: number;
+  /** Lados que van sin canto porque la placa de la pieza no tiene uno de su color (DECISIONES 45). */
+  cantosSinElegir: MissingDefaultEdge[];
 };
 
 /** Respuesta de POST /api/pedidos-modulos/preview (DECISIONES 17): el paso 4 muestra solo esto (R3). */
@@ -367,13 +374,12 @@ export type ModuleOrder = Omit<Order, "detalles"> &
     emailContacto: string | null;
     direccionEntrega: string | null;
     modulos: Array<
-      Omit<ModuleOrderPreviewModule, "version" | "piezas" | "moduloId"> & {
+      Omit<ModuleOrderPreviewModule, "version" | "piezas" | "moduloId" | "cantosSinElegir"> & {
         id: string;
         moduloId: string | null;
         definicionSnapshot: Omit<ModuleDefinition, "imagen" | "tienePedidos">;
         colorEsqueleto: PlateRef;
         colorFrentes: PlateRef;
-        colorCanto: PlateRef;
         materialFondo: PlateRef | null;
       }
     >;

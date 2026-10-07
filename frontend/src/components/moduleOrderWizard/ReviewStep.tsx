@@ -10,7 +10,9 @@ import {
   Button,
   Chip,
   Divider,
+  FormHelperText,
   IconButton,
+  MenuItem,
   LinearProgress,
   Paper,
   Stack,
@@ -20,20 +22,109 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Tooltip,
   Typography
 } from "@mui/material";
 import { useId, useMemo, useState } from "react";
 import type { ModuleOrderApiError } from "../../api/moduleOrders";
-import { changedSides, edgeSummary, materialSummary, rowsByModule, unitPieceEdges, type WizardUnit } from "../../lib/moduleOrderWizard";
-import type { EspesorCanto, LadoCanto, Material, ModuleDefinition, ModuleOrderDetail, ModuleOrderPreview } from "../../types";
+import { changedSides, defaultEdgeId, edgeSummary, materialSummary, rowsByModule, type EdgeDefaultsContext, type WizardUnit } from "../../lib/moduleOrderWizard";
+import type { LadoCanto, Material, MissingDefaultEdge, ModuleDefinition, ModuleOrderDetail, ModuleOrderPreview } from "../../types";
 import { CutOptimizer } from "../CutOptimizer";
-import { EDITED_BLUE, EdgeToggleButtons } from "../PieceEdgesToggles";
+import { EDITED_BLUE } from "../PieceEdgesToggles";
 
 export type PreviewStatus = "idle" | "loading" | "stale" | "error" | "ready";
 
 const money = (value: number) => value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 const numberText = (value: number, decimals = 2) => value.toLocaleString("es-AR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+const mmText = (value: number) => value.toLocaleString("es-AR", { useGrouping: false, maximumFractionDigits: 2 });
+
+const SIDES: Array<{ lado: LadoCanto; label: string; field: "cantoLargo1Id" | "cantoLargo2Id" | "cantoAncho1Id" | "cantoAncho2Id" }> = [
+  { lado: "LARGO_1", label: "Largo 1", field: "cantoLargo1Id" },
+  { lado: "LARGO_2", label: "Largo 2", field: "cantoLargo2Id" },
+  { lado: "ANCHO_1", label: "Ancho 1", field: "cantoAncho1Id" },
+  { lado: "ANCHO_2", label: "Ancho 2", field: "cantoAncho2Id" }
+];
+/** Un canto en el menu: la placa de su color (o su nombre) y el espesor. */
+const edgeLabel = (canto: Material) => `${(canto.placaMaterial?.nombre ?? canto.nombre).trim()} · ${mmText(canto.espesorMm)} mm`;
+/** Color que avisa un lado sin canto porque la placa no tiene uno de su color (contraste 4,5:1 sobre blanco). */
+const MISSING_AMBER = "#8a5a00";
+
+/**
+ * Los cuatro lados de una pieza (DECISIONES 45): cada uno con el canto que lleva y un menu con todos los cantos
+ * activos, o sin canto. El de por defecto (el de la placa de la pieza) se marca en el menu; un lado elegido a mano se
+ * ve en azul, y uno sin canto porque la placa no tiene uno de su color, en ambar.
+ */
+function PieceEdgeSelects({
+  row,
+  unit,
+  definition,
+  codigo,
+  context,
+  missing,
+  label,
+  disabled,
+  onChange
+}: {
+  row: ModuleOrderDetail;
+  unit: WizardUnit;
+  definition: ModuleDefinition;
+  codigo: string;
+  context: EdgeDefaultsContext;
+  missing: Set<LadoCanto>;
+  label: string;
+  disabled: boolean;
+  onChange: (lado: LadoCanto, cantoId: string | null) => void;
+}) {
+  const override = unit.cantosOverride[codigo] ?? {};
+  const byId = new Map(context.cantos.map((canto) => [canto.id, canto]));
+  return (
+    <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: "repeat(2, minmax(150px, 1fr))", minWidth: 320, pt: 0.75 }}>
+      {SIDES.map(({ lado, label: ladoLabel, field }) => {
+        const edited = override[lado] !== undefined;
+        const value = edited ? (override[lado] ?? "") : (row[field] ?? "");
+        const porDefecto = defaultEdgeId(unit, definition, codigo, lado, context);
+        const sinCanto = !edited && missing.has(lado);
+        const color = edited ? EDITED_BLUE : sinCanto ? MISSING_AMBER : undefined;
+        return (
+          <Box key={lado}>
+            <TextField
+              select
+              size="small"
+              fullWidth
+              label={ladoLabel}
+              value={value}
+              disabled={disabled}
+              onChange={(event) => onChange(lado, event.target.value || null)}
+              slotProps={{
+                htmlInput: { "aria-label": `${ladoLabel} de ${label}` },
+                inputLabel: { shrink: true },
+                // Cerrado se ve solo el canto (o "Sin canto"); "(por defecto)" va en el menu.
+                select: {
+                  displayEmpty: true,
+                  renderValue: (selected) => {
+                    const canto = byId.get(String(selected));
+                    return canto ? edgeLabel(canto) : "Sin canto";
+                  }
+                }
+              }}
+              sx={color ? { "& .MuiOutlinedInput-notchedOutline": { borderColor: color, borderWidth: 2 }, "& .MuiInputLabel-root": { color } } : undefined}
+            >
+              <MenuItem value="">Sin canto{porDefecto === null ? " (por defecto)" : ""}</MenuItem>
+              {context.cantos.map((canto) => (
+                <MenuItem key={canto.id} value={canto.id}>
+                  {edgeLabel(canto)}
+                  {canto.id === porDefecto ? " (por defecto)" : ""}
+                </MenuItem>
+              ))}
+            </TextField>
+            {sinCanto && <FormHelperText sx={{ color: MISSING_AMBER, mx: 0.5 }}>La placa no tiene canto de su color</FormHelperText>}
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
 
 function SummaryPanel({
   preview,
@@ -143,7 +234,8 @@ function ModuleDespieceCard({
   unit,
   definition,
   rows,
-  available,
+  edgeContext,
+  sinCanto,
   locked,
   onEdgeChange,
   onResetPiece
@@ -152,9 +244,11 @@ function ModuleDespieceCard({
   unit: WizardUnit;
   definition: ModuleDefinition;
   rows: ModuleOrderDetail[];
-  available: readonly number[] | undefined;
+  edgeContext: EdgeDefaultsContext;
+  /** Lados sin canto porque la placa de la pieza no tiene uno de su color (de la vista previa). */
+  sinCanto: MissingDefaultEdge[];
   locked: boolean;
-  onEdgeChange: (piezaCodigo: string, lado: LadoCanto, espesor: EspesorCanto | null) => void;
+  onEdgeChange: (piezaCodigo: string, lado: LadoCanto, cantoId: string | null) => void;
   onResetPiece: (piezaCodigo: string) => void;
 }) {
   const perfil = definition.perfiles.find((item) => item.orden === unit.perfilCantoOrden);
@@ -171,14 +265,10 @@ function ModuleDespieceCard({
         </Typography>
       </Stack>
       <TableContainer sx={{ overflowX: "auto" }}>
-        <Table size="small" aria-labelledby={titleId} sx={{ minWidth: 720, "& td": { verticalAlign: "middle" } }}>
+        <Table size="small" aria-labelledby={titleId} sx={{ minWidth: 640, "& td": { verticalAlign: "middle" } }}>
           <TableHead>
             <TableRow>
               <TableCell>Pieza</TableCell>
-              <TableCell>Material</TableCell>
-              <TableCell align="right">Largo</TableCell>
-              <TableCell align="right">Ancho</TableCell>
-              <TableCell align="right">Cant.</TableCell>
               <TableCell>Cantos</TableCell>
               <TableCell />
             </TableRow>
@@ -186,51 +276,46 @@ function ModuleDespieceCard({
           <TableBody>
             {rows.map((row) => {
               const codigo = (row.piezaCodigo ?? "").toUpperCase();
-              // Los cantos que se van a mandar: el cambio a mano o los del perfil, los mismos que usa el servidor. No se
-              // deducen de la fila ni de la lista de materiales (un canto cargado despues de abrir se ve igual).
-              const edges = unitPieceEdges(unit, definition, codigo);
-              const sides = changedSides(unit, definition, codigo);
-              const edited = sides.length > 0;
+              const edited = changedSides(unit, codigo).length > 0;
+              const missing = new Set(sinCanto.filter((item) => item.piezaCodigo.toUpperCase() === codigo).map((item) => item.lado));
               const nombre = row.nombreProducto ?? codigo;
               return (
                 <TableRow key={`${row.piezaCodigo}-${row.indice}`} sx={edited ? { boxShadow: `inset 4px 0 0 ${EDITED_BLUE}` } : undefined}>
-                  <TableCell>
+                  <TableCell sx={{ minWidth: 180 }}>
                     <Typography variant="body2" fontWeight={700}>
                       {nombre}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {row.material}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                      {row.largo} × {row.ancho} mm · {row.cantidad} u.
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "ui-monospace, Consolas, monospace", whiteSpace: "nowrap" }}>
                       {row.codigoBarra}
                     </Typography>
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{row.material}</Typography>
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
-                    {row.largo}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
-                    {row.ancho}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
-                    {row.cantidad}
-                  </TableCell>
-                  <TableCell>
-                    <EdgeToggleButtons
-                      edges={edges}
-                      context={`${nombre} del módulo ${posicion}`}
-                      editedSides={sides}
-                      available={available}
+                  {/* Todo el ancho que queda: los cuatro lados se leen sin cortar el nombre del canto. */}
+                  <TableCell sx={{ width: "100%" }}>
+                    <PieceEdgeSelects
+                      row={row}
+                      unit={unit}
+                      definition={definition}
+                      codigo={codigo}
+                      context={edgeContext}
+                      missing={missing}
+                      label={`${nombre} del módulo ${posicion}`}
                       disabled={locked}
-                      onChange={(lado, espesor) => onEdgeChange(codigo, lado, espesor)}
+                      onChange={(lado, cantoId) => onEdgeChange(codigo, lado, cantoId)}
                     />
                   </TableCell>
                   <TableCell sx={{ width: 104 }}>
                     {edited && (
                       <Stack direction="row" alignItems="center" spacing={0.5}>
                         <Chip size="small" label="Editada" variant="outlined" sx={{ borderColor: EDITED_BLUE, color: EDITED_BLUE }} />
-                        <Tooltip title="Volver a los cantos del perfil">
+                        <Tooltip title="Volver a los cantos por defecto">
                           <span>
-                            <IconButton size="small" aria-label={`Volver a los cantos del perfil en ${nombre}`} disabled={locked} onClick={() => onResetPiece(codigo)}>
+                            <IconButton size="small" aria-label={`Volver a los cantos por defecto en ${nombre}`} disabled={locked} onClick={() => onResetPiece(codigo)}>
                               <RestartAltIcon fontSize="inherit" />
                             </IconButton>
                           </span>
@@ -250,7 +335,8 @@ function ModuleDespieceCard({
 
 /**
  * Paso 4 (spec §9.2): el despiece y el resumen que devuelve la vista previa del servidor, sin calculos locales
- * (DECISIONES R3). Los cantos se cambian por lado; el cambio se recalcula en un momento, no en cada click (P12).
+ * (DECISIONES R3). El canto de cada lado se elige entre todos los cantos activos (DECISIONES 45); el cambio se recalcula
+ * en un momento, no en cada click (P12).
  */
 export function ReviewStep({
   preview,
@@ -259,7 +345,7 @@ export function ReviewStep({
   units,
   definitions,
   materials,
-  edgeCoverage,
+  edgeContext,
   planMaterials,
   herrajesHabilitados,
   locked,
@@ -273,13 +359,13 @@ export function ReviewStep({
   units: WizardUnit[];
   definitions: Map<string, ModuleDefinition>;
   materials: Material[];
-  /** Espesores de canto activos por color (edgeThicknessesByColor), para avisar en el menu los que faltan. */
-  edgeCoverage: Map<string, number[]>;
+  /** Cantos activos y fondo de la configuracion: las opciones de cada lado y el canto por defecto. */
+  edgeContext: EdgeDefaultsContext;
   planMaterials: Material[];
   herrajesHabilitados: boolean;
   /** Mientras se crea la solicitud no se puede cambiar nada: el alta ya salio con lo que habia. */
   locked: boolean;
-  onEdgeChange: (uid: string, piezaCodigo: string, lado: LadoCanto, espesor: EspesorCanto | null) => void;
+  onEdgeChange: (uid: string, piezaCodigo: string, lado: LadoCanto, cantoId: string | null) => void;
   onResetPiece: (uid: string, piezaCodigo: string) => void;
   onRecalculate: () => void;
 }) {
@@ -343,7 +429,8 @@ export function ReviewStep({
                 unit={unit}
                 definition={definition}
                 rows={rows}
-                available={unit.colorCantoId ? (edgeCoverage.get(unit.colorCantoId) ?? []) : undefined}
+                edgeContext={edgeContext}
+                sinCanto={preview.modulos[index]?.cantosSinElegir ?? []}
                 locked={locked}
                 onEdgeChange={(codigo, lado, espesor) => onEdgeChange(unit.uid, codigo, lado, espesor)}
                 onResetPiece={(codigo) => onResetPiece(unit.uid, codigo)}
