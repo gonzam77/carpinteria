@@ -27,6 +27,30 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-07 (22) · equipo Pinformatico15 · rama main
+
+**Pasos:** F4.6 terminado.
+
+**Hecho:**
+- Gonzalo decidió P13: el backup se restauró en un contenedor nuevo `carpinteria-analisis-db` y queda hasta terminar la fase de desarrollo. Se le aplicaron las migraciones, el catálogo de módulos (`prisma:seed:modulos`) y el detalle guardado de los pedidos viejos (`pedidos:completar-detalle`), y se vaciaron las suscripciones push.
+- **Tildes en toda la interfaz** (DECISIONES 15): textos de 64 archivos del frontend y del backend, con voseo en todos lados. Lo hicieron seis agentes en paralelo, con archivos separados. Otro agente ajustó los textos que buscan las pruebas de punta a punta, y un revisor recorrió todos los textos del código: no quedaron palabras sin tilde ni cambios que no fueran textos. El Excel no cambió.
+- **Un color por estado** en `StatusChip` (DECISIONES 46), con contraste de 5:1 o más.
+- **Filas de módulos sin Remark** (DECISIONES 20).
+
+**Decisiones nuevas:** P13 (DECISIONES 47). Se aplicaron la 15, la 20 y la 46.
+
+**Verificaciones:**
+- frontend `npm test` (39, 17, 6, 5, 8, 21 y 11), backend `npm test` (25), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f45 137/137, f44 98/98, f43 66/66, f42 93/93, f31 30/30, f05 22/22, f04 12/12 y f23 4/4. La copia quedó como estaba.
+
+**Commits:** tres commits locales (colores, tildes y sin Remark, documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F4.7, el color de los cantos por tipo de placa (DECISIONES 45). Lo primero: proponer el diseño a Gonzalo.
+
+**Esperando a Gonzalo o a ROMA:** el OK del diseño de F4.7; P5 y P6.
+
+---
+
 ## 2026-10-07 (21) · equipo Pinformatico15 · rama main
 
 **Pasos:** respuestas de Gonzalo a las decisiones pendientes. Se agregan F4.6 y F4.7.

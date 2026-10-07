@@ -13,8 +13,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-07
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F4.5 está commiteado y subido (2026-10-07, con el OK de Gonzalo). Cada push espera su OK.
-- **Último paso terminado:** F4.5. Las Fases 0 a 4 están completas.
-- **Próximo paso:** **F4.6**, tildes en toda la interfaz, un color por estado y las filas de módulos sin Remark (respuestas de Gonzalo del 2026-10-07). Después F4.7 (color de los cantos por tipo de placa) y F5.1.
+- **Pasos anteriores:** las Fases 0 a 3 y F4.1 a F4.5 están completas.
+- **Último paso terminado:** F4.6 (tildes, colores de estado y sin Remark).
+- **Próximo paso:** **F4.7**, el color de los cantos por tipo de placa (DECISIONES 45). Lo primero: proponer el diseño a Gonzalo. Después, F5.1.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -35,7 +36,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F2.1–F2.5 | Modelo de datos, migraciones e importador | [x] |
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
 | F4.1–F4.5 | API, asistente y listado de solicitudes de módulos | [x] |
-| F4.6–F4.7 | Tildes, colores de estado, sin Remark y color de los cantos por tipo de placa | [ ] |
+| F4.6–F4.7 | Tildes, colores de estado, sin Remark y color de los cantos por tipo de placa | [~] F4.6 hecho |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
 | F6 | Herrajes (contratados, DECISIONES 10) | [ ] |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
@@ -521,13 +522,14 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
     - e2e-f44 ajustada al detalle en `/modulos/:id`: 98 de 98;
     - e2e-f43: 66 de 66.
 
-#### F4.6 Tildes, colores de estado y sin Remark · [ ]
+#### F4.6 Tildes, colores de estado y sin Remark · [x]
 - **Depende de:** F4.5.
 - **Hacer:**
   - tildes en todos los textos de la interfaz, también en las pantallas de los carpinteros y en los mensajes del backend que se muestran (DECISIONES 15). Lo que va a la máquina (el Excel) no cambia. Hay que ajustar los textos que buscan las pruebas en el navegador y los tests;
   - un color distinto para cada estado en `StatusChip` (DECISIONES 46);
   - las filas de las solicitudes de módulos sin Remark (DECISIONES 20): `moduleRemark` deja de usarse y sus tests cambian.
 - **Terminado cuando:** no queda ningún texto visible sin tilde (búsqueda en el código), los colores de estado son distintos y con contraste, y las pruebas dan verde.
+- **Hecho (2026-10-07):** tildes en los textos de 64 archivos del frontend y del backend, con voseo en todos lados (DECISIONES 15); un color por estado (DECISIONES 46); filas de módulos sin Remark (DECISIONES 20). Una revisión buscó en todos los textos del código palabras sin tilde o con tilde de más y cambios que no fueran textos: no quedó nada. Pruebas: tests unitarios, `tsc` y build en verde; e2e-f45 137/137, e2e-f44 98/98, e2e-f43 66/66, e2e-f42 93/93, e2e-f31 30/30, e2e-f05 22/22, e2e-f04 12/12 y e2e-f23 4/4, con sus textos ajustados.
 
 #### F4.7 Color de los cantos por tipo de placa · [ ]
 - **Depende de:** F4.6.
@@ -645,7 +647,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 | P12 | La vista previa de 20 módulos tarda de 1,5 a 8,4 s, según las piezas (100 módulos: unos 28 s). Spec §20 pide caché si pasa de 2 s | Gonzalo | **Resuelto (2026-10-07):** se acepta como está; los tiempos se optimizan en F7.4 (DECISIONES 24) |
 | P7 | La placa "metal cepillado bronce" figura como 1830×26000, con un cero de más | Gonzalo | **Resuelto (2026-10-07):** se deja como está; se le avisa al cliente (DECISIONES 47) |
 | P8 | ¿Se conserva el contenedor `carpinteria-analisis-db` con el backup en la PC de la primera sesión? | Gonzalo | **Resuelto (2026-10-07):** se borró, con su volumen (DECISIONES 47) |
-| P13 | Base para las pruebas de punta a punta, ahora que no está el contenedor con el backup: ¿restaurar el backup en un contenedor nuevo cada vez que haga falta probar (y borrarlo al terminar) o armar una base local con datos inventados? | Gonzalo | Sin base, solo corren los tests unitarios, `tsc` y el build |
+| P13 | Base para las pruebas de punta a punta, ahora que no está el contenedor con el backup | Gonzalo | **Resuelto (2026-10-07):** el backup se restaura en `carpinteria-analisis-db` y se conserva hasta terminar la fase de desarrollo (DECISIONES 47) |
 
 ---
 
