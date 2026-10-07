@@ -28,6 +28,11 @@ function ModuleOrderDetailRoute() {
   const { id } = useParams();
   return <ModuleOrderDetailPage key={id} />;
 }
+// La edicion de una solicitud de modulos usa el mismo formulario que corte (spec §10.2).
+function ModuleOrderEditRoute() {
+  const { id } = useParams();
+  return <OrderFormPage key={id} kind="MODULOS" />;
+}
 
 export function App() {
   return (
@@ -71,6 +76,14 @@ export function App() {
           element={
             <ProtectedRoute roles={["ADMIN"]}>
               <ModuleOrderDetailRoute />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="modulos/:id/editar"
+          element={
+            <ProtectedRoute roles={["ADMIN"]}>
+              <ModuleOrderEditRoute />
             </ProtectedRoute>
           }
         />

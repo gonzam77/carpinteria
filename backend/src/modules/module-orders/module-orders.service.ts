@@ -4,18 +4,20 @@
 // DECISIONES R6), las filas pasan por el mismo normalizeDetails que el corte (R8) y el presupuesto es el mismo
 // buildOrderEstimateSnapshot, sin cambios (R1). Unas mismas piezas dan las mismas placas y los mismos importes
 // se carguen como corte o como modulos: lo unico que agrega este servicio es de donde sale cada fila.
-import { EstadoPedido, Prisma, TipoMaterial, TipoPedido, type PrismaClient } from "../../generated/prisma/client.js";
-import { fromDateOnly, toDateOnly } from "../../utils/dates.js";
+import { EstadoPedido, OrigenDetalle, Prisma, TipoMaterial, TipoPedido, type PrismaClient } from "../../generated/prisma/client.js";
+import { fromDateOnly, toDateOnly, todayInBusinessZone } from "../../utils/dates.js";
 import { AppError } from "../../utils/http.js";
 import type { OrderedModulePiece, RoundingMode } from "../../shared/moduleFormula.js";
+import { describeChanges, hasChanges, matchRows, summarizeChanges } from "../../shared/moduleOrderChanges.js";
 import { toCentavos } from "../../shared/orderEstimate.js";
 import { getModulesConfig, MODULE_INCLUDE, toDefinition } from "../catalog/catalog.service.js";
 import { normalizeDetails, type NormalizedDetail } from "../orders/order-details.service.js";
 import { buildOrderEstimateSnapshot, getOptimizerSettings } from "../orders/order-estimate.service.js";
 import { DETALLES_ORDENADOS } from "../orders/order-queries.js";
+import { hasStockCommitment } from "../orders/order-stock.service.js";
 import { compareForList } from "./module-order-list.js";
 import { moduleBarcode, planModuleOrder, type MissingDefaultEdge, type PlanModule } from "./module-order-plan.js";
-import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderLine } from "./module-orders.schemas.js";
+import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderLine, ModuleOrderUpdateInput } from "./module-orders.schemas.js";
 
 export { moduleBarcode } from "./module-order-plan.js";
 
@@ -193,6 +195,117 @@ export async function changeModuleOrderDeliveryDate(prisma: PrismaClient, id: st
     });
     if (updated.count !== 1) throw new AppError(409, "La solicitud cambió mientras tanto. Recargá la página y volvé a intentar.", { code: "ORDER_CHANGED" });
     await tx.historialPedido.create({ data: { pedidoId: id, usuarioId: userId, accion: "CAMBIAR_FECHA_ENTREGA", valorAnterior: anterior, valorNuevo: fechaEntrega } });
+  });
+  return getModuleOrder(prisma, id);
+}
+
+/** Se puede editar mientras no este en proceso, terminada ni entregada (spec §10.1, igual que corte). */
+export const canEditModuleOrder = (estado: EstadoPedido) =>
+  estado !== EstadoPedido.EN_PROCESO && estado !== EstadoPedido.TERMINADA && estado !== EstadoPedido.ENTREGADA;
+
+/**
+ * Edicion de una solicitud de modulos (spec §10.3). Reemplaza las filas como el PUT de corte, pero cada fila que sigue
+ * conserva su modulo, su codigo de pieza, su orden y su codigo de barra; si cambio, pasa a EDITADO (una MANUAL sigue
+ * MANUAL). Las nuevas son MANUAL, van al final de su modulo y llevan el codigo M{numero}-{posicion}-{orden} (las
+ * adicionales, posicion 00). Los modulos (medidas, colores, fondo) no cambian (spec §10.4). Las filas siguen al
+ * cliente de la solicitud. El presupuesto sale del mismo normalizeDetails y buildOrderEstimateSnapshot que el corte.
+ * Sin ningun cambio no escribe nada. Con cambios, deja EDITAR_PEDIDO en el historial con el resumen.
+ */
+export async function updateModuleOrder(prisma: PrismaClient, id: string, input: ModuleOrderUpdateInput, userId: string) {
+  const existing = await prisma.pedido.findFirst({
+    where: { id, tipo: TipoPedido.MODULOS },
+    include: { detalles: DETALLES_ORDENADOS, modulos: { select: { id: true, posicion: true } } }
+  });
+  if (!existing) throw new AppError(404, "Solicitud de módulos no encontrada.");
+  if (!canEditModuleOrder(existing.estado)) throw new AppError(403, "No se pueden editar pedidos en proceso, terminados o entregados.");
+  if (hasStockCommitment(existing)) throw new AppError(409, "La solicitud tiene stock descontado. Pasala a pendiente antes de editarla.");
+  if (input.fechaActualizacion && new Date(input.fechaActualizacion).getTime() !== existing.fechaActualizacion.getTime()) {
+    throw new AppError(409, "La solicitud cambió mientras la editabas. Recargá la página y volvé a hacer los cambios.", { code: "ORDER_CHANGED" });
+  }
+  const fechaAnterior = toDateOnly(existing.fechaEntrega);
+  if (input.fechaEntrega !== fechaAnterior && input.fechaEntrega < todayInBusinessZone()) {
+    throw new AppError(400, "La fecha de entrega no puede ser anterior a hoy.", { code: "DELIVERY_DATE_PAST" });
+  }
+
+  // Cada fila va con un modulo de esta solicitud o sin modulo (pieza adicional).
+  const posicionDe = new Map(existing.modulos.map((modulo) => [modulo.id, modulo.posicion]));
+  const ajena = input.detalles.findIndex((detalle) => detalle.pedidoModuloId && !posicionDe.has(detalle.pedidoModuloId));
+  if (ajena >= 0) {
+    throw new AppError(400, `La pieza ${ajena + 1} es de un módulo que no está en esta solicitud. Recargá la página y volvé a intentar.`, {
+      code: "MODULE_NOT_IN_ORDER"
+    });
+  }
+
+  // Las filas, agrupadas como se leen: por modulo (posicion) y las adicionales al final; dentro de cada grupo, como vinieron.
+  const grupo = (pedidoModuloId: string | null | undefined) => (pedidoModuloId ? posicionDe.get(pedidoModuloId)! : Number.MAX_SAFE_INTEGER);
+  const filas = input.detalles.map((detalle, index) => ({ detalle, index })).sort((a, b) => grupo(a.detalle.pedidoModuloId) - grupo(b.detalle.pedidoModuloId) || a.index - b.index);
+
+  const guardadas = existing.detalles;
+  const { matches } = matchRows(
+    guardadas,
+    filas.map(({ detalle }) => detalle)
+  );
+  // Las nuevas siguen al ultimo orden guardado de su grupo, asi un codigo de barra no se repite.
+  const ultimoOrden = new Map<string, number>();
+  for (const detalle of guardadas) {
+    const key = detalle.pedidoModuloId ?? "";
+    ultimoOrden.set(key, Math.max(ultimoOrden.get(key) ?? 0, detalle.orden));
+  }
+  const nuevas = filas.map(({ detalle }, indice) => {
+    const match = matches[indice];
+    const pedidoModuloId = detalle.pedidoModuloId ?? null;
+    const base = { ...detalle, id: undefined, numeroCliente: "", nombreCliente: "", pedidoModuloId, indice };
+    if (match.kind === "kept") {
+      const { saved, changed } = match;
+      const origen = saved.origen === OrigenDetalle.MANUAL ? OrigenDetalle.MANUAL : changed ? OrigenDetalle.EDITADO : saved.origen;
+      return { ...base, piezaCodigo: saved.piezaCodigo, orden: saved.orden, origen, codigoBarra: saved.codigoBarra };
+    }
+    const key = pedidoModuloId ?? "";
+    const orden = (ultimoOrden.get(key) ?? 0) + 1;
+    ultimoOrden.set(key, orden);
+    const posicion = pedidoModuloId ? posicionDe.get(pedidoModuloId)! : 0;
+    return { ...base, piezaCodigo: null, orden, origen: OrigenDetalle.MANUAL, codigoBarra: moduleBarcode(existing.numero, posicion, orden) };
+  });
+
+  const changes = summarizeChanges(
+    {
+      data: {
+        cliente: existing.cliente,
+        numeroContacto: existing.numeroContacto ?? "",
+        emailContacto: existing.emailContacto,
+        direccionEntrega: existing.direccionEntrega,
+        fechaEntrega: fechaAnterior,
+        observaciones: existing.observaciones
+      },
+      rows: guardadas
+    },
+    { data: input, rows: filas.map(({ detalle }) => detalle) }
+  );
+  if (!hasChanges(changes)) return getModuleOrder(prisma, id);
+
+  // Calculo afuera de la transaccion, como el alta: el optimizador puede tardar mas de lo que dura una transaccion.
+  const detalles = await normalizeDetails(nuevas, input.cliente, input.numeroContacto);
+  const { costoHerrajes, presupuestoConHerrajes: _total, ...snapshot } = await buildModuleOrderEstimate(prisma, detalles);
+
+  await prisma.$transaction(async (tx) => {
+    // Solo si sigue como se leyo: si otro la cambio mientras se calculaba, 409 y no se toca nada.
+    const claimed = await tx.pedido.updateMany({
+      where: { id, estado: existing.estado, fechaActualizacion: existing.fechaActualizacion },
+      data: {
+        cliente: input.cliente,
+        numeroContacto: input.numeroContacto,
+        emailContacto: input.emailContacto ?? null,
+        direccionEntrega: input.direccionEntrega ?? null,
+        fechaEntrega: fromDateOnly(input.fechaEntrega),
+        observaciones: input.observaciones ?? null,
+        costoHerrajes,
+        ...snapshot
+      }
+    });
+    if (claimed.count !== 1) throw new AppError(409, "La solicitud cambió mientras la editabas. Recargá la página y volvé a hacer los cambios.", { code: "ORDER_CHANGED" });
+    await tx.detallePedido.deleteMany({ where: { pedidoId: id } });
+    await tx.detallePedido.createMany({ data: detalles.map((detalle) => ({ ...detalle, pedidoId: id })) });
+    await tx.historialPedido.create({ data: { pedidoId: id, usuarioId: userId, accion: "EDITAR_PEDIDO", valorNuevo: describeChanges(changes) } });
   });
   return getModuleOrder(prisma, id);
 }

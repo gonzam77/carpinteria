@@ -5,7 +5,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import RemoveIcon from "@mui/icons-material/Remove";
 import StraightenIcon from "@mui/icons-material/Straighten";
 import { Box, Button, Checkbox, IconButton, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from "@mui/material";
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { Material, OrderDetail } from "../types";
 
 const emptyRow: OrderDetail = {
@@ -63,6 +63,23 @@ const edgeFields: EdgeFieldConfig[] = [
 const largoEdgeFlags: EdgeFlagField[] = ["cantoLargo1", "cantoLargo2"];
 const anchoEdgeFlags: EdgeFlagField[] = ["cantoAncho1", "cantoAncho2"];
 const maxEdgeTypeRows = 4;
+
+/**
+ * Un grupo de filas (spec §10.2): un modulo de la solicitud o las piezas adicionales. Con grupos, la tabla pone un
+ * encabezado por grupo y cada uno agrega sus propias piezas. Las filas se agrupan por `pedidoModuloId` y tienen que
+ * venir ordenadas por grupo; una fila de un grupo que no esta va al ultimo.
+ */
+export type OrderItemsGroup = {
+  /** El modulo de la solicitud, o null para las piezas adicionales. */
+  id: string | null;
+  title: string;
+  subtitle?: string;
+  /** La placa de una pieza nueva del grupo (el esqueleto del modulo). Sin ella, ver createDetailForGroup. */
+  defaultMaterialId?: string | null;
+  addLabel: string;
+  /** Lo que se lee cuando el grupo no tiene piezas. */
+  emptyLabel: string;
+};
 
 export function createEmptyDetail(defaults: Partial<Pick<OrderDetail, "numeroCliente" | "nombreCliente">> = {}): OrderDetail {
   return { ...emptyRow, ...defaults };
@@ -131,7 +148,8 @@ export function OrderItemsTable({
   clientPhone,
   onClientPhoneChange,
   defaultDetailValues = {},
-  mode = "cuts"
+  mode = "cuts",
+  groups
 }: {
   rows: OrderDetail[];
   setRows: (rows: OrderDetail[]) => void;
@@ -141,6 +159,8 @@ export function OrderItemsTable({
   onClientPhoneChange: (value: string) => void;
   defaultDetailValues?: Partial<Pick<OrderDetail, "numeroCliente" | "nombreCliente">>;
   mode?: OrderItemsMode;
+  /** Sin grupos, la tabla de siempre (las solicitudes de corte). */
+  groups?: OrderItemsGroup[];
 }) {
   const [edgeTypeSelections, setEdgeTypeSelections] = useState<Record<string, string>>({});
   const [edgeTypeRowCounts, setEdgeTypeRowCounts] = useState<Record<string, number>>({});
@@ -199,6 +219,80 @@ export function OrderItemsTable({
       materialId,
       material: material?.nombre ?? previousRow.material ?? ""
     };
+  }
+
+  /** El grupo de una fila: su modulo si esta entre los grupos, si no el ultimo grupo. */
+  function groupIdOf(row: OrderDetail) {
+    const id = row.pedidoModuloId ?? null;
+    return groups?.some((group) => group.id === id) ? id : (groups?.[groups.length - 1]?.id ?? null);
+  }
+
+  function createDetailForGroup(group: OrderItemsGroup) {
+    // La del grupo; si no tiene, la de su ultima pieza; si esta vacio, la del primer grupo que tenga una (el esqueleto
+    // del primer modulo) y si no la de la ultima pieza de la tabla (como Agregar pieza en corte).
+    const lastInGroup = [...rows].reverse().find((row) => groupIdOf(row) === group.id);
+    const lastRow = rows[rows.length - 1];
+    const materialId =
+      group.defaultMaterialId ||
+      (lastInGroup ? selectedMaterialId(lastInGroup) : "") ||
+      groups?.find((item) => item.defaultMaterialId)?.defaultMaterialId ||
+      (lastRow ? selectedMaterialId(lastRow) : "");
+    const material = placaMaterials.find((item) => item.id === materialId);
+    return { ...createEmptyDetail(defaultDetailValues), pedidoModuloId: group.id, materialId: material?.id ?? "", material: material?.nombre ?? "" };
+  }
+
+  /** Agrega una pieza al final de su grupo (o donde iria el grupo, si esta vacio). */
+  function addToGroup(group: OrderItemsGroup) {
+    const order = new Map((groups ?? []).map((item, position) => [item.id, position]));
+    const target = order.get(group.id) ?? 0;
+    let insertAt = 0;
+    rows.forEach((row, index) => {
+      if ((order.get(groupIdOf(row)) ?? 0) <= target) insertAt = index + 1;
+    });
+    setRows([...rows.slice(0, insertAt), createDetailForGroup(group), ...rows.slice(insertAt)]);
+  }
+
+  /**
+   * Las filas del cuerpo de la tabla. Sin grupos, una detras de otra como siempre; con grupos, cada grupo con su
+   * encabezado (y en Cortes, su boton para agregar).
+   */
+  function bodyRows(columns: number, render: (row: OrderDetail, index: number) => ReactNode) {
+    if (!groups) return rows.map(render);
+    return groups.map((group) => {
+      const indexes = rows.flatMap((row, index) => (groupIdOf(row) === group.id ? [index] : []));
+      return [
+        <TableRow key={`grupo-${group.id ?? "adicionales"}`}>
+          <TableCell colSpan={columns} sx={{ bgcolor: "background.default", py: 1 }}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between">
+              <Box>
+                <Typography variant="subtitle2" fontWeight={900}>
+                  {group.title}
+                </Typography>
+                {group.subtitle && (
+                  <Typography variant="caption" color="text.secondary">
+                    {group.subtitle}
+                  </Typography>
+                )}
+              </Box>
+              {mode === "cuts" && (
+                <Button type="button" size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => addToGroup(group)}>
+                  {group.addLabel}
+                </Button>
+              )}
+            </Stack>
+          </TableCell>
+        </TableRow>,
+        ...(indexes.length
+          ? indexes.map((index) => render(rows[index], index))
+          : [
+              <TableRow key={`vacio-${group.id ?? "adicionales"}`}>
+                <TableCell colSpan={columns} sx={{ color: "text.secondary" }}>
+                  {group.emptyLabel}
+                </TableCell>
+              </TableRow>
+            ])
+      ];
+    });
   }
 
   function cantoOptionsForRow(row: OrderDetail) {
@@ -432,7 +526,7 @@ export function OrderItemsTable({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {rows.map((row, index) => {
+                {bodyRows(7, (row, index) => {
                   const options = cantoOptionsForRow(row);
 
                   if (!options.length) {
@@ -618,7 +712,7 @@ export function OrderItemsTable({
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((row, index) => (
+              {bodyRows(8, (row, index) => (
                 <TableRow key={index}>
                   <TableCell sx={{ width: 48, fontWeight: 900 }}>{index + 1}</TableCell>
                   <TableCell sx={{ width: 280, minWidth: 280 }}>
@@ -656,7 +750,7 @@ export function OrderItemsTable({
                   <TableCell align="right" sx={{ width: 104 }}>
                     <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                       <Tooltip title="Duplicar pieza">
-                        <IconButton onClick={() => setRows([...rows.slice(0, index + 1), { ...row }, ...rows.slice(index + 1)])}>
+                        <IconButton onClick={() => setRows([...rows.slice(0, index + 1), groups ? { ...row, id: undefined } : { ...row }, ...rows.slice(index + 1)])}>
                           <ContentCopyIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -676,13 +770,11 @@ export function OrderItemsTable({
         </Box>
       </Paper>
 
-      <Button startIcon={<AddIcon />} sx={{ width: { xs: "100%", sm: "auto" } }} variant="outlined" onClick={() => setRows([...rows, createNextDetail()])}>
-        Agregar pieza
-      </Button>
+      {!groups && (
+        <Button startIcon={<AddIcon />} sx={{ width: { xs: "100%", sm: "auto" } }} variant="outlined" onClick={() => setRows([...rows, createNextDetail()])}>
+          Agregar pieza
+        </Button>
+      )}
     </Stack>
   );
 }
-
-
-
-

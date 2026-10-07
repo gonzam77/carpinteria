@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { EstadoPedido } from "../../generated/prisma/enums.js";
 import { todayInBusinessZone } from "../../utils/dates.js";
+import { detailSchema } from "../orders/order.schemas.js";
 
 /** Un id obligatorio, con el mismo mensaje si falta, si no es texto o si no tiene formato de id. */
 const requiredId = (message: string) => z.string({ required_error: message, invalid_type_error: message }).uuid(message);
@@ -98,6 +99,39 @@ export type ModuleOrderCreateInput = z.infer<typeof moduleOrderCreateSchema>;
 export const moduleOrderDeliveryDateSchema = z
   .object({ fechaEntrega: moduleOrderCreateSchema.shape.fechaEntrega })
   .strict("Solo se puede mandar la fecha de entrega");
+
+/**
+ * Una fila de la edicion (spec §10.3): la misma fila que el corte, mas el id de la fila guardada (si es una de antes) y
+ * el modulo de la solicitud al que pertenece (null, pieza adicional). El codigo de pieza, el orden, el origen y el
+ * codigo de barra no se mandan: los pone el servidor.
+ */
+const moduleOrderDetailEditSchema = detailSchema.extend({
+  id: z.string({ invalid_type_error: "El id de la pieza no es válido" }).uuid("El id de la pieza no es válido").nullable().optional(),
+  pedidoModuloId: z.string({ invalid_type_error: "El módulo de la pieza no es válido" }).uuid("El módulo de la pieza no es válido").nullable().optional().default(null)
+});
+
+/**
+ * Edicion de una solicitud de modulos (spec §10.3): los datos del cliente y de la entrega y todas las filas. La fecha
+ * de entrega puede seguir siendo la guardada aunque ya haya pasado; una nueva tiene que ser desde hoy (lo mira el
+ * servicio). `fechaActualizacion` es la de la solicitud que se edito: si cambio mientras tanto, 409.
+ */
+export const moduleOrderUpdateSchema = z
+  .object({
+    cliente: moduleOrderCreateSchema.shape.cliente,
+    numeroContacto: moduleOrderCreateSchema.shape.numeroContacto,
+    emailContacto: moduleOrderCreateSchema.shape.emailContacto,
+    direccionEntrega: moduleOrderCreateSchema.shape.direccionEntrega,
+    fechaEntrega: dateOnly("Elegí la fecha de entrega (AAAA-MM-DD)"),
+    observaciones: moduleOrderCreateSchema.shape.observaciones,
+    fechaActualizacion: z.string({ invalid_type_error: "La fecha de la versión editada no es válida" }).datetime({ offset: true, message: "La fecha de la versión editada no es válida" }).optional(),
+    detalles: z
+      .array(moduleOrderDetailEditSchema, { required_error: "La solicitud tiene que tener al menos una pieza", invalid_type_error: "La solicitud tiene que tener al menos una pieza" })
+      .min(1, "La solicitud tiene que tener al menos una pieza")
+      .max(2000, "Una solicitud tiene como máximo 2000 piezas")
+  })
+  .strict("Hay datos de la solicitud que no se reconocen: revisá los nombres de los campos");
+
+export type ModuleOrderUpdateInput = z.infer<typeof moduleOrderUpdateSchema>;
 
 /** Filtros del listado (spec §13.2 y §9.1). */
 export const moduleOrderFiltersSchema = z.object({

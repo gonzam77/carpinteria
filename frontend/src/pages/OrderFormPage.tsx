@@ -8,12 +8,18 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { ensureSession } from "../api/session";
-import { createEmptyDetail, OrderItemsTable } from "../components/OrderItemsTable";
+import { getModuleOrder, moduleOrderError } from "../api/moduleOrders";
+import { createEmptyDetail, OrderItemsGroup, OrderItemsTable } from "../components/OrderItemsTable";
 import { OrderReceiptDialog } from "../components/OrderReceiptDialog";
 import { useAuth } from "../context/AuthContext";
 import { draftScope, useFormDraft } from "../hooks/useFormDraft";
-import { Material, Order, OrderDetail } from "../types";
+import { useTodayInArgentina } from "../hooks/useTodayInArgentina";
+import { canEditModuleOrder, moduleMeasuresText, sortRowsByModule, validateEditClient } from "../lib/moduleOrderDetail";
+import { describeChanges, hasChanges, summarizeChanges } from "../lib/moduleOrderChanges";
+import { MAX_DIRECCION, MAX_REFERENCIA } from "../lib/moduleOrderWizard";
+import { Material, ModuleOrder, Order, OrderDetail } from "../types";
 import { CutOptimizer } from "../components/CutOptimizer";
+import { getStatusStyle } from "../components/StatusChip";
 
 function resolveMaterialId(row: OrderDetail, materials: Material[]) {
   return row.materialId || materials.find((material) => material.tipo === "PLACA" && material.nombre === row.material)?.id || "";
@@ -34,7 +40,20 @@ type OrderDraft = {
   observaciones: string;
   rows: OrderDetail[];
   step: number;
+  /** Solo al editar una solicitud de modulos. */
+  email?: string;
+  direccion?: string;
+  fechaEntrega?: string;
 };
+
+/** CORTE: alta y edicion de una solicitud de corte. MODULOS: edicion de una solicitud de modulos (spec §10). */
+export type OrderFormKind = "CORTE" | "MODULOS";
+
+/** A donde vuelve el detalle de modulos despues de editar: la ruta que traia (el listado con sus filtros), si es propia. */
+function moduleListReturn(state: unknown) {
+  const returnTo = (state as { returnTo?: unknown } | null)?.returnTo;
+  return typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : undefined;
+}
 
 /** Evita ofrecer la recuperacion de un formulario que estaba practicamente vacio. */
 function hasContent(draft: OrderDraft) {
@@ -61,7 +80,8 @@ function fillClientFields(rows: OrderDetail[], numeroCliente: string, nombreClie
   }));
 }
 
-export function OrderFormPage() {
+export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
+  const modules = kind === "MODULOS";
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -78,32 +98,87 @@ export function OrderFormPage() {
   const previewRequest = useRef<AbortController | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? (id ? `/pedidos/${id}` : user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes");
+  // Solo modulos: los datos que corte no tiene, la solicitud guardada (los grupos y los cambios se comparan contra
+  // ella) y el listado al que vuelve su detalle.
+  const [email, setEmail] = useState("");
+  const [direccion, setDireccion] = useState("");
+  const [fechaEntrega, setFechaEntrega] = useState("");
+  const [savedModuleOrder, setSavedModuleOrder] = useState<ModuleOrder | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const today = useTodayInArgentina();
+  const [moduleListReturnTo] = useState(() => moduleListReturn(location.state));
+  const moduleDetailPath = `/modulos/${id}`;
 
   // En edicion hay que esperar a que llegue el pedido: si no, guardariamos como
   // borrador el formulario vacio de los primeros renders.
   const [formReady, setFormReady] = useState(!id);
 
+  // En corte, sin los datos de modulos: el borrador y la comparacion quedan como siempre.
+  const moduleData = useMemo(() => (modules ? { email, direccion, fechaEntrega } : {}), [direccion, email, fechaEntrega, modules]);
+
   const snapshot = useMemo<OrderDraft>(
-    () => ({ cliente, telefono, observaciones, rows, step }),
-    [cliente, observaciones, rows, step, telefono]
+    () => ({ cliente, telefono, observaciones, rows, step, ...moduleData }),
+    [cliente, moduleData, observaciones, rows, step, telefono]
   );
 
   // El paso del asistente queda afuera: moverse entre pasos no es una edicion.
   const contentKey = useMemo(
-    () => JSON.stringify({ cliente, telefono, observaciones, rows }),
-    [cliente, observaciones, rows, telefono]
+    () => JSON.stringify({ cliente, telefono, observaciones, rows, ...moduleData }),
+    [cliente, moduleData, observaciones, rows, telefono]
   );
 
   // En edicion, lo que vino del servidor. Sin cambios encima no hay nada que
   // guardar, y asi no ofrecemos recuperar un borrador identico al pedido.
   const [baseline, setBaseline] = useState<string | null>(null);
 
+  // Modulos: un grupo por modulo de la solicitud y otro para las piezas adicionales (spec §10.2).
+  const groups = useMemo<OrderItemsGroup[] | undefined>(() => {
+    if (!modules || !savedModuleOrder) return undefined;
+    return [
+      ...savedModuleOrder.modulos.map((modulo) => ({
+        id: modulo.id,
+        title: [`Módulo ${modulo.posicion}`, modulo.nombreModulo, moduleMeasuresText(modulo)].filter(Boolean).join(" · "),
+        subtitle: [`Esqueleto ${modulo.colorEsqueleto.nombre.trim()}`, `Frentes ${modulo.colorFrentes.nombre.trim()}`].join(" · "),
+        defaultMaterialId: modulo.colorEsqueletoId,
+        addLabel: "Agregar pieza a este módulo",
+        emptyLabel: "Este módulo no tiene piezas."
+      })),
+      { id: null, title: "Piezas adicionales (sin módulo)", addLabel: "Agregar pieza adicional", emptyLabel: "No hay piezas adicionales." }
+    ];
+  }, [modules, savedModuleOrder]);
+
+  // Modulos: lo que cambia contra lo guardado, con la misma cuenta que el historial del servidor (spec §10.2).
+  const changes = useMemo(() => {
+    if (!modules || !savedModuleOrder) return null;
+    return summarizeChanges(
+      {
+        data: {
+          cliente: savedModuleOrder.cliente,
+          numeroContacto: savedModuleOrder.numeroContacto ?? "",
+          emailContacto: savedModuleOrder.emailContacto,
+          direccionEntrega: savedModuleOrder.direccionEntrega,
+          fechaEntrega: savedModuleOrder.fechaEntrega,
+          observaciones: savedModuleOrder.observaciones
+        },
+        rows: savedModuleOrder.detalles.flatMap((detalle) => (detalle.id ? [{ ...detalle, id: detalle.id }] : []))
+      },
+      { data: { cliente, numeroContacto: telefono, emailContacto: email, direccionEntrega: direccion, fechaEntrega, observaciones }, rows }
+    );
+  }, [cliente, direccion, email, fechaEntrega, modules, observaciones, rows, savedModuleOrder, telefono]);
+
+  // Modulos: una solicitud que ya no se puede editar (o que no cargo) no muestra el formulario.
+  const blockedMessage =
+    loadError ||
+    (savedModuleOrder && !canEditModuleOrder(savedModuleOrder.estado)
+      ? `La solicitud M-${savedModuleOrder.numero} está ${getStatusStyle(savedModuleOrder.estado).label.toLowerCase()}: ya no se puede editar.`
+      : "");
+
   // La clave lleva el id del usuario: en una PC compartida el borrador de uno
   // no puede aparecerle al siguiente que entra.
   const scope = draftScope(user?.id);
 
   const { pendingDraft, draftSavedAt, restoreDraft, dismissDraft, clearDraft } = useFormDraft<OrderDraft>(
-    scope ? `${scope}order:${id ?? "new"}` : null,
+    scope ? (modules ? `${scope}modules:${id}` : `${scope}order:${id ?? "new"}`) : null,
     snapshot,
     { ready: formReady, worthSaving: hasContent(snapshot) && contentKey !== baseline }
   );
@@ -118,6 +193,11 @@ export function OrderFormPage() {
     setObservaciones(draft.observaciones);
     setRows(draft.rows);
     setStep(draft.step);
+    if (modules) {
+      setEmail(draft.email ?? "");
+      setDireccion(draft.direccion ?? "");
+      setFechaEntrega(draft.fechaEntrega ?? "");
+    }
   }
 
   useEffect(() => {
@@ -136,10 +216,51 @@ export function OrderFormPage() {
   useEffect(() => () => previewRequest.current?.abort(), []);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !modules) return;
+    getModuleOrder(id)
+      .then((order) => {
+        const loaded = {
+          cliente: order.cliente,
+          telefono: order.numeroContacto ?? "",
+          observaciones: order.observaciones ?? "",
+          rows: sortRowsByModule(order.detalles, order.modulos),
+          email: order.emailContacto ?? "",
+          direccion: order.direccionEntrega ?? "",
+          fechaEntrega: order.fechaEntrega ?? ""
+        };
+        setCliente(loaded.cliente);
+        setTelefono(loaded.telefono);
+        setObservaciones(loaded.observaciones);
+        setRows(loaded.rows);
+        setEmail(loaded.email);
+        setDireccion(loaded.direccion);
+        setFechaEntrega(loaded.fechaEntrega);
+        setSavedModuleOrder(order);
+        setBaseline(JSON.stringify(loaded));
+        setFormReady(true);
+      })
+      .catch((loadFailure) => {
+        // Una solicitud de corte abierta con la URL de modulos: se edita en su formulario.
+        if (axios.isAxiosError(loadFailure) && loadFailure.response?.status === 404) {
+          navigate(`/pedidos/${id}/editar`, { replace: true, state: location.state });
+          return;
+        }
+        setLoadError(moduleOrderError(loadFailure, "No se pudo cargar la solicitud.").message);
+      });
+    // Solo al cambiar de solicitud, como en corte.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  useEffect(() => {
+    if (!id || modules) return;
     api
       .get<Order>(`/orders/${id}`)
       .then((response) => {
+        // Una solicitud de modulos se edita en su formulario (spec §10).
+        if (response.data.tipo === "MODULOS") {
+          navigate(`/modulos/${id}/editar`, { replace: true, state: location.state });
+          return;
+        }
         const loaded = {
           cliente: response.data.cliente,
           telefono: response.data.numeroContacto ?? user?.telefono ?? "",
@@ -167,7 +288,17 @@ export function OrderFormPage() {
 
   async function nextStep() {
     setError("");
-    if (step === 0) {
+    if (step === 0 && modules) {
+      const problems = validateEditClient(
+        { cliente, numeroContacto: telefono, emailContacto: email, direccionEntrega: direccion, observaciones, fechaEntrega },
+        today,
+        savedModuleOrder?.fechaEntrega ?? null
+      );
+      if (problems.length) {
+        setError(problems.join(" "));
+        return;
+      }
+    } else if (step === 0) {
       if (!cliente || !telefono) {
         setError("Completá cliente y teléfono de contacto.");
         return;
@@ -205,6 +336,19 @@ export function OrderFormPage() {
         ancho: Number(row.ancho),
         cantidad: Number(row.cantidad)
       }))
+    };
+  }
+
+  /** El PUT de modulos (spec §10.3): las filas con su id y su modulo, y la version que se edito. */
+  function buildModulePayload() {
+    const { detalles, ...rest } = buildPayload();
+    return {
+      ...rest,
+      emailContacto: email,
+      direccionEntrega: direccion,
+      fechaEntrega,
+      fechaActualizacion: savedModuleOrder?.fechaActualizacion,
+      detalles: detalles.map((detalle) => ({ ...detalle, id: detalle.id ?? null, pedidoModuloId: detalle.pedidoModuloId ?? null }))
     };
   }
 
@@ -288,6 +432,13 @@ export function OrderFormPage() {
     }
 
     try {
+      if (modules) {
+        const saved = await api.put<ModuleOrder>(`/pedidos-modulos/${id}`, buildModulePayload());
+        clearDraft();
+        setPreviewOrder(null);
+        navigate(moduleDetailPath, { state: { notification: `Solicitud M-${saved.data.numero} actualizada.`, returnTo: moduleListReturnTo } });
+        return;
+      }
       const payload = buildPayload();
       const response = id ? await api.put(`/orders/${id}`, payload) : await api.post("/orders", payload);
 
@@ -309,6 +460,11 @@ export function OrderFormPage() {
         state: { notification: id ? "Solicitud de corte actualizada correctamente." : "Solicitud de corte enviada correctamente." }
       });
     } catch (submitError) {
+      if (modules) {
+        const apiError = moduleOrderError(submitError, "No se pudieron guardar los cambios.", true);
+        setError([apiError.message, ...apiError.items].join(" "));
+        return;
+      }
       setError(resolveApiError(submitError, "No se pudo enviar la solicitud.", true));
       // El comprobante queda abierto a proposito: si el error fue transitorio
       // el usuario reintenta sin tener que rehacer el preview.
@@ -317,13 +473,34 @@ export function OrderFormPage() {
     }
   }
 
+  const header = (
+    <Stack spacing={0.5}>
+      <Typography variant="h4">
+        {modules ? (savedModuleOrder ? `Editar solicitud M-${savedModuleOrder.numero}` : "Editar solicitud de módulos") : id ? "Editar solicitud" : "Nueva solicitud de corte"}
+      </Typography>
+      <Typography color="text.secondary">Cargá los datos del cliente, definí las piezas y revisá el resumen antes de enviar.</Typography>
+    </Stack>
+  );
+
+  // Modulos: mientras carga, o si no se puede editar, no hay formulario (no se escribe sobre datos que no llegaron).
+  if (modules && (blockedMessage || !formReady)) {
+    return (
+      <Stack spacing={3}>
+        {header}
+        {blockedMessage ? <Alert severity="error">{blockedMessage}</Alert> : <Alert severity="info">Cargando la solicitud...</Alert>}
+        <Box>
+          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(moduleDetailPath, { state: { returnTo: moduleListReturnTo } })}>
+            Volver a la solicitud
+          </Button>
+        </Box>
+      </Stack>
+    );
+  }
+
   return (
     <>
       <Stack spacing={3} component="form" onSubmit={openPreview}>
-        <Stack spacing={0.5}>
-          <Typography variant="h4">{id ? "Editar solicitud" : "Nueva solicitud de corte"}</Typography>
-          <Typography color="text.secondary">Cargá los datos del cliente, definí las piezas y revisá el resumen antes de enviar.</Typography>
-        </Stack>
+        {header}
         {error && <Alert severity="error">{error}</Alert>}
         {recoverableDraft && (
           <Alert
@@ -365,8 +542,30 @@ export function OrderFormPage() {
                 <TextField label="Cliente" value={cliente} onChange={(event) => setCliente(event.target.value)} required fullWidth />
                 <TextField label="Teléfono de contacto" value={telefono} onChange={(event) => setTelefono(event.target.value)} required fullWidth />
               </Stack>
+              {modules && (
+                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                  <TextField label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} fullWidth />
+                  <TextField label="Dirección de entrega" value={direccion} onChange={(event) => setDireccion(event.target.value)} inputProps={{ maxLength: MAX_DIRECCION }} fullWidth />
+                  <TextField
+                    label="Fecha de entrega"
+                    type="date"
+                    value={fechaEntrega}
+                    onChange={(event) => setFechaEntrega(event.target.value)}
+                    required
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: fechaEntrega && fechaEntrega === savedModuleOrder?.fechaEntrega && fechaEntrega < today ? fechaEntrega : today }}
+                    sx={{ minWidth: { md: 200 } }}
+                  />
+                </Stack>
+              )}
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                <TextField label="Observaciones" value={observaciones} onChange={(event) => setObservaciones(event.target.value)} fullWidth />
+                <TextField
+                  label={modules ? "Referencia del trabajo" : "Observaciones"}
+                  value={observaciones}
+                  onChange={(event) => setObservaciones(event.target.value)}
+                  inputProps={modules ? { maxLength: MAX_REFERENCIA } : undefined}
+                  fullWidth
+                />
               </Stack>
             </Stack>
           </Paper>
@@ -381,6 +580,7 @@ export function OrderFormPage() {
               clientPhone={telefono}
               onClientPhoneChange={setTelefono}
               defaultDetailValues={{ numeroCliente: telefono, nombreCliente: cliente }}
+              groups={groups}
             />
           </Stack>
         )}
@@ -395,6 +595,7 @@ export function OrderFormPage() {
               onClientPhoneChange={setTelefono}
               defaultDetailValues={{ numeroCliente: telefono, nombreCliente: cliente }}
               mode="edges"
+              groups={groups}
             />
             <Paper sx={{ p: 2, borderRadius: "8px" }}>
               <CutOptimizer rows={rows} materials={materials} />
@@ -407,7 +608,27 @@ export function OrderFormPage() {
               <Box>
                 <Typography variant="h6">Datos de contacto</Typography>
                 <Typography>{cliente} - {telefono}</Typography>
+                {modules && (
+                  <Typography color="text.secondary">
+                    {[email.trim(), direccion.trim(), fechaEntrega ? `Entrega ${fechaEntrega.split("-").reverse().join("/")}` : ""].filter(Boolean).join(" · ")}
+                  </Typography>
+                )}
               </Box>
+              {changes && (
+                <Box>
+                  <Typography variant="h6">Cambios detectados</Typography>
+                  {hasChanges(changes) ? (
+                    <Stack component="ul" spacing={0.25} sx={{ m: 0, pl: 2.5 }} aria-label="Cambios detectados">
+                      {changes.modificadas > 0 && <li>{changes.modificadas === 1 ? "1 pieza modificada" : `${changes.modificadas} piezas modificadas`}</li>}
+                      {changes.agregadas > 0 && <li>{changes.agregadas === 1 ? "1 pieza agregada" : `${changes.agregadas} piezas agregadas`}</li>}
+                      {changes.eliminadas > 0 && <li>{changes.eliminadas === 1 ? "1 pieza eliminada" : `${changes.eliminadas} piezas eliminadas`}</li>}
+                      {changes.datos.length > 0 && <li>{describeChanges({ modificadas: 0, agregadas: 0, eliminadas: 0, datos: changes.datos }).replace(/^c/, "C")}</li>}
+                    </Stack>
+                  ) : (
+                    <Typography color="text.secondary">No hay cambios para guardar.</Typography>
+                  )}
+                </Box>
+              )}
               <Box>
                 <Typography variant="h6">Cortes solicitados</Typography>
                 <Typography>
@@ -428,7 +649,8 @@ export function OrderFormPage() {
               startIcon={<CloseIcon />}
               onClick={() => {
                 cancelPreview();
-                navigate(returnTo);
+                if (modules) navigate(moduleDetailPath, { state: { returnTo: moduleListReturnTo } });
+                else navigate(returnTo);
               }}
               sx={{ width: { xs: "100%", sm: "auto" } }}
             >
@@ -453,7 +675,7 @@ export function OrderFormPage() {
               Siguiente
             </Button>
           ) : (
-            <Button type="submit" variant="contained" startIcon={<SaveIcon />} disabled={previewLoading} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            <Button type="submit" variant="contained" startIcon={<SaveIcon />} disabled={previewLoading || Boolean(changes && !hasChanges(changes))} sx={{ width: { xs: "100%", sm: "auto" } }}>
               {previewLoading ? "Generando comprobante..." : id ? "Revisar y guardar" : "Revisar y enviar"}
             </Button>
           )}

@@ -1,10 +1,11 @@
-// El optimizador de cortes, el presupuesto y el motor de formulas de modulos viven en frontend/src/lib/ y se copian al
-// backend para que el navegador y el servidor calculen placas y despieces con el mismo codigo.
+// El optimizador de cortes, el presupuesto, el motor de formulas de modulos y los cambios de una edicion de modulos
+// viven en frontend/src/lib/ y se copian al backend para que el navegador y el servidor calculen placas, despieces y
+// cambios con el mismo codigo.
 //   node scripts/sync-optimizer.mjs          copia las versiones del frontend al backend
 //   node scripts/sync-optimizer.mjs --check  falla si alguna copia difiere
 import { copyFileSync, existsSync, readFileSync } from "node:fs";
 
-const sharedFiles = ["cutOptimizer.ts", "moduleFormula.ts", "orderEstimate.ts"].map((name) => ({
+const sharedFiles = ["cutOptimizer.ts", "moduleFormula.ts", "orderEstimate.ts", "moduleOrderChanges.ts"].map((name) => ({
   name,
   source: new URL(`../frontend/src/lib/${name}`, import.meta.url),
   target: new URL(`../backend/src/shared/${name}`, import.meta.url)

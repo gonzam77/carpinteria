@@ -101,6 +101,8 @@ export type OrderDetail = {
   numeroCliente?: string;
   nombreCliente?: string;
   nombreProducto?: string;
+  /** Solo en solicitudes de modulos: el modulo de la solicitud (null, pieza adicional). Agrupa la tabla al editar. */
+  pedidoModuloId?: string | null;
 };
 
 export type Order = {

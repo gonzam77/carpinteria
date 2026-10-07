@@ -4,7 +4,7 @@ process.env.TZ = "UTC";
 
 import assert from "node:assert/strict";
 import test, { mock } from "node:test";
-import { moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema } from "./module-orders.schemas.js";
+import { moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema, moduleOrderUpdateSchema } from "./module-orders.schemas.js";
 
 const fechaEntrega = moduleOrderCreateSchema.shape.fechaEntrega;
 
@@ -46,4 +46,24 @@ test("cambio de fecha de entrega (spec §9.3): desde hoy en Argentina y solo la 
   assert.equal(moduleOrderDeliveryDateSchema.safeParse({ fechaEntrega: "15/10/2026" }).success, false);
   assert.equal(moduleOrderDeliveryDateSchema.safeParse({}).success, false, "sin fecha");
   assert.equal(moduleOrderDeliveryDateSchema.safeParse({ fechaEntrega: "2026-10-20", estado: "ENTREGADA" }).success, false, "solo la fecha");
+});
+
+test("edición (spec §10.3): la fecha guardada puede haber pasado, las filas traen id y módulo, y nada más", () => {
+  const fila = { materialId: "3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b", largo: 720, ancho: 560, cantidad: 2 };
+  const base = { cliente: "Prueba", numeroContacto: "2664000000", fechaEntrega: "2020-01-01", detalles: [fila] };
+  const parsed = moduleOrderUpdateSchema.safeParse(base);
+  assert.equal(parsed.success, true, "una fecha pasada pasa el esquema: el servicio la acepta si es la guardada");
+  assert.equal(parsed.data?.detalles[0].pedidoModuloId, null, "sin módulo es una pieza adicional");
+  const conIds = moduleOrderUpdateSchema.safeParse({
+    ...base,
+    fechaActualizacion: "2026-10-07T12:34:56.789Z",
+    detalles: [{ ...fila, id: "9b1d2c3e-4f5a-4b6c-8d7e-0f1a2b3c4d5e", pedidoModuloId: "3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b", piezaCodigo: "LAT", orden: 4 }]
+  });
+  assert.equal(conIds.success, true);
+  assert.equal("piezaCodigo" in (conIds.data?.detalles[0] ?? {}), false, "el código de pieza lo pone el servidor");
+  assert.equal(moduleOrderUpdateSchema.safeParse({ ...base, detalles: [] }).success, false, "sin piezas");
+  assert.equal(moduleOrderUpdateSchema.safeParse({ ...base, fechaEntrega: "01/01/2020" }).success, false);
+  assert.equal(moduleOrderUpdateSchema.safeParse({ ...base, estado: "PENDIENTE" }).success, false, "un campo desconocido");
+  assert.equal(moduleOrderUpdateSchema.safeParse({ ...base, fechaActualizacion: "ayer" }).success, false);
+  assert.equal(moduleOrderUpdateSchema.safeParse({ ...base, detalles: [{ ...fila, pedidoModuloId: "x" }] }).success, false);
 });

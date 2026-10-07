@@ -1,6 +1,7 @@
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
+import EditIcon from "@mui/icons-material/Edit";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import InventoryIcon from "@mui/icons-material/Inventory2";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -45,7 +46,7 @@ import { ActionSnackbar, OrderCompletedDialog, StockShortageDialog, type StockSh
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { EDITED_BLUE } from "../components/PieceEdgesToggles";
 import { useTodayInArgentina } from "../hooks/useTodayInArgentina";
-import { activeStep, canChangeDeliveryDate, deliveryDateProblem, historyText, STATUS_STEPS } from "../lib/moduleOrderDetail";
+import { activeStep, canChangeDeliveryDate, canEditModuleOrder, deliveryDateProblem, historyText, STATUS_STEPS } from "../lib/moduleOrderDetail";
 import { deliveryStatus, exportErrorMessage, formatCreatedDay, formatDay, STATUS_ORDER } from "../lib/moduleOrdersList";
 import { buildWhatsappLink } from "../lib/whatsapp";
 import type { EstadoSolicitud, Material, ModuleOrder, ModuleOrderDetail, ModulesConfig } from "../types";
@@ -403,10 +404,12 @@ export function ModuleOrderDetailPage() {
 
   return (
     <Stack spacing={2.5}>
-      <Stack direction={{ xs: "column", md: "row" }} alignItems={{ md: "flex-end" }} justifyContent="space-between" gap={2}>
-        <Box sx={{ minWidth: 0 }}>
+      {/* Con las seis acciones al lado, desde 1200 px; mas angosto, van en una fila abajo del titulo. */}
+      <Stack direction={{ xs: "column", lg: "row" }} alignItems={{ lg: "flex-end" }} justifyContent="space-between" gap={2}>
+        <Box sx={{ minWidth: 0, flexShrink: { lg: 0 } }}>
           <Stack direction="row" spacing={1.25} alignItems="center" useFlexGap flexWrap="wrap">
-            <Typography variant="h4" component="h1">
+            {/* En una linea: con todas las acciones al lado, se cortaba en "M-" y el numero abajo. */}
+            <Typography variant="h4" component="h1" sx={{ whiteSpace: "nowrap" }}>
               Solicitud M-{order.numero}
             </Typography>
             <StatusChip size="small" status={order.estado} />
@@ -417,7 +420,7 @@ export function ModuleOrderDetailPage() {
             {order.observaciones ? ` · ${order.observaciones}` : ""}
           </Typography>
         </Box>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap sx={{ flexWrap: "wrap", flexShrink: { md: 0 }, justifyContent: { md: "flex-end" }, width: { xs: "100%", md: "auto" } }}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap sx={{ flexWrap: "wrap", flexShrink: { lg: 1 }, justifyContent: { lg: "flex-end" }, width: { xs: "100%", sm: "auto" } }}>
           <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(backTo)} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Volver
           </Button>
@@ -439,6 +442,12 @@ export function ModuleOrderDetailPage() {
               </MenuItem>
             ))}
           </TextField>
+          {/* Como en corte (spec §10.1): no en proceso, terminada ni entregada. El formulario vuelve aca. */}
+          {canEditModuleOrder(order.estado) && (
+            <Button variant="outlined" startIcon={<EditIcon />} onClick={() => navigate(`/modulos/${order.id}/editar`, { state: { returnTo: backTo } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              Editar
+            </Button>
+          )}
           <Button variant="outlined" startIcon={<InventoryIcon />} onClick={() => setMaterialsOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Materiales
           </Button>

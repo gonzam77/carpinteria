@@ -1,12 +1,12 @@
 // API de las solicitudes de modulos (/api/pedidos-modulos, spec §13.2). Solo para ADMIN.
 // Estado, materiales, exportacion y borrado se hacen con las rutas de /api/orders, que sirven para los dos tipos
-// (spec §13.3). La edicion (PUT) es de F5.2.
+// (spec §13.3). La edicion es PUT /:id (spec §10.3).
 import { Router } from "express";
 import { EstadoPedido, Rol, TipoPedido } from "../../generated/prisma/client.js";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
 import { asyncHandler } from "../../utils/http.js";
-import { moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema } from "./module-orders.schemas.js";
+import { moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema, moduleOrderUpdateSchema } from "./module-orders.schemas.js";
 import {
   buildModuleOrder,
   buildModuleOrderEstimate,
@@ -14,7 +14,8 @@ import {
   createModuleOrder,
   findModuleOrderByAltaKey,
   getModuleOrder,
-  listModuleOrders
+  listModuleOrders,
+  updateModuleOrder
 } from "./module-orders.service.js";
 
 export const moduleOrdersRouter = Router();
@@ -90,5 +91,17 @@ moduleOrdersRouter.patch(
   asyncHandler(async (req: any, res: any) => {
     const { fechaEntrega } = moduleOrderDeliveryDateSchema.parse(req.body);
     res.json(await changeModuleOrderDeliveryDate(prisma, req.params.id, fechaEntrega, req.user.id));
+  })
+);
+
+/**
+ * Edita la solicitud (spec §10.3): datos del cliente y de la entrega y todas las filas. Responde la solicitud como
+ * GET /:id. 403 si ya no se puede editar, 409 si tiene stock descontado o si cambio mientras se editaba.
+ */
+moduleOrdersRouter.put(
+  "/:id",
+  asyncHandler(async (req: any, res: any) => {
+    const data = moduleOrderUpdateSchema.parse(req.body);
+    res.json(await updateModuleOrder(prisma, req.params.id, data, req.user.id));
   })
 );

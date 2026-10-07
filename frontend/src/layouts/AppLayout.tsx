@@ -94,7 +94,9 @@ export function AppLayout() {
     if (!state?.notification) return;
 
     setNotification(state.notification);
-    navigate(location.pathname + location.search, { replace: true, state: {} });
+    // Se saca solo el aviso: el resto (por ejemplo, a donde vuelve el detalle) sigue.
+    const { notification: _shown, ...rest } = state;
+    navigate(location.pathname + location.search, { replace: true, state: rest });
   }, [location, navigate]);
 
   const navItemSx = {
