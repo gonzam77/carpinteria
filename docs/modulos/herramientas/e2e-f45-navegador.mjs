@@ -113,7 +113,7 @@ const colores = psql(`
     and exists (select 1 from materiales c where c."placaMaterialId" = p.id and c.tipo = 'CANTO' and c.activo and abs(c."espesorMm" - 2) < 1e-6)
   order by p.nombre limit 2`).split("\n");
 const BAJO = psql("select id from modulos where codigo='BAJO_MESADA_2_PUERTAS'");
-const linea = { moduloId: BAJO, valores: {}, colorEsqueletoId: colores[0], colorFrentesId: colores[1], colorCantoId: colores[0], perfilCantoOrden: 1 };
+const linea = { moduloId: BAJO, valores: {}, colorEsqueletoId: colores[0], colorFrentesId: colores[1], perfilCantoOrden: 1 };
 check(
   "datos de prueba",
   colores.length === 2 && Boolean(BAJO) && aviso === 3 && modulosAntes === "0" && Boolean(carpintero.id) && Boolean(corteCarpintero) && Boolean(corteId),

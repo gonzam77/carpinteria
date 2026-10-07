@@ -2,11 +2,16 @@
 // del backup con el catalogo importado.
 // - El alta guarda exactamente lo que mostro la vista previa: placas, cada componente del presupuesto, las filas
 //   (solo cambia el codigo de barra, que pasa a tener el numero) y los modulos con su copia de la definicion.
+// - Cantos por pieza (DECISIONES 45): cada lado lleva por defecto el canto del color de la placa de su pieza y del
+//   espesor del perfil; si esa placa no tiene uno, va sin canto, se avisa (cantosSinElegir) y no es un error. Los
+//   cambios a mano (cualquier canto activo, o ninguno) se guardan lado por lado y solo marcan EDITADO las piezas que
+//   quedan distintas de lo de por defecto. Las filas cargadas como corte dan las mismas placas y el mismo presupuesto.
 // - Los m² por material son la suma exacta de las piezas (R3).
 // - El stock se reserva y se devuelve exacto al cambiar el estado, como en corte, y una carrera entre borrar y
 //   cambiar el estado no pierde ni duplica placas.
 // - Listado: cada busqueda y filtro trae lo que corresponde y excluye lo demas; orden por entrega, entregadas al final.
-// - Errores: datos, version del modulo cambiada (409) y permisos.
+// - Errores: datos, cantos (el color unico viejo, el formato viejo, un canto que no es canto, una pieza que no existe),
+//   version del modulo cambiada (409) y permisos.
 //
 // Cambia la copia por un rato y la deja como estaba: carga una placa de 3 mm como fondo si la configuracion no
 // tiene, pone 500 placas de stock en los materiales que usa y borra las solicitudes que crea (todas con cliente
@@ -78,31 +83,109 @@ const colores = psql(`
     and exists (select 1 from materiales c where c."placaMaterialId" = p.id and c.tipo = 'CANTO' and c.activo and abs(c."espesorMm" - 0.45) < 1e-6)
     and exists (select 1 from materiales c where c."placaMaterialId" = p.id and c.tipo = 'CANTO' and c.activo and abs(c."espesorMm" - 2) < 1e-6)
   order by p.nombre limit 2`).split("\n");
-const fondo = psql(`select id from materiales where tipo = 'PLACA' and activo and "espesorMm" = 3 and "anchoPlaca" is not null limit 1`);
+// Una placa de 18 mm sin canto de 2 mm de su color, para los frentes del modulo 5: sus puertas van sin canto, se avisa y
+// no es un error (DECISIONES 45). La mas grande, para que las piezas entren.
+const colorSinCanto2 = psql(`
+  select p.id from materiales p
+  where p.tipo = 'PLACA' and p.activo and p."espesorMm" = 18 and p."anchoPlaca" is not null and p."altoPlaca" is not null
+    and not exists (select 1 from materiales c where c."placaMaterialId" = p.id and c.tipo = 'CANTO' and c.activo and abs(c."espesorMm" - 2) < 1e-6)
+  order by p."anchoPlaca" * p."altoPlaca" desc, p.nombre, p.id limit 1`);
+// Todos los cantos activos, en el orden del backend (nombre e id): si hubiera dos de la misma placa y espesor, el de
+// por defecto es el primero.
+const cantosActivos = psql(`select id, coalesce("placaMaterialId", ''), "espesorMm" from materiales where tipo = 'CANTO' and activo order by nombre, id`)
+  .split("\n")
+  .map((row) => row.split("|"))
+  .map(([id, placa, espesor]) => ({ id, placa, espesorMm: Number(espesor) }));
+const cantoPorDefecto = (placaId, espesorMm) => cantosActivos.find((canto) => canto.placa === placaId && Math.abs(canto.espesorMm - espesorMm) < 1e-6)?.id ?? null;
+const nombrePlaca = new Map(psql(`select id, nombre from materiales where tipo = 'PLACA'`).split("\n").map((row) => row.split("|")).map(([id, ...nombre]) => [id, nombre.join("|").trim()]));
+const fondo =psql(`select id from materiales where tipo = 'PLACA' and activo and "espesorMm" = 3 and "anchoPlaca" is not null limit 1`);
 // Un fondo elegido en la solicitud, distinto del de la configuracion (DECISIONES 32).
 const fondoElegido = psql(`select id from materiales where tipo = 'PLACA' and activo and "espesorMm" = 5.5 and "anchoPlaca" is not null order by nombre limit 1`);
 const fondoAntes = psql(`select coalesce("materialFondoId", 'null') from configuracion_modulos where id = 'default'`);
 const fondoConfig = fondoAntes === "null" ? fondo : fondoAntes;
 const pedidosAntes = psql("select count(*) from pedidos");
 const modulosPedidosAntes = psql("select count(*) from pedidos_modulo");
-const usados = [...new Set([...colores, fondoConfig, fondoElegido])];
+const usados = [...new Set([...colores, colorSinCanto2, fondoConfig, fondoElegido])];
 const lista = (ids) => ids.map((id) => `'${id}'`).join(",");
 const stockAntes = new Map(psql(`select id, coalesce("stockPlacas"::text, 'null') from materiales where id in (${lista(usados)})`).split("\n").map((row) => row.split("|")));
-check("datos de prueba", colores.length === 2 && Boolean(fondoConfig) && Boolean(fondoElegido) && fondoElegido !== fondoConfig && stockAntes.size === usados.length);
+check(
+  "datos de prueba",
+  colores.length === 2 &&
+    Boolean(colorSinCanto2) &&
+    !colores.includes(colorSinCanto2) &&
+    Boolean(fondoConfig) &&
+    Boolean(fondoElegido) &&
+    fondoElegido !== fondoConfig &&
+    stockAntes.size === usados.length
+);
 
 const codigos = ["BAJO_MESADA_2_PUERTAS", "ALACENA_2_PUERTAS", "PLACARD_3_PUERTAS_DE_EMBUTIR"];
 const modulos = new Map(psql(`select codigo, id from modulos where codigo in (${codigos.map((c) => `'${c}'`).join(",")})`).split("\n").map((row) => row.split("|")));
 const [colorA, colorB] = colores;
 const bajo = modulos.get("BAJO_MESADA_2_PUERTAS");
 const placard = modulos.get("PLACARD_3_PUERTAS_DE_EMBUTIR");
-const piso = (await call("GET", `/modulos/${bajo}`)).data.piezas[0].codigo;
+const alacena = modulos.get("ALACENA_2_PUERTAS");
+const definiciones = new Map();
+for (const id of [bajo, alacena, placard]) definiciones.set(id, (await call("GET", `/modulos/${id}`)).data);
+const LADOS = ["LARGO_1", "LARGO_2", "ANCHO_1", "ANCHO_2"];
+const CAMPO = { LARGO_1: "cantoLargo1", LARGO_2: "cantoLargo2", ANCHO_1: "cantoAncho1", ANCHO_2: "cantoAncho2" };
+const espesorDelPerfil = (pieza, perfil, lado) => (pieza?.cantos ?? []).find((canto) => canto.perfilOrden === perfil && canto.lado === lado)?.espesorMm ?? null;
+// Del bajo mesada, con el perfil 1: una pieza de esqueleto con canto solo en Largo 1 y un frente con canto en los 4 lados.
+const piezasBajo = definiciones.get(bajo).piezas;
+const piso = piezasBajo.find((pieza) => pieza.rol === "ESQUELETO" && LADOS.map((lado) => espesorDelPerfil(pieza, 1, lado) !== null).join() === "true,false,false,false");
+const puertas = piezasBajo.find((pieza) => pieza.rol === "FRENTE" && LADOS.every((lado) => espesorDelPerfil(pieza, 1, lado) !== null));
+// Cambios a mano del modulo 4 (frentes colorB, esqueleto colorA):
+// - en las puertas, Largo 1 con el canto de OTRO color (el de colorA) y Ancho 2 sin canto: la pieza queda EDITADO;
+// - en el piso, Largo 1 con el mismo canto que lleva por defecto y Largo 2 sin canto, como ya estaba: sigue CALCULADO.
+const cantoPuertas = cantoPorDefecto(colorB, espesorDelPerfil(puertas, 1, "LARGO_1"));
+const cantoOtroColor = cantoPorDefecto(colorA, espesorDelPerfil(puertas, 1, "LARGO_1"));
+const cantoPiso = cantoPorDefecto(colorA, espesorDelPerfil(piso, 1, "LARGO_1"));
 const lines = [
-  { moduloId: bajo, valores: {}, colorEsqueletoId: colorA, colorFrentesId: colorB, colorCantoId: colorA, perfilCantoOrden: 1, observaciones: "Va contra la pared", materialFondoId: fondoElegido },
-  { moduloId: modulos.get("ALACENA_2_PUERTAS"), valores: {}, colorEsqueletoId: colorA, colorFrentesId: colorB, colorCantoId: colorB, perfilCantoOrden: 2 },
-  { moduloId: placard, valores: {}, colorEsqueletoId: colorB, colorFrentesId: colorA, colorCantoId: colorA, perfilCantoOrden: 1 },
-  { moduloId: bajo, valores: { ANCHO: 900 }, colorEsqueletoId: colorA, colorFrentesId: colorB, colorCantoId: colorA, perfilCantoOrden: 1, cantosOverride: { [piso]: { LARGO_1: 2, LARGO_2: 2, ANCHO_1: null, ANCHO_2: null } } }
+  { moduloId: bajo, valores: {}, colorEsqueletoId: colorA, colorFrentesId: colorB, perfilCantoOrden: 1, observaciones: "Va contra la pared", materialFondoId: fondoElegido },
+  { moduloId: alacena, valores: {}, colorEsqueletoId: colorA, colorFrentesId: colorB, perfilCantoOrden: 2 },
+  { moduloId: placard, valores: {}, colorEsqueletoId: colorB, colorFrentesId: colorA, perfilCantoOrden: 1 },
+  {
+    moduloId: bajo,
+    valores: { ANCHO: 900 },
+    colorEsqueletoId: colorA,
+    colorFrentesId: colorB,
+    perfilCantoOrden: 1,
+    cantosOverride: { [puertas?.codigo]: { LARGO_1: cantoOtroColor, ANCHO_2: null }, [piso?.codigo]: { LARGO_1: cantoPiso, LARGO_2: null } }
+  },
+  // Frentes de una placa sin canto de 2 mm de su color: las puertas van sin canto y se avisa.
+  { moduloId: alacena, valores: {}, colorEsqueletoId: colorA, colorFrentesId: colorSinCanto2, perfilCantoOrden: 1 }
 ];
+check(
+  "piezas y cantos para los cambios a mano",
+  Boolean(piso && puertas && cantoPuertas && cantoOtroColor && cantoPiso) && cantoOtroColor !== cantoPuertas && definiciones.get(alacena).piezas.some((pieza) => pieza.rol === "FRENTE")
+);
+// Sin esas piezas o esos cantos el resto no prueba lo que dice: se corta antes de tocar la copia.
+if (failures) process.exit(1);
 const placardLine = lines[2];
+
+// Lo que tiene que llevar cada lado de una fila de la vista previa, calculado aca por separado (DECISIONES 45): el
+// elegido a mano si se toco; si no, el canto de la placa de la pieza con el espesor del perfil, o ninguno (y se avisa).
+const esperadoDe = (row) => {
+  const line = lines[row.posicionModulo - 1];
+  const pieza = definiciones.get(line.moduloId).piezas.find((item) => item.codigo === row.piezaCodigo);
+  const override = line.cantosOverride?.[row.piezaCodigo] ?? {};
+  let editado = false;
+  const sinCanto = [];
+  const cantos = Object.fromEntries(
+    LADOS.map((lado) => {
+      const espesor = espesorDelPerfil(pieza, line.perfilCantoOrden, lado);
+      const porDefecto = espesor === null ? null : cantoPorDefecto(row.materialId, espesor);
+      if (lado in override) {
+        if (override[lado] !== porDefecto) editado = true;
+        return [lado, override[lado]];
+      }
+      if (espesor !== null && !porDefecto) sinCanto.push({ piezaCodigo: pieza.codigo, pieza: pieza.nombre, lado, espesorMm: espesor, placa: nombrePlaca.get(row.materialId) });
+      return [lado, porDefecto];
+    })
+  );
+  return { cantos, origen: editado ? "EDITADO" : "CALCULADO", sinCanto };
+};
+const ladosDe = (row) => LADOS.map((lado) => row[`${CAMPO[lado]}Id`] ?? null);
 const datos = (extra = {}) => ({
   cliente: `${PREFIJO} alfa`,
   numeroContacto: "000000",
@@ -120,7 +203,7 @@ const ROW_FIELDS = [
   "numeroCliente", "nombreCliente", "nombreProducto", "indice", "piezaCodigo", "origen", "orden"
 ];
 const pick = (row, fields) => Object.fromEntries(fields.map((field) => [field, row[field] ?? null]));
-const MODULE_FIELDS = ["posicion", "moduloId", "nombreModulo", "valores", "colorEsqueletoId", "colorFrentesId", "colorCantoId", "perfilCantoOrden", "materialFondoId", "observaciones"];
+const MODULE_FIELDS = ["posicion", "moduloId", "nombreModulo", "valores", "colorEsqueletoId", "colorFrentesId", "perfilCantoOrden", "materialFondoId", "observaciones"];
 
 const creados = [];
 const crear = async (body) => {
@@ -159,7 +242,102 @@ try {
   );
   const moduloDe = new Map(order.modulos.map((modulo) => [modulo.id, modulo.posicion]));
   check("cada fila con el pedidoModuloId de su modulo", order.detalles.every((row, index) => moduloDe.get(row.pedidoModuloId) === preview.data.detalles[index].posicionModulo));
-  check("una pieza con cantos cambiados queda EDITADO", order.detalles.filter((row) => row.origen === "EDITADO").length === 1 && order.detalles.every((row) => row.origen));
+
+  // ---------------------------------------------------------------- cantos por pieza (DECISIONES 45)
+  const esperados = preview.data.detalles.map(esperadoDe);
+  const malCantos = preview.data.detalles
+    .map((row, index) => ({ row, esperado: esperados[index], index }))
+    .filter(
+      ({ row, esperado }) =>
+        !same(ladosDe(row), LADOS.map((lado) => esperado.cantos[lado])) ||
+        LADOS.some((lado) => row[CAMPO[lado]] !== (esperado.cantos[lado] !== null)) ||
+        row.origen !== esperado.origen
+    );
+  check(
+    "vista previa: cada lado lleva el canto de la placa de su pieza y del espesor del perfil, o el elegido a mano",
+    preview.data.detalles.length > 0 && malCantos.length === 0,
+    malCantos.length ? malCantos.slice(0, 3).map(({ row, index }) => `fila ${index} módulo ${row.posicionModulo} ${row.piezaCodigo}`).join("; ") : `${preview.data.detalles.length} filas`
+  );
+  const sinCantoEsperado = lines.map((_, index) => esperados.filter((_e, fila) => preview.data.detalles[fila].posicionModulo === index + 1).flatMap((item) => item.sinCanto));
+  check(
+    "lados sin canto de su color: van sin canto, se avisan por módulo (cantosSinElegir) y no son un error",
+    preview.data.modulos.every((modulo, index) => same(modulo.cantosSinElegir, sinCantoEsperado[index])) &&
+      sinCantoEsperado.slice(0, 4).every((lista) => lista.length === 0) &&
+      sinCantoEsperado[4].length > 0 &&
+      sinCantoEsperado[4].every((item) => item.espesorMm === 2 && item.placa === nombrePlaca.get(colorSinCanto2)),
+    preview.data.modulos.map((modulo) => modulo.cantosSinElegir?.length ?? "falta").join(" ")
+  );
+  const filaDe = (posicion, codigo) => order.detalles.find((row) => row.pedidoModuloId === order.modulos[posicion - 1]?.id && row.piezaCodigo === codigo);
+  const puertasEditadas = filaDe(4, puertas.codigo);
+  const pisoSinCambio = filaDe(4, piso.codigo);
+  check(
+    "guardado: las puertas del módulo 4 con el canto de otro color en Largo 1, sin canto en Ancho 2 y el resto por defecto",
+    Boolean(puertasEditadas) &&
+      same(ladosDe(puertasEditadas), [cantoOtroColor, cantoPuertas, cantoPuertas, null]) &&
+      puertasEditadas.cantoLargo1 === true &&
+      puertasEditadas.cantoAncho2 === false &&
+      puertasEditadas.origen === "EDITADO"
+  );
+  check(
+    "guardado: elegir a mano lo mismo que lleva por defecto no es un cambio (el piso sigue CALCULADO)",
+    Boolean(pisoSinCambio) && same(ladosDe(pisoSinCambio), [cantoPiso, null, null, null]) && pisoSinCambio.origen === "CALCULADO"
+  );
+  const enLaBase = new Map(
+    psql(
+      `select id, coalesce("cantoLargo1Id", '-'), coalesce("cantoLargo2Id", '-'), coalesce("cantoAncho1Id", '-'), coalesce("cantoAncho2Id", '-'), origen from detalle_pedidos where "pedidoId" = '${order.id}'`
+    )
+      .split("\n")
+      .map((row) => [row.slice(0, row.indexOf("|")), row.slice(row.indexOf("|") + 1)])
+  );
+  check(
+    "en la base: cada fila con los cantos de la vista previa lado por lado y su origen",
+    enLaBase.size === order.detalles.length &&
+      order.detalles.every((row, index) => enLaBase.get(row.id) === [...ladosDe(preview.data.detalles[index]).map((id) => id ?? "-"), preview.data.detalles[index].origen].join("|"))
+  );
+  const editadas = order.detalles.filter((row) => row.origen === "EDITADO");
+  check(
+    "EDITADO solo en las piezas con algún lado distinto del de por defecto",
+    editadas.length === 1 && editadas[0] === puertasEditadas && order.detalles.every((row) => row.origen === "EDITADO" || row.origen === "CALCULADO"),
+    `${editadas.length} editadas`
+  );
+  const sinCantoGuardadas = order.detalles.filter((row) => row.pedidoModuloId === order.modulos[4]?.id && row.materialId === colorSinCanto2);
+  check(
+    "guardado: los frentes sin canto de su color quedan sin canto y CALCULADO",
+    sinCantoGuardadas.length > 0 && sinCantoGuardadas.every((row) => same(ladosDe(row), [null, null, null, null]) && row.origen === "CALCULADO"),
+    `${sinCantoGuardadas.length} filas`
+  );
+
+  // Paridad (CLAUDE.md regla 1): las filas de la vista previa cargadas tal cual como corte dan las mismas placas y
+  // cada componente del presupuesto, con los cantos de otro color y los lados sin canto incluidos.
+  const comoCorteCalc = await call("POST", "/orders/preview", {
+    cliente: `${PREFIJO} paridad`,
+    numeroContacto: "000000",
+    detalles: preview.data.detalles.map((row) => ({
+      materialId: row.materialId,
+      largo: row.largo,
+      ancho: row.ancho,
+      cantidad: row.cantidad,
+      permiteRotar: row.permiteRotar,
+      cantoLargo1Id: row.cantoLargo1Id,
+      cantoLargo2Id: row.cantoLargo2Id,
+      cantoAncho1Id: row.cantoAncho1Id,
+      cantoAncho2Id: row.cantoAncho2Id,
+      nombreProducto: "a mano"
+    }))
+  });
+  const PARIDAD = ["placasEstimadas", "costoPlacas", "costoManoObraCortes", "costoMaterialCantos", "costoPegadoCantos", "costoCantos", "metrosCanto", "presupuestoEstimado", "faltanteStock"];
+  const ordenado = (detail) => ({
+    ...detail,
+    porMaterial: [...detail.porMaterial].sort((x, y) => x.materialId.localeCompare(y.materialId)),
+    porCanto: [...detail.porCanto].sort((x, y) => x.cantoId.localeCompare(y.cantoId))
+  });
+  const difCorte = comoCorteCalc.status === 200 ? PARIDAD.filter((key) => comoCorteCalc.data[key] !== preview.data[key]) : [`corte ${comoCorteCalc.status}`];
+  if (comoCorteCalc.status === 200 && !same(ordenado(comoCorteCalc.data.estimacionDetalle), ordenado(preview.data.estimacionDetalle))) difCorte.push("estimacionDetalle");
+  check(
+    "paridad: las mismas filas como solicitud de corte dan las mismas placas y cada componente del presupuesto",
+    difCorte.length === 0 && preview.data.costoCantos > 0,
+    difCorte.join(", ") || `${preview.data.placasEstimadas} placas, ${preview.data.metrosCanto} m de canto`
+  );
 
   // Modulos guardados: cada uno igual al de la vista previa y al pedido, con la copia de SU definicion (spec D2).
   check(
@@ -174,18 +352,24 @@ try {
         modulo.moduloId === lines[index].moduloId &&
         modulo.colorEsqueleto.id === lines[index].colorEsqueletoId &&
         modulo.colorFrentes.id === lines[index].colorFrentesId &&
-        modulo.colorCanto.id === lines[index].colorCantoId &&
         modulo.perfilCantoOrden === lines[index].perfilCantoOrden
     )
   );
-  // Fondo usado: el elegido (modulo 1), el de la configuracion (modulos 2 y 4) y ninguno en el placard, que no tiene fondo.
+  // Ya no hay un color de canto por modulo (DECISIONES 45): ni en la vista previa, ni en lo guardado, ni en la base.
+  check(
+    "los módulos no tienen color de canto",
+    [...order.modulos, ...preview.data.modulos].every((modulo) => !("colorCantoId" in modulo) && !("colorCanto" in modulo)) &&
+      psql(`select count(*) from information_schema.columns where table_name = 'pedidos_modulo' and column_name = 'colorCantoId'`) === "0"
+  );
+  // Fondo usado: el elegido (modulo 1), el de la configuracion (modulos 2, 4 y 5) y ninguno en el placard, que no tiene fondo.
   check(
     "cada modulo guarda el fondo que uso",
     order.modulos[0].materialFondoId === fondoElegido &&
       order.modulos[0].materialFondo?.id === fondoElegido &&
       order.modulos[1].materialFondoId === fondoConfig &&
       order.modulos[2].materialFondoId === null &&
-      order.modulos[3].materialFondoId === fondoConfig,
+      order.modulos[3].materialFondoId === fondoConfig &&
+      order.modulos[4].materialFondoId === fondoConfig,
     order.modulos.map((modulo) => (modulo.materialFondoId === fondoElegido ? "elegido" : modulo.materialFondoId ? "config" : "-")).join(" ")
   );
   const fondoDelModulo1 = order.detalles.filter((row) => row.pedidoModuloId === order.modulos[0].id && row.piezaCodigo && row.materialId === fondoElegido);
@@ -194,8 +378,6 @@ try {
   const elegidoEnMateriales = materiales.find((material) => material.id === fondoElegido);
   check("Materiales cuenta el fondo elegido como vinculo (no se puede borrar)", elegidoEnMateriales?.linkedModulesCount >= 1 && elegidoEnMateriales.canDeletePermanently === false);
 
-  const definiciones = new Map();
-  for (const line of lines) if (!definiciones.has(line.moduloId)) definiciones.set(line.moduloId, (await call("GET", `/modulos/${line.moduloId}`)).data);
   const sinExtras = ({ imagen: _i, tienePedidos: _t, estadoFormulas: _e, errores: _r, ...rest }) => rest;
   check(
     "la copia de la definicion es la de su modulo, completa y sin imagen ni tienePedidos",
@@ -403,6 +585,26 @@ await prisma.$disconnect();
     (data) => data.code === "MODULE_CHANGED" && data.details.modulos[0].posicion === 2
   );
   await intento("sin modulos: 400", { ...datos(), modulos: [] }, 400);
+  // Cantos (DECISIONES 45): el color unico por modulo y el formato viejo (espesores) ya no entran.
+  const conCantos = (cantosOverride) => [{ ...lines[0], cantosOverride }];
+  await intento("un módulo con colorCantoId (ya no existe): 400", { ...datos(), modulos: [{ ...lines[0], colorCantoId: colorA }] }, 400, (data) => texto(data).includes("no se reconocen"));
+  await intento("cantos cambiados con el formato viejo (espesor en mm): 400", { ...datos(), modulos: conCantos({ [piso.codigo]: { LARGO_1: 2 } }) }, 400, (data) =>
+    texto(data).includes("Cada lado lleva el canto elegido o null (sin canto)")
+  );
+  await intento("un lado que no existe: 400", { ...datos(), modulos: conCantos({ [piso.codigo]: { LARGO_3: null } }) }, 400, (data) =>
+    texto(data).includes("Los lados de una pieza son LARGO_1, LARGO_2, ANCHO_1 y ANCHO_2")
+  );
+  await intento(
+    "un canto elegido que no es un canto activo (una placa): 400 MODULE_MATERIAL_INVALID",
+    { ...datos(), modulos: conCantos({ [piso.codigo]: { LARGO_1: colorA } }) },
+    400,
+    (data) =>
+      data.code === "MODULE_MATERIAL_INVALID" &&
+      data.message === `Módulo 1 (${definiciones.get(bajo).nombre}): el canto elegido para "${piso.nombre}" (Largo 1) no es un canto activo del sistema.`
+  );
+  await intento("cantos cambiados de una pieza que no existe: 400 MODULE_FORMULA_ERRORS", { ...datos(), modulos: conCantos({ NO_EXISTE: { LARGO_1: null } }) }, 400, (data) =>
+    data.code === "MODULE_FORMULA_ERRORS" && texto(data).includes("No existe la pieza NO_EXISTE para cambiarle los cantos")
+  );
   await intento("clave de alta mal formada: 400", { ...datos(), claveAlta: "no-es-uuid", modulos: [placardLine] }, 400, (data) => texto(data).includes("La clave de alta no es válida"));
   const prohibido = await call("POST", "/pedidos-modulos", { ...datos(), modulos: lines }, carpintero);
   check("un carpintero no accede (403)", prohibido.status === 403 && (await call("GET", "/pedidos-modulos", undefined, carpintero)).status === 403);

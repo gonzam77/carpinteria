@@ -2,12 +2,14 @@
 // (puerto 4100, copia del backup) y Vite (puerto 5180, con VITE_API_URL=http://127.0.0.1:4100/api).
 // - Permisos: sin sesion lleva a /admin; un carpintero no ve el menu ni entra.
 // - Los 4 pasos: validaciones (como el alta), busqueda y teclado en la grilla, colores por defecto, fondo por modulo,
-//   copiar medidas, perfil, medidas mal escritas, colores sin el canto que hace falta, cantos por pieza (tomados del
-//   perfil, marcados por lado), error de un canto que no existe, volver y avanzar, plano con las mismas placas que la
-//   vista previa, una sola vista previa a la vez (con el servidor demorado a proposito), 409 MODULE_CHANGED, doble
-//   click, bloqueo mientras se crea, respuesta perdida (busca la solicitud en vez de crearla otra vez), salir mientras
-//   se crea, lo guardado igual a la ultima vista previa, catalogo que cambia con el asistente abierto y borrador
-//   (guardar, recuperar con fecha vencida, descartar).
+//   copiar medidas, perfil, medidas mal escritas, sin selector de color de cantos en el paso 3 (DECISIONES 45), cantos
+//   por pieza y por lado (por defecto el de la placa de la pieza con el espesor del perfil; el menu con todos los
+//   cantos activos; otro color, otro espesor o sin canto; el azul de lo cambiado y el ambar de un lado sin canto de su
+//   color; volver al de por defecto), un error de la vista previa (inventado con page.route), volver y avanzar, plano
+//   con las mismas placas que la vista previa, una sola vista previa a la vez (con el servidor demorado a proposito),
+//   409 MODULE_CHANGED, doble click, bloqueo mientras se crea, respuesta perdida (busca la solicitud en vez de crearla
+//   otra vez), salir mientras se crea, lo guardado igual a la ultima vista previa, catalogo que cambia con el
+//   asistente abierto y borrador (guardar, recuperar con fecha vencida y con cantos del formato viejo, descartar).
 // - Paridad entre pantallas: el detalle comun de la solicitud creada da las mismas placas e importe guardados.
 // - Corte: el detalle y el formulario siguen igual. Tablet y celular sin scroll horizontal. Barra del editor de modulos.
 // Crea solicitudes "Prueba F4.4 ..." y las borra al final; sube un rato la version de un modulo (409) y desactiva otro
@@ -82,14 +84,71 @@ const colores = psql(`select p.id || '|' || trim(p.nombre) from materiales p whe
 const [[colorAId, colorANombre], [colorBId, colorBNombre]] = colores;
 const colorA = `${colorANombre} · 18 mm`;
 const colorB = `${colorBNombre} · 18 mm`;
-// Un color con canto de 0,45 pero sin el de 2 mm que piden las puertas del perfil Estandar.
-const colorSinDos = `${psql(`select trim(p.nombre) from materiales p where ${placas18} and ${conCanto(0.45)} and not ${conCanto(2)} order by p.nombre limit 1`)} · 18 mm`;
+// Un color con canto de 0,45 pero sin el de 2 mm que piden las puertas del perfil Estandar: en los frentes, las puertas
+// van sin canto (en ambar), sin error (DECISIONES 45).
+const [colorSinDosId, colorSinDosNombre] = psql(`select p.id || '|' || trim(p.nombre) from materiales p where ${placas18} and ${conCanto(0.45)} and not ${conCanto(2)} order by p.nombre limit 1`).split("|");
+const colorSinDos = `${colorSinDosNombre} · 18 mm`;
+// Los cantos activos, en el orden en que el servidor elige el de por defecto (nombre e id), con el texto del menu.
+const mmText = (value) => Number(value).toLocaleString("es-AR", { useGrouping: false, maximumFractionDigits: 2 });
+const cantos = psql(
+  `select c.id || '|' || coalesce(c."placaMaterialId", '') || '|' || c."espesorMm" || '|' || trim(coalesce(p.nombre, c.nombre)) from materiales c left join materiales p on p.id = c."placaMaterialId" where c.tipo = 'CANTO' and c.activo order by c.nombre, c.id`
+)
+  .split("\n")
+  .filter(Boolean)
+  .map((row) => {
+    const [id, placaId, mm, nombre] = row.split("|");
+    return { id, placaId, mm: Number(mm), label: `${nombre} · ${mmText(mm)} mm` };
+  });
+const cantoDe = (placaId, mm) => cantos.find((canto) => canto.placaId === placaId && Math.abs(canto.mm - mm) < 1e-6)?.id ?? null;
+const etiqueta = (id) => cantos.find((canto) => canto.id === id)?.label ?? `canto ${id}`;
+const cantoA045 = cantoDe(colorAId, 0.45);
+const cantoA2 = cantoDe(colorAId, 2);
+const cantoB045 = cantoDe(colorBId, 0.45);
+const cantoB2 = cantoDe(colorBId, 2);
 const [fondoId, fondoNombre] = psql(`select id || '|' || trim(nombre) from materiales where tipo = 'PLACA' and activo and "espesorMm" = 5.5 and "anchoPlaca" is not null order by nombre limit 1`).split("|");
 const fondoLabel = `${fondoNombre} · 5,5 mm`;
 const BAJO = psql("select id from modulos where codigo='BAJO_MESADA_2_PUERTAS'");
 const ALACENA = psql("select id from modulos where codigo='ALACENA_2_PUERTAS'");
 const ESPECIERO = psql("select id from modulos where codigo='ESPECIERO'");
 const versionAlacena = psql(`select version from modulos where id='${ALACENA}'`);
+// Rol de cada pieza y espesor de cada lado en cada perfil: con eso y los colores, el canto por defecto de cada lado.
+const piezasDe = (moduloId) => {
+  const piezas = new Map(
+    psql(`select codigo || '|' || rol from modulos_pieza where "moduloId" = '${moduloId}'`)
+      .split("\n")
+      .map((row) => row.split("|"))
+      .map(([codigo, rol]) => [codigo, { rol, perfiles: { 1: {}, 2: {} } }])
+  );
+  const lados = psql(
+    `select p.codigo || '|' || pf.orden || '|' || c.lado || '|' || c."espesorMm" from modulos_pieza p join modulos_pieza_canto c on c."piezaId" = p.id join modulos_perfil_canto pf on pf.id = c."perfilId" where p."moduloId" = '${moduloId}'`
+  );
+  for (const row of lados.split("\n").filter(Boolean)) {
+    const [codigo, orden, lado, mm] = row.split("|");
+    piezas.get(codigo).perfiles[orden][lado] = Number(mm);
+  }
+  return piezas;
+};
+const catalogoPiezas = new Map([
+  [BAJO, piezasDe(BAJO)],
+  [ALACENA, piezasDe(ALACENA)]
+]);
+const LADOS = [
+  ["LARGO_1", "Largo 1", "cantoLargo1Id"],
+  ["LARGO_2", "Largo 2", "cantoLargo2Id"],
+  ["ANCHO_1", "Ancho 1", "cantoAncho1Id"],
+  ["ANCHO_2", "Ancho 2", "cantoAncho2Id"]
+];
+/** Canto por defecto de un lado (DECISIONES 45): el de la placa de la pieza con el espesor del perfil, o null. */
+const porDefecto = (modulo, piezaCodigo, lado) => {
+  const pieza = catalogoPiezas.get(modulo.moduloId)?.get(piezaCodigo);
+  const mm = pieza?.perfiles[modulo.perfilCantoOrden]?.[lado];
+  if (mm === undefined) return null;
+  const placa = pieza.rol === "ESQUELETO" ? modulo.colorEsqueletoId : pieza.rol === "FRENTE" ? modulo.colorFrentesId : null;
+  return placa ? cantoDe(placa, mm) : null;
+};
+/** JSON con las claves ordenadas, para comparar cambios de canto sin depender del orden. */
+const canonico = (value) =>
+  JSON.stringify(value, (_key, item) => (item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item));
 const corteId = psql(`select id from pedidos where tipo='CORTE' and exists (select 1 from detalle_pedidos d where d."pedidoId" = pedidos.id) order by "fechaCreacion" desc limit 1`);
 const contar = () => ({
   pedidos: psql("select count(*) from pedidos"),
@@ -107,7 +166,12 @@ const espesores = new Map(
 );
 check(
   "datos de prueba",
-  Boolean(colorAId && colorBId && fondoId && BAJO && ALACENA && ESPECIERO && corteId && fondoConfig && !colorSinDos.startsWith(" ·")) && dias > 0 && especieroActivo === "t",
+  Boolean(colorAId && colorBId && fondoId && BAJO && ALACENA && ESPECIERO && corteId && fondoConfig && colorSinDosId && colorSinDosNombre) &&
+    Boolean(cantoA045 && cantoA2 && cantoB045 && cantoB2) &&
+    cantoDe(colorSinDosId, 0.45) !== null &&
+    cantoDe(colorSinDosId, 2) === null &&
+    dias > 0 &&
+    especieroActivo === "t",
   `fondo de la configuracion: ${fondoConfig}`
 );
 
@@ -291,19 +355,33 @@ try {
   check("paso 3: medidas por defecto del catalogo", (await c1.getByLabel("Ancho (mm)").inputValue()) === "1200" && (await c3.getByLabel("Ancho (mm)").inputValue()) === "780");
   await page.getByRole("button", { name: "Revisar despiece" }).click();
   text = await firstError();
-  check("paso 3: sin colores no avanza y dice que falta", text.includes("Módulo 1 (Bajo mesada 2 puertas): falta elegir el color de esqueleto, el color de frentes, el color de los cantos"), text.slice(0, 160));
-  check("paso 3: colores sin elegir dicen que hacer", (await c1.getByText("Elegí un color").count()) === 3);
+  check(
+    "paso 3: sin colores no avanza y dice que falta (sin color de cantos)",
+    text.includes("Módulo 1 (Bajo mesada 2 puertas): falta elegir el color de esqueleto, el color de frentes.") && !text.includes("canto"),
+    text.slice(0, 160)
+  );
+  check("paso 3: colores sin elegir dicen que hacer", (await c1.getByText("Elegí un color").count()) === 2);
   const barra = page.locator(".MuiPaper-root", { hasText: "Colores por defecto" });
+  // DECISIONES 45: ya no se elige un color de cantos, ni en la barra ni en las tarjetas, y no hay avisos de espesores.
+  const selectoresCantos = await page.getByRole("combobox", { name: /^Cantos/ }).count();
+  const combosBarra = await barra.getByRole("combobox").count();
+  check(
+    "paso 3: no hay selector de color de cantos ni avisos de espesores",
+    selectoresCantos === 0 && combosBarra === 2 && (await page.getByText(/sin canto de/).count()) === 0,
+    `${selectoresCantos} selectores Cantos, ${combosBarra} en la barra`
+  );
   await selectIn(barra, "Esqueleto", colorA);
   await selectIn(barra, "Frentes", colorB);
-  await selectIn(barra, "Cantos", colorA);
   await barra.getByRole("button", { name: "Aplicar a todos" }).click();
   check("paso 3: Aplicar a todos completa los colores", JSON.stringify(await estados()) === '["Listo","Listo","Listo"]', (await estados()).join(", "));
-  // Un color de cantos sin el espesor que piden las puertas: la tarjeta queda para revisar y lo dice.
-  await selectIn(c1, "Cantos", new RegExp(`^${colorSinDos.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
-  const helperCantos = norm(await c1.locator(".MuiFormHelperText-root.Mui-error").allInnerTexts());
-  check("paso 3: color de cantos sin el canto de 2 mm marca la tarjeta", (await estados())[0] === "Revisar" && helperCantos.includes("sin canto de 2 mm"), helperCantos.slice(0, 120));
-  await selectIn(c1, "Cantos", colorA);
+  // Frentes de un color sin canto de 2 mm (el que piden las puertas): la tarjeta sigue lista, sin error (DECISIONES 45).
+  await selectIn(c2, "Frentes", colorSinDos);
+  await page.waitForTimeout(150);
+  check(
+    "paso 3: frentes de un color sin el canto que piden las puertas no marcan la tarjeta",
+    JSON.stringify(await estados()) === '["Listo","Listo","Listo"]' && (await c2.locator(".MuiFormHelperText-root.Mui-error").count()) === 0,
+    (await estados()).join(", ")
+  );
   const fondoTexto = norm(await c1.getByRole("combobox", { name: /^Material de fondo/ }).innerText());
   check("paso 3: fondo del catalogo por defecto", fondoTexto === `El del catálogo (${fondoConfig})`, fondoTexto);
   await selectIn(c2, "Material de fondo", fondoLabel);
@@ -345,7 +423,8 @@ try {
   await page.getByText("Calculando placas y presupuesto con el optimizador").waitFor({ timeout: 10000 }).catch(() => undefined);
   let preview = await (await response).json();
   const body = JSON.parse(previewSent[previewSent.length - 1].postData());
-  const permitidos = new Set(["moduloId", "valores", "colorEsqueletoId", "colorFrentesId", "colorCantoId", "perfilCantoOrden", "materialFondoId", "observaciones", "cantosOverride"]);
+  // Sin colorCantoId (DECISIONES 45): el esquema estricto lo rechaza.
+  const permitidos = new Set(["moduloId", "valores", "colorEsqueletoId", "colorFrentesId", "perfilCantoOrden", "materialFondoId", "observaciones", "cantosOverride"]);
   check(
     "vista previa: manda los datos cargados y nada mas",
     body.cliente === `${PREFIJO} navegador` &&
@@ -359,7 +438,8 @@ try {
       body.modulos[0].materialFondoId === undefined &&
       body.modulos[1].materialFondoId === fondoId &&
       body.modulos[2].perfilCantoOrden === 2 &&
-      body.modulos.every((line) => line.colorEsqueletoId === colorAId && line.colorFrentesId === colorBId && line.colorCantoId === colorAId && !line.cantosOverride),
+      body.modulos.every((line) => line.colorEsqueletoId === colorAId && !("colorCantoId" in line) && !line.cantosOverride) &&
+      JSON.stringify(body.modulos.map((line) => line.colorFrentesId)) === JSON.stringify([colorBId, colorSinDosId, colorBId]),
     JSON.stringify(body.modulos.map((line) => Object.keys(line)))
   );
   const despiece = (n, nombre) => page.getByRole("region", { name: `Módulo ${n} · ${nombre}`, exact: true });
@@ -371,17 +451,111 @@ try {
     await despiece(3, "Alacena 2 puertas").locator("tbody tr").count()
   ];
   check("paso 4: una tarjeta por modulo con sus piezas", JSON.stringify(filasPorModulo) === JSON.stringify(filasEnPantalla) && filasPorModulo.every((count) => count > 0), filasEnPantalla.join(", "));
-  // Los cantos que se ven son los de las filas del servidor (el perfil), lado por lado.
-  const espesorDe = new Map(preview.estimacionDetalle.porCanto.map((item) => [item.cantoId, item.espesorMm]));
-  const ladosFila = (row) => [row.cantoLargo1Id, row.cantoLargo2Id, row.cantoAncho1Id, row.cantoAncho2Id].map((id) => (id ? espesorDe.get(id) : null));
-  const filasServidor = preview.detalles.filter((row) => row.posicionModulo === 1);
-  let cantosIguales = true;
-  for (let index = 0; index < filasServidor.length; index += 1) {
-    const pressed = await despiece(1, "Bajo mesada 2 puertas").locator("tbody tr").nth(index).getByRole("button").evaluateAll((buttons) => buttons.slice(0, 4).map((button) => button.getAttribute("aria-pressed") === "true"));
-    const servidor = ladosFila(filasServidor[index]).map((value) => value !== null);
-    if (JSON.stringify(pressed) !== JSON.stringify(servidor)) cantosIguales = false;
+  // Cantos (DECISIONES 45): cuatro selects por pieza. El valor es el id del canto (o vacio, sin canto) en el input oculto
+  // de MUI; cerrado se ve "<placa> · <mm> mm" o "Sin canto", y en el menu el de la placa de la pieza lleva
+  // " (por defecto)".
+  const nombresDespiece = ["Bajo mesada 2 puertas", "Bajo mesada 2 puertas", "Alacena 2 puertas"];
+  const filasDe = (posicion) => despiece(posicion, nombresDespiece[posicion - 1]).locator("tbody tr");
+  const escapar = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // El nombre accesible es el rotulo del lado mas su aria-label ("Largo 1 Largo 1 de Piso del módulo 1"): se busca por el final.
+  const selectLado = (posicion, pieza, index) => page.getByRole("combobox", { name: new RegExp(`(^|\\s)${escapar(`${LADOS[index][1]} de ${pieza} del módulo ${posicion}`)}$`) });
+  const mostrado = async (locator) => norm((await locator.innerText()).replace(/​/g, ""));
+  const sinCantoVisible = (text) => text === "" || text.startsWith("Sin canto");
+  const valoresFila = (fila) => fila.locator("input.MuiSelect-nativeInput").evaluateAll((inputs) => inputs.map((input) => input.value));
+  const desenfocar = async () => {
+    await page.mouse.move(1, 1);
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.waitForTimeout(250);
+  };
+  const AZUL = "rgb(47, 111, 219)";
+  const contornos = async (fila) => {
+    await desenfocar();
+    return fila.locator(".MuiOutlinedInput-notchedOutline").evaluateAll((outlines) => outlines.map((outline) => getComputedStyle(outline).borderColor));
+  };
+  const diferenciasPorDefecto = [];
+  for (const posicion of [1, 2, 3]) {
+    const modulo = preview.modulos[posicion - 1];
+    const filas = preview.detalles.filter((row) => row.posicionModulo === posicion);
+    for (let index = 0; index < filas.length; index += 1) {
+      const row = filas[index];
+      const filaN = filasDe(posicion).nth(index);
+      const esperado = LADOS.map(([ladoCodigo]) => porDefecto(modulo, row.piezaCodigo, ladoCodigo));
+      const servidor = LADOS.map(([, , campo]) => row[campo] ?? null);
+      const enPantalla = await valoresFila(filaN);
+      const textos = [];
+      for (let ladoIndex = 0; ladoIndex < 4; ladoIndex += 1) textos.push(await mostrado(filaN.getByRole("combobox").nth(ladoIndex)));
+      const textosOk = esperado.every((id, ladoIndex) => (id ? textos[ladoIndex] === etiqueta(id) : sinCantoVisible(textos[ladoIndex])));
+      if (
+        JSON.stringify(servidor) !== JSON.stringify(esperado) ||
+        JSON.stringify(enPantalla) !== JSON.stringify(esperado.map((id) => id ?? "")) ||
+        !textosOk ||
+        row.origen !== "CALCULADO"
+      ) {
+        diferenciasPorDefecto.push(`M${posicion} ${row.piezaCodigo}: ${textos.join(" / ")}`);
+      }
+    }
   }
-  check("paso 4: los cantos de la tabla coinciden con las filas del servidor", cantosIguales);
+  check(
+    "paso 4: cada lado arranca con el canto de la placa de su pieza y el espesor del perfil (servidor y pantalla)",
+    diferenciasPorDefecto.length === 0,
+    diferenciasPorDefecto.slice(0, 3).join(" || ")
+  );
+  // Frentes sin canto de su color (modulo 2): las puertas van sin canto, en ambar, y la vista previa lo lista (sin error).
+  const filaFrente2Index = preview.detalles.filter((row) => row.posicionModulo === 2).findIndex((row) => catalogoPiezas.get(BAJO).get(row.piezaCodigo)?.rol === "FRENTE");
+  const frente2 = preview.detalles.filter((row) => row.posicionModulo === 2)[filaFrente2Index];
+  const filaFrente2 = filasDe(2).nth(filaFrente2Index);
+  const AVISO_AMBAR = "La placa no tiene canto de su color";
+  const sinElegir = preview.modulos.map((modulo) => modulo.cantosSinElegir ?? []);
+  const ambar = await filaFrente2.getByText(AVISO_AMBAR, { exact: true }).count();
+  const colorAmbar = ambar ? await filaFrente2.getByText(AVISO_AMBAR, { exact: true }).first().evaluate((element) => getComputedStyle(element).color) : "";
+  check(
+    "paso 4: puertas de un color sin canto de 2 mm, sin canto en los 4 lados con el aviso ambar",
+    Boolean(frente2) &&
+      LADOS.every(([, , campo]) => frente2[campo] === null) &&
+      sinElegir[0].length === 0 &&
+      sinElegir[2].length === 0 &&
+      sinElegir[1].length === 4 &&
+      sinElegir[1].every((item) => item.piezaCodigo === frente2.piezaCodigo && item.espesorMm === 2 && item.placa === colorSinDosNombre) &&
+      JSON.stringify(sinElegir[1].map((item) => item.lado).sort()) === JSON.stringify(LADOS.map(([lado]) => lado).sort()) &&
+      ambar === 4 &&
+      (await despiece(2, "Bajo mesada 2 puertas").getByText(AVISO_AMBAR, { exact: true }).count()) === 4 &&
+      (await despiece(1, "Bajo mesada 2 puertas").getByText(AVISO_AMBAR, { exact: true }).count()) === 0 &&
+      (await despiece(3, "Alacena 2 puertas").getByText(AVISO_AMBAR, { exact: true }).count()) === 0 &&
+      colorAmbar === "rgb(138, 90, 0)",
+    `${ambar} avisos, color ${colorAmbar}, cantosSinElegir ${sinElegir.map((list) => list.length).join("/")}`
+  );
+  await selectLado(2, frente2.nombreProducto, 0).click();
+  const opcionesAmbar = await page.getByRole("option").allInnerTexts();
+  await page.keyboard.press("Escape");
+  check(
+    "paso 4: en ese lado, el menu marca Sin canto como el de por defecto",
+    norm(opcionesAmbar[0]) === "Sin canto (por defecto)" && opcionesAmbar.filter((option) => option.includes("(por defecto)")).length === 1,
+    norm(opcionesAmbar[0])
+  );
+  await shot("w4-sin-canto-ambar");
+
+  // El menu de un lado: Sin canto y todos los cantos activos, de cualquier color y espesor; el de por defecto, marcado.
+  const filasServidor = preview.detalles.filter((row) => row.posicionModulo === 1);
+  const filaPreview = filasServidor[0];
+  const codigo = filaPreview.piezaCodigo;
+  const nombrePieza = filaPreview.nombreProducto;
+  const fila = filasDe(1).first();
+  const lado = (index) => selectLado(1, nombrePieza, index);
+  const defectoFila = LADOS.map(([ladoCodigo]) => porDefecto(preview.modulos[0], codigo, ladoCodigo));
+  await lado(0).click();
+  const opciones = (await page.getByRole("option").allInnerTexts()).map(norm);
+  await page.keyboard.press("Escape");
+  const sinSufijo = opciones.slice(1).map((option) => option.replace(/ \(por defecto\)$/, "")).sort();
+  check(
+    `paso 4: el menu de un lado tiene Sin canto y los ${cantos.length} cantos activos, con el de por defecto marcado`,
+    (await lado(0).count()) === 1 &&
+      defectoFila[0] === cantoA045 &&
+      defectoFila.slice(1).every((id) => id === null) &&
+      opciones[0] === "Sin canto" &&
+      JSON.stringify(sinSufijo) === JSON.stringify(cantos.map((canto) => canto.label).sort()) &&
+      JSON.stringify(opciones.filter((option) => option.endsWith("(por defecto)"))) === JSON.stringify([`${etiqueta(defectoFila[0])} (por defecto)`]),
+    `${opciones.length} opciones; por defecto: ${opciones.filter((option) => option.endsWith("(por defecto)")).join(", ")}`
+  );
 
   const panel = page.getByRole("region", { name: "Resumen", exact: true });
   const panelOk = async (data, label) => {
@@ -413,42 +587,37 @@ try {
   await shot("w4-revisar-scroll");
   await page.evaluate(() => window.scrollTo(0, 0));
 
-  // Cantos (P12): una sola vista previa a la vez. Con el servidor lento (3 s de demora), tres cambios seguidos dan
-  // la que estaba en curso mas una sola con los tres, sin cortar ninguna; mientras falta, no deja crear.
-  const fila = despiece(1, "Bajo mesada 2 puertas").locator("tbody tr").first();
-  const filaPreview = filasServidor[0];
-  const codigo = filaPreview.piezaCodigo;
-  const lado = (index) => fila.getByRole("button").nth(index);
+  // Cantos (P12, DECISIONES 45): una sola vista previa a la vez. Con el servidor lento (3 s de demora), tres cambios
+  // seguidos dan la que estaba en curso mas una sola con los tres, sin cortar ninguna; mientras falta, no deja crear.
+  // Los tres: Largo 1 sin canto, Ancho 1 con el canto de otro color (el de frentes, 2 mm) y Ancho 2 con otro espesor
+  // del mismo color (2 mm). Largo 2 no se toca.
   const elegir = async (index, opcion) => {
     await lado(index).click();
-    await page.getByRole("menuitem", { name: new RegExp(`^${opcion}`) }).click();
+    await page.getByRole("option", { name: opcion, exact: true }).click();
   };
-  const objetivo = async (index) => ((await lado(index).getAttribute("aria-pressed")) === "true" ? "Sin canto" : "2 mm");
-  const t0 = await objetivo(0);
-  const t2 = await objetivo(2);
-  const t3 = await objetivo(3);
-  // Elegir lo que ya tiene no cambia nada ni recalcula.
+  // Elegir lo que ya tiene (el de por defecto) no cambia nada ni recalcula.
   const enviadosSinCambio = previewSent.length;
-  await lado(0).click();
-  await page.getByRole("menuitem", { name: new RegExp(`^${t0 === "Sin canto" ? "0,45 mm" : "Sin canto"}`) }).click();
+  await elegir(0, `${etiqueta(cantoA045)} (por defecto)`);
   await page.waitForTimeout(1200);
   check("paso 4: elegir el canto que ya tiene no recalcula", previewSent.length === enviadosSinCambio && (await fila.getByText("Editada", { exact: true }).count()) === 0);
   const enviadosAntes = previewSent.length;
   const hechosAntes = previewDone.length;
   const cortadasAntes = previewFailed.length;
+  // 8 s de demora: elegir en un menu con todos los cantos tarda mas de un segundo, y los tres cambios tienen que caer
+  // mientras se calcula la primera.
   const demora = async (route) => {
-    await sleep(3000);
+    await sleep(8000);
     await route.continue().catch(() => undefined);
   };
   await page.route("**/pedidos-modulos/preview", demora);
   const inicio = Date.now();
   const tiempos = [];
-  await elegir(0, t0);
+  await elegir(0, "Sin canto");
   tiempos.push(Date.now() - inicio);
   check("paso 4: avisa que se va a recalcular", (await page.getByText("Cambiaste cantos: en un momento se recalcula el resumen.").count()) === 1);
-  await elegir(2, t2);
+  await elegir(2, etiqueta(cantoB2));
   tiempos.push(Date.now() - inicio);
-  await elegir(3, t3);
+  await elegir(3, etiqueta(cantoA2));
   tiempos.push(Date.now() - inicio);
   const postsDuranteCalculo = posts.length;
   await page.getByRole("button", { name: "Crear solicitud" }).click();
@@ -461,71 +630,157 @@ try {
   await page.waitForTimeout(1500);
   await page.unroute("**/pedidos-modulos/preview", demora);
   preview = previewBodies[previewBodies.length - 1];
-  const sentBody = JSON.parse(previewSent[previewSent.length - 1].postData());
-  const override = sentBody.modulos[0].cantosOverride?.[codigo];
-  const esperado = (t) => (t === "Sin canto" ? null : 2);
+  let sentBody = JSON.parse(previewSent[previewSent.length - 1].postData());
+  const tresCambios = { [codigo]: { LARGO_1: null, ANCHO_1: cantoB2, ANCHO_2: cantoA2 } };
   check(
     "paso 4: cambios mientras se calcula, una sola vista previa mas con los tres y ninguna cortada",
-    previewSent.length - enviadosAntes === 2 &&
-      previewDone.length - hechosAntes === 2 &&
-      previewFailed.length === cortadasAntes &&
-      override &&
-      override.LARGO_1 === esperado(t0) &&
-      override.ANCHO_1 === esperado(t2) &&
-      override.ANCHO_2 === esperado(t3),
+    previewSent.length - enviadosAntes === 2 && previewDone.length - hechosAntes === 2 && previewFailed.length === cortadasAntes,
     `${previewSent.length - enviadosAntes} enviadas, ${previewDone.length - hechosAntes} completas, ${previewFailed.length - cortadasAntes} cortadas; cambios a los ${tiempos.join(", ")} ms`
+  );
+  check(
+    "paso 4: manda solo los lados tocados, con el id del canto o null (sin canto), y nada en los otros modulos",
+    canonico(sentBody.modulos[0].cantosOverride) === canonico(tresCambios) &&
+      sentBody.modulos.slice(1).every((line) => line.cantosOverride === undefined) &&
+      sentBody.modulos.every((line) => Object.keys(line).every((key) => permitidos.has(key))),
+    JSON.stringify(sentBody.modulos[0].cantosOverride ?? null).replace(/[0-9a-f-]{36}/g, (id) => etiqueta(id))
   );
   check(
     "paso 4: al terminar queda lista y se borra el aviso de espera",
     (await page.getByText("Despiece y resumen calculados por el servidor.").count()) === 1 && (await page.getByText("Esperá a que termine el cálculo para crear la solicitud.").count()) === 0
   );
-  const editada = preview.detalles.find((row) => row.posicionModulo === 1 && row.piezaCodigo === codigo);
-  const azules = await fila.getByRole("button").evaluateAll((buttons) => buttons.slice(0, 4).map((button) => (button.getAttribute("aria-label") ?? "").endsWith("cambiado a mano")));
-  check("paso 4: la pieza vuelve como EDITADO, con la marca y solo los lados cambiados", editada?.origen === "EDITADO" && (await fila.getByText("Editada", { exact: true }).count()) === 1 && JSON.stringify(azules) === "[true,false,true,true]", JSON.stringify(azules));
+  let editada = preview.detalles.find((row) => row.posicionModulo === 1 && row.piezaCodigo === codigo);
+  let azules = (await contornos(fila)).map((color) => color === AZUL);
+  let textosFila = [];
+  for (let index = 0; index < 4; index += 1) textosFila.push(await mostrado(lado(index)));
+  check(
+    "paso 4: la pieza vuelve como EDITADO, con la marca Editada y en azul solo los lados cambiados",
+    editada?.origen === "EDITADO" &&
+      editada.cantoLargo1Id === null &&
+      editada.cantoLargo2Id === defectoFila[1] &&
+      editada.cantoAncho1Id === cantoB2 &&
+      editada.cantoAncho2Id === cantoA2 &&
+      (await fila.getByText("Editada", { exact: true }).count()) === 1 &&
+      JSON.stringify(azules) === "[true,false,true,true]" &&
+      JSON.stringify(await valoresFila(fila)) === JSON.stringify(["", defectoFila[1] ?? "", cantoB2, cantoA2]) &&
+      sinCantoVisible(textosFila[0]) &&
+      textosFila[2] === etiqueta(cantoB2) &&
+      textosFila[3] === etiqueta(cantoA2) &&
+      (await fila.getByText(AVISO_AMBAR, { exact: true }).count()) === 0,
+    `${editada?.origen} ${JSON.stringify(azules)} ${textosFila.join(" / ")}`
+  );
+  // Las demas piezas del modulo siguen como estaban (CALCULADO).
+  check(
+    "paso 4: el cambio no toca las otras piezas",
+    preview.detalles.filter((row) => row.posicionModulo === 1 && row.piezaCodigo !== codigo).every((row) => row.origen === "CALCULADO") &&
+      (await despiece(1, "Bajo mesada 2 puertas").getByText("Editada", { exact: true }).count()) === 1
+  );
   await panelOk(preview, "paso 4 despues del cambio");
+  await shot("w4-cantos-cambiados");
 
-  // Un canto que el color no tiene: el menu lo avisa; si se elige igual, error claro, la ultima vista previa sigue a la
-  // vista y no deja crear (con el detalle junto al boton).
-  await lado(1).click();
-  const nota = norm(await page.getByRole("menuitem", { name: /^1 mm/ }).innerText());
-  check("paso 4: el menu avisa el espesor que el color no tiene", nota.includes("No hay canto de este espesor para el color elegido"), nota);
+  // Elegir otra vez el de por defecto saca ese cambio: Ancho 2 vuelve a "Sin canto (por defecto)" y deja de estar en azul.
   response = nextPreview();
-  await page.getByRole("menuitem", { name: /^1 mm/ }).click();
+  await elegir(3, `${defectoFila[3] ? etiqueta(defectoFila[3]) : "Sin canto"} (por defecto)`);
+  preview = await (await response).json();
+  sentBody = JSON.parse(previewSent[previewSent.length - 1].postData());
+  editada = preview.detalles.find((row) => row.posicionModulo === 1 && row.piezaCodigo === codigo);
+  azules = (await contornos(fila)).map((color) => color === AZUL);
+  check(
+    "paso 4: elegir el de por defecto saca ese cambio (y la pieza sigue Editada por los otros)",
+    canonico(sentBody.modulos[0].cantosOverride) === canonico({ [codigo]: { LARGO_1: null, ANCHO_1: cantoB2 } }) &&
+      editada?.origen === "EDITADO" &&
+      editada.cantoAncho2Id === defectoFila[3] &&
+      JSON.stringify(azules) === "[true,false,true,false]" &&
+      (await fila.getByText("Editada", { exact: true }).count()) === 1,
+    JSON.stringify(azules)
+  );
+
+  // Un error de la vista previa (inventado con page.route: ya no hay cantos que falten): se ve una vez, la ultima vista
+  // previa sigue a la vista y no deja crear (con el detalle junto al boton).
+  const errorInventado = (route) =>
+    route.fulfill({
+      status: 400,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Prueba e2e: error inventado de la vista previa.", code: "PRUEBA_E2E", details: { errores: ["Detalle inventado para la prueba."] } })
+    });
+  await page.route("**/pedidos-modulos/preview", errorInventado);
+  response = nextPreview();
+  await elegir(1, etiqueta(cantoB045));
   const fallida = await response;
+  await page.unroute("**/pedidos-modulos/preview", errorInventado);
   await page.getByText("Volver a calcular").waitFor();
   text = await firstError();
-  const repeticiones = (text.match(/Falta el canto de 1 mm/g) ?? []).length;
-  check("paso 4: canto que no existe, error claro y sin repetir", fallida.status() === 400 && repeticiones === 1 && (await despiece(1, "Bajo mesada 2 puertas").count()) === 1, `${fallida.status()} ${text.slice(0, 140)}`);
+  const repeticiones = (text.match(/Detalle inventado para la prueba/g) ?? []).length;
+  check(
+    "paso 4: error de la vista previa, claro, sin repetir y con la tabla a la vista",
+    fallida.status() === 400 && text.includes("Prueba e2e: error inventado de la vista previa.") && repeticiones === 1 && (await despiece(1, "Bajo mesada 2 puertas").count()) === 1,
+    `${fallida.status()} ${text.slice(0, 140)}`
+  );
   const postsAntes = posts.length;
   await page.getByRole("button", { name: "Crear solicitud" }).click();
   await page.waitForTimeout(300);
   const junto = norm(await page.locator(".MuiAlert-standardError").last().innerText());
   check(
     "paso 4: con error no crea y dice por que junto al boton",
-    posts.length === postsAntes && junto.startsWith("Todavía no se puede crear: corregí lo que dice el aviso del despiece.") && junto.includes("Falta el canto de 1 mm"),
+    posts.length === postsAntes && junto.startsWith("Todavía no se puede crear: corregí lo que dice el aviso del despiece.") && junto.includes("Detalle inventado para la prueba."),
     junto.slice(0, 160)
   );
-  await shot("w4-error-canto");
+  await shot("w4-error-vista-previa");
+  // El boton de la pieza vuelve los cuatro lados al de por defecto y recalcula.
   response = nextPreview();
-  await page.getByRole("button", { name: `Volver a los cantos del perfil en ${filaPreview.nombreProducto}` }).click();
+  await page.getByRole("button", { name: `Volver a los cantos por defecto en ${nombrePieza}` }).click();
   preview = await (await response).json();
+  sentBody = JSON.parse(previewSent[previewSent.length - 1].postData());
+  azules = (await contornos(fila)).map((color) => color === AZUL);
   check(
-    "paso 4: volver al perfil quita la marca y muestra los cantos del perfil al instante",
-    preview.detalles.find((row) => row.posicionModulo === 1 && row.piezaCodigo === codigo)?.origen !== "EDITADO" && (await fila.getByText("Editada", { exact: true }).count()) === 0
+    "paso 4: volver a los cantos por defecto quita la marca, el azul y el cambio",
+    preview.detalles.find((row) => row.posicionModulo === 1 && row.piezaCodigo === codigo)?.origen === "CALCULADO" &&
+      sentBody.modulos[0].cantosOverride === undefined &&
+      (await fila.getByText("Editada", { exact: true }).count()) === 0 &&
+      !azules.includes(true) &&
+      JSON.stringify(await valoresFila(fila)) === JSON.stringify(defectoFila.map((id) => id ?? "")),
+    JSON.stringify(azules)
   );
+  // Editada otra vez: Largo 1 con el canto de 2 mm del color de frentes (sigue en la solicitud que se crea).
   response = nextPreview();
-  await elegir(0, t0);
+  await elegir(0, etiqueta(cantoB2));
   preview = await (await response).json();
-  check("paso 4: pieza editada otra vez", preview.detalles.find((row) => row.posicionModulo === 1 && row.piezaCodigo === codigo)?.origen === "EDITADO");
+  editada = preview.detalles.find((row) => row.posicionModulo === 1 && row.piezaCodigo === codigo);
+  check("paso 4: pieza editada otra vez", editada?.origen === "EDITADO" && editada.cantoLargo1Id === cantoB2);
 
-  // Volver al paso 3 y avanzar recalcula
+  // Volver al paso 3 conserva el cambio (y el borrador lo guarda con el id del canto); avanzar recalcula con el.
   await page.getByRole("button", { name: "Volver", exact: true }).click();
   await page.getByText("Colores por defecto").waitFor();
-  check("volver al paso 3 conserva el cambio de canto", (await c1.getByText("1 pieza con cantos cambiados").count()) === 1 && (await c1.getByRole("button", { name: "Volver todas al perfil" }).count()) === 1);
+  check(
+    "volver al paso 3 conserva el cambio de canto",
+    (await c1.getByText("1 pieza con cantos cambiados", { exact: true }).count()) === 1 && (await c1.getByRole("button", { name: "Volver todas a los cantos por defecto" }).count()) === 1
+  );
+  let borradorCanto = null;
+  for (let waited = 0; waited < 5000 && borradorCanto !== cantoB2; waited += 250) {
+    borradorCanto = await page.evaluate(
+      ({ key, pieza }) =>
+        [localStorage.getItem(key), localStorage.getItem(`${key}~live`)]
+          .map((raw) => {
+            try {
+              return JSON.parse(raw ?? "null")?.value?.units?.[0]?.cantosOverride?.[pieza]?.LARGO_1;
+            } catch {
+              return undefined;
+            }
+          })
+          .find((value) => value !== undefined) ?? null,
+      { key: draftKey, pieza: codigo }
+    );
+    if (borradorCanto !== cantoB2) await page.waitForTimeout(250);
+  }
+  check("borrador: guarda el canto elegido a mano (su id)", borradorCanto === cantoB2, String(borradorCanto && etiqueta(borradorCanto)));
   response = nextPreview();
   await page.getByRole("button", { name: "Revisar despiece" }).click();
   preview = await (await response).json();
-  check("avanzar de nuevo recalcula", preview.detalles.find((row) => row.posicionModulo === 1 && row.piezaCodigo === codigo)?.origen === "EDITADO");
+  sentBody = JSON.parse(previewSent[previewSent.length - 1].postData());
+  check(
+    "avanzar de nuevo recalcula con el cambio",
+    preview.detalles.find((row) => row.posicionModulo === 1 && row.piezaCodigo === codigo)?.origen === "EDITADO" &&
+      canonico(sentBody.modulos[0].cantosOverride) === canonico({ [codigo]: { LARGO_1: cantoB2 } })
+  );
   await despiece(1, "Bajo mesada 2 puertas").waitFor();
 
   // Plano de cortes: mismas placas que la vista previa (paridad), con "Calculando..." mientras calcula.
@@ -593,7 +848,7 @@ try {
   expectedErrors.push(/^requestfailed: (POST|GET) \/pedidos-modulos(\?clave=\S*)? net::ERR_CONNECTION_RESET$/, /ERR_CONNECTION_RESET/);
   await page.getByRole("button", { name: "Crear solicitud" }).dblclick();
   await page.waitForTimeout(300);
-  check("mientras se crea, los cantos y volver quedan bloqueados", (await lado(0).isDisabled()) && (await page.getByRole("button", { name: "Volver", exact: true }).isDisabled()));
+  check("mientras se crea, los cantos y volver quedan bloqueados", (await lado(0).getAttribute("aria-disabled")) === "true" && (await page.getByRole("button", { name: "Volver", exact: true }).isDisabled()));
   await page.getByText("no se pudo revisar si quedó cargada", { exact: false }).waitFor({ timeout: 60000 });
   await page.unroute("**/pedidos-modulos", perdida);
   check(
@@ -606,7 +861,7 @@ try {
   );
   // Se cambia un canto: lo que se ve ya no es lo que se mando. Al crear, primero se busca con lo que se mando.
   response = nextPreview();
-  await elegir(3, await objetivo(3));
+  await elegir(3, etiqueta(cantoB045));
   preview = await (await response).json();
   await page.getByText("Despiece y resumen calculados por el servidor.").waitFor();
   const postsAntesDeReintentar = posts.length;
@@ -637,6 +892,15 @@ try {
       createBody.observaciones === "Cocina de prueba" &&
       createBody.fechaEntrega === fechaElegida
   );
+  const cambiosFinales = { [codigo]: { LARGO_1: cantoB2, ANCHO_2: cantoB045 } };
+  check(
+    "alta: sin color de cantos, con los campos permitidos y solo los lados cambiados (ids de canto)",
+    createBody.modulos.every((line) => !("colorCantoId" in line) && Object.keys(line).every((key) => permitidos.has(key) || key === "version")) &&
+      canonico(createBody.modulos[0].cantosOverride) === canonico(cambiosFinales) &&
+      createBody.modulos.slice(1).every((line) => line.cantosOverride === undefined) &&
+      JSON.stringify(createBody.modulos.map((line) => line.colorFrentesId)) === JSON.stringify([colorBId, colorSinDosId, colorBId]),
+    JSON.stringify(createBody.modulos.map((line) => Object.keys(line)))
+  );
   const componentes = ["placasEstimadas", "costoPlacas", "costoManoObraCortes", "costoMaterialCantos", "costoPegadoCantos", "costoCantos", "metrosCanto", "presupuestoEstimado", "faltanteStock", "costoHerrajes", "presupuestoConHerrajes"];
   const guardada = (await api("GET", `/pedidos-modulos/${order.id}`)).data;
   const distintos = componentes.filter((key) => guardada[key] !== preview[key]);
@@ -649,6 +913,23 @@ try {
   );
   const origen = psql(`select d.origen from detalle_pedidos d join pedidos_modulo pm on pm.id = d."pedidoModuloId" where d."pedidoId" = '${order.id}' and pm.posicion = 1 and d."piezaCodigo" = '${codigo}'`);
   check("alta: la pieza cambiada queda EDITADO", origen === "EDITADO", origen);
+  const ladosGuardados = (posicion, pieza) =>
+    psql(
+      `select coalesce(d."cantoLargo1Id", '-') || '|' || coalesce(d."cantoLargo2Id", '-') || '|' || coalesce(d."cantoAncho1Id", '-') || '|' || coalesce(d."cantoAncho2Id", '-') from detalle_pedidos d join pedidos_modulo pm on pm.id = d."pedidoModuloId" where d."pedidoId" = '${order.id}' and pm.posicion = ${posicion} and d."piezaCodigo" = '${pieza}'`
+    )
+      .split("|")
+      .map((id) => (id === "-" ? null : id));
+  const guardadoPieza = ladosGuardados(1, codigo);
+  const guardadoPuertas = ladosGuardados(2, frente2.piezaCodigo);
+  check(
+    "alta: guarda el canto elegido en cada lado y las puertas sin canto de su color van sin canto",
+    JSON.stringify(guardadoPieza) === JSON.stringify([cantoB2, defectoFila[1], defectoFila[2], cantoB045]) && JSON.stringify(guardadoPuertas) === JSON.stringify([null, null, null, null]),
+    `${guardadoPieza.map((id) => (id ? etiqueta(id) : "sin canto")).join(" / ")} || ${guardadoPuertas.map((id) => (id ? etiqueta(id) : "sin canto")).join(" / ")}`
+  );
+  check(
+    "alta: la solicitud guardada no tiene color de cantos por modulo",
+    Array.isArray(guardada.modulos) && guardada.modulos.length === 3 && guardada.modulos.every((modulo) => !("colorCanto" in modulo) && !("colorCantoId" in modulo))
+  );
   const borrador = await page.evaluate((key) => [localStorage.getItem(key), localStorage.getItem(`${key}~live`)], draftKey);
   check("alta: borra el borrador", borrador[0] === null && borrador[1] === null);
   await shot("w6-creada");
@@ -672,7 +953,6 @@ try {
     await page.getByText("Colores por defecto").waitFor();
     await selectIn(barra, "Esqueleto", colorA);
     await selectIn(barra, "Frentes", colorB);
-    await selectIn(barra, "Cantos", colorA);
     await barra.getByRole("button", { name: "Aplicar a todos" }).click();
   };
   await armar(`${PREFIJO} salir`, ["Bajo mesada 2 puertas"]);
@@ -794,7 +1074,6 @@ try {
   );
   await selectIn(barra, "Esqueleto", colorA);
   await selectIn(barra, "Frentes", colorB);
-  await selectIn(barra, "Cantos", colorA);
   await barra.getByRole("button", { name: "Aplicar a todos" }).click();
   psql(`update modulos set activo = false where id = '${ESPECIERO}'`);
   await page.getByRole("button", { name: "Revisar despiece" }).click();
@@ -840,11 +1119,18 @@ try {
   // Salir por el menu (sin recargar) y vencer la fecha del borrador, como si fuera de otro dia.
   await page.getByRole("link", { name: "Dashboard" }).click();
   await page.waitForURL(`${APP}/`);
-  await page.evaluate((key) => {
-    const stored = JSON.parse(localStorage.getItem(key));
-    stored.value.fechaEntrega = "2020-01-01";
-    localStorage.setItem(key, JSON.stringify(stored));
-  }, draftKey);
+  // Y dejarlo como uno de antes de DECISIONES 45: color de cantos y cambios de canto con espesores por lado.
+  await page.evaluate(
+    ({ key, pieza, color }) => {
+      const stored = JSON.parse(localStorage.getItem(key));
+      stored.value.fechaEntrega = "2020-01-01";
+      stored.value.units[0].colorCantoId = color;
+      stored.value.units[0].cantosOverride = { [pieza]: { LARGO_1: 2, LARGO_2: null, ANCHO_1: null, ANCHO_2: null } };
+      stored.value.defaults = { ...(stored.value.defaults ?? {}), colorCantoId: color };
+      localStorage.setItem(key, JSON.stringify(stored));
+    },
+    { key: draftKey, pieza: codigo, color: colorAId }
+  );
   // Chromium guarda localStorage en diferido: sin esta espera, la pagina nueva puede leer el valor anterior.
   await page.waitForTimeout(2000);
   await page.goto(`${APP}/modulos/nueva`);
@@ -856,6 +1142,11 @@ try {
   const avisos = norm(await page.locator(".MuiAlert-standardWarning").first().innerText().catch(() => ""));
   check("borrador: vuelve al paso 3 con lo cargado", (await c1.getByLabel("Ancho (mm)").inputValue()) === "700", await c1.getByLabel("Ancho (mm)").inputValue());
   check("borrador: avisa que la fecha ya paso", avisos.includes("La fecha de entrega del borrador ya pasó: se puso la de por defecto."), avisos);
+  check("borrador de antes de DECISIONES 45: avisa que los cantos cambiados no se recuperaron", avisos.includes("Algunos cantos cambiados a mano no se pudieron recuperar: revisalos en el paso 4."), avisos);
+  // Lo que no se pudo recuperar no queda como cambio: los lados null del formato viejo tampoco (si no, el paso 4 los
+  // marca "Editada" y en azul, y el servidor guarda la pieza como CALCULADO).
+  const chipViejo = norm(await c1.getByText(/con cantos cambiados$/).allInnerTexts());
+  check("borrador de antes de DECISIONES 45: no queda ningún canto cambiado de ese formato", chipViejo === "", chipViejo);
   await page.getByRole("button", { name: "Volver", exact: true }).click();
   await page.getByRole("button", { name: "Volver", exact: true }).click();
   check("borrador: datos del cliente y fecha por defecto", (await page.getByLabel("Nombre o razón social").inputValue()) === `${PREFIJO} borrador` && (await fecha.inputValue()) === addDays(hoy, dias));
@@ -929,7 +1220,7 @@ try {
   await browser.close();
 }
 
-// Errores esperados: el 409 y la respuesta cortada que se provocan a proposito, y el 400 del canto de 1 mm.
+// Errores esperados: el 409 y la respuesta cortada que se provocan a proposito, y el 400 inventado de la vista previa.
 const esperados = [...expectedErrors, /^HTTP 400 POST \/pedidos-modulos\/preview$/, /status of 400/];
 const inesperados = errors.filter((error) => !esperados.some((pattern) => pattern.test(error)));
 check("sin errores en la consola ni respuestas fallidas inesperadas", inesperados.length === 0, inesperados.slice(0, 6).join(" || "));
