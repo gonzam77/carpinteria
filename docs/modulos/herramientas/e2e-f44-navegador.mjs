@@ -980,7 +980,7 @@ try {
       (await despiece(3, "Alacena 2 puertas").getByText("Editada", { exact: true }).count()) === 0,
     `${guardada.placasEstimadas} placas guardadas, ${preview.placasEstimadas} en la vista previa`
   );
-  check("detalle de la solicitud creada: sin Editar (llega en F5.2)", (await page.getByRole("button", { name: "Editar", exact: true }).count()) === 0);
+  check("detalle de la solicitud creada: con Editar (pendiente, F5.2)", (await page.getByRole("button", { name: "Editar", exact: true }).count()) === 1);
   await page.getByRole("tab", { name: "Plano de cortes" }).click();
   const planoDetalle = page.getByText(/^Placas necesarias: \d+ - Costo estimado: /);
   await planoDetalle.waitFor({ timeout: 60000 });

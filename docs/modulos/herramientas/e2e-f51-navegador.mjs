@@ -3,7 +3,7 @@
 // VITE_API_URL=http://127.0.0.1:4100/api).
 // - Permisos: sin sesión lleva a /admin; un carpintero vuelve al inicio.
 // - Encabezado (título, estado, plazo, cliente y referencia), tarjeta de datos (Sin email, Sin dirección, Creada, Módulos)
-//   y el stepper; sin Editar todavía (F5.2).
+//   y el stepper; Editar en una pendiente (lleva a /modulos/:id/editar, F5.2) y no en una entregada.
 // - Volver: sin origen, con un origen válido y con uno que no es una ruta propia; también desde el listado filtrado.
 // - Fecha de entrega: una fecha pasada no llega al servidor, un 409 inventado se muestra, una válida se guarda (aviso,
 //   historial); una entregada no la deja cambiar. Además, la API: 400, 404, 403, 409 ORDER_DELIVERED y la misma fecha.
@@ -410,8 +410,8 @@ try {
   check("encabezado: cliente · referencia", (await subtitulo()) === `${PREFIJO} principal · Referencia F5.1`, await subtitulo());
   const botones = (await page.locator("main").getByRole("button").allInnerTexts()).map(norm);
   check(
-    "acciones: Volver, Materiales, Exportar Excel y Eliminar, sin Editar (F5.2)",
-    ["Volver", "Materiales", "Exportar Excel", "Eliminar"].every((texto) => botones.includes(texto)) && !botones.includes("Editar") && (await selectorEstado.count()) === 1,
+    "acciones: Volver, Editar, Materiales, Exportar Excel y Eliminar",
+    ["Volver", "Editar", "Materiales", "Exportar Excel", "Eliminar"].every((texto) => botones.includes(texto)) && (await selectorEstado.count()) === 1,
     botones.join(", ")
   );
   check("el selector de estado muestra Pendiente", norm(await selectorEstado.innerText()) === "Pendiente", norm(await selectorEstado.innerText()));
@@ -652,8 +652,9 @@ try {
   await abrir(pedidos.entregada.id);
   const datosEntregada = await datos();
   check(
-    "entregada: sin Cambiar, el stepper completo, y el email y la dirección cargados",
+    "entregada: sin Cambiar ni Editar, el stepper completo, y el email y la dirección cargados",
     (await botonCambiar.count()) === 0 &&
+      (await page.locator("main").getByRole("button", { name: "Editar", exact: true }).count()) === 0 &&
       (await esperarPasos("ENTREGADA")) &&
       datosEntregada["Fecha de entrega"] === dmy(FECHA) &&
       datosEntregada.Email === "prueba-f51@example.com" &&
