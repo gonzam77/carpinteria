@@ -27,6 +27,34 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-07 (25) · equipo Pinformatico15 · rama main
+
+**Pasos:** F5.2 terminado.
+
+**Hecho:**
+- Push de los 3 commits de F5.1, con el OK de Gonzalo.
+- Edición de una solicitud de módulos con el mismo formulario que corte (DECISIONES 49): `OrderFormPage kind="MODULOS"` en `/modulos/:id/editar`, con email, dirección y fecha de entrega en Datos, Cortes y Cantos agrupados por módulo (`OrderItemsTable` con la prop opcional `groups`), "Cambios detectados" en el Resumen y borrador `modules:{id}`. "Editar" en el detalle, solo en los estados editables.
+- Backend: `PUT /api/pedidos-modulos/:id`. Conserva la identidad de cada fila, marca EDITADO o MANUAL, numera las nuevas (adicionales `M{n}-00-OO`), no toca los módulos, recalcula con el mismo código que corte, controla la versión (409) y deja el resumen en el historial. Test del esquema.
+- Código compartido nuevo: `moduleOrderChanges.ts` (cuenta los cambios para el Resumen y para el historial), sincronizado con `sync:optimizer`.
+- `AppLayout` ahora saca solo la notificación del `state`: así el detalle conserva a dónde volver después de guardar.
+- El título del detalle va en una línea y las acciones bajan abajo del título por debajo de 1200 px.
+- Pruebas: e2e-f52 (API) y e2e-f52-navegador nuevas; f51 y f44 ajustadas (ahora esperan "Editar").
+- Encontrado, sin tocar: en el formulario de corte, al tocar Siguiente en Cantos ya se abre el comprobante (P14).
+
+**Decisiones nuevas:** DECISIONES 49.
+
+**Verificaciones:**
+- frontend `npm test` (39, 17, 6, 5, 8, 21, 11, 5 y 5), backend `npm test` (27), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f52 43/43, f52-navegador 40/40, f51 63/63, f45-navegador 139/139, f44-navegador sin fallas (ajustada: espera Editar), f43, f42 (paridad en los 30 módulos), f31 y f05 sin fallas, f04 12/12 y f23 4/4. La copia quedó como estaba.
+
+**Commits:** dos commits locales (código y pruebas, y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F5.3, el Excel para la máquina. Lo primero: leer "Tener en cuenta" de PLAN F5.3.
+
+**Esperando a Gonzalo o a ROMA:** P5, P6 y P14.
+
+---
+
 ## 2026-10-07 (24) · equipo Pinformatico15 · rama main
 
 **Pasos:** F5.1 terminado.

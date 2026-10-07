@@ -4,7 +4,7 @@ Sistema de gestión de solicitudes de corte de placas de melamina para ROMA Amob
 
 - `frontend/`: React, MUI y Vite.
 - `backend/`: Express, Prisma 7 y PostgreSQL 16.
-- Código de cálculo compartido: `frontend/src/lib/cutOptimizer.ts`, `frontend/src/lib/moduleFormula.ts` y `frontend/src/lib/orderEstimate.ts`. Se copian a `backend/src/shared/` con `npm run sync:optimizer`.
+- Código de cálculo compartido: `frontend/src/lib/cutOptimizer.ts`, `frontend/src/lib/moduleFormula.ts`, `frontend/src/lib/orderEstimate.ts` y `frontend/src/lib/moduleOrderChanges.ts` (los cambios de una edición de módulos). Se copian a `backend/src/shared/` con `npm run sync:optimizer`.
 
 ## Trabajo en curso: Módulos a medida
 
@@ -66,8 +66,8 @@ Sistema de gestión de solicitudes de corte de placas de melamina para ROMA Amob
 
 ```bash
 npm run install:all                     # dependencias de backend y frontend
-cd frontend && npm test                 # tests del optimizador, del motor de fórmulas, del presupuesto, del editor, del asistente, del listado y del detalle de módulos
-cd backend && npm test                  # tests del armado y del orden del listado de solicitudes de módulos (sin base de datos)
+cd frontend && npm test                 # tests del optimizador, del motor de fórmulas, del presupuesto, del editor, del asistente, del listado, del detalle y de la edición de módulos
+cd backend && npm test                  # tests del armado, del listado y de los esquemas de solicitudes de módulos (sin base de datos)
 npm run sync:optimizer                  # copia el código compartido al backend
 npm run check:optimizer                 # falla si las copias difieren
 cd frontend && npx tsc --noEmit

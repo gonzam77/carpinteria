@@ -12,9 +12,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-07
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F4.5 está commiteado y subido (2026-10-07, con el OK de Gonzalo). Cada push espera su OK.
-- **Último paso terminado:** F5.1 (detalle de la solicitud de módulos). Las Fases 0 a 4 están completas.
-- **Próximo paso:** **F5.2**, la edición de una solicitud de módulos con el mismo formulario que corte (spec §10).
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F5.1 está commiteado y subido (2026-10-07, con el OK de Gonzalo). Cada push espera su OK.
+- **Último paso terminado:** F5.2 (edición de una solicitud de módulos con el mismo formulario que corte). Las Fases 0 a 4 están completas.
+- **Próximo paso:** **F5.3**, el Excel para la máquina (spec §11.1).
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -36,7 +36,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
 | F4.1–F4.5 | API, asistente y listado de solicitudes de módulos | [x] |
 | F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
-| F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [~] F5.1 hecho |
+| F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [~] F5.1 y F5.2 hechos |
 | F6 | Herrajes (contratados, DECISIONES 10) | [ ] |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
 | F8 | Pase a producción (VPS), al final | [ ] |
@@ -564,7 +564,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - e2e-f45 recorre el detalle (abrir, Volver, atrás, Eliminar con filtros, redirecciones): ajustar esos chequeos al detalle nuevo.
 - **Hecho (2026-10-07):** `ModuleOrderDetailPage` en `/modulos/:id` con encabezado y acciones, tarjeta de datos con la fecha de entrega editable (`PATCH /api/pedidos-modulos/:id/fecha-entrega`, con historial), stepper, pestañas Despiece, Plano de cortes e Historial, y errores visibles (DECISIONES 48). El asistente va al detalle al crear (DECISIONES 35). Los diálogos de estado se comparten con el detalle de corte sin cambiarlo. Pruebas: tests unitarios (detalle 3, backend 26) y de punta a punta: e2e-f51 63/63 (nueva), e2e-f45 139/139, e2e-f44 114/114, e2e-f43 96/96, e2e-f42 106/106, e2e-f31 30/30, e2e-f05 22/22, e2e-f04 12/12 y e2e-f23 4/4.
 
-#### F5.2 Edición, igual que la actual · [ ]
+#### F5.2 Edición, igual que la actual · [x]
 - **Depende de:** F5.1.
 - **Tener en cuenta (de F5.1):** el detalle (`ModuleOrderDetailPage`) todavía no tiene "Editar": sumarlo con `canEditOrder` y volver al detalle al guardar. Los cantos se editan por lado con cualquier canto, como en corte (DECISIONES 45).
 - **Hacer:**
@@ -573,6 +573,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - `PUT` que marca `origen` como EDITADO o MANUAL, y que mantiene el fondo guardado de cada módulo (`PedidoModulo.materialFondoId`, DECISIONES 32);
   - el resumen "Cambios detectados";
   - borrador `modules:{id}` (spec §10).
+- **Hecho (2026-10-07):** `OrderFormPage kind="MODULOS"` en `/modulos/:id/editar` (Datos con email, dirección y fecha de entrega; Cortes y Cantos agrupados por módulo con `OrderItemsTable groups`; Resumen con "Cambios detectados"; borrador `modules:{id}`), "Editar" en el detalle, y `PUT /api/pedidos-modulos/:id` que conserva la identidad de cada fila, marca EDITADO o MANUAL, no toca los módulos y deja el resumen en el historial (DECISIONES 49). Los cambios se cuentan con `moduleOrderChanges.ts`, código compartido. Sin `groups`, la tabla de corte queda igual. Pruebas: tests unitarios (cambios 5, detalle 5, backend 27) y de punta a punta: e2e-f52 43/43 (nueva, API), e2e-f52-navegador 40/40 (nueva), e2e-f51-navegador 63/63, f45-navegador 139/139, f44-navegador sin fallas (ajustada: espera Editar), f43, f42 (paridad en los 30 módulos), f31 y f05 sin fallas, f04 12/12 y f23 4/4.
 
 #### F5.3 Excel para la máquina · [ ]
 - **Depende de:** F4.3.
@@ -581,6 +582,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - filtro `?tipo` opcional;
   - nombre de archivo `pedido-M{numero}.xlsx` cuando se exporta un único pedido de módulos (spec §11.1).
 - **Terminado cuando:** exportar solicitudes de corte da el mismo Excel que antes.
+- **Tener en cuenta (de F5.2):** desde la edición puede haber piezas adicionales (sin módulo): su código de barra es `M{numero}-00-{orden}` y van al final. Las piezas agregadas a un módulo siguen a las suyas con el orden siguiente (DECISIONES 49), así que ordenar por posición y orden las deja en su lugar.
 - **Tener en cuenta (de F4.5):** el nombre del archivo que ve el usuario lo pone el navegador (`saveAs`), no el `Content-Disposition` del servidor: el CORS no expone ese encabezado. El listado de módulos ya baja `pedido-M{numero}.xlsx` con una sola solicitud y `pedidos-carpinteria.xlsx` con varias (DECISIONES 42); el detalle común sigue con `<cliente>-<fecha>.xlsx`.
 
 #### F5.4 Hoja de taller · [ ]
@@ -653,6 +655,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 | P12 | La vista previa de 20 módulos tarda de 1,5 a 8,4 s, según las piezas (100 módulos: unos 28 s). Spec §20 pide caché si pasa de 2 s | Gonzalo | **Resuelto (2026-10-07):** se acepta como está; los tiempos se optimizan en F7.4 (DECISIONES 24) |
 | P7 | La placa "metal cepillado bronce" figura como 1830×26000, con un cero de más | Gonzalo | **Resuelto (2026-10-07):** se deja como está; se le avisa al cliente (DECISIONES 47) |
 | P8 | ¿Se conserva el contenedor `carpinteria-analisis-db` con el backup en la PC de la primera sesión? | Gonzalo | **Resuelto (2026-10-07):** se borró, con su volumen (DECISIONES 47) |
+| P14 | En el formulario de corte (alta y edición), al tocar Siguiente en Cantos ya se abre el comprobante: el mismo botón pasa a ser el de enviar en ese clic, y el Resumen se ve recién al cerrarlo. Pasa también al editar módulos, que usa el mismo formulario | Gonzalo | Se deja como está, igual que hoy en corte. Corregirlo es una línea (una `key` en cada botón) |
 | P13 | Base para las pruebas de punta a punta, ahora que no está el contenedor con el backup | Gonzalo | **Resuelto (2026-10-07):** el backup se restaura en `carpinteria-analisis-db` y se conserva hasta terminar la fase de desarrollo (DECISIONES 47) |
 
 ---
