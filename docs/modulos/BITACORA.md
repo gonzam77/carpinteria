@@ -27,6 +27,30 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-07 (26) · equipo Pinformatico15 · rama main
+
+**Pasos:** F5.3 terminado.
+
+**Hecho:**
+- Push de los 3 commits de F5.2, con el OK de Gonzalo. GitHub respondió `remote rejected ... (Internal Server Error)` durante unos 15 minutos (7 intentos, githubstatus.com sin incidentes); el intento siguiente entró. Si vuelve a pasar, esperar y reintentar.
+- Excel para la máquina (DECISIONES 50): las filas de módulos salen por módulo y orden, con las adicionales al final; corte, como antes. `?tipo` opcional y `pedido-M{numero}.xlsx` para una sola de módulos. `buildOrdersWorkbook` sin cambios.
+- Pruebas: test del backend `export-order.test.ts` y e2e-f53 nueva.
+- P14 (el comprobante que se abre solo al llegar al Resumen) sigue sin respuesta: queda como está.
+
+**Decisiones nuevas:** DECISIONES 50.
+
+**Verificaciones:**
+- backend `npm test` (30), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f53 21/21, f51-navegador 63/63 y f45-navegador 139/139 (leen el Excel exportado), f52 43/43. La copia quedó como estaba.
+
+**Commits:** dos commits locales (código y pruebas, y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F5.4, la hoja de taller: leer spec §11.2 y "Tener en cuenta" de PLAN F5.4.
+
+**Esperando a Gonzalo o a ROMA:** P5, P6 y P14.
+
+---
+
 ## 2026-10-07 (25) · equipo Pinformatico15 · rama main
 
 **Pasos:** F5.2 terminado.
@@ -47,7 +71,7 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 - frontend `npm test` (39, 17, 6, 5, 8, 21, 11, 5 y 5), backend `npm test` (27), `tsc`, `check:optimizer` y build en verde.
 - e2e contra la copia: f52 43/43, f52-navegador 40/40, f51 63/63, f45-navegador 139/139, f44-navegador sin fallas (ajustada: espera Editar), f43, f42 (paridad en los 30 módulos), f31 y f05 sin fallas, f04 12/12 y f23 4/4. La copia quedó como estaba.
 
-**Commits:** dos commits locales (código y pruebas, y documentación). El push espera el OK de Gonzalo.
+**Commits:** tres commits locales (código, pruebas y documentación). El push espera el OK de Gonzalo.
 
 **Próximo paso:** F5.3, el Excel para la máquina. Lo primero: leer "Tener en cuenta" de PLAN F5.3.
 

@@ -12,9 +12,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-07
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F5.1 está commiteado y subido (2026-10-07, con el OK de Gonzalo). Cada push espera su OK.
-- **Último paso terminado:** F5.2 (edición de una solicitud de módulos con el mismo formulario que corte). Las Fases 0 a 4 están completas.
-- **Próximo paso:** **F5.3**, el Excel para la máquina (spec §11.1).
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F5.2 está commiteado y subido (2026-10-07, con el OK de Gonzalo). F5.3 está commiteado en local; su push espera el OK. Cada push espera su OK.
+- **Último paso terminado:** F5.3 (Excel para la máquina). Las Fases 0 a 4 están completas.
+- **Próximo paso:** **F5.4**, la hoja de taller (spec §11.2).
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -36,7 +36,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
 | F4.1–F4.5 | API, asistente y listado de solicitudes de módulos | [x] |
 | F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
-| F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [~] F5.1 y F5.2 hechos |
+| F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [~] F5.1 a F5.3 hechos |
 | F6 | Herrajes (contratados, DECISIONES 10) | [ ] |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
 | F8 | Pase a producción (VPS), al final | [ ] |
@@ -575,7 +575,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - borrador `modules:{id}` (spec §10).
 - **Hecho (2026-10-07):** `OrderFormPage kind="MODULOS"` en `/modulos/:id/editar` (Datos con email, dirección y fecha de entrega; Cortes y Cantos agrupados por módulo con `OrderItemsTable groups`; Resumen con "Cambios detectados"; borrador `modules:{id}`), "Editar" en el detalle, y `PUT /api/pedidos-modulos/:id` que conserva la identidad de cada fila, marca EDITADO o MANUAL, no toca los módulos y deja el resumen en el historial (DECISIONES 49). Los cambios se cuentan con `moduleOrderChanges.ts`, código compartido. Sin `groups`, la tabla de corte queda igual. Pruebas: tests unitarios (cambios 5, detalle 5, backend 27) y de punta a punta: e2e-f52 43/43 (nueva, API), e2e-f52-navegador 40/40 (nueva), e2e-f51-navegador 63/63, f45-navegador 139/139, f44-navegador sin fallas (ajustada: espera Editar), f43, f42 (paridad en los 30 módulos), f31 y f05 sin fallas, f04 12/12 y f23 4/4.
 
-#### F5.3 Excel para la máquina · [ ]
+#### F5.3 Excel para la máquina · [x]
 - **Depende de:** F4.3.
 - **Hacer:**
   - ordenar por posición y orden **solo** en los pedidos MODULOS;
@@ -583,10 +583,12 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - nombre de archivo `pedido-M{numero}.xlsx` cuando se exporta un único pedido de módulos (spec §11.1).
 - **Terminado cuando:** exportar solicitudes de corte da el mismo Excel que antes.
 - **Tener en cuenta (de F5.2):** desde la edición puede haber piezas adicionales (sin módulo): su código de barra es `M{numero}-00-{orden}` y van al final. Las piezas agregadas a un módulo siguen a las suyas con el orden siguiente (DECISIONES 49), así que ordenar por posición y orden las deja en su lugar.
+- **Hecho (2026-10-07):** `GET /api/orders/export` ordena las filas de las solicitudes de módulos por posición y orden, con las adicionales al final (`export-order.ts`); las de corte salen como antes. Suma `?tipo=CORTE|MODULOS` opcional (zod, 400 si es otro) y el nombre `pedido-M{numero}.xlsx` para una sola de módulos. `buildOrdersWorkbook` no cambió (DECISIONES 50). Pruebas: tests del backend (30) y de punta a punta: e2e-f53 21/21 (nueva), f51-navegador 63/63 y f45-navegador 139/139 (leen el Excel exportado), f52 43/43.
 - **Tener en cuenta (de F4.5):** el nombre del archivo que ve el usuario lo pone el navegador (`saveAs`), no el `Content-Disposition` del servidor: el CORS no expone ese encabezado. El listado de módulos ya baja `pedido-M{numero}.xlsx` con una sola solicitud y `pedidos-carpinteria.xlsx` con varias (DECISIONES 42); el detalle común sigue con `<cliente>-<fecha>.xlsx`.
 
 #### F5.4 Hoja de taller · [ ]
 - **Depende de:** F5.1.
+- **Tener en cuenta (de F5.3):** el Excel ordena las piezas de cada módulo por `orden`; la hoja de taller conviene que use el mismo orden (`machineRows` en `backend/src/modules/orders/export-order.ts`), así la hoja y el Excel coinciden pieza por pieza.
 - **Hacer:** `/modulos/:id/taller`, en A4, una página por módulo y otra para las piezas adicionales (spec §11.2).
 
 #### F5.5 No regresión y pruebas de integración · [ ]
