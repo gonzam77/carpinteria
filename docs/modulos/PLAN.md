@@ -13,8 +13,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 **Actualizado:** 2026-10-07
 
 - **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F4.5 está commiteado y subido (2026-10-07, con el OK de Gonzalo). Cada push espera su OK.
-- **Último paso terminado:** F4.7 (cantos por pieza). Las Fases 0 a 4 están completas.
-- **Próximo paso:** **F5.1**, el detalle de la solicitud de módulos (`/modulos/:id`, que hoy muestra el detalle común).
+- **Último paso terminado:** F5.1 (detalle de la solicitud de módulos). Las Fases 0 a 4 están completas.
+- **Próximo paso:** **F5.2**, la edición de una solicitud de módulos con el mismo formulario que corte (spec §10).
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -36,7 +36,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
 | F4.1–F4.5 | API, asistente y listado de solicitudes de módulos | [x] |
 | F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
-| F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [ ] |
+| F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [~] F5.1 hecho |
 | F6 | Herrajes (contratados, DECISIONES 10) | [ ] |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
 | F8 | Pase a producción (VPS), al final | [ ] |
@@ -542,7 +542,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 
 ### Fase 5: Detalle, edición y salidas (spec §9.3, §10 y §11)
 
-#### F5.1 Detalle de la solicitud · [ ]
+#### F5.1 Detalle de la solicitud · [x]
 - **Depende de:** F4.3.
 - **Hacer:**
   - encabezado con acciones;
@@ -562,9 +562,11 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - el listado, el éxito del asistente y "Ver M-N" navegan con `state.returnTo`. "Volver" y "Eliminar" del detalle nuevo tienen que respetarlo, para volver al listado con sus filtros. Hay que validarlo como en `OrderDetailPage`: que empiece con `/` y no con `//`;
   - la notificación de AppLayout reemplaza el `state` por `{}`. Si el asistente navega al detalle con "Solicitud M-N creada" (spec §9.2), el `returnTo` se pierde: hay que decidir a dónde vuelve en ese caso (por defecto, `/modulos`);
   - e2e-f45 recorre el detalle (abrir, Volver, atrás, Eliminar con filtros, redirecciones): ajustar esos chequeos al detalle nuevo.
+- **Hecho (2026-10-07):** `ModuleOrderDetailPage` en `/modulos/:id` con encabezado y acciones, tarjeta de datos con la fecha de entrega editable (`PATCH /api/pedidos-modulos/:id/fecha-entrega`, con historial), stepper, pestañas Despiece, Plano de cortes e Historial, y errores visibles (DECISIONES 48). El asistente va al detalle al crear (DECISIONES 35). Los diálogos de estado se comparten con el detalle de corte sin cambiarlo. Pruebas: tests unitarios (detalle 3, backend 26) y de punta a punta: e2e-f51 63/63 (nueva), e2e-f45 139/139, e2e-f44 114/114, e2e-f43 96/96, e2e-f42 106/106, e2e-f31 30/30, e2e-f05 22/22, e2e-f04 12/12 y e2e-f23 4/4.
 
 #### F5.2 Edición, igual que la actual · [ ]
 - **Depende de:** F5.1.
+- **Tener en cuenta (de F5.1):** el detalle (`ModuleOrderDetailPage`) todavía no tiene "Editar": sumarlo con `canEditOrder` y volver al detalle al guardar. Los cantos se editan por lado con cualquier canto, como en corte (DECISIONES 45).
 - **Hacer:**
   - `OrderItemsTable` con la prop opcional `groups`. Sin la prop, tiene que verse y funcionar idéntico a hoy;
   - `OrderFormPage` reutilizado para módulos;

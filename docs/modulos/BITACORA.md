@@ -27,6 +27,32 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-07 (24) · equipo Pinformatico15 · rama main
+
+**Pasos:** F5.1 terminado.
+
+**Hecho:**
+- Push de los 6 commits de F4.6 y F4.7, con el OK de Gonzalo.
+- Detalle propio de la solicitud de módulos en `/modulos/:id` (`ModuleOrderDetailPage`, DECISIONES 48): encabezado con estado, semáforo y acciones (Estado, Materiales, Exportar Excel, Eliminar), tarjeta de datos, fecha de entrega editable, stepper, pestañas Despiece (con el resumen guardado), Plano de cortes e Historial legible.
+- Backend: `PATCH /api/pedidos-modulos/:id/fecha-entrega`, con historial `CAMBIAR_FECHA_ENTREGA`, 409 si está entregada o si cambió mientras tanto. Test del esquema.
+- Diálogos de cambio de estado y link de WhatsApp compartidos con el detalle de corte (mismo JSX). El detalle de corte ya solo atiende solicitudes de corte y redirige las de módulos.
+- El asistente, al crear, va al detalle con "Solicitud M-N creada" (DECISIONES 35).
+- Pruebas: e2e-f51-navegador nueva (detalle), y f43, f44 y f45 ajustadas (tres agentes en paralelo, uno por archivo).
+
+**Decisiones nuevas:** DECISIONES 48; cambian la 35 y la 43.
+
+**Verificaciones:**
+- frontend `npm test` (39, 17, 6, 5, 8, 21, 11 y 3), backend `npm test` (26), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f51 63/63, f45 139/139, f44 114/114, f43 96/96, f42 106/106, f31 30/30, f05 22/22, f04 12/12 y f23 4/4. La copia quedó como estaba.
+
+**Commits:** tres commits locales (código, pruebas y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F5.2, la edición con el mismo formulario que corte. Lo primero: leer spec §10 y "Tener en cuenta" de PLAN F5.2.
+
+**Esperando a Gonzalo o a ROMA:** P5 y P6.
+
+---
+
 ## 2026-10-07 (23) · equipo Pinformatico15 · rama main
 
 **Pasos:** F4.7 terminado. La Fase 4 está completa.
