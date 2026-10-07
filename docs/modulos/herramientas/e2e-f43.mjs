@@ -10,6 +10,9 @@
 // - El stock se reserva y se devuelve exacto al cambiar el estado, como en corte, y una carrera entre borrar y
 //   cambiar el estado no pierde ni duplica placas.
 // - Listado: cada busqueda y filtro trae lo que corresponde y excluye lo demas; orden por entrega, entregadas al final.
+// - Cambio de la fecha de entrega (F5.1, spec §9.3): guarda la fecha y una entrada CAMBIAR_FECHA_ENTREGA en el
+//   historial; la misma fecha no deja otra; fechas pasadas, mal escritas o con otros campos dan 400; un pedido de corte o
+//   uno que no existe, 404; una entregada, 409 ORDER_DELIVERED; un carpintero, 403; dos cambios a la vez no se pisan.
 // - Errores: datos, cantos (el color unico viejo, el formato viejo, un canto que no es canto, una pieza que no existe),
 //   version del modulo cambiada (409) y permisos.
 //
@@ -34,7 +37,8 @@ const SECRET = "prueba-local-analisis-0123456789";
 const PREFIJO = "Prueba F4.3";
 const psql = (sql) =>
   execFileSync("docker", ["exec", "carpinteria-analisis-db", "psql", "-U", "carpinteria", "-d", "carpinteria", "-At", "-F", "|", "-c", sql], { encoding: "utf8" }).trim();
-const admin = jwt.sign({ id: psql("select id from usuarios where rol='ADMIN' limit 1"), email: "prueba@local", rol: "ADMIN" }, SECRET, { expiresIn: "2h" });
+const adminId = psql("select id from usuarios where rol='ADMIN' limit 1");
+const admin = jwt.sign({ id: adminId, email: "prueba@local", rol: "ADMIN" }, SECRET, { expiresIn: "2h" });
 const carpintero = jwt.sign({ id: psql("select id from usuarios where rol='CARPINTERO' limit 1"), email: "carp@local", rol: "CARPINTERO" }, SECRET, { expiresIn: "2h" });
 
 const call = async (method, path, body, token = admin) => {
@@ -456,6 +460,113 @@ try {
   const corte = (await call("GET", "/orders")).data;
   check("GET /orders no muestra las solicitudes de modulos", !corte.some((item) => nuestras.has(item.id)));
   check("GET /pedidos-modulos/:id de un pedido de corte: 404", (await call("GET", `/pedidos-modulos/${corte[0]?.id}`)).status === 404);
+
+  // ---------------------------------------------------------------- fecha de entrega (F5.1, spec §9.3)
+  // Sobre B (PENDIENTE, entrega en 30 días) y C (ENTREGADA), cuando ya se probó el listado. Las fechas, en la zona del
+  // negocio; las del historial, AAAA-MM-DD. Los historiales se borran con sus solicitudes al final.
+  const fechaPath = (id) => `/pedidos-modulos/${id}/fecha-entrega`;
+  const fechaEnLaBase = (id) => psql(`select coalesce("fechaEntrega"::text, 'null') from pedidos where id = '${id}'`);
+  const cambiosEnLaBase = (id) => psql(`select count(*) from historial_pedidos where "pedidoId" = '${id}' and accion = 'CAMBIAR_FECHA_ENTREGA'`);
+  const cambiosDeFecha = (data) => (data?.historial ?? []).filter((item) => item.accion === "CAMBIAR_FECHA_ENTREGA");
+  const fechaB = b.data.fechaEntrega;
+  const nuevaFecha = enDias(40);
+  const cambio = await call("PATCH", fechaPath(b.data.id), { fechaEntrega: nuevaFecha });
+  const leidaDespues = await call("GET", `/pedidos-modulos/${b.data.id}`);
+  check(
+    "fecha de entrega: una fecha futura se guarda (200, en la respuesta, en GET y en la base)",
+    fechaB === enDias(30) &&
+      cambio.status === 200 &&
+      cambio.data.id === b.data.id &&
+      cambio.data.fechaEntrega === nuevaFecha &&
+      leidaDespues.data?.fechaEntrega === nuevaFecha &&
+      fechaEnLaBase(b.data.id) === nuevaFecha,
+    `${cambio.status} ${cambio.data?.code ?? cambio.data?.message ?? ""}`
+  );
+  check("fecha de entrega: responde la solicitud igual que GET /pedidos-modulos/:id", leidaDespues.status === 200 && JSON.stringify(leidaDespues.data) === JSON.stringify(cambio.data));
+  const [entradaFecha] = cambiosDeFecha(leidaDespues.data);
+  check(
+    "fecha de entrega: una entrada CAMBIAR_FECHA_ENTREGA en el historial, la más nueva, con la fecha anterior, la nueva y el usuario",
+    cambiosDeFecha(leidaDespues.data).length === 1 &&
+      entradaFecha.valorAnterior === fechaB &&
+      entradaFecha.valorNuevo === nuevaFecha &&
+      entradaFecha.usuarioId === adminId &&
+      leidaDespues.data.historial.length === 2 &&
+      leidaDespues.data.historial[0] === entradaFecha &&
+      leidaDespues.data.historial[1].accion === "CREAR_PEDIDO_MODULOS" &&
+      cambiosEnLaBase(b.data.id) === "1",
+    entradaFecha ? `${entradaFecha.valorAnterior} -> ${entradaFecha.valorNuevo}` : "sin entrada"
+  );
+  const mismaFecha = await call("PATCH", fechaPath(b.data.id), { fechaEntrega: nuevaFecha });
+  check(
+    "fecha de entrega: la misma fecha otra vez responde 200 y no deja otra entrada",
+    mismaFecha.status === 200 && mismaFecha.data.fechaEntrega === nuevaFecha && cambiosDeFecha(mismaFecha.data).length === 1 && cambiosEnLaBase(b.data.id) === "1",
+    String(mismaFecha.status)
+  );
+
+  // Lo que no pasa no cambia ni la fecha ni el historial de la solicitud.
+  const fechaSinEfecto = async (label, id, body, status, test = () => true, token = admin) => {
+    const antes = `${fechaEnLaBase(id)}|${cambiosEnLaBase(id)}`;
+    const response = await call("PATCH", fechaPath(id), body, token);
+    check(
+      label,
+      response.status === status && test(response.data) && `${fechaEnLaBase(id)}|${cambiosEnLaBase(id)}` === antes,
+      `${response.status} ${String(response.data?.code ?? JSON.stringify(response.data?.errors ?? response.data?.message ?? "")).slice(0, 120)}`
+    );
+  };
+  const textoDe = (data) => JSON.stringify(data);
+  await fechaSinEfecto("fecha de entrega: ayer (en Argentina) da 400", b.data.id, { fechaEntrega: enDias(-1) }, 400, (data) => textoDe(data).includes("La fecha de entrega no puede ser anterior a hoy"));
+  await fechaSinEfecto("fecha de entrega: mal escrita (dd/mm/aaaa) da 400", b.data.id, { fechaEntrega: "15/11/2026" }, 400, (data) => textoDe(data).includes("AAAA-MM-DD"));
+  await fechaSinEfecto("fecha de entrega: un mes que no existe da 400", b.data.id, { fechaEntrega: "2026-13-01" }, 400, (data) => textoDe(data).includes("AAAA-MM-DD"));
+  await fechaSinEfecto("fecha de entrega: sin fecha da 400", b.data.id, {}, 400, (data) => textoDe(data).includes("Elegí la fecha de entrega"));
+  await fechaSinEfecto("fecha de entrega: con otro campo da 400", b.data.id, { fechaEntrega: enDias(41), cliente: `${PREFIJO} otro` }, 400, (data) =>
+    textoDe(data).includes("Solo se puede mandar la fecha de entrega")
+  );
+  check("hay un pedido de corte para probar", Boolean(corte[0]?.id));
+  await fechaSinEfecto("fecha de entrega: un pedido de corte da 404", corte[0]?.id, { fechaEntrega: enDias(41) }, 404, (data) => data?.message === "Solicitud de módulos no encontrada.");
+  await fechaSinEfecto("fecha de entrega: una solicitud que no existe da 404", randomUUID(), { fechaEntrega: enDias(41) }, 404);
+  await fechaSinEfecto("fecha de entrega: un carpintero no accede (403)", b.data.id, { fechaEntrega: enDias(41) }, 403, () => true, carpintero);
+  await fechaSinEfecto(
+    "fecha de entrega: una solicitud ENTREGADA da 409 ORDER_DELIVERED",
+    c.data.id,
+    { fechaEntrega: enDias(41) },
+    409,
+    (data) => data?.code === "ORDER_DELIVERED" && fechaEnLaBase(c.data.id) === enDias(5)
+  );
+  // Hoy sí se puede, como en el alta (la fecha de hoy se toma en el momento).
+  const fechaHoy = ymd(new Date());
+  const aHoy = await call("PATCH", fechaPath(b.data.id), { fechaEntrega: fechaHoy });
+  check(
+    "fecha de entrega: hoy sí se puede, y deja la segunda entrada",
+    aHoy.status === 200 && aHoy.data.fechaEntrega === fechaHoy && cambiosDeFecha(aHoy.data).length === 2 &&
+      cambiosDeFecha(aHoy.data).some((item) => item.valorAnterior === nuevaFecha && item.valorNuevo === fechaHoy) &&
+      cambiosEnLaBase(b.data.id) === "2",
+    String(aHoy.status)
+  );
+  // Dos cambios a la vez: cada uno se aplica entero o responde 409 ORDER_CHANGED, y el historial encadena exactamente los
+  // que se aplicaron (sin depender de cuál llega primero ni de la hora de cada entrada).
+  const paralelas = [enDias(45), enDias(46)];
+  const aLaVez = await Promise.all(paralelas.map((fecha) => call("PATCH", fechaPath(b.data.id), { fechaEntrega: fecha })));
+  const aplicadas = aLaVez.filter((response) => response.status === 200).length;
+  const trasLaCarrera = await call("GET", `/pedidos-modulos/${b.data.id}`);
+  const nuevasEntradas = cambiosDeFecha(trasLaCarrera.data).filter((item) => paralelas.includes(item.valorNuevo));
+  let actual = fechaHoy;
+  const pendientes = [...nuevasEntradas];
+  while (pendientes.length) {
+    const siguiente = pendientes.findIndex((item) => item.valorAnterior === actual);
+    if (siguiente < 0) break;
+    actual = pendientes.splice(siguiente, 1)[0].valorNuevo;
+  }
+  check(
+    "fecha de entrega: dos cambios a la vez no se pisan (200 o 409 ORDER_CHANGED, y una entrada encadenada por cada 200)",
+    aLaVez.every((response) => response.status === 200 || (response.status === 409 && response.data?.code === "ORDER_CHANGED")) &&
+      aplicadas >= 1 &&
+      nuevasEntradas.length === aplicadas &&
+      pendientes.length === 0 &&
+      actual === trasLaCarrera.data.fechaEntrega &&
+      fechaEnLaBase(b.data.id) === actual &&
+      cambiosEnLaBase(b.data.id) === String(2 + aplicadas),
+    aLaVez.map((response) => `${response.status}${response.data?.code ? " " + response.data.code : ""}`).join(" / ")
+  );
 
   // ---------------------------------------------------------------- stock, como en corte
   const porMaterial = order.estimacionDetalle.porMaterial;

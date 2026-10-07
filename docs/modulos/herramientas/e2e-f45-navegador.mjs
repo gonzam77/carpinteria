@@ -8,7 +8,8 @@
 //   semaforo, orden por encabezado, filtros en la URL (estado, busqueda con pausa, telefono, numero, fechas escritas con
 //   el teclado sin aplicar las intermedias, rango invertido), la grilla que no se desarma (orden, anchos), aviso para
 //   lectores de pantalla, foco, seleccion con filtros y con errores, exportar (ids pedidos y contenido del Excel),
-//   detalle en /modulos/:id con su menu y su barra, volver con los mismos filtros, redirecciones sin cargar dos veces,
+//   detalle de modulos en /modulos/:id (F5.1, "Solicitud M-<numero>") con su menu y su barra, volver con los mismos
+//   filtros, redirecciones entre /pedidos/:id y /modulos/:id con una sola carga en cada pantalla, saltos con el historial,
 //   errores (busqueda, listado y exportacion), menu desde un listado filtrado, borrar desde el detalle, zona horaria del
 //   navegador, cambio de dia a la medianoche, dias de aviso de la configuracion, y tamanos de notebook, tablet y celular.
 // Crea solicitudes "Prueba F4.5 ..." por la API, les pone estado y fechas por SQL (sin reserva de stock) y las borra al
@@ -257,7 +258,8 @@ try {
   });
   const shot = (name, fullPage = false) => page.screenshot({ path: join(shotsDir, `${name}.png`), fullPage });
   // Los pedidos al servidor: los del listado (pausa de la busqueda, fechas intermedias, rango invertido), los ids de cada
-  // exportacion y los del detalle (para ver que una redireccion no lo cargue dos veces).
+  // exportacion y los de cada detalle (para ver que una redireccion no lo cargue de mas): "corte" es GET /api/orders/:id
+  // (el detalle comun) y "modulos" GET /api/pedidos-modulos/:id (el detalle de modulos, F5.1).
   const pedidos = [];
   const exportaciones = [];
   const detalles = [];
@@ -266,8 +268,13 @@ try {
     if (request.method() !== "GET") return;
     if (url.pathname.endsWith("/pedidos-modulos")) pedidos.push(Object.fromEntries(url.searchParams));
     if (url.pathname.endsWith("/orders/export")) exportaciones.push(url.searchParams.get("ids"));
-    if (/\/api\/orders\/[0-9a-f-]{36}$/.test(url.pathname)) detalles.push(url.pathname);
+    if (/\/api\/orders\/[0-9a-f-]{36}$/.test(url.pathname)) detalles.push({ tipo: "corte", ruta: url.pathname });
+    if (/\/api\/pedidos-modulos\/[0-9a-f-]{36}$/.test(url.pathname)) detalles.push({ tipo: "modulos", ruta: url.pathname });
   });
+  const cargasDe = (tipo) => detalles.filter((item) => item.tipo === tipo).length;
+  // El detalle de modulos de una solicitud: su titulo "Solicitud M-<numero>".
+  const tituloDetalle = (key) => page.getByRole("heading", { level: 1, name: `Solicitud M-${fila.get(key).numero}`, exact: true });
+  const esperarTitulo = (key, timeout = 30000) => tituloDetalle(key).waitFor({ timeout }).then(() => true, () => false);
   const { listado, filas, clientes, fila: filaDe, esperarClientes, celda, barra, esperarBarra, valoresIndicadores } = listadoDe(page);
   const buscar = page.getByLabel("Buscar");
   const desdeInput = page.getByLabel("Entrega desde");
@@ -910,28 +917,41 @@ try {
   await casilla("gamma").uncheck();
 
   // ---------------------------------------------------------------- E. detalle en /modulos/:id y vuelta con los filtros
-  // Primero el ojo, en la misma pantalla en que cambiaron los filtros (el boton se armo antes, con otra URL): su
-  // "Volver" tiene que traer los filtros de ahora.
+  // El detalle de modulos (F5.1): titulo "Solicitud M-<numero>". Primero el ojo, en la misma pantalla en que cambiaron
+  // los filtros (el boton se armo antes, con otra URL): su "Volver" tiene que traer los filtros de ahora.
   const conFiltros = new URL(page.url()).search;
   await page.getByRole("button", { name: `Ver la solicitud M-${fila.get("eta").numero}` }).click();
   await page.waitForURL(`**/modulos/${fila.get("eta").id}`);
+  const ojoConTitulo = await esperarTitulo("eta");
   const vueltaDelOjo = await page.evaluate(() => window.history.state?.usr?.returnTo ?? null);
   await page.getByRole("button", { name: "Volver" }).click();
   await page.waitForURL(`**/modulos${conFiltros}`, { timeout: 15000 }).catch(() => undefined);
   check(
-    "el ojo de la fila: abre el detalle y Volver trae los filtros de ese momento",
-    vueltaDelOjo === `/modulos${conFiltros}` && new URL(page.url()).search === conFiltros && (await esperarClientes(["beta", "gamma", "eta"])),
-    String(vueltaDelOjo).replace(conFiltros, "?<filtros>")
+    "el ojo de la fila: abre el detalle de modulos (Solicitud M-<numero>) y Volver trae los filtros de ese momento",
+    ojoConTitulo && vueltaDelOjo === `/modulos${conFiltros}` && new URL(page.url()).search === conFiltros && (await esperarClientes(["beta", "gamma", "eta"])),
+    `titulo ${ojoConTitulo} | ${String(vueltaDelOjo).replace(conFiltros, "?<filtros>")}`
   );
+  // Lo que pide un detalle al montarse una vez sin recargar la pagina (con el StrictMode de Vite, dos pedidos; en el
+  // build, uno). Al recargar la pagina se monta dos veces: la sesion se valida y la ruta protegida se desmonta un momento.
+  detalles.length = 0;
   await filaDe("gamma").locator('[data-field="cliente"]').click();
   await page.waitForURL(`**/modulos/${fila.get("gamma").id}`);
+  const filaConTitulo = await esperarTitulo("gamma");
+  const porMontaje = cargasDe("modulos");
+  const cortesAlAbrirFila = cargasDe("corte");
   await page.getByRole("button", { name: "Volver" }).waitFor();
   check(
-    "click en la fila: abre el detalle en /modulos/:id, con el menu y la barra de la seccion",
-    (await page.getByText(`${PREFIJO} gamma`).count()) >= 1 &&
+    "click en la fila: abre el detalle de modulos en /modulos/:id (solo con su servicio), con el menu y la barra de la seccion",
+    filaConTitulo &&
+      porMontaje >= 1 &&
+      porMontaje <= 2 &&
+      cortesAlAbrirFila === 0 &&
+      (await page.getByText(`${PREFIJO} gamma`).count()) >= 1 &&
+      (await page.getByRole("region", { name: "Datos de la solicitud" }).count()) === 1 &&
       (await esperarBarra("Módulos a medida")) &&
       (await page.getByRole("link", { name: "Módulos a medida" }).evaluate((link) => link.classList.contains("Mui-selected"))) &&
-      !(await page.getByRole("link", { name: "Solicitudes", exact: true }).evaluate((link) => link.classList.contains("Mui-selected")))
+      !(await page.getByRole("link", { name: "Solicitudes", exact: true }).evaluate((link) => link.classList.contains("Mui-selected"))),
+    `cargas al abrir la fila: modulos ${porMontaje}, corte ${cortesAlAbrirFila}`
   );
   await page.getByRole("button", { name: "Volver" }).click();
   await page.waitForURL(`**/modulos${conFiltros}`);
@@ -941,10 +961,13 @@ try {
   );
   await filaDe("eta").locator('[data-field="cliente"]').click();
   await page.waitForURL(`**/modulos/${fila.get("eta").id}`);
-  await page.getByRole("button", { name: "Volver" }).waitFor();
+  const atrasConTitulo = await esperarTitulo("eta");
   await page.goBack();
   await page.waitForURL(`**/modulos${conFiltros}`);
-  check("atras del navegador desde el detalle: vuelta con los filtros y sus filas", (await esperarClientes(["beta", "gamma", "eta"])) && new URL(page.url()).search === conFiltros);
+  check(
+    "atras del navegador desde el detalle: vuelta con los filtros y sus filas",
+    atrasConTitulo && (await esperarClientes(["beta", "gamma", "eta"])) && new URL(page.url()).search === conFiltros
+  );
   await limpiar();
   await esperarClientes(ORDEN);
 
@@ -973,7 +996,7 @@ try {
   );
   await page.keyboard.press("Enter");
   await page.waitForURL(`**/modulos/${fila.get("zeta").id}`, { timeout: 10000 }).catch(() => undefined);
-  check("teclado: Enter abre la fila que tiene el foco", new URL(page.url()).pathname === `/modulos/${fila.get("zeta").id}`);
+  check("teclado: Enter abre la fila que tiene el foco", new URL(page.url()).pathname === `/modulos/${fila.get("zeta").id}` && (await esperarTitulo("zeta", 15000)));
   await page.getByRole("button", { name: "Volver" }).click();
   await page.waitForURL(`${APP}/modulos`);
   await esperarClientes(ORDEN);
@@ -1037,31 +1060,57 @@ try {
   check("seleccionar el telefono con el mouse no abre la solicitud", new URL(page.url()).pathname === "/modulos" && seleccionado.length > 0, `${new URL(page.url()).pathname}, ${seleccionado.length} caracteres`);
   await page.evaluate(() => window.getSelection()?.removeAllRanges());
 
-  // Un link viejo a /pedidos/:id de una solicitud de modulos pasa a /modulos/:id (sin cargar el detalle dos veces); uno
-  // de corte, al reves
+  // Un link viejo a /pedidos/:id de una solicitud de modulos pasa a /modulos/:id; uno de corte, al reves. Desde F5.1 son
+  // dos pantallas: la del link carga la solicitud con su servicio, ve que es de la otra seccion y la reemplaza (sin sumar
+  // un paso al historial), y la otra la carga con el suyo. Cada una la carga una vez: la del link, lo mismo que un
+  // detalle abierto directo (con la pagina recargada se monta dos veces, ver porMontaje), y la otra, lo de un montaje.
   detalles.length = 0;
   await page.goto(`${APP}/modulos/${fila.get("delta").id}`);
-  await page.getByRole("button", { name: "Volver" }).waitFor();
+  const directoConTitulo = await esperarTitulo("delta");
   await page.waitForTimeout(800);
-  const cargasDirectas = detalles.length;
+  const directa = { corte: cargasDe("corte"), modulos: cargasDe("modulos") };
+  // Lo que pide una pantalla de detalle abierta directo, con la pagina recargada.
+  const alRecargar = directa.modulos;
+  check(
+    "/modulos/:id de una solicitud de modulos, abierto directo: su detalle, cargado solo con el servicio de modulos",
+    directoConTitulo && alRecargar >= porMontaje && alRecargar <= 2 * porMontaje && directa.corte === 0,
+    `cargas: ${JSON.stringify(directa)}, por montaje ${porMontaje}`
+  );
   detalles.length = 0;
   await page.goto(`${APP}/pedidos/${fila.get("delta").id}`);
   await page.waitForURL(`**/modulos/${fila.get("delta").id}`, { timeout: 15000 }).catch(() => undefined);
-  await page.getByRole("button", { name: "Volver" }).waitFor();
+  const redirigidoConTitulo = await esperarTitulo("delta");
   await page.waitForTimeout(800);
-  const cargasConRedireccion = detalles.length;
+  const conRedireccion = { corte: cargasDe("corte"), modulos: cargasDe("modulos") };
   check(
-    "/pedidos/:id de una solicitud de modulos pasa a /modulos/:id, sin cargarla de nuevo",
-    new URL(page.url()).pathname === `/modulos/${fila.get("delta").id}` && (await esperarBarra("Módulos a medida")) && cargasConRedireccion === cargasDirectas,
-    `cargas: directa ${cargasDirectas}, con redireccion ${cargasConRedireccion}`
+    "/pedidos/:id de una solicitud de modulos pasa a /modulos/:id, cargandola una vez en cada pantalla",
+    new URL(page.url()).pathname === `/modulos/${fila.get("delta").id}` &&
+      redirigidoConTitulo &&
+      (await esperarBarra("Módulos a medida")) &&
+      conRedireccion.corte === alRecargar &&
+      conRedireccion.modulos === porMontaje,
+    `cargas: directa ${JSON.stringify(directa)}, con redireccion ${JSON.stringify(conRedireccion)}, por montaje ${porMontaje}`
   );
   await page.getByRole("button", { name: "Volver" }).click();
   await page.waitForURL(`${APP}/modulos`);
   check("sin origen, Volver va al listado de modulos", new URL(page.url()).pathname === "/modulos");
+  // El detalle de modulos responde 404 con una de corte (por eso pasa a /pedidos/:id): es un error esperado.
+  esperados.push(new RegExp(`^HTTP 404 GET /pedidos-modulos/${corteId}$`), new RegExp(`^console: Failed to load resource: .*404.* @ /pedidos-modulos/${corteId}$`));
+  detalles.length = 0;
   await page.goto(`${APP}/modulos/${corteId}`);
   await page.waitForURL(`**/pedidos/${corteId}`, { timeout: 15000 }).catch(() => undefined);
   await page.getByRole("button", { name: "Volver" }).waitFor();
-  check("/modulos/:id de una solicitud de corte pasa a /pedidos/:id, con la barra de siempre", new URL(page.url()).pathname === `/pedidos/${corteId}` && (await esperarBarra("Panel de solicitudes")), await barra());
+  await page.waitForTimeout(800);
+  const deCorte = { corte: cargasDe("corte"), modulos: cargasDe("modulos") };
+  check(
+    "/modulos/:id de una solicitud de corte pasa a /pedidos/:id, con la barra de siempre y cargandola una vez en cada pantalla",
+    new URL(page.url()).pathname === `/pedidos/${corteId}` &&
+      (await esperarBarra("Panel de solicitudes")) &&
+      (await page.locator("main h1").count()) === 0 &&
+      deCorte.modulos === alRecargar &&
+      deCorte.corte === porMontaje,
+    `${await barra()} | cargas ${JSON.stringify(deCorte)}, por montaje ${porMontaje}`
+  );
   await page.getByRole("button", { name: "Volver" }).click();
   await page.waitForURL(`${APP}/pedidos`, { timeout: 15000 }).catch(() => undefined);
   check("corte: Volver del detalle sigue yendo a /pedidos", new URL(page.url()).pathname === "/pedidos");
@@ -1100,7 +1149,7 @@ try {
   const saltoAtras = {
     llego: llegoAtras,
     ruta: new URL(page.url()).pathname === `/modulos/${fila.get("eta").id}`,
-    cargas: detalles.length,
+    cargas: { corte: cargasDe("corte"), modulos: cargasDe("modulos") },
     cambios: cambiosDeUrl.length
   };
   cambiosDeUrl.length = 0;
@@ -1111,20 +1160,34 @@ try {
   const saltoAdelante = {
     llego: llegoAdelante,
     ruta: new URL(page.url()).pathname === detalleCorte,
-    cargas: detalles.length,
+    cargas: { corte: cargasDe("corte"), modulos: cargasDe("modulos") },
     cambios: cambiosDeUrl.length
   };
   page.off("framenavigated", anotarUrl);
   check(
     "saltar con el historial entre un detalle de modulos y uno de corte: cada uno en su ruta, una carga y la URL quieta",
-    saltoAtras.llego && saltoAtras.ruta && saltoAtras.cargas <= 2 && saltoAtras.cambios <= 1 && saltoAdelante.llego && saltoAdelante.ruta && saltoAdelante.cargas <= 2 && saltoAdelante.cambios <= 1,
+    // Cada detalle pide solo su servicio: el de modulos GET /api/pedidos-modulos/:id y el de corte GET /api/orders/:id.
+    saltoAtras.llego &&
+      saltoAtras.ruta &&
+      saltoAtras.cargas.corte === 0 &&
+      saltoAtras.cargas.modulos >= 1 &&
+      saltoAtras.cargas.modulos <= porMontaje &&
+      saltoAtras.cambios <= 1 &&
+      saltoAdelante.llego &&
+      saltoAdelante.ruta &&
+      saltoAdelante.cargas.modulos === 0 &&
+      saltoAdelante.cargas.corte >= 1 &&
+      saltoAdelante.cargas.corte <= porMontaje &&
+      saltoAdelante.cambios <= 1,
     `${JSON.stringify(saltoAtras)} | ${JSON.stringify(saltoAdelante)}`
   );
   // Al pasar a otra solicitud se monta un detalle nuevo: mientras carga no queda a la vista el titulo de la anterior, y
   // una respuesta tardia de la anterior no reemplaza a la que se esta viendo. Se compara solo con la solicitud de prueba
   // (la de corte es de la copia: no se imprime nada de ella).
-  const tituloEsEta = async () => (await page.locator("main h4").count()) === 1 && norm(await page.locator("main h4").innerText()) === `${PREFIJO} eta`;
-  const detalleDeEta = (url) => url.pathname.endsWith(`/api/orders/${fila.get("eta").id}`);
+  // El titulo del detalle de modulos es un h1 ("Solicitud M-<numero>"); el del detalle de corte, un h4 con el cliente.
+  const titulosDetalle = page.locator("main h1, main h4");
+  const tituloEsEta = async () => (await titulosDetalle.count()) === 1 && norm(await titulosDetalle.innerText()) === `Solicitud M-${fila.get("eta").numero}`;
+  const detalleDeEta = (url) => url.pathname.endsWith(`/api/pedidos-modulos/${fila.get("eta").id}`);
   const demorarEta = async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 2500));
     await route.continue().catch(() => undefined);
@@ -1132,7 +1195,7 @@ try {
   await page.route(detalleDeEta, demorarEta);
   await page.evaluate(() => window.history.go(-2));
   await esperarQue(async () => (await barra()) === "Módulos a medida");
-  const titulosMientrasCarga = await page.locator("main h4").count();
+  const titulosMientrasCarga = await titulosDetalle.count();
   const llegoEta = await esperarQue(tituloEsEta);
   await page.unroute(detalleDeEta, demorarEta);
   check("al saltar a otra solicitud, mientras carga no queda a la vista el titulo de la anterior", titulosMientrasCarga === 0 && llegoEta, `${titulosMientrasCarga} titulos mientras carga`);
@@ -1954,19 +2017,27 @@ try {
   const conEstado = new URL(page.url()).search;
   await filaDe("delta").locator('[data-field="cliente"]').click();
   await page.waitForURL(`**/modulos/${fila.get("delta").id}`);
-  await page.getByRole("button", { name: "Eliminar" }).click();
+  // Desde el detalle de modulos (F5.1): borra y vuelve a la pantalla que lo abrio con "Solicitud M-<numero> eliminada.".
+  const borrarConTitulo = await esperarTitulo("delta");
+  await page.getByRole("button", { name: "Eliminar", exact: true }).click();
   await page.getByRole("button", { name: "Sí, eliminar" }).click();
   await page.waitForURL(`**/modulos${conEstado}`, { timeout: 15000 }).catch(() => undefined);
+  const textoBorrado = `Solicitud M-${fila.get("delta").numero} eliminada.`;
   const avisoBorrado = await page
-    .getByText("Solicitud eliminada correctamente.")
+    .locator(".MuiSnackbar-root .MuiAlert-message", { hasText: textoBorrado })
     .waitFor({ timeout: 10000 })
     .then(() => true, () => false);
   const quedan = await esperarClientes(["alfa", "eta"]);
   check(
-    "borrar desde el detalle: vuelve al listado con los mismos filtros, avisa y ya no esta",
-    new URL(page.url()).search === conEstado && avisoBorrado && quedan,
+    "borrar desde el detalle de modulos: vuelve al listado con los mismos filtros, avisa con su numero y ya no esta",
+    borrarConTitulo && new URL(page.url()).pathname === "/modulos" && new URL(page.url()).search === conEstado && avisoBorrado && quedan && psql(`select count(*) from pedidos where id = '${fila.get("delta").id}'`) === "0",
     `${new URL(page.url()).search} | aviso ${avisoBorrado} | ${(await clientes()).join(", ")}`
   );
+  // La notificacion deja el historial sin estado: recargar no la repite.
+  await page.reload();
+  await esperarClientes(["alfa", "eta"]);
+  await page.waitForTimeout(500);
+  check("borrar desde el detalle: al recargar el listado no se repite el aviso", (await page.getByText(textoBorrado).count()) === 0);
 
   if (ymd(new Date()) !== hoy) check("la corrida cruzo la medianoche de Argentina: volve a correrla", false);
   await context.close();

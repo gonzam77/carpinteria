@@ -10,7 +10,10 @@
 //   409 MODULE_CHANGED, doble click, bloqueo mientras se crea, respuesta perdida (busca la solicitud en vez de crearla
 //   otra vez), salir mientras se crea, lo guardado igual a la ultima vista previa, catalogo que cambia con el
 //   asistente abierto y borrador (guardar, recuperar con fecha vencida y con cantos del formato viejo, descartar).
-// - Paridad entre pantallas: el detalle comun de la solicitud creada da las mismas placas e importe guardados.
+// - Creada (F5.1): el asistente se reemplaza por el detalle /modulos/:id (atras no vuelve al asistente), con su titulo y
+//   la notificacion; tambien al terminar un alta mientras se estaba en otra pantalla.
+// - Paridad entre pantallas: el Resumen del detalle (lo guardado, GET /api/pedidos-modulos/:id) y su plano dan las mismas
+//   placas e importe que la ultima vista previa.
 // - Corte: el detalle y el formulario siguen igual. Tablet y celular sin scroll horizontal. Barra del editor de modulos.
 // Crea solicitudes "Prueba F4.4 ..." y las borra al final; sube un rato la version de un modulo (409) y desactiva otro
 // un rato (catalogo que cambia), y los deja como estaban. No imprime datos de clientes.
@@ -263,6 +266,23 @@ try {
   const card = (n, nombre) => page.getByRole("region", { name: `Módulo ${n} · ${nombre}`, exact: true });
   const estados = async () => (await page.locator("section[data-modulo] .MuiChip-label").allInnerTexts()).filter((label) => label === "Listo" || label === "Revisar");
   const moduleButton = (nombre) => page.getByRole("button", { name: nombre, exact: true });
+  // Despues de crear (F5.1): el asistente se reemplaza por el detalle /modulos/:id, con el titulo "Solicitud M-<numero>" y
+  // la notificacion "Solicitud M-<numero> creada" del layout (se cierra sola a los 4,2 s: se busca enseguida).
+  const llegarAlDetalle = async (id, numero) => {
+    await page.waitForURL(`${APP}/modulos/${id}`, { timeout: 60000 }).catch(() => undefined);
+    const titulo = page.getByRole("heading", { level: 1, name: `Solicitud M-${numero}`, exact: true });
+    const aviso = page.locator(".MuiSnackbar-root .MuiAlert-message", { hasText: `Solicitud M-${numero} creada` });
+    const [conTitulo, conAviso] = await Promise.all([
+      titulo.waitFor({ timeout: 30000 }).then(() => true).catch(() => false),
+      aviso.waitFor({ timeout: 30000 }).then(() => true).catch(() => false)
+    ]);
+    const avisoTexto = conAviso ? norm(await aviso.first().innerText().catch(() => "")) : "";
+    const pathname = new URL(page.url()).pathname;
+    return {
+      ok: pathname === `/modulos/${id}` && conTitulo && avisoTexto === `Solicitud M-${numero} creada`,
+      detalle: `${pathname.replace(id, ":id")} | titulo ${conTitulo ? "si" : "no"} | aviso "${avisoTexto}"`
+    };
+  };
 
   await page.goto(`${APP}/`);
   const menu = page.getByRole("link", { name: "Módulos a medida" });
@@ -558,25 +578,36 @@ try {
   );
 
   const panel = page.getByRole("region", { name: "Resumen", exact: true });
+  // El resumen muestra los numeros de `data` (la vista previa en el paso 4, lo guardado en el detalle). Espera hasta 15 s:
+  // el espesor de cada placa llega con los materiales, despues de la solicitud.
   const panelOk = async (data, label) => {
-    const panelText = norm(await panel.innerText());
-    const placas = [...panelText.matchAll(/(\d+) placas?\b/g)].reduce((sum, match) => sum + Number(match[1]), 0);
     const piezas = data.detalles.reduce((sum, row) => sum + Number(row.cantidad), 0);
-    const m2 = data.estimacionDetalle.porMaterial.every((item) =>
-      panelText.includes(`${item.nombre.trim()} · ${espesores.get(item.materialId)} mm ${item.placas} ${item.placas === 1 ? "placa" : "placas"} ${decimals(item.mm2 / 1e6)} m² de piezas`)
-    );
-    const metros = data.estimacionDetalle.porCanto.every((item) => panelText.includes(`${decimals(item.mm / 1000)} m`));
-    const importes = [
-      `Placas ${money(data.costoPlacas)}`,
-      `Mano de obra por cortes ${money(data.costoManoObraCortes)}`,
-      `Cantos (material y pegado) ${money(data.costoCantos)}`,
-      `Total ${money(data.presupuestoConHerrajes)}`
-    ].every((part) => panelText.includes(part));
-    check(
-      `${label}: el resumen es el de la vista previa (placas, m², canto e importes)`,
-      placas === data.placasEstimadas && panelText.includes(`Módulos 3 Piezas ${piezas}`) && m2 && metros && importes && !panelText.includes("Herrajes") && panelText.includes("Las placas finales las define el optimizador al cortar."),
-      `${placas} placas en pantalla, ${data.placasEstimadas} en la vista previa`
-    );
+    let ok = false;
+    let placas = null;
+    for (let waited = 0; !ok && waited <= 15000; waited += 250) {
+      if (waited) await page.waitForTimeout(250);
+      const panelText = norm(await panel.innerText().catch(() => ""));
+      placas = [...panelText.matchAll(/(\d+) placas?\b/g)].reduce((sum, match) => sum + Number(match[1]), 0);
+      const m2 = data.estimacionDetalle.porMaterial.every((item) =>
+        panelText.includes(`${item.nombre.trim()} · ${espesores.get(item.materialId)} mm ${item.placas} ${item.placas === 1 ? "placa" : "placas"} ${decimals(item.mm2 / 1e6)} m² de piezas`)
+      );
+      const metros = data.estimacionDetalle.porCanto.every((item) => panelText.includes(`${decimals(item.mm / 1000)} m`));
+      const importes = [
+        `Placas ${money(data.costoPlacas)}`,
+        `Mano de obra por cortes ${money(data.costoManoObraCortes)}`,
+        `Cantos (material y pegado) ${money(data.costoCantos)}`,
+        `Total ${money(data.presupuestoConHerrajes)}`
+      ].every((part) => panelText.includes(part));
+      ok =
+        placas === data.placasEstimadas &&
+        panelText.includes(`Módulos 3 Piezas ${piezas}`) &&
+        m2 &&
+        metros &&
+        importes &&
+        !panelText.includes("Herrajes") &&
+        panelText.includes("Las placas finales las define el optimizador al cortar.");
+    }
+    check(`${label}: el resumen muestra esos números (placas, m², canto e importes)`, ok, `${placas} placas en pantalla, ${data.placasEstimadas} esperadas`);
   };
   await panelOk(preview, "paso 4");
   await shot("w4-revisar");
@@ -878,11 +909,14 @@ try {
   await page.getByRole("button", { name: "Crear solicitud" }).click();
   const order = await (await respuestaB).json();
   creados.add(order.id);
-  await page.getByRole("heading", { name: /^Solicitud M-\d+ creada$/ }).waitFor({ timeout: 30000 });
-  await page.waitForTimeout(500);
-  const titulo = norm(await page.getByRole("heading", { name: /^Solicitud M-\d+ creada$/ }).innerText());
-  check("despues del aviso, crear otra vez crea una nueva con lo que se ve", titulo === `Solicitud M-${order.numero} creada` && order.numero !== creadaA.numero && posts.length === postsAntesDeReintentar + 1, titulo);
-  check("exito: el titulo toma el foco", await page.evaluate(() => document.activeElement?.tagName === "H1" && document.activeElement.textContent.includes("creada")));
+  // Creada (F5.1): va derecho al detalle de la solicitud, con la notificacion del layout, sin pantalla de exito.
+  const llegada = await llegarAlDetalle(order.id, order.numero);
+  check(
+    "despues del aviso, crear otra vez crea una nueva con lo que se ve y abre su detalle",
+    llegada.ok && order.numero !== creadaA.numero && posts.length === postsAntesDeReintentar + 1,
+    llegada.detalle
+  );
+  check("creada: no queda la pantalla de exito vieja", (await page.getByRole("button", { name: "Cargar otra solicitud" }).count()) === 0 && (await page.getByRole("button", { name: "Ver la solicitud" }).count()) === 0);
   const createBody = JSON.parse(posts[posts.length - 1].postData());
   check(
     "alta: manda la version de la ultima vista previa y los datos del cliente",
@@ -932,13 +966,47 @@ try {
   );
   const borrador = await page.evaluate((key) => [localStorage.getItem(key), localStorage.getItem(`${key}~live`)], draftKey);
   check("alta: borra el borrador", borrador[0] === null && borrador[1] === null);
-  await shot("w6-creada");
+  await shot("w6-detalle-creada", true);
 
-  // Cargar otra: asistente vacio, sin borrador
-  await page.getByRole("button", { name: "Cargar otra solicitud" }).click();
-  await page.getByLabel("Nombre o razón social").waitFor();
+  // Paridad entre pantallas: el Resumen del detalle muestra los numeros guardados (GET /api/pedidos-modulos/:id), que son
+  // los de la ultima vista previa; el plano del detalle da las mismas placas e importe guardados.
+  await panelOk(guardada, "detalle de la solicitud creada");
   check(
-    "cargar otra: arranca de cero con la fecha por defecto",
+    "detalle de la solicitud creada: mismas placas e importe que la vista previa, y la pieza cambiada marcada Editada",
+    guardada.placasEstimadas === preview.placasEstimadas &&
+      guardada.presupuestoConHerrajes === preview.presupuestoConHerrajes &&
+      (await despiece(1, "Bajo mesada 2 puertas").getByText("Editada", { exact: true }).count()) === 1 &&
+      (await despiece(2, "Bajo mesada 2 puertas").getByText("Editada", { exact: true }).count()) === 0 &&
+      (await despiece(3, "Alacena 2 puertas").getByText("Editada", { exact: true }).count()) === 0,
+    `${guardada.placasEstimadas} placas guardadas, ${preview.placasEstimadas} en la vista previa`
+  );
+  check("detalle de la solicitud creada: sin Editar (llega en F5.2)", (await page.getByRole("button", { name: "Editar", exact: true }).count()) === 0);
+  await page.getByRole("tab", { name: "Plano de cortes" }).click();
+  const planoDetalle = page.getByText(/^Placas necesarias: \d+ - Costo estimado: /);
+  await planoDetalle.waitFor({ timeout: 60000 });
+  const detalleTexto = norm(await planoDetalle.innerText());
+  check(
+    "detalle de la solicitud creada: plano = placas e importe guardados",
+    detalleTexto === `Placas necesarias: ${guardada.placasEstimadas} - Costo estimado: ${money(guardada.presupuestoEstimado)}`,
+    detalleTexto
+  );
+  await shot("w6-detalle-plano");
+  // Reemplaza al asistente en el historial: atras va al listado, no al asistente con la solicitud.
+  await page.goBack();
+  await page.waitForURL(`${APP}/modulos`, { timeout: 15000 }).catch(() => undefined);
+  await page.waitForTimeout(500);
+  check(
+    "creada: atras no vuelve al asistente (el detalle lo reemplazo en el historial)",
+    new URL(page.url()).pathname === "/modulos" && (await page.getByRole("heading", { name: "Nueva solicitud de módulos" }).count()) === 0 && (await page.getByLabel("Nombre o razón social").count()) === 0,
+    new URL(page.url()).pathname
+  );
+
+  // Otra solicitud: el asistente arranca vacio, sin borrador.
+  await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
+  await page.getByLabel("Nombre o razón social").waitFor();
+  await page.waitForFunction(() => document.querySelector('input[type="date"]')?.value, null, { timeout: 15000 });
+  check(
+    "nueva despues de crear: arranca de cero con la fecha por defecto",
     (await page.getByLabel("Nombre o razón social").inputValue()) === "" && (await fecha.inputValue()) === addDays(hoy, dias) && (await page.getByText("Tenés una solicitud sin terminar").count()) === 0
   );
 
@@ -977,14 +1045,22 @@ try {
     .waitFor({ state: "visible", timeout: 2500 })
     .then(() => true)
     .catch(() => false);
-  await page.getByRole("heading", { name: /^Solicitud M-\d+ creada$/ }).waitFor({ timeout: 60000 });
+  await page.waitForURL(/\/modulos\/[0-9a-f-]{36}$/, { timeout: 60000 }).catch(() => undefined);
   await page.unroute("**/pedidos-modulos", lenta);
-  check(
-    "salir mientras se crea: al volver espera ese alta y muestra el exito, sin ofrecer el borrador",
-    esperando && psql(`select count(*) from pedidos where cliente = '${PREFIJO} salir'`) === "1" && (await page.getByText("Tenés una solicitud sin terminar").count()) === 0
-  );
   for (const id of psql(`select id from pedidos where cliente like '${PREFIJO}%'`).split("\n").filter(Boolean)) creados.add(id);
-  await page.getByRole("button", { name: "Cargar otra solicitud" }).click();
+  const salirIds = psql(`select id from pedidos where cliente = '${PREFIJO} salir'`).split("\n").filter(Boolean);
+  const salir = salirIds.length === 1 ? (await api("GET", `/pedidos-modulos/${salirIds[0]}`)).data : null;
+  const llegadaSalir = salir ? await llegarAlDetalle(salir.id, salir.numero) : { ok: false, detalle: `${salirIds.length} solicitudes "salir"` };
+  check(
+    "salir mientras se crea: al volver espera ese alta y abre su detalle con la notificacion, sin ofrecer el borrador",
+    esperando && salirIds.length === 1 && llegadaSalir.ok && (await page.getByText("Tenés una solicitud sin terminar").count()) === 0,
+    `${esperando ? "espero" : "no espero"} | ${llegadaSalir.detalle}`
+  );
+  // La notificacion deja el historial sin estado: Volver lleva al listado, y desde ahi el asistente arranca vacio.
+  await page.getByRole("button", { name: "Volver", exact: true }).click();
+  await page.waitForURL(`${APP}/modulos`, { timeout: 15000 }).catch(() => undefined);
+  check("salir mientras se crea: Volver del detalle lleva al listado", new URL(page.url()).pathname === "/modulos", new URL(page.url()).pathname);
+  await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
   await page.getByLabel("Nombre o razón social").waitFor();
 
   // ---------------------------------------------------------------- C2. salir mientras se crea y la respuesta se pierde
@@ -1026,28 +1102,26 @@ try {
   await page.getByText("Despiece y resumen calculados por el servidor.").waitFor();
   const postsC = posts.length;
   await page.getByRole("button", { name: "Crear solicitud" }).click();
-  await page.getByRole("heading", { name: /^Solicitud M-\d+ creada$/ }).waitFor({ timeout: 30000 });
+  const llegadaC = await llegarAlDetalle(creadaC.id, creadaC.numero);
   check(
-    "al recuperarlo y crear, manda la misma clave y el servidor devuelve la que ya se habia creado",
+    "al recuperarlo y crear, manda la misma clave, el servidor devuelve la que ya se habia creado y abre su detalle",
     posts.length === postsC + 1 &&
       JSON.parse(posts[posts.length - 1].postData()).claveAlta === psql(`select "claveAlta" from pedidos where cliente = '${PREFIJO} perdida'`) &&
-      norm(await page.getByRole("heading", { name: /^Solicitud M-\d+ creada$/ }).innerText()) === `Solicitud M-${creadaC.numero} creada` &&
-      psql(`select count(*) from pedidos where cliente = '${PREFIJO} perdida'`) === "1"
+      llegadaC.ok &&
+      psql(`select count(*) from pedidos where cliente = '${PREFIJO} perdida'`) === "1",
+    llegadaC.detalle
   );
-  // "Ver la solicitud" abre el detalle en /modulos/:id (el comun hasta F5.1), con la barra de la seccion, y "Volver"
-  // lleva al listado. Desde ahi se vuelve al asistente, que arranca vacio.
-  await page.getByRole("button", { name: "Ver la solicitud" }).click();
-  await page.waitForURL(`**/modulos/${creadaC.id}`, { timeout: 15000 }).catch(() => undefined);
-  await page.getByRole("button", { name: "Volver" }).waitFor({ timeout: 30000 });
+  // El detalle de modulos (F5.1) lleva la barra de la seccion, y "Volver" lleva al listado. Desde ahi se vuelve al
+  // asistente, que arranca vacio.
   let barraDetalle = "";
   for (let waited = 0; waited < 5000 && barraDetalle !== "Módulos a medida"; waited += 100) {
     barraDetalle = norm(await page.locator("header .MuiTypography-h6").innerText());
     await page.waitForTimeout(100);
   }
-  check("exito: Ver la solicitud abre /modulos/:id con la barra de la seccion", new URL(page.url()).pathname === `/modulos/${creadaC.id}` && barraDetalle === "Módulos a medida", barraDetalle);
-  await page.getByRole("button", { name: "Volver" }).click();
+  check("creada: el detalle en /modulos/:id lleva la barra de la seccion", new URL(page.url()).pathname === `/modulos/${creadaC.id}` && barraDetalle === "Módulos a medida", barraDetalle);
+  await page.getByRole("button", { name: "Volver", exact: true }).click();
   await page.waitForURL(`${APP}/modulos`, { timeout: 15000 }).catch(() => undefined);
-  check("exito: Volver del detalle lleva al listado de modulos", new URL(page.url()).pathname === "/modulos");
+  check("creada: Volver del detalle lleva al listado de modulos", new URL(page.url()).pathname === "/modulos");
   await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
   await page.getByLabel("Nombre o razón social").waitFor();
 
@@ -1167,15 +1241,6 @@ try {
   check("borrador: despues de descartar no vuelve a aparecer", (await banner.count()) === 0);
 
   // ---------------------------------------------------------------- F. otras pantallas
-  // Mientras no exista el detalle de modulos (F5.1), /modulos/:id muestra el detalle comun: tiene que andar, sin
-  // "Editar" (el formulario de corte no la puede guardar), y el plano tiene que dar las mismas placas e importe guardados.
-  await page.goto(`${APP}/modulos/${order.id}`);
-  const planoDetalle = page.getByText(/^Placas necesarias: \d+ - Costo estimado: /);
-  await planoDetalle.waitFor({ timeout: 60000 });
-  const detalleTexto = norm(await planoDetalle.innerText());
-  check("detalle comun de la solicitud de modulos: plano = placas e importe guardados", detalleTexto === `Placas necesarias: ${guardada.placasEstimadas} - Costo estimado: ${money(guardada.presupuestoEstimado)}`, detalleTexto);
-  check("detalle comun de la solicitud de modulos: sin Editar", (await page.getByRole("button", { name: "Editar", exact: true }).count()) === 0);
-  await shot("w7-detalle-comun", true);
   // Corte: el detalle sigue mostrando los importes del plano y el boton Editar; el formulario abre igual.
   await page.goto(`${APP}/pedidos/${corteId}`);
   await page.getByText(/^Placas necesarias: \d+ - Costo estimado: /).waitFor({ timeout: 60000 });
