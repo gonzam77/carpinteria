@@ -20,39 +20,39 @@ const cantosOverrideSchema = z.object({
 });
 
 const medida = z
-  .number({ required_error: "Falta el valor de una medida", invalid_type_error: "Las medidas tienen que ser numeros" })
-  .finite("Las medidas tienen que ser numeros");
+  .number({ required_error: "Falta el valor de una medida", invalid_type_error: "Las medidas tienen que ser números" })
+  .finite("Las medidas tienen que ser números");
 
 export const moduleLineSchema = z
   .object({
-    moduloId: requiredId("Elegi un modulo del catalogo"),
+    moduloId: requiredId("Elegí un módulo del catálogo"),
     // Obligatorio, como en spec §13.2. Puede venir vacio: lo que falta toma el valor por defecto del modulo.
-    valores: z.record(z.string(), medida, { required_error: "Faltan las medidas del modulo", invalid_type_error: "Faltan las medidas del modulo" }),
-    colorEsqueletoId: requiredId("Elegi el color de esqueleto"),
-    colorFrentesId: requiredId("Elegi el color de frentes"),
-    colorCantoId: requiredId("Elegi el color de los cantos"),
+    valores: z.record(z.string(), medida, { required_error: "Faltan las medidas del módulo", invalid_type_error: "Faltan las medidas del módulo" }),
+    colorEsqueletoId: requiredId("Elegí el color de esqueleto"),
+    colorFrentesId: requiredId("Elegí el color de frentes"),
+    colorCantoId: requiredId("Elegí el color de los cantos"),
     // Obligatorio, como en spec §13.2: el asistente manda el que eligio (por defecto, el predeterminado del modulo).
-    perfilCantoOrden: z.union([z.literal(1), z.literal(2)], { errorMap: () => ({ message: "Elegi el perfil de cantos del modulo (1 o 2)" }) }),
+    perfilCantoOrden: z.union([z.literal(1), z.literal(2)], { errorMap: () => ({ message: "Elegí el perfil de cantos del módulo (1 o 2)" }) }),
     // Opcional (DECISIONES 32): sin elegir, las piezas de fondo van en el material de fondo del modulo o de la configuracion.
     materialFondoId: z
-      .string({ invalid_type_error: "Elegi el material de fondo" })
-      .uuid("Elegi el material de fondo")
+      .string({ invalid_type_error: "Elegí el material de fondo" })
+      .uuid("Elegí el material de fondo")
       .nullable()
       .optional(),
-    observaciones: z.string().trim().max(500, "Las observaciones del modulo tienen como maximo 500 caracteres").optional().nullable(),
+    observaciones: z.string().trim().max(500, "Las observaciones del módulo tienen como máximo 500 caracteres").optional().nullable(),
     cantosOverride: z.record(z.string(), cantosOverrideSchema).optional().default({}),
     // La version del modulo que mostro la vista previa. Si viene y el catalogo cambio, el alta responde 409.
-    version: z.number({ invalid_type_error: "La version del modulo tiene que ser un numero" }).int().positive().optional()
+    version: z.number({ invalid_type_error: "La versión del módulo tiene que ser un número" }).int().positive().optional()
   })
   // Un campo con otro nombre (perfilOrden, valor...) no se ignora: se calcularia con los valores por defecto sin avisar.
-  .strict("Hay datos de un modulo que no se reconocen: revisa los nombres de los campos");
+  .strict("Hay datos de un módulo que no se reconocen: revisá los nombres de los campos");
 
 export type ModuleOrderLine = z.infer<typeof moduleLineSchema>;
 
 const modulosSchema = z
-  .array(moduleLineSchema, { required_error: "Elegi al menos un modulo", invalid_type_error: "Elegi al menos un modulo" })
-  .min(1, "Elegi al menos un modulo")
-  .max(100, "Una solicitud tiene como maximo 100 modulos");
+  .array(moduleLineSchema, { required_error: "Elegí al menos un módulo", invalid_type_error: "Elegí al menos un módulo" })
+  .min(1, "Elegí al menos un módulo")
+  .max(100, "Una solicitud tiene como máximo 100 módulos");
 
 /** Vista previa (spec §8.5): alcanza con los modulos; los datos del cliente completan las filas si vienen. */
 export const moduleOrderPreviewSchema = z.object({
@@ -75,21 +75,21 @@ const dateOnly = (message: string) => z.string({ required_error: message, invali
  */
 export const moduleOrderCreateSchema = z
   .object({
-    cliente: requiredText(2, "Completa el cliente (al menos 2 caracteres)"),
-    numeroContacto: requiredText(6, "Completa el telefono (al menos 6 caracteres)"),
+    cliente: requiredText(2, "Completá el cliente (al menos 2 caracteres)"),
+    numeroContacto: requiredText(6, "Completá el teléfono (al menos 6 caracteres)"),
     emailContacto: z.preprocess(
       (value) => (typeof value === "string" && !value.trim() ? null : value),
-      z.string({ invalid_type_error: "El email no es valido" }).trim().email("El email no es valido").nullable().optional()
+      z.string({ invalid_type_error: "El email no es válido" }).trim().email("El email no es válido").nullable().optional()
     ),
-    direccionEntrega: optionalText(300, "La direccion de entrega tiene como maximo 300 caracteres"),
-    fechaEntrega: dateOnly("Elegi la fecha de entrega (AAAA-MM-DD)").refine((value) => value >= todayInBusinessZone(), "La fecha de entrega no puede ser anterior a hoy"),
-    observaciones: optionalText(1000, "La referencia del trabajo tiene como maximo 1000 caracteres"),
+    direccionEntrega: optionalText(300, "La dirección de entrega tiene como máximo 300 caracteres"),
+    fechaEntrega: dateOnly("Elegí la fecha de entrega (AAAA-MM-DD)").refine((value) => value >= todayInBusinessZone(), "La fecha de entrega no puede ser anterior a hoy"),
+    observaciones: optionalText(1000, "La referencia del trabajo tiene como máximo 1000 caracteres"),
     // Clave de alta (DECISIONES 40): la genera el navegador por cada intento. Si el mismo intento llega dos veces, se
     // devuelve la solicitud ya creada en vez de crear otra.
-    claveAlta: z.string({ invalid_type_error: "La clave de alta no es valida" }).uuid("La clave de alta no es valida").optional(),
+    claveAlta: z.string({ invalid_type_error: "La clave de alta no es válida" }).uuid("La clave de alta no es válida").optional(),
     modulos: modulosSchema
   })
-  .strict("Hay datos de la solicitud que no se reconocen: revisa los nombres de los campos");
+  .strict("Hay datos de la solicitud que no se reconocen: revisá los nombres de los campos");
 
 export type ModuleOrderCreateInput = z.infer<typeof moduleOrderCreateSchema>;
 
@@ -100,7 +100,7 @@ export const moduleOrderFiltersSchema = z.object({
   entregaDesde: dateOnly("La fecha desde tiene que ser AAAA-MM-DD").optional(),
   entregaHasta: dateOnly("La fecha hasta tiene que ser AAAA-MM-DD").optional(),
   /** La solicitud de un intento de alta (DECISIONES 40): para saber si un alta sin respuesta entro. */
-  clave: z.string().uuid("La clave de alta no es valida").optional()
+  clave: z.string().uuid("La clave de alta no es válida").optional()
 });
 
 export type ModuleOrderFilters = z.infer<typeof moduleOrderFiltersSchema>;

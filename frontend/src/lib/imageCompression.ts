@@ -35,7 +35,7 @@ export async function compressWith(sourceWidth: number, sourceHeight: number, en
     if (Math.max(width, height) <= MIN_SIDE) break;
     ({ width, height } = fitWithin(width, height, Math.round(Math.max(width, height) * 0.8)));
   }
-  throw new Error("No se pudo comprimir la imagen por debajo de 1 MB. Proba con otra foto o recortala.");
+  throw new Error("No se pudo comprimir la imagen por debajo de 1 MB. Probá con otra foto o recortala.");
 }
 
 /** Comprime un archivo elegido por el usuario. Solo en el navegador (usa canvas). */
@@ -45,7 +45,7 @@ export async function compressImageFile(file: File) {
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    throw new Error("No se pudo leer la imagen. Usa una foto JPEG, PNG o WebP.");
+    throw new Error("No se pudo leer la imagen. Usá una foto JPEG, PNG o WebP.");
   }
   try {
     const canvas = document.createElement("canvas");

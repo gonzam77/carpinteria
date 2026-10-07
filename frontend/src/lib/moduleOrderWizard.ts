@@ -173,7 +173,7 @@ export function reconcileUnits(units: WizardUnit[], fresh: Map<string, ModuleDef
       result.push(unit);
       continue;
     }
-    const nombre = definition?.nombre ?? previous.get(unit.moduloId)?.nombre ?? "un modulo";
+    const nombre = definition?.nombre ?? previous.get(unit.moduloId)?.nombre ?? "un módulo";
     if (!definition || !definition.activo) {
       quitados.add(nombre);
       continue;
@@ -250,8 +250,8 @@ const THOUSANDS_TEXT = /^-?[1-9]\d{0,2}(?:\.\d{3})+$/;
 export function measureTextError(text: string) {
   const value = text.trim();
   if (!value) return null;
-  if (THOUSANDS_TEXT.test(value)) return `Escribi la medida sin punto de miles (por ejemplo ${value.replace(/\./g, "")})`;
-  if (!MEASURE_TEXT.test(value)) return "Escribi solo el numero, en mm";
+  if (THOUSANDS_TEXT.test(value)) return `Escribí la medida sin punto de miles (por ejemplo ${value.replace(/\./g, "")})`;
+  if (!MEASURE_TEXT.test(value)) return "Escribí solo el número, en mm";
   return null;
 }
 
@@ -347,15 +347,15 @@ export function validateUnit(unit: WizardUnit, definition: ModuleDefinition, red
   const materiales: string[] = [];
   let fondo: string | null = null;
   if (activePlateIds) {
-    if (unit.materialFondoId && !activePlateIds.has(unit.materialFondoId)) fondo = "el elegido ya no esta activo";
+    if (unit.materialFondoId && !activePlateIds.has(unit.materialFondoId)) fondo = "el elegido ya no está activo";
     else if (!unit.materialFondoId && result.piezas.some((pieza) => pieza.rol === "FONDO")) {
       const catalogo = definition.materialFondoId ?? configFondoId;
-      if (!catalogo) fondo = "el catalogo no tiene uno configurado";
-      else if (!activePlateIds.has(catalogo)) fondo = "el del catalogo esta inactivo";
+      if (!catalogo) fondo = "el catálogo no tiene uno configurado";
+      else if (!activePlateIds.has(catalogo)) fondo = "el del catálogo está inactivo";
     }
     if (fondo) faltantes.push(`el material de fondo (${fondo})`);
     for (const pieza of result.piezas.filter((item) => item.rol === "FIJO")) {
-      if (!pieza.materialFijoId || !activePlateIds.has(pieza.materialFijoId)) materiales.push(`${pieza.codigo}: su material fijo no esta activo. Revisalo en el catalogo de modulos.`);
+      if (!pieza.materialFijoId || !activePlateIds.has(pieza.materialFijoId)) materiales.push(`${pieza.codigo}: su material fijo no está activo. Revisalo en el catálogo de módulos.`);
     }
   }
   generales.push(...materiales);
@@ -604,11 +604,11 @@ export function hasWizardContent(
 /** Antiguedad del borrador, con el mismo texto que el formulario de corte. */
 export function describeAge(savedAt: number, now = Date.now()) {
   const minutes = Math.floor((now - savedAt) / 60000);
-  if (minutes < 1) return "recien";
+  if (minutes < 1) return "recién";
   if (minutes < 60) return `hace ${minutes} min`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `hace ${hours} h`;
-  return `hace ${Math.floor(hours / 24)} dias`;
+  return `hace ${Math.floor(hours / 24)} días`;
 }
 
 const asText = (value: unknown) => (typeof value === "string" ? value : "");
@@ -632,7 +632,7 @@ export function restoreWizardDraft(
     (item) => item && typeof item.moduloId === "string" && Number.isInteger(item.cantidad) && item.cantidad > 0
   );
   const disponibles = selecciones.filter((item) => definitions.get(item.moduloId)?.activo);
-  if (disponibles.length < selecciones.length) avisos.push("Se quitaron modulos que ya no estan en el catalogo o estan inactivos.");
+  if (disponibles.length < selecciones.length) avisos.push("Se quitaron módulos que ya no están en el catálogo o están inactivos.");
 
   let coloresLimpios = false;
   const units = (Array.isArray(raw.units) ? raw.units : [])
@@ -655,11 +655,11 @@ export function restoreWizardDraft(
       if (changed) coloresLimpios = true;
       return clean;
     });
-  if (coloresLimpios) avisos.push("Algunos colores o fondos ya no estan disponibles: elegilos de nuevo.");
+  if (coloresLimpios) avisos.push("Algunos colores o fondos ya no están disponibles: elegilos de nuevo.");
 
   let fechaEntrega = asText(raw.fechaEntrega);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaEntrega) || fechaEntrega < context.today) {
-    if (fechaEntrega) avisos.push("La fecha de entrega del borrador ya paso: se puso la de por defecto.");
+    if (fechaEntrega) avisos.push("La fecha de entrega del borrador ya pasó: se puso la de por defecto.");
     fechaEntrega = context.defaultFecha;
   }
   const defaults = raw.defaults ?? { colorEsqueletoId: "", colorFrentesId: "", colorCantoId: "" };
@@ -702,12 +702,12 @@ export function validateClient(
   today: string
 ) {
   const problems: string[] = [];
-  if (data.cliente.trim().length < 2) problems.push("Completa el cliente (al menos 2 caracteres).");
-  if (data.numeroContacto.trim().length < 6) problems.push("Completa el telefono (al menos 6 caracteres).");
-  if (data.emailContacto.trim() && !ZOD_EMAIL.test(data.emailContacto.trim())) problems.push("El email no es valido.");
-  if ((data.direccionEntrega ?? "").trim().length > MAX_DIRECCION) problems.push(`La direccion de entrega tiene como maximo ${MAX_DIRECCION} caracteres.`);
-  if ((data.observaciones ?? "").trim().length > MAX_REFERENCIA) problems.push(`La referencia del trabajo tiene como maximo ${MAX_REFERENCIA} caracteres.`);
-  if (!isValidDay(data.fechaEntrega)) problems.push("Elegi la fecha de entrega.");
+  if (data.cliente.trim().length < 2) problems.push("Completá el cliente (al menos 2 caracteres).");
+  if (data.numeroContacto.trim().length < 6) problems.push("Completá el teléfono (al menos 6 caracteres).");
+  if (data.emailContacto.trim() && !ZOD_EMAIL.test(data.emailContacto.trim())) problems.push("El email no es válido.");
+  if ((data.direccionEntrega ?? "").trim().length > MAX_DIRECCION) problems.push(`La dirección de entrega tiene como máximo ${MAX_DIRECCION} caracteres.`);
+  if ((data.observaciones ?? "").trim().length > MAX_REFERENCIA) problems.push(`La referencia del trabajo tiene como máximo ${MAX_REFERENCIA} caracteres.`);
+  if (!isValidDay(data.fechaEntrega)) problems.push("Elegí la fecha de entrega.");
   else if (data.fechaEntrega < today) problems.push("La fecha de entrega no puede ser anterior a hoy.");
   return problems;
 }

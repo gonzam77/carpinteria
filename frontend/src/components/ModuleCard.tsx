@@ -99,7 +99,7 @@ export function ModuleCard({
             <Chip size="small" color={module.activo ? "success" : "default"} label={module.activo ? "Activo" : "Inactivo"} />
             {module.estadoFormulas === "CON_ERRORES" && <Chip size="small" color="error" label="Con errores" />}
             {module.cantidadObservaciones > 0 && (
-              <Chip size="small" color="warning" variant="outlined" label={`${module.cantidadObservaciones} ${module.cantidadObservaciones === 1 ? "observacion" : "observaciones"}`} />
+              <Chip size="small" color="warning" variant="outlined" label={`${module.cantidadObservaciones} ${module.cantidadObservaciones === 1 ? "observación" : "observaciones"}`} />
             )}
           </Stack>
         </CardContent>

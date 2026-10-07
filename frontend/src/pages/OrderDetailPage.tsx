@@ -74,7 +74,7 @@ function buildWhatsappLink(order: Order) {
   if (!phone) return "";
 
   const orderLabel = order.id.slice(0, 8).toUpperCase();
-  const message = `Hola ${order.cliente}, te avisamos que tu pedido ${orderLabel} ya esta listo para retirar. Cuando quieras podes pasar a buscarlo. Si necesitas coordinar horario o tenes alguna consulta, escribinos por este medio.`;
+  const message = `Hola ${order.cliente}, te avisamos que tu pedido ${orderLabel} ya está listo para retirar. Cuando quieras podés pasar a buscarlo. Si necesitás coordinar horario o tenés alguna consulta, escribinos por este medio.`;
   return `https://api.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
 }
 
@@ -234,7 +234,7 @@ export function OrderDetailPage() {
           </Stack>
           <Typography color="text.secondary">{order.observaciones}</Typography>
           <Typography color="text.secondary">
-            Telefono: {order.numeroContacto ?? order.usuario?.telefono ?? "Sin telefono"}
+            Teléfono: {order.numeroContacto ?? order.usuario?.telefono ?? "Sin teléfono"}
           </Typography>
         </div>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap sx={{ flexWrap: "wrap", width: { xs: "100%", md: "auto" } }}>
@@ -302,7 +302,7 @@ export function OrderDetailPage() {
                 <TableCell>{cantoLabel(detail.cantoLargo2, detail.cantoLargo2Nombre)}</TableCell>
                 <TableCell>{cantoLabel(detail.cantoAncho1, detail.cantoAncho1Nombre)}</TableCell>
                 <TableCell>{cantoLabel(detail.cantoAncho2, detail.cantoAncho2Nombre)}</TableCell>
-                <TableCell>{detail.permiteRotar ? "Si" : "No"}</TableCell>
+                <TableCell>{detail.permiteRotar ? "Sí" : "No"}</TableCell>
                 <TableCell>{detail.nombreCliente || order.cliente}</TableCell>
                 <TableCell>{detail.nombreProducto}</TableCell>
               </TableRow>
@@ -332,7 +332,7 @@ export function OrderDetailPage() {
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 0.5 }}>
             <Alert severity="warning" variant="outlined">
-              No hay stock suficiente para pasar esta solicitud a {pendingStatus ? getStatusStyle(pendingStatus).label : "ese estado"}. Puedes continuar de todos modos y el stock no se descontara.
+              No hay stock suficiente para pasar esta solicitud a {pendingStatus ? getStatusStyle(pendingStatus).label : "ese estado"}. Podés continuar de todos modos y el stock no se descontará.
             </Alert>
             <Stack spacing={1}>
               {stockShortages.map((item) => (
@@ -374,11 +374,11 @@ export function OrderDetailPage() {
                 Avisar al cliente
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                Puedes enviarle un WhatsApp para avisarle que el pedido ya esta terminado y lo puede pasar a retirar.
+                Podés enviarle un WhatsApp para avisarle que el pedido ya está terminado y lo puede pasar a retirar.
               </Typography>
               {!canNotifyByWhatsapp && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25 }}>
-                  Esta solicitud no tiene un telefono de contacto disponible.
+                  Esta solicitud no tiene un teléfono de contacto disponible.
                 </Typography>
               )}
             </Box>

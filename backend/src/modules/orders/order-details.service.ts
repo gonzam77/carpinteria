@@ -49,7 +49,7 @@ export async function normalizeDetails(detalles: DetailInput[], cliente: string,
   if (notInteger >= 0) {
     const detail = detalles[notInteger];
     const nombre = detail.nombreProducto || detail.material || `pieza ${notInteger + 1}`;
-    throw new AppError(400, `"${nombre}" tiene que tener largo, ancho y cantidad en numeros enteros mayores a 0 (vino ${detail.largo} × ${detail.ancho} × ${detail.cantidad}).`, {
+    throw new AppError(400, `"${nombre}" tiene que tener largo, ancho y cantidad en números enteros mayores a 0 (vino ${detail.largo} × ${detail.ancho} × ${detail.cantidad}).`, {
       code: "DETAIL_NOT_INTEGER",
       details: { posicion: notInteger + 1 }
     });
@@ -77,10 +77,10 @@ export async function normalizeDetails(detalles: DetailInput[], cliente: string,
   const cantoById = new Map(cantos.map((canto) => [canto.id, canto]));
 
   if (materials.length !== materialIds.length) {
-    throw new AppError(400, "Seleccione un material valido para cada pieza.");
+    throw new AppError(400, "Seleccioná un material válido para cada pieza.");
   }
   if (cantos.length !== cantoIds.length) {
-    throw new AppError(400, "Seleccione un canto valido en cada borde.");
+    throw new AppError(400, "Seleccioná un canto válido en cada borde.");
   }
 
   return detalles.map((detail, position) => {

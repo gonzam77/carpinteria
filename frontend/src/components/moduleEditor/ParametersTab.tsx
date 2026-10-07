@@ -35,9 +35,9 @@ import { FormulaInput } from "../FormulaInput";
 
 const TIPOS: Array<{ value: TipoParametroModulo; label: string; ayuda: string }> = [
   { value: "MEDIDA", label: "Medida (mm)", ayuda: "Se pide al cargar, en mm" },
-  { value: "ENTERO", label: "Cantidad", ayuda: "Se pide al cargar, numero entero" },
+  { value: "ENTERO", label: "Cantidad", ayuda: "Se pide al cargar, número entero" },
   { value: "OPCION", label: "Opciones", ayuda: "Se elige de una lista" },
-  { value: "CALCULADO", label: "Calculada", ayuda: "No se pide: sale de una formula" }
+  { value: "CALCULADO", label: "Calculada", ayuda: "No se pide: sale de una fórmula" }
 ];
 
 const numberOrNull = (value: string) => (value.trim() === "" || !Number.isFinite(Number(value)) ? null : Number(value));
@@ -70,7 +70,7 @@ function OptionsField({ value, onChange }: { value: DraftParameter["opciones"]; 
         onChange(parsed.opciones);
       }}
       error={Boolean(error)}
-      helperText={error ?? "Una por linea: valor = descripcion"}
+      helperText={error ?? "Una por línea: valor = descripción"}
       sx={{ minWidth: 230 }}
     />
   );
@@ -121,8 +121,8 @@ export function ParametersTab({
   return (
     <Stack spacing={2}>
       <Typography color="text.secondary" variant="body2">
-        Las medidas que se piden al cargar el modulo (ancho, alto, luces, cantidad de estantes, variantes) y las que se calculan solas. Las piezas las usan
-        en sus formulas por la clave. Si cambias una clave, las formulas que la usan se actualizan solas.
+        Las medidas que se piden al cargar el módulo (ancho, alto, luces, cantidad de estantes, variantes) y las que se calculan solas. Las piezas las usan
+        en sus fórmulas por la clave. Si cambiás una clave, las fórmulas que la usan se actualizan solas.
       </Typography>
       <Paper sx={{ borderRadius: "10px", overflow: "hidden" }}>
         <TableContainer>
@@ -134,9 +134,9 @@ export function ParametersTab({
                 <TableCell>Etiqueta</TableCell>
                 <TableCell>Tipo</TableCell>
                 <TableCell align="right">Por defecto</TableCell>
-                <TableCell align="right">Minimo</TableCell>
-                <TableCell align="right">Maximo</TableCell>
-                <TableCell>Opciones o formula</TableCell>
+                <TableCell align="right">Mínimo</TableCell>
+                <TableCell align="right">Máximo</TableCell>
+                <TableCell>Opciones o fórmula</TableCell>
                 <TableCell>Ayuda</TableCell>
                 <TableCell />
               </TableRow>
@@ -215,14 +215,14 @@ export function ParametersTab({
                       </TextField>
                     </TableCell>
                     <TableCell align="right">{numberField("valorDefecto", "Valor por defecto")}</TableCell>
-                    <TableCell align="right">{numberField("minimo", "Minimo")}</TableCell>
-                    <TableCell align="right">{numberField("maximo", "Maximo")}</TableCell>
+                    <TableCell align="right">{numberField("minimo", "Mínimo")}</TableCell>
+                    <TableCell align="right">{numberField("maximo", "Máximo")}</TableCell>
                     <TableCell sx={{ minWidth: 260 }}>
                       {param.tipo === "OPCION" && <OptionsField value={param.opciones} onChange={(opciones) => patch(index, { opciones })} />}
                       {param.tipo === "CALCULADO" && (
                         <FormulaInput
                           id={`param-${param.uid}-formula`}
-                          label="Formula"
+                          label="Fórmula"
                           value={param.formula ?? ""}
                           onChange={(formula) => patch(index, { formula })}
                           suggestions={suggestions.filter((item) => item.insert !== param.clave)}

@@ -23,7 +23,7 @@ function ImageSection({ moduleId, imagen, onChanged }: { moduleId: string | null
   if (!moduleId) {
     return (
       <Alert severity="info" variant="outlined">
-        Guarda el modulo para poder subirle una imagen.
+        Guardá el módulo para poder subirle una imagen.
       </Alert>
     );
   }
@@ -81,7 +81,7 @@ function ImageSection({ moduleId, imagen, onChanged }: { moduleId: string | null
         }}
       />
       <Typography variant="caption" color="text.secondary">
-        JPEG, PNG o WebP. Se achica y comprime antes de subirla (maximo 1 MB). La imagen se guarda en el momento, aparte del resto del modulo.
+        JPEG, PNG o WebP. Se achica y comprime antes de subirla (máximo 1 MB). La imagen se guarda en el momento, aparte del resto del módulo.
         {imagen ? ` Actual: ${Math.round(imagen.tamanoBytes / 1024)} KB.` : ""}
       </Typography>
       {error && <Alert severity="error">{error}</Alert>}
@@ -130,7 +130,7 @@ export function GeneralTab({
             ))}
           </Box>
           <Typography variant="caption" component="p" sx={{ mt: 1 }}>
-            Cuando esten revisadas, borralas de "Observaciones" y guarda.
+            Cuando estén revisadas, borralas de "Observaciones" y guardá.
           </Typography>
         </Alert>
       )}
@@ -138,17 +138,17 @@ export function GeneralTab({
         <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
           <TextField label="Nombre" value={draft.nombre} onChange={(event) => update({ nombre: event.target.value })} required />
           <TextField
-            label="Codigo"
+            label="Código"
             value={draft.codigo}
             disabled={codeLocked}
             onChange={(event) => {
               onCodeEdited();
               update({ codigo: event.target.value.toUpperCase().replace(/\s+/g, "_") });
             }}
-            helperText={codeLocked ? "Ya se uso en solicitudes: el codigo no se puede cambiar." : "En mayusculas, con _ (ej. BAJO_MESADA_2_PUERTAS)."}
+            helperText={codeLocked ? "Ya se usó en solicitudes: el código no se puede cambiar." : "En mayúsculas, con _ (ej. BAJO_MESADA_2_PUERTAS)."}
             slotProps={{ htmlInput: { style: { fontFamily: "ui-monospace, Consolas, monospace" } } }}
           />
-          <TextField select label="Categoria" value={draft.categoriaId} onChange={(event) => update({ categoriaId: event.target.value })} required>
+          <TextField select label="Categoría" value={draft.categoriaId} onChange={(event) => update({ categoriaId: event.target.value })} required>
             {categories
               .filter((category) => category.activo || category.id === draft.categoriaId)
               .map((category) => (
@@ -159,11 +159,11 @@ export function GeneralTab({
               ))}
           </TextField>
           <TextField
-            label="Espesor de diseno (mm)"
+            label="Espesor de diseño (mm)"
             type="number"
             value={draft.espesorDisenoMm}
             onChange={(event) => update({ espesorDisenoMm: Number(event.target.value) })}
-            helperText={`El espesor con el que estan escritas las formulas (ESP). Al pedir el modulo solo se ofrecen placas de ese espesor${
+            helperText={`El espesor con el que están escritas las fórmulas (ESP). Al pedir el módulo solo se ofrecen placas de ese espesor${
               espesores.length ? `; hay placas activas de ${espesores.map((espesor) => `${formatMm(espesor)} mm`).join(" / ")}` : ""
             }.`}
             slotProps={{ htmlInput: { min: 1, step: 0.5 } }}
@@ -174,9 +174,9 @@ export function GeneralTab({
             value={draft.materialFondoId ?? ""}
             onChange={(event) => update({ materialFondoId: event.target.value || null })}
             slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
-            helperText="Para las piezas que van en fondo. Si no elegis uno, se usa el de la configuracion del catalogo."
+            helperText="Para las piezas que van en fondo. Si no elegís uno, se usa el de la configuración del catálogo."
           >
-            <MenuItem value="">Usar el de la configuracion{configFondo ? ` (${configFondo.nombre})` : " (sin configurar)"}</MenuItem>
+            <MenuItem value="">Usar el de la configuración{configFondo ? ` (${configFondo.nombre})` : " (sin configurar)"}</MenuItem>
             {plateOptions(placas, draft.materialFondoId).map((material) => (
               <MenuItem key={material.id} value={material.id}>
                 {plateLabel(material)}
@@ -190,7 +190,7 @@ export function GeneralTab({
             />
           </Stack>
           <TextField
-            label="Descripcion"
+            label="Descripción"
             value={draft.descripcion ?? ""}
             onChange={(event) => update({ descripcion: event.target.value })}
             multiline
@@ -203,7 +203,7 @@ export function GeneralTab({
             onChange={(event) => update({ observaciones: event.target.value })}
             multiline
             minRows={3}
-            helperText="Notas para el administrador. Una por linea: cada linea cuenta como una observacion pendiente en el catalogo."
+            helperText="Notas para el administrador. Una por línea: cada línea cuenta como una observación pendiente en el catálogo."
             sx={{ gridColumn: { md: "1 / -1" } }}
           />
         </Box>

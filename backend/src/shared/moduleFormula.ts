@@ -44,8 +44,8 @@ export const IDENTIFIER_PATTERN = /^[A-Z][A-Z0-9_]*$/;
 
 /** Devuelve el motivo por el que un nombre no sirve como clave de medida o codigo de pieza, o null si es valido. */
 export function validateIdentifier(name: string): string | null {
-  if (!IDENTIFIER_PATTERN.test(name)) return `"${name}" tiene que estar en mayusculas, empezar con una letra y usar solo letras, numeros y _`;
-  if (FUNCTIONS[name]) return `"${name}" es el nombre de una funcion`;
+  if (!IDENTIFIER_PATTERN.test(name)) return `"${name}" tiene que estar en mayúsculas, empezar con una letra y usar solo letras, números y _`;
+  if (FUNCTIONS[name]) return `"${name}" es el nombre de una función`;
   if (FORMULA_CONSTANTS.includes(name)) return `"${name}" es una constante reservada`;
   return null;
 }
@@ -74,15 +74,15 @@ function tokenize(src: string): Tok[] {
     if (c === "(" || c === ")") { out.push({ t: c, v: c, p: i }); i++; continue; }
     if (c === ";" || c === ",") { out.push({ t: "sep", v: c, p: i }); i++; continue; }
     if (c === ".") { out.push({ t: ".", v: c, p: i }); i++; continue; }
-    throw new FormulaError(`Caracter no valido "${c}"`, i);
+    throw new FormulaError(`Carácter no válido "${c}"`, i);
   }
   out.push({ t: "end", v: "", p: src.length });
   return out;
 }
 
 export function parseFormula(src: string): Ast {
-  if (!src || !src.trim()) throw new FormulaError("La formula esta vacia");
-  if (src.length > MAX_FORMULA_LENGTH) throw new FormulaError(`La formula supera los ${MAX_FORMULA_LENGTH} caracteres`);
+  if (!src || !src.trim()) throw new FormulaError("La fórmula está vacía");
+  if (src.length > MAX_FORMULA_LENGTH) throw new FormulaError(`La fórmula supera los ${MAX_FORMULA_LENGTH} caracteres`);
   let depth = 0;
   const toks = tokenize(src);
   let pos = 0;
@@ -95,7 +95,7 @@ export function parseFormula(src: string): Ast {
   };
 
   function comparison(): Ast {
-    if (++depth > MAX_FORMULA_DEPTH) throw new FormulaError("La formula tiene demasiados niveles de parentesis o funciones");
+    if (++depth > MAX_FORMULA_DEPTH) throw new FormulaError("La fórmula tiene demasiados niveles de paréntesis o funciones");
     let a = additive();
     const tok = peek();
     if (tok.t === "op" && ["=", "<>", "<", "<=", ">", ">="].includes(tok.v)) {
@@ -134,7 +134,7 @@ export function parseFormula(src: string): Ast {
       const name = tok.v.toUpperCase();
       if (peek().t === "(") {
         const spec = FUNCTIONS[name];
-        if (!spec) throw new FormulaError(`Funcion desconocida ${name}`, tok.p);
+        if (!spec) throw new FormulaError(`Función desconocida ${name}`, tok.p);
         next();
         const args: Ast[] = [];
         if (peek().t !== ")") {
@@ -151,12 +151,12 @@ export function parseFormula(src: string): Ast {
         next();
         const accTok = expect("id", "largo, ancho o cant");
         const acc = accTok.v.toLowerCase();
-        if (acc !== "largo" && acc !== "ancho" && acc !== "cant") throw new FormulaError("Despues del punto va largo, ancho o cant", accTok.p);
+        if (acc !== "largo" && acc !== "ancho" && acc !== "cant") throw new FormulaError("Después del punto va largo, ancho o cant", accTok.p);
         return { k: "ref", id: name, acc };
       }
       return { k: "ref", id: name };
     }
-    if (tok.t === "end") throw new FormulaError("La formula esta incompleta", tok.p);
+    if (tok.t === "end") throw new FormulaError("La fórmula está incompleta", tok.p);
     throw new FormulaError(`No se esperaba "${tok.v}"`, tok.p);
   }
 
@@ -296,7 +296,7 @@ export function evaluateModule(
           case "+": return a + b;
           case "-": return a - b;
           case "*": return a * b;
-          case "/": if (b === 0) throw new FormulaError("Division por cero"); return a / b;
+          case "/": if (b === 0) throw new FormulaError("División por cero"); return a / b;
           case "=": return a === b ? 1 : 0;
           case "<>": return a !== b ? 1 : 0;
           case "<": return a < b ? 1 : 0;
@@ -320,7 +320,7 @@ export function evaluateModule(
         }
       }
     }
-    throw new FormulaError("Expresion no valida");
+    throw new FormulaError("Expresión no válida");
   }
 
   // Validacion de las medidas ingresadas
@@ -328,12 +328,12 @@ export function evaluateModule(
     if (p.tipo === "CALCULADO") continue;
     const raw = inputValue(p);
     if (raw === null) { errores.push({ ref: p.clave, mensaje: "Falta el valor" }); continue; }
-    if (p.tipo === "ENTERO" && !Number.isInteger(raw)) errores.push({ ref: p.clave, mensaje: "Tiene que ser un numero entero" });
+    if (p.tipo === "ENTERO" && !Number.isInteger(raw)) errores.push({ ref: p.clave, mensaje: "Tiene que ser un número entero" });
     if (p.tipo === "OPCION" && p.opciones?.length && !p.opciones.some((option) => option.valor === raw)) {
-      errores.push({ ref: p.clave, mensaje: "Elegi una de las opciones" });
+      errores.push({ ref: p.clave, mensaje: "Elegí una de las opciones" });
     }
-    if (p.minimo != null && raw < p.minimo) errores.push({ ref: p.clave, mensaje: `Minimo ${p.minimo}` });
-    if (p.maximo != null && raw > p.maximo) errores.push({ ref: p.clave, mensaje: `Maximo ${p.maximo}` });
+    if (p.minimo != null && raw < p.minimo) errores.push({ ref: p.clave, mensaje: `Mínimo ${p.minimo}` });
+    if (p.maximo != null && raw > p.maximo) errores.push({ ref: p.clave, mensaje: `Máximo ${p.maximo}` });
   }
 
   const piezas: PieceResult[] = [];
@@ -347,7 +347,7 @@ export function evaluateModule(
       const largoExacto = resolve(`${codigo}.largo`);
       const anchoExacto = resolve(`${codigo}.ancho`);
       const largo = roundMm(largoExacto, mode), ancho = roundMm(anchoExacto, mode);
-      if (largo <= 0 || ancho <= 0) throw new FormulaError(`Medida invalida: ${largo} x ${ancho} mm`);
+      if (largo <= 0 || ancho <= 0) throw new FormulaError(`Medida inválida: ${largo} x ${ancho} mm`);
       piezas.push({ codigo: p.codigo, nombre: p.nombre, largo, ancho, cantidad, largoExacto, anchoExacto });
     } catch (e) {
       failed.add(codigo);
@@ -465,7 +465,7 @@ export function buildModulePieces(
   }
 
   if (!definition.perfiles.some((perfil) => perfil.orden === opts.perfilOrden)) {
-    errores.push({ ref: "PERFIL", mensaje: `El modulo no tiene el perfil de canto ${opts.perfilOrden}` });
+    errores.push({ ref: "PERFIL", mensaje: `El módulo no tiene el perfil de canto ${opts.perfilOrden}` });
   }
 
   const ordered = definition.piezas

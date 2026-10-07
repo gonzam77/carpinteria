@@ -24,14 +24,14 @@ export function authenticate(req: any, _res: any, next: any) {
   try {
     payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
   } catch {
-    throw new AppError(401, "Token invalido");
+    throw new AppError(401, "Token inválido");
   }
 
   // El tope tambien se aplica al usar y no solo al renovar. Si se controlara
   // solo en /refresh, la sesion real duraria el tope MAS lo que le quede de
   // vida al ultimo token emitido.
   if (typeof payload.ses === "number" && Date.now() - payload.ses > env.SESSION_MAX_HOURS * 60 * 60 * 1000) {
-    throw new AppError(401, "La sesion alcanzo su duracion maxima");
+    throw new AppError(401, "La sesión alcanzó su duración máxima");
   }
 
   req.user = payload;

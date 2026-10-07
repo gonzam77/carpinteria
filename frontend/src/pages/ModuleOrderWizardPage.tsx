@@ -49,7 +49,7 @@ import {
 } from "../lib/moduleOrderWizard";
 import type { EspesorCanto, LadoCanto, Material, ModuleCategory, ModuleDefinition, ModuleListItem, ModuleOrder, ModuleOrderPreview, ModulesConfig } from "../types";
 
-const STEPS = ["Cliente y entrega", "Elegir modulos", "Medidas y colores", "Revisar despiece"];
+const STEPS = ["Cliente y entrega", "Elegir módulos", "Medidas y colores", "Revisar despiece"];
 /** Espera antes de recalcular despues de cambiar un canto: no se calcula en cada click (PLAN P12). */
 const RECALC_DELAY_MS = 700;
 /** Un alta que termino fuera de la pantalla se muestra al volver solo si es reciente. */
@@ -74,9 +74,9 @@ function unitProblems(index: number, nombre: string, validation: UnitValidation 
     ...(validation?.faltantes.length ? [`falta elegir ${validation.faltantes.join(", ")}`] : []),
     ...Object.entries(validation?.porMedida ?? {}).map(([clave, mensajes]) => `${clave}: ${mensajes.join(", ")}`),
     ...(validation?.generales ?? []),
-    ...(validation?.cantosFaltantes.length ? [`el color de cantos esta ${missingEdgesText(validation.cantosFaltantes)} (cargalo en Materiales o elegi otro)`] : [])
+    ...(validation?.cantosFaltantes.length ? [`el color de cantos está ${missingEdgesText(validation.cantosFaltantes)} (cargalo en Materiales o elegí otro)`] : [])
   ];
-  return `Modulo ${index + 1} (${nombre}): ${detalle.join("; ")}.`;
+  return `Módulo ${index + 1} (${nombre}): ${detalle.join("; ")}.`;
 }
 
 /** Asistente "Nueva solicitud de modulos" (spec §9.2), en /modulos/nueva. Solo ADMIN. */
@@ -156,9 +156,9 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
       })
       .catch((error) => {
         if (cancelled) return;
-        if (axios.isAxiosError(error) && error.response?.status === 401) setLoadError("Tu sesion expiro. Volve a ingresar para cargar la solicitud.");
-        else if (axios.isAxiosError(error) && !error.response) setLoadError("No se pudo cargar el catalogo de modulos: revisa la conexion e intenta de nuevo.");
-        else setLoadError("No se pudo cargar el catalogo de modulos. Intenta de nuevo en un momento.");
+        if (axios.isAxiosError(error) && error.response?.status === 401) setLoadError("Tu sesión expiró. Volvé a ingresar para cargar la solicitud.");
+        else if (axios.isAxiosError(error) && !error.response) setLoadError("No se pudo cargar el catálogo de módulos: revisá la conexión e intentá de nuevo.");
+        else setLoadError("No se pudo cargar el catálogo de módulos. Intentá de nuevo en un momento.");
       });
     return () => {
       cancelled = true;
@@ -257,7 +257,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
       if (creatingRef.current) return;
       // Sin conexion no se recupera a medias: el borrador sigue ofrecido para intentar de nuevo.
       if (failed) {
-        setErrors(["No se pudo cargar algun modulo del borrador. Revisa la conexion e intenta de nuevo."]);
+        setErrors(["No se pudo cargar algún módulo del borrador. Revisá la conexión e intentá de nuevo."]);
         return;
       }
       restoreDraft();
@@ -285,7 +285,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
       setEnviado(draft.enviado);
       setAvisos([
         ...restoreAvisos,
-        ...(draft.enviado ? ["Esta solicitud se estaba creando cuando se cerro la pantalla: al crearla se revisa primero si ya quedo cargada."] : [])
+        ...(draft.enviado ? ["Esta solicitud se estaba creando cuando se cerró la pantalla: al crearla se revisa primero si ya quedó cargada."] : [])
       ]);
       setErrors([]);
     } finally {
@@ -342,7 +342,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
       if (!(await ensureSession())) {
         if (current() && !outdated()) {
           setPreviewStatus("error");
-          setPreviewError({ message: "Tu sesion expiro. Volve a ingresar para continuar: la solicitud sigue cargada.", items: [] });
+          setPreviewError({ message: "Tu sesión expiró. Volvé a ingresar para continuar: la solicitud sigue cargada.", items: [] });
         }
         return;
       }
@@ -475,10 +475,10 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
       materials: freshMaterials
     };
     const notes = [
-      ...reconciled.quitados.map((nombre) => `Se quito ${nombre}: ya no esta en el catalogo o esta inactivo.`),
-      ...reconciled.cambiados.map((nombre) => `${nombre} cambio en el catalogo: revisa sus medidas y cantos.`),
-      ...nuevas.map((nombre) => `Se usa la version nueva de ${nombre} del catalogo.`),
-      ...(coloresLimpios ? ["Algunos colores o fondos ya no estan disponibles: elegilos de nuevo."] : [])
+      ...reconciled.quitados.map((nombre) => `Se quitó ${nombre}: ya no está en el catálogo o está inactivo.`),
+      ...reconciled.cambiados.map((nombre) => `${nombre} cambió en el catálogo: revisá sus medidas y cantos.`),
+      ...nuevas.map((nombre) => `Se usa la versión nueva de ${nombre} del catálogo.`),
+      ...(coloresLimpios ? ["Algunos colores o fondos ya no están disponibles: elegilos de nuevo."] : [])
     ];
     if (notes.length) setAvisos(notes);
     return { needsReview: unitsChanged, empty: nextSel.length === 0, config: freshConfig };
@@ -533,7 +533,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
       return setStep(1);
     }
     if (step === 1) {
-      if (!selecciones.length) return setErrors(["Elegi al menos un modulo."]);
+      if (!selecciones.length) return setErrors(["Elegí al menos un módulo."]);
       if (!data) return;
       setBusy(true);
       try {
@@ -546,15 +546,15 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
           const loaded = await loadDefinitions(pendientes(), defs);
           defs = loaded.defs;
           loaded.removed.forEach((id) => removed.add(id));
-          if (loaded.failed) return setErrors(["No se pudo cargar algun modulo elegido. Revisa la conexion e intenta de nuevo."]);
+          if (loaded.failed) return setErrors(["No se pudo cargar algún módulo elegido. Revisá la conexión e intentá de nuevo."]);
         }
-        if (pendientes().length) return setErrors(["No se pudo cargar algun modulo elegido. Revisa la conexion e intenta de nuevo."]);
+        if (pendientes().length) return setErrors(["No se pudo cargar algún módulo elegido. Revisá la conexión e intentá de nuevo."]);
         if (removed.size) {
           setSelecciones((list) => list.filter((item) => !removed.has(item.moduloId)));
-          setAvisos(["Se quito algun modulo elegido: ya no esta en el catalogo."]);
+          setAvisos(["Se quitó algún módulo elegido: ya no está en el catálogo."]);
         }
         const elegidas = latest.current.selecciones.filter((item) => !removed.has(item.moduloId));
-        if (!elegidas.length) return setErrors(["Elegi al menos un modulo."]);
+        if (!elegidas.length) return setErrors(["Elegí al menos un módulo."]);
         setUnits((current) => syncUnits(current, elegidas, defs, defaults, latest.current.materials));
         setStep(2);
       } finally {
@@ -569,7 +569,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
         // actual, DECISIONES 25): si algo cambio, se avisa aca.
         const refresh = await refreshCatalog();
         if (!mounted.current) return;
-        if (!refresh) return setErrors(["No se pudo revisar el catalogo y los materiales. Revisa la conexion e intenta de nuevo."]);
+        if (!refresh) return setErrors(["No se pudo revisar el catálogo y los materiales. Revisá la conexión e intentá de nuevo."]);
         if (refresh.empty) return setStep(1);
         if (refresh.needsReview) return;
         const { units: currentUnits, definitions: defs, materials: currentMaterials } = latest.current;
@@ -629,15 +629,15 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
       // El detalle del error se repite aca: el aviso de la vista previa queda arriba, lejos del boton.
       setCreateError(
         previewStatus === "error"
-          ? { message: "Todavia no se puede crear: corregi lo que dice el aviso del despiece.", items: previewError ? [previewError.message, ...previewError.items] : [] }
-          : { message: "Espera a que termine el calculo para crear la solicitud.", items: [] }
+          ? { message: "Todavía no se puede crear: corregí lo que dice el aviso del despiece.", items: previewError ? [previewError.message, ...previewError.items] : [] }
+          : { message: "Esperá a que termine el cálculo para crear la solicitud.", items: [] }
       );
       return;
     }
     // Con un borrador anterior ofrecido y sin decidir, la marca de envio no tendria donde guardarse (DECISIONES 36).
     if (recoverable) {
       setCreateError({
-        message: "Antes de crear, decidi que hacer con la solicitud sin terminar que se ofrece arriba: Descartar la borra y seguis con lo que ves; Recuperar reemplaza lo que ves por esa.",
+        message: "Antes de crear, decidí qué hacer con la solicitud sin terminar que se ofrece arriba: Descartar la borra y seguís con lo que ves; Recuperar reemplaza lo que ves por esa.",
         items: []
       });
       return;
@@ -648,7 +648,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
     let reused = false;
     try {
       if (!(await ensureSession())) {
-        setCreateError({ message: "Tu sesion expiro. Volve a ingresar: tu solicitud sigue cargada.", items: [] });
+        setCreateError({ message: "Tu sesión expiró. Volvé a ingresar: tu solicitud sigue cargada.", items: [] });
         return;
       }
       // Si mientras se volvia a ingresar se salio de la pantalla, no se manda nada: el borrador queda como estaba.
@@ -672,7 +672,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
         try {
           found = await findByKey(mark.clave);
         } catch {
-          setCreateError({ message: "No se pudo revisar si la solicitud que se mando antes quedo cargada. Revisa la conexion e intenta de nuevo.", items: [] });
+          setCreateError({ message: "No se pudo revisar si la solicitud que se mandó antes quedó cargada. Revisá la conexión e intentá de nuevo.", items: [] });
           return;
         }
         if (!mounted.current) return;
@@ -680,7 +680,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
           // Quedo cargada con los datos de antes: no se muestra como si fuera esta ni se crea otra sin avisar.
           setEnviado(null);
           setCreateError({
-            message: `La solicitud M-${found.numero} ya habia quedado cargada con los datos que se mandaron antes. Revisala: si tocas Crear solicitud otra vez, se crea una nueva con lo que ves ahora.`,
+            message: `La solicitud M-${found.numero} ya había quedado cargada con los datos que se mandaron antes. Revisala: si tocás Crear solicitud otra vez, se crea una nueva con lo que ves ahora.`,
             items: [],
             code: "ALREADY_CREATED",
             details: { id: found.id, numero: found.numero }
@@ -730,8 +730,8 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
         }
         setCreateError({
           message: checked
-            ? "No llego la respuesta del servidor y la solicitud todavia no aparece. Toca Crear solicitud de nuevo: si ya habia quedado cargada, se muestra esa y no se crea otra."
-            : "No llego la respuesta del servidor y no se pudo revisar si quedo cargada. Cuando vuelva la conexion, toca Crear solicitud: si ya habia quedado cargada, se muestra esa y no se crea otra.",
+            ? "No llegó la respuesta del servidor y la solicitud todavía no aparece. Tocá Crear solicitud de nuevo: si ya había quedado cargada, se muestra esa y no se crea otra."
+            : "No llegó la respuesta del servidor y no se pudo revisar si quedó cargada. Cuando vuelva la conexión, tocá Crear solicitud: si ya había quedado cargada, se muestra esa y no se crea otra.",
           items: []
         });
         return;
@@ -821,7 +821,7 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
                 </Typography>
                 <Typography color="text.secondary">
                   {created.cliente} · entrega {created.fechaEntrega?.split("-").reverse().join("/")} · {created.modulos.length}{" "}
-                  {created.modulos.length === 1 ? "modulo" : "modulos"}
+                  {created.modulos.length === 1 ? "módulo" : "módulos"}
                 </Typography>
               </Box>
             </Stack>
@@ -846,9 +846,9 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
   if (waitingPrevious) {
     return (
       <Stack spacing={2}>
-        <Typography variant="h4">Nueva solicitud de modulos</Typography>
+        <Typography variant="h4">Nueva solicitud de módulos</Typography>
         <Alert severity="info" icon={<CircularProgress size={20} />} role="status">
-          Se esta terminando de crear la solicitud que mandaste antes de salir de la pantalla. Espera unos segundos: no hace falta cargarla de nuevo.
+          Se está terminando de crear la solicitud que mandaste antes de salir de la pantalla. Esperá unos segundos: no hace falta cargarla de nuevo.
         </Alert>
       </Stack>
     );
@@ -885,9 +885,9 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
     <Stack spacing={3}>
       <Stack spacing={0.5}>
         <Typography variant="h4" component="h1">
-          Nueva solicitud de modulos
+          Nueva solicitud de módulos
         </Typography>
-        <Typography color="text.secondary">Elegi los muebles del catalogo, sus medidas y colores, y revisa el despiece antes de crear la solicitud.</Typography>
+        <Typography color="text.secondary">Elegí los muebles del catálogo, sus medidas y colores, y revisá el despiece antes de crear la solicitud.</Typography>
       </Stack>
 
       {errors.length > 0 && (
@@ -930,8 +930,8 @@ function ModuleOrderWizard({ onRestart }: { onRestart: () => void }) {
             </Stack>
           }
         >
-          Tenes una solicitud sin terminar ({draftModules === 1 ? "1 modulo" : `${draftModules} modulos`}, guardada {describeAge(draftSavedAt ?? Date.now())}).
-          {recoverable.enviado ? " Se estaba creando cuando se cerro la pantalla: al crearla se revisa primero si ya quedo cargada." : ""}
+          Tenés una solicitud sin terminar ({draftModules === 1 ? "1 módulo" : `${draftModules} módulos`}, guardada {describeAge(draftSavedAt ?? Date.now())}).
+          {recoverable.enviado ? " Se estaba creando cuando se cerró la pantalla: al crearla se revisa primero si ya quedó cargada." : ""}
         </Alert>
       )}
 

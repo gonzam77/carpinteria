@@ -25,7 +25,7 @@ export function DashboardPage() {
     return (
       <Stack spacing={1}>
         <Typography variant="h4">Mis solicitudes</Typography>
-        <Typography color="text.secondary">Solicita cortes, revisa tus solicitudes y consulta el estado de cada trabajo.</Typography>
+        <Typography color="text.secondary">Solicitá cortes, revisá tus solicitudes y consultá el estado de cada trabajo.</Typography>
       </Stack>
     );
   }

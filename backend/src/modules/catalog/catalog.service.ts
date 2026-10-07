@@ -105,7 +105,7 @@ export function toDefinition(module: ModuleWithRelations) {
 
 export async function loadModule(tx: Tx, id: string) {
   const module = await tx.modulo.findUnique({ where: { id }, include: MODULE_INCLUDE });
-  if (!module) throw new AppError(404, "Modulo no encontrado.");
+  if (!module) throw new AppError(404, "Módulo no encontrado.");
   return module;
 }
 
@@ -123,9 +123,9 @@ export async function validateModuleInput(tx: Tx, input: ModuloInput, moduleId?:
     input.materialFondoId ? tx.material.findUnique({ where: { id: input.materialFondoId } }) : Promise.resolve(null),
     tx.modulo.findUnique({ where: { codigo: input.codigo } })
   ]);
-  if (!categoria) problems.push("La categoria no existe.");
+  if (!categoria) problems.push("La categoría no existe.");
   if (input.materialFondoId && (!fondo || fondo.tipo !== TipoMaterial.PLACA)) problems.push("El material de fondo tiene que ser una placa.");
-  if (sameCode && sameCode.id !== moduleId) problems.push(`Ya existe un modulo con el codigo ${input.codigo}.`);
+  if (sameCode && sameCode.id !== moduleId) problems.push(`Ya existe un módulo con el código ${input.codigo}.`);
 
   // Nombres: formato, palabras reservadas y sin repetir entre medidas y piezas.
   const names = [...input.parametros.map((param) => param.clave), ...input.piezas.map((pieza) => pieza.codigo)];
@@ -138,13 +138,13 @@ export async function validateModuleInput(tx: Tx, input: ModuloInput, moduleId?:
 
   input.parametros.forEach((param) => {
     if (param.tipo === "OPCION" && !param.opciones?.length) problems.push(`La medida ${param.clave} es de opciones y no tiene opciones.`);
-    if (param.tipo === "CALCULADO" && !param.formula?.trim()) problems.push(`La medida ${param.clave} es calculada y no tiene formula.`);
-    if (param.minimo != null && param.maximo != null && param.minimo > param.maximo) problems.push(`En ${param.clave}, el minimo supera al maximo.`);
+    if (param.tipo === "CALCULADO" && !param.formula?.trim()) problems.push(`La medida ${param.clave} es calculada y no tiene fórmula.`);
+    if (param.minimo != null && param.maximo != null && param.minimo > param.maximo) problems.push(`En ${param.clave}, el mínimo supera al máximo.`);
   });
 
   // Perfiles: uno o dos, sin repetir el orden, con exactamente uno predeterminado.
   const perfilOrdenes = input.perfiles.map((perfil) => perfil.orden);
-  if (new Set(perfilOrdenes).size !== perfilOrdenes.length) problems.push("Hay dos perfiles de canto con el mismo numero.");
+  if (new Set(perfilOrdenes).size !== perfilOrdenes.length) problems.push("Hay dos perfiles de canto con el mismo número.");
   if (input.perfiles.filter((perfil) => perfil.predeterminado).length !== 1) problems.push("Tiene que haber exactamente un perfil de canto predeterminado.");
 
   // Piezas: material fijo y cantos.
@@ -172,12 +172,12 @@ export async function validateModuleInput(tx: Tx, input: ModuloInput, moduleId?:
 
   const evaluation = evaluateDefinition(input, {}, config.redondeo as RoundingMode);
   if (input.activo) {
-    if (!input.piezas.length) problems.push("Un modulo activo necesita al menos una pieza.");
+    if (!input.piezas.length) problems.push("Un módulo activo necesita al menos una pieza.");
     evaluation.errores.forEach((error) => problems.push(`${error.ref}: ${error.mensaje}`));
   }
 
   if (problems.length) {
-    throw new AppError(400, input.activo && evaluation.errores.length ? "El modulo tiene errores: corregilos o guardalo inactivo." : "Hay datos del modulo para corregir.", {
+    throw new AppError(400, input.activo && evaluation.errores.length ? "El módulo tiene errores: corregilos o guardalo inactivo." : "Hay datos del módulo para corregir.", {
       code: "MODULE_INVALID",
       details: { errores: problems, formulas: evaluation.errores }
     });
@@ -266,7 +266,7 @@ export async function createModule(prisma: PrismaClient, input: ModuloInput, use
 export async function updateModule(prisma: PrismaClient, id: string, input: ModuloInput, userId: string) {
   const existing = await loadModule(prisma, id);
   if (input.codigo !== existing.codigo && existing._count.pedidos > 0) {
-    throw new AppError(409, "No se puede cambiar el codigo de un modulo que ya se uso en solicitudes.", { code: "MODULE_CODE_LOCKED" });
+    throw new AppError(409, "No se puede cambiar el código de un módulo que ya se usó en solicitudes.", { code: "MODULE_CODE_LOCKED" });
   }
   await validateModuleInput(prisma, input, id);
   await prisma.$transaction(async (tx) => {
@@ -330,7 +330,7 @@ export async function duplicateModule(prisma: PrismaClient, id: string, userId: 
 export async function deleteModule(prisma: PrismaClient, id: string, userId: string) {
   const module = await loadModule(prisma, id);
   if (module._count.pedidos > 0) {
-    throw new AppError(409, "El modulo ya se uso en solicitudes: no se puede borrar. Desactivalo para que no aparezca al cargar.", {
+    throw new AppError(409, "El módulo ya se usó en solicitudes: no se puede borrar. Desactivalo para que no aparezca al cargar.", {
       code: "MODULE_IN_USE"
     });
   }

@@ -32,14 +32,14 @@ test("paridad con muebles.xlsx: las 305 piezas dan lo mismo que el Excel", () =>
 });
 
 test("errores de sintaxis legibles", () => {
-  assert.throws(() => parseFormula(""), /vacia/);
+  assert.throws(() => parseFormula(""), /vacía/);
   assert.throws(() => parseFormula("ANCHO -"), /incompleta/);
-  assert.throws(() => parseFormula("FOO(1)"), /Funcion desconocida FOO/);
+  assert.throws(() => parseFormula("FOO(1)"), /Función desconocida FOO/);
   assert.throws(() => parseFormula("PISO.alto"), /largo, ancho o cant/);
   assert.throws(() => parseFormula("SI(1; 2)"), /SI recibe 3 valores/);
   assert.throws(() => parseFormula("(ANCHO"), /Se esperaba "\)"/);
   assert.throws(() => parseFormula("ANCHO 2"), /Sobra "2"/);
-  assert.throws(() => parseFormula("ANCHO # 2"), /Caracter no valido "#"/);
+  assert.throws(() => parseFormula("ANCHO # 2"), /Carácter no válido "#"/);
   assert.throws(() => parseFormula("1+".repeat(300) + "1"), /500/);
   assert.throws(() => parseFormula("(".repeat(60) + "1" + ")".repeat(60)), /demasiados niveles/);
 });
@@ -93,7 +93,7 @@ test("cantidad no entera y medida invalida", () => {
     {}
   );
   assert.equal(result.errores[0].mensaje, "La cantidad debe ser un entero mayor o igual a 0 (dio 2.5)");
-  assert.equal(result.errores[1].mensaje, "Medida invalida: 0 x 100 mm");
+  assert.equal(result.errores[1].mensaje, "Medida inválida: 0 x 100 mm");
 });
 
 test("redondeo REDONDEAR y TRUNCAR solo sobre la medida final", () => {
@@ -126,9 +126,9 @@ test("validacion de medidas: rangos, enteros, opciones y faltantes", () => {
     { ancho: 200, ESTANTES: 1.5, VARIANTE: 3 }
   );
   assert.deepEqual(result.errores, [
-    { ref: "ANCHO", mensaje: "Minimo 300" },
-    { ref: "ESTANTES", mensaje: "Tiene que ser un numero entero" },
-    { ref: "VARIANTE", mensaje: "Elegi una de las opciones" },
+    { ref: "ANCHO", mensaje: "Mínimo 300" },
+    { ref: "ESTANTES", mensaje: "Tiene que ser un número entero" },
+    { ref: "VARIANTE", mensaje: "Elegí una de las opciones" },
     { ref: "LUZ", mensaje: "Falta el valor" }
   ]);
 });
@@ -162,8 +162,8 @@ test("constante ESP y expresiones de herrajes", () => {
 
 test("nombres de medidas y piezas", () => {
   assert.equal(validateIdentifier("LUZ_ABAJO"), null);
-  assert.match(validateIdentifier("luz") ?? "", /mayusculas/);
-  assert.match(validateIdentifier("SI") ?? "", /funcion/);
+  assert.match(validateIdentifier("luz") ?? "", /mayúsculas/);
+  assert.match(validateIdentifier("SI") ?? "", /función/);
   assert.match(validateIdentifier("ESP") ?? "", /constante/);
 });
 
@@ -271,14 +271,14 @@ test("buildModulePieces: es estricto con las medidas y el perfil", () => {
   assert.deepEqual(result.errores.slice(0, 3), [
     { ref: "ANCHOO", mensaje: "No existe la medida ANCHOO" },
     { ref: "LUZ", mensaje: "LUZ se calcula sola: no se carga" },
-    { ref: "PERFIL", mensaje: "El modulo no tiene el perfil de canto 3" }
+    { ref: "PERFIL", mensaje: "El módulo no tiene el perfil de canto 3" }
   ]);
   const fueraDeRango = buildModulePieces(
     { ...sampleModule(), parametros: [{ clave: "ALTO", tipo: "MEDIDA", valorDefecto: 720, minimo: 300, maximo: 2400 }, ...sampleModule().parametros.slice(1)] },
     { ALTO: 2500 },
     { redondeo: "REDONDEAR", perfilOrden: 1 }
   );
-  assert.deepEqual(fueraDeRango.errores, [{ ref: "ALTO", mensaje: "Maximo 2400" }]);
+  assert.deepEqual(fueraDeRango.errores, [{ ref: "ALTO", mensaje: "Máximo 2400" }]);
 });
 
 test("buildModulePieces da las mismas medidas que el motor en las 305 piezas del catalogo", () => {

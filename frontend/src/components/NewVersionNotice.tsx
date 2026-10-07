@@ -22,7 +22,7 @@ export function NewVersionNotice() {
           </Button>
         }
       >
-        Hay una version nueva del sistema disponible.
+        Hay una versión nueva del sistema disponible.
       </Alert>
     </Snackbar>
   );

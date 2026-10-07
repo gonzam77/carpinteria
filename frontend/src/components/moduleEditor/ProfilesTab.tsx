@@ -26,8 +26,8 @@ export function ProfilesTab({
   return (
     <Stack spacing={2}>
       <Typography variant="body2" color="text.secondary">
-        Un modulo puede tener uno o dos juegos de cantos (por ejemplo, "Estandar" con canto en todos los lados vistos y "Economico" solo en los frentes). Al
-        cargar la solicitud se elige cual usar; el predeterminado viene marcado. Los cantos de cada pieza se eligen en la pestana Despiece y cantos.
+        Un módulo puede tener uno o dos juegos de cantos (por ejemplo, "Estandar" con canto en todos los lados vistos y "Economico" solo en los frentes). Al
+        cargar la solicitud se elige cuál usar; el predeterminado viene marcado. Los cantos de cada pieza se eligen en la pestaña Despiece y cantos.
       </Typography>
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
         {perfiles.map((perfil) => (
@@ -45,11 +45,11 @@ export function ProfilesTab({
                 value={perfil.nombre}
                 onChange={(event) => patch(perfil.orden, { nombre: event.target.value })}
                 error={!perfil.nombre.trim()}
-                helperText={perfil.nombre.trim() ? " " : "Completa el nombre"}
+                helperText={perfil.nombre.trim() ? " " : "Completá el nombre"}
               />
               <TextField
                 size="small"
-                label="Descripcion"
+                label="Descripción"
                 value={perfil.descripcion ?? ""}
                 onChange={(event) => patch(perfil.orden, { descripcion: event.target.value })}
                 multiline

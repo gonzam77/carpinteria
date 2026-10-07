@@ -27,7 +27,7 @@ export async function sendNewOrderWhatsappNotification(order: {
   const lines = [
     "Nueva solicitud recibida",
     `Cliente: ${order.cliente}`,
-    `Telefono: ${order.numeroContacto || "-"}`,
+    `Teléfono: ${order.numeroContacto || "-"}`,
     `Piezas: ${totalUnits}`,
     `Pedido ID: ${order.id}`
   ];

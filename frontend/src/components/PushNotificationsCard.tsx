@@ -46,7 +46,7 @@ export function PushNotificationsCard({ compact = false }: PushNotificationsCard
 
   async function enableNotifications() {
     if (!config?.enabled) {
-      setMessage("Configura primero las claves VAPID en el backend.");
+      setMessage("Configurá primero las claves VAPID en el backend.");
       return;
     }
 
@@ -55,7 +55,7 @@ export function PushNotificationsCard({ compact = false }: PushNotificationsCard
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        setMessage("El navegador no concedio permisos para mostrar notificaciones.");
+        setMessage("El navegador no concedió permisos para mostrar notificaciones.");
         return;
       }
 
@@ -94,7 +94,7 @@ export function PushNotificationsCard({ compact = false }: PushNotificationsCard
   }
 
   if (!supported) {
-    return <Alert severity="info">Este navegador o contexto no soporta Web Push. Necesitas HTTPS o localhost y un navegador compatible.</Alert>;
+    return <Alert severity="info">Este navegador o contexto no soporta Web Push. Necesitás HTTPS o localhost y un navegador compatible.</Alert>;
   }
 
   return (
@@ -103,7 +103,7 @@ export function PushNotificationsCard({ compact = false }: PushNotificationsCard
         <Stack spacing={0.5}>
           <Typography variant={compact ? "subtitle1" : "h6"}>Notificaciones en este dispositivo</Typography>
           <Typography color="text.secondary" variant={compact ? "body2" : "body1"}>
-            Activa Web Push para recibir avisos cuando ingrese una nueva solicitud.
+            Activá Web Push para recibir avisos cuando ingrese una nueva solicitud.
           </Typography>
         </Stack>
         {message && <Alert severity="success">{message}</Alert>}

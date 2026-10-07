@@ -12,14 +12,14 @@ export function ClientStep({ value, onChange, today }: { value: ClientFields; on
       </Typography>
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
         <TextField
-          label="Nombre o razon social"
+          label="Nombre o razón social"
           value={value.cliente}
           onChange={(event) => onChange({ cliente: event.target.value })}
           required
           autoComplete="off"
         />
         <TextField
-          label="Telefono"
+          label="Teléfono"
           type="tel"
           value={value.numeroContacto}
           onChange={(event) => onChange({ numeroContacto: event.target.value })}
@@ -36,7 +36,7 @@ export function ClientStep({ value, onChange, today }: { value: ClientFields; on
           slotProps={{ htmlInput: { inputMode: "email" } }}
         />
         <TextField
-          label="Direccion de entrega"
+          label="Dirección de entrega"
           value={value.direccionEntrega}
           onChange={(event) => onChange({ direccionEntrega: event.target.value })}
           autoComplete="off"

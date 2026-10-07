@@ -311,7 +311,7 @@ export function MaterialsPage() {
               </IconButton>
             </Tooltip>
           ) : (
-            <Tooltip title="No se puede eliminar definitivamente porque esta vinculado a solicitudes o cantos">
+            <Tooltip title="No se puede eliminar definitivamente porque está vinculado a solicitudes o cantos">
               <span>
                 <IconButton color="error" disabled>
                   <DeleteIcon />
@@ -355,7 +355,7 @@ export function MaterialsPage() {
       { field: "valor", headerName: "Valor", width: 130, valueFormatter: (value) => Number(value).toLocaleString() },
       { field: "espesorMm", headerName: "Espesor", width: 110, valueFormatter: (value) => `${value} mm` },
       { field: "linkedOrdersCount", headerName: "Solicitudes", width: 120, valueGetter: (_value, row) => row.linkedOrdersCount ?? 0 },
-      { field: "fechaActualizacion", headerName: "Ult. cambio", width: 130, valueGetter: (_value, row) => (row.fechaActualizacion ? new Date(row.fechaActualizacion).toLocaleDateString() : "-") },
+      { field: "fechaActualizacion", headerName: "Últ. cambio", width: 130, valueGetter: (_value, row) => (row.fechaActualizacion ? new Date(row.fechaActualizacion).toLocaleDateString() : "-") },
       buildActionColumn(true)
     ],
     []
@@ -367,7 +367,7 @@ export function MaterialsPage() {
       { field: "espesorMm", headerName: "Espesor", width: 110, valueFormatter: (value) => `${value} mm` },
       { field: "valor", headerName: "Valor por metro", width: 150, valueFormatter: (value) => Number(value).toLocaleString() },
       { field: "linkedOrdersCount", headerName: "Solicitudes", width: 120, valueGetter: (_value, row) => row.linkedOrdersCount ?? 0 },
-      { field: "fechaActualizacion", headerName: "Ult. cambio", width: 130, valueGetter: (_value, row) => (row.fechaActualizacion ? new Date(row.fechaActualizacion).toLocaleDateString() : "-") },
+      { field: "fechaActualizacion", headerName: "Últ. cambio", width: 130, valueGetter: (_value, row) => (row.fechaActualizacion ? new Date(row.fechaActualizacion).toLocaleDateString() : "-") },
       buildActionColumn(true)
     ],
     []
@@ -386,7 +386,7 @@ export function MaterialsPage() {
     <Stack spacing={3}>
       <Stack spacing={0.5}>
         <Typography variant="h4">Materiales</Typography>
-        <Typography color="text.secondary">Administra placas y cantos activos. La mano de obra de cantos y por placa ahora se define desde Configuracion de presupuesto.</Typography>
+        <Typography color="text.secondary">Administrá placas y cantos activos. La mano de obra de cantos y por placa ahora se define desde Configuración de presupuesto.</Typography>
       </Stack>
       {feedback && (
         <Alert severity={feedbackSeverity} onClose={() => setFeedback("")}>
@@ -512,7 +512,7 @@ export function MaterialsPage() {
               Historial de placas
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 1.5 }}>
-              Estos materiales ya no aparecen al cargar nuevas solicitudes, pero siguen preservados para mantener consistencia historica.
+              Estos materiales ya no aparecen al cargar nuevas solicitudes, pero siguen preservados para mantener consistencia histórica.
             </Typography>
             <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
               <DataGrid rows={historialPlacas} columns={historyPlacaColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 920, md: "100%" } }} />
@@ -523,7 +523,7 @@ export function MaterialsPage() {
               Historial de cantos
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 1.5 }}>
-              Puedes reactivar un material cuando vuelva a usarse o eliminarlo definitivamente solo si nunca quedo vinculado a solicitudes.
+              Podés reactivar un material cuando vuelva a usarse o eliminarlo definitivamente solo si nunca quedó vinculado a solicitudes.
             </Typography>
             <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
               <DataGrid rows={historialCantos} columns={historyCantoColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 960, md: "100%" } }} />
@@ -537,7 +537,7 @@ export function MaterialsPage() {
         <DialogContent>
           <Stack spacing={2.5} sx={{ pt: 1 }}>
             <Typography color="text.secondary">
-              Selecciona los materiales activos a afectar e indica el porcentaje que quieres aumentar o disminuir sobre el valor actual.
+              Seleccioná los materiales activos a afectar e indicá el porcentaje que querés aumentar o disminuir sobre el valor actual.
             </Typography>
             <FormControlLabel
               control={<Checkbox checked={allSelected} indeterminate={bulkForm.selectedIds.length > 0 && !allSelected} onChange={toggleSelectAllBulkMaterials} />}
@@ -563,7 +563,7 @@ export function MaterialsPage() {
               value={bulkForm.percentage}
               onChange={(event) => setBulkForm((current) => ({ ...current, percentage: event.target.value }))}
               inputProps={{ step: "0.01" }}
-              helperText="Usa valores positivos para aumentar y negativos para disminuir. Ejemplo: 10 o -5."
+              helperText="Usá valores positivos para aumentar y negativos para disminuir. Ejemplo: 10 o -5."
               required
             />
           </Stack>
@@ -586,11 +586,11 @@ export function MaterialsPage() {
             </DialogContentText>
             {deleteDialog?.mode === "permanent" ? (
               <Alert severity="warning" variant="outlined">
-                Esta accion no se puede deshacer. Solo elimina el material si estas seguro de que ya no debe existir en el sistema.
+                Esta acción no se puede deshacer. Solo eliminá el material si estás seguro de que ya no debe existir en el sistema.
               </Alert>
             ) : (
               <Alert severity="info" variant="outlined">
-                El material pasara al historial y podras reactivarlo mas adelante si vuelve a usarse.
+                El material pasará al historial y podrás reactivarlo más adelante si vuelve a usarse.
               </Alert>
             )}
           </Stack>
@@ -600,7 +600,7 @@ export function MaterialsPage() {
             Cancelar
           </Button>
           <Button variant="contained" color={deleteDialog?.mode === "permanent" ? "error" : "warning"} onClick={confirmDeleteMaterial} disabled={deleteLoading}>
-            {deleteLoading ? "Procesando..." : deleteDialog?.mode === "permanent" ? "Si, eliminar" : "Si, quitar"}
+            {deleteLoading ? "Procesando..." : deleteDialog?.mode === "permanent" ? "Sí, eliminar" : "Sí, quitar"}
           </Button>
         </DialogActions>
       </Dialog>

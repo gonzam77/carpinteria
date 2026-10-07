@@ -82,7 +82,7 @@ test("referencias: quien usa una pieza o una medida, y renombrar sin tocar funci
 test("nombres de medidas y piezas", () => {
   assert.equal(identifierProblem("PISO", ["PISO", "LATERAL"]), null);
   assert.match(identifierProblem("PISO", ["PISO", "piso"]) ?? "", /Ya hay/);
-  assert.match(identifierProblem("MIN", ["MIN"]) ?? "", /funcion/);
+  assert.match(identifierProblem("MIN", ["MIN"]) ?? "", /función/);
   assert.match(identifierProblem("", [""]) ?? "", /Completalo/);
 });
 
@@ -108,7 +108,7 @@ test("opciones de una medida, una por linea", () => {
     error: null
   });
   assert.match(parseOptionsText("1 = A\n1 = B").error ?? "", /repetido/);
-  assert.match(parseOptionsText("Fondo entero").error ?? "", /Linea 1/);
+  assert.match(parseOptionsText("Fondo entero").error ?? "", /Línea 1/);
   assert.match(parseOptionsText("").error ?? "", /al menos una/);
 });
 
@@ -130,13 +130,13 @@ test("encaje: misma funcion que el optimizador, agrupando placas por tamano util
     warnings.map((warning) => warning.codigo),
     ["ENTRA", "ACOSTADA", "ACOSTADA", "LARGA"]
   );
-  assert.match(warnings[0].mensaje, /no entra en Chica \(2580 × 1810 mm utiles\)\.$/);
-  assert.match(warnings[1].mensaje, /no entra en Blanco, Negro \(2730 × 1810 mm utiles\)\. Girada entraria/);
+  assert.match(warnings[0].mensaje, /no entra en Chica \(2580 × 1810 mm útiles\)\.$/);
+  assert.match(warnings[1].mensaje, /no entra en Blanco, Negro \(2730 × 1810 mm útiles\)\. Girada entraría/);
   const muchas = fitWarnings(
     [{ codigo: "X", nombre: "X", largo: 3000, ancho: 100, permiteRotar: false, placas: ["A ", "B", "C", "D", "E"].map((nombre) => placa(nombre, 1830, 2750)) }],
     settings
   );
-  assert.match(muchas[0].mensaje, /no entra en A, B, C y 2 placas mas \(/);
+  assert.match(muchas[0].mensaje, /no entra en A, B, C y 2 placas más \(/);
   assert.match(warnings[3].mensaje,/"Larga" \(2700 × 600 mm\) no entra en Chica/);
 });
 

@@ -27,14 +27,14 @@ export function OptimizerSettingsPage() {
       espesorSierraMm: String(response.data.espesorSierraMm),
       perfiladoBordeMm: String(response.data.perfiladoBordeMm)
     });
-    setMessage("Configuracion del optimizador actualizada.");
+    setMessage("Configuración del optimizador actualizada.");
   }
 
   return (
     <Stack spacing={3}>
       <Stack spacing={0.5}>
-        <Typography variant="h4">Configuracion del optimizador</Typography>
-        <Typography color="text.secondary">Ajusta el espesor de sierra y el perfilado por borde usados por el calculo de cortes.</Typography>
+        <Typography variant="h4">Configuración del optimizador</Typography>
+        <Typography color="text.secondary">Ajustá el espesor de sierra y el perfilado por borde usados por el cálculo de cortes.</Typography>
       </Stack>
       {message && <Alert severity="success">{message}</Alert>}
       <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "8px" }}>
@@ -61,7 +61,7 @@ export function OptimizerSettingsPage() {
             />
           </Stack>
           <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Guardar configuracion
+            Guardar configuración
           </Button>
         </Stack>
       </Paper>

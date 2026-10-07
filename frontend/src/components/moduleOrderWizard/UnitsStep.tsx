@@ -139,7 +139,7 @@ function UnitCard({
           </Box>
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography id={titleId} component="h3" fontWeight={800} fontSize="1rem" sx={{ lineHeight: 1.2 }}>
-              Modulo {index + 1} · {definition.nombre}
+              Módulo {index + 1} · {definition.nombre}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {definition.categoria.nombre}
@@ -152,7 +152,7 @@ function UnitCard({
           {pedibles.map((param) => {
             const clave = param.clave.toUpperCase();
             const errors = validation?.porMedida[clave] ?? [];
-            const rango = [param.minimo !== null ? `min ${mmText(param.minimo)}` : "", param.maximo !== null ? `max ${mmText(param.maximo)}` : ""].filter(Boolean).join(" · ");
+            const rango = [param.minimo !== null ? `mín ${mmText(param.minimo)}` : "", param.maximo !== null ? `máx ${mmText(param.maximo)}` : ""].filter(Boolean).join(" · ");
             const helper = errors.length ? errors.join(". ") : [rango, param.ayuda ?? ""].filter(Boolean).join(" · ") || " ";
             return param.tipo === "OPCION" ? (
               <TextField
@@ -194,7 +194,7 @@ function UnitCard({
             value={unit.colorEsqueletoId}
             onChange={(event) => onChange({ colorEsqueletoId: event.target.value })}
             error={!unit.colorEsqueletoId}
-            helperText={!design.length ? `No hay placas de ${mmText(definition.espesorDisenoMm)} mm activas: cargalas en Materiales` : unit.colorEsqueletoId ? " " : "Elegi un color"}
+            helperText={!design.length ? `No hay placas de ${mmText(definition.espesorDisenoMm)} mm activas: cargalas en Materiales` : unit.colorEsqueletoId ? " " : "Elegí un color"}
           >
             {design.map((material) => (
               <MenuItem key={material.id} value={material.id}>
@@ -209,7 +209,7 @@ function UnitCard({
             value={unit.colorFrentesId}
             onChange={(event) => onChange({ colorFrentesId: event.target.value })}
             error={!unit.colorFrentesId}
-            helperText={!design.length ? `No hay placas de ${mmText(definition.espesorDisenoMm)} mm activas: cargalas en Materiales` : unit.colorFrentesId ? " " : "Elegi un color"}
+            helperText={!design.length ? `No hay placas de ${mmText(definition.espesorDisenoMm)} mm activas: cargalas en Materiales` : unit.colorFrentesId ? " " : "Elegí un color"}
           >
             {design.map((material) => (
               <MenuItem key={material.id} value={material.id}>
@@ -225,7 +225,7 @@ function UnitCard({
             onChange={(event) => onChange({ colorCantoId: event.target.value })}
             error={!unit.colorCantoId || missingForCanto.length > 0}
             helperText={
-              missingForCanto.length ? `Este color esta ${missingEdgesText(missingForCanto)}: cargalo en Materiales o elegi otro.` : unit.colorCantoId ? " " : "Elegi un color"
+              missingForCanto.length ? `Este color está ${missingEdgesText(missingForCanto)}: cargalo en Materiales o elegí otro.` : unit.colorCantoId ? " " : "Elegí un color"
             }
           >
             {plates.map((material) => {
@@ -247,9 +247,9 @@ function UnitCard({
               onChange={(event) => onChange({ materialFondoId: event.target.value || null })}
               slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
               error={Boolean(validation?.fondo)}
-              helperText={validation?.fondo ? `Elegi un fondo: ${validation.fondo}` : unit.materialFondoId ? "Elegido para este modulo" : " "}
+              helperText={validation?.fondo ? `Elegí un fondo: ${validation.fondo}` : unit.materialFondoId ? "Elegido para este módulo" : " "}
             >
-              <MenuItem value="">El del catalogo ({catalogFondoName})</MenuItem>
+              <MenuItem value="">El del catálogo ({catalogFondoName})</MenuItem>
               {plates.map((material) => (
                 <MenuItem key={material.id} value={material.id}>
                   {plateLabel(material)}
@@ -288,7 +288,7 @@ function UnitCard({
 
         <TextField
           size="small"
-          label="Observaciones del modulo"
+          label="Observaciones del módulo"
           placeholder="Salen en la hoja de taller"
           value={unit.observaciones}
           onChange={(event) => onChange({ observaciones: event.target.value })}
@@ -341,7 +341,7 @@ export function UnitsStep({
   // La lista solo trae placas activas: un fondo configurado que no esta en ella esta inactivo o se borro.
   const fondoLabel = (id: string | null) => {
     if (!id) return "sin configurar";
-    return materials.find((material) => material.id === id)?.nombre.trim() ?? "inactivo: elegi otro";
+    return materials.find((material) => material.id === id)?.nombre.trim() ?? "inactivo: elegí otro";
   };
   const conErrores = units.filter((unit) => validations.get(unit.uid) && !validations.get(unit.uid)!.ok).length;
 
@@ -350,7 +350,7 @@ export function UnitsStep({
       <DefaultColorsBar defaults={defaults} onChange={onDefaultsChange} onApply={onApplyDefaults} materials={materials} espesores={espesores} />
       {conErrores > 0 && (
         <Alert severity="warning">
-          {conErrores === 1 ? "Hay 1 modulo para revisar." : `Hay ${conErrores} modulos para revisar.`} Los datos que faltan o no sirven estan marcados en rojo.
+          {conErrores === 1 ? "Hay 1 módulo para revisar." : `Hay ${conErrores} módulos para revisar.`} Los datos que faltan o no sirven están marcados en rojo.
         </Alert>
       )}
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" } }}>

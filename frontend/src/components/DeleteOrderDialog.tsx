@@ -19,11 +19,11 @@ export function DeleteOrderDialog({
       <DialogTitle>Eliminar solicitud</DialogTitle>
       <DialogContent>
         <DialogContentText>
-          Esta accion eliminara la solicitud
+          Esta acción eliminará la solicitud
           {order?.cliente ? ` de ${order.cliente}` : ""} de forma permanente.
         </DialogContentText>
         <DialogContentText sx={{ mt: 1.5 }}>
-          Si la solicitud estaba en proceso, el stock reservado se devolvera automaticamente. ¿Deseas continuar?
+          Si la solicitud estaba en proceso, el stock reservado se devolverá automáticamente. ¿Deseás continuar?
         </DialogContentText>
       </DialogContent>
       <DialogActions>
@@ -31,7 +31,7 @@ export function DeleteOrderDialog({
           Cancelar
         </Button>
         <Button color="error" variant="contained" onClick={onConfirm} disabled={loading}>
-          {loading ? "Eliminando..." : "Si, eliminar"}
+          {loading ? "Eliminando..." : "Sí, eliminar"}
         </Button>
       </DialogActions>
     </Dialog>

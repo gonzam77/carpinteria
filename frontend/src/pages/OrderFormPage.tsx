@@ -21,8 +21,8 @@ function resolveMaterialId(row: OrderDetail, materials: Material[]) {
 
 function validateRows(rows: OrderDetail[], materials: Material[]) {
   for (const row of rows) {
-    if (!resolveMaterialId(row, materials) || !row.largo || !row.ancho || !row.cantidad) return "Complete material, largo, ancho y cantidad de cada pieza.";
-    if (Number.isNaN(Number(row.largo)) || Number.isNaN(Number(row.ancho))) return "Largo y ancho deben ser numericos.";
+    if (!resolveMaterialId(row, materials) || !row.largo || !row.ancho || !row.cantidad) return "Completá material, largo, ancho y cantidad de cada pieza.";
+    if (Number.isNaN(Number(row.largo)) || Number.isNaN(Number(row.ancho))) return "Largo y ancho deben ser numéricos.";
     if (Number(row.cantidad) <= 0) return "La cantidad debe ser mayor a cero.";
   }
   return "";
@@ -46,11 +46,11 @@ function hasContent(draft: OrderDraft) {
 
 function describeAge(savedAt: number) {
   const minutes = Math.floor((Date.now() - savedAt) / 60000);
-  if (minutes < 1) return "recien";
+  if (minutes < 1) return "recién";
   if (minutes < 60) return `hace ${minutes} min`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `hace ${hours} h`;
-  return `hace ${Math.floor(hours / 24)} dias`;
+  return `hace ${Math.floor(hours / 24)} días`;
 }
 
 function fillClientFields(rows: OrderDetail[], numeroCliente: string, nombreCliente: string) {
@@ -169,11 +169,11 @@ export function OrderFormPage() {
     setError("");
     if (step === 0) {
       if (!cliente || !telefono) {
-        setError("Complete cliente y telefono de contacto.");
+        setError("Completá cliente y teléfono de contacto.");
         return;
       }
       if (telefono.trim().length < 6) {
-        setError("El telefono de contacto debe tener al menos 6 digitos.");
+        setError("El teléfono de contacto debe tener al menos 6 dígitos.");
         return;
       }
       setRows((currentRows) => fillClientFields(currentRows, telefono, cliente));
@@ -215,8 +215,8 @@ export function OrderFormPage() {
         // de revisar el listado cuando el request escribia: el comprobante no
         // crea nada, y mandar a buscar un pedido que no existe confunde.
         return writes
-          ? "Se corto la conexion antes de recibir la respuesta. Revisa en el listado si la solicitud quedo cargada antes de volver a enviarla."
-          : "Se corto la conexion. Revisa la conexion e intenta de nuevo.";
+          ? "Se cortó la conexión antes de recibir la respuesta. Revisá en el listado si la solicitud quedó cargada antes de volver a enviarla."
+          : "Se cortó la conexión. Revisá la conexión e intentá de nuevo.";
       }
 
       const apiMessage = submitError.response.data?.message;
@@ -239,7 +239,7 @@ export function OrderFormPage() {
     // Validamos la sesion antes de mandar: renueva en silencio y, si ya no
     // alcanza, pide reingreso sin haber perdido nada de lo cargado.
     if (!(await ensureSession())) {
-      setError("Tu sesion expiro. Volve a ingresar para continuar.");
+      setError("Tu sesión expiró. Volvé a ingresar para continuar.");
       return;
     }
 
@@ -282,7 +282,7 @@ export function OrderFormPage() {
     // Misma validacion previa que en el preview, pero aca es critica: es el
     // request que no queremos que se pierda.
     if (!(await ensureSession())) {
-      setError("Tu sesion expiro. Volve a ingresar: tu solicitud sigue cargada.");
+      setError("Tu sesión expiró. Volvé a ingresar: tu solicitud sigue cargada.");
       setSubmitLoading(false);
       return;
     }
@@ -322,7 +322,7 @@ export function OrderFormPage() {
       <Stack spacing={3} component="form" onSubmit={openPreview}>
         <Stack spacing={0.5}>
           <Typography variant="h4">{id ? "Editar solicitud" : "Nueva solicitud de corte"}</Typography>
-          <Typography color="text.secondary">Carga los datos del cliente, define las piezas y revisa el resumen antes de enviar.</Typography>
+          <Typography color="text.secondary">Cargá los datos del cliente, definí las piezas y revisá el resumen antes de enviar.</Typography>
         </Stack>
         {error && <Alert severity="error">{error}</Alert>}
         {recoverableDraft && (
@@ -339,7 +339,7 @@ export function OrderFormPage() {
               </Stack>
             }
           >
-            Tenes una solicitud sin terminar ({recoverableDraft.rows.length} piezas, guardada {describeAge(draftSavedAt ?? Date.now())}).
+            Tenés una solicitud sin terminar ({recoverableDraft.rows.length} piezas, guardada {describeAge(draftSavedAt ?? Date.now())}).
           </Alert>
         )}
         <Stepper
@@ -363,7 +363,7 @@ export function OrderFormPage() {
             <Stack spacing={2}>
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                 <TextField label="Cliente" value={cliente} onChange={(event) => setCliente(event.target.value)} required fullWidth />
-                <TextField label="Telefono de contacto" value={telefono} onChange={(event) => setTelefono(event.target.value)} required fullWidth />
+                <TextField label="Teléfono de contacto" value={telefono} onChange={(event) => setTelefono(event.target.value)} required fullWidth />
               </Stack>
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                 <TextField label="Observaciones" value={observaciones} onChange={(event) => setObservaciones(event.target.value)} fullWidth />

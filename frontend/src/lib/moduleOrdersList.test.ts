@@ -82,24 +82,24 @@ test("fechas para mostrar: el dia del negocio, este donde este el navegador (DEC
 
 test("semaforo de plazo (spec 9.1): gris, rojo, amarillo y verde", () => {
   const status = (estado: EstadoSolicitud, fechaEntrega: string | null, aviso = 3) => deliveryStatus({ estado, fechaEntrega }, TODAY, aviso);
-  assert.deepEqual(status("ENTREGADA", "2026-09-01"), { kind: "entregada", label: "Entregada", description: "Ya se entrego", dias: null }, "entregada, aunque la fecha haya pasado");
+  assert.deepEqual(status("ENTREGADA", "2026-09-01"), { kind: "entregada", label: "Entregada", description: "Ya se entregó", dias: null }, "entregada, aunque la fecha haya pasado");
   assert.equal(status("RECHAZADA", "2026-09-01").kind, "sin-plazo", "una rechazada no tiene plazo");
   assert.equal(status("RECHAZADA", "2026-09-01").label, "Sin plazo");
   assert.equal(status("PENDIENTE", null).label, "Sin fecha");
 
   const atrasada = status("TERMINADA", "2026-10-05");
   assert.deepEqual([atrasada.kind, atrasada.label, atrasada.dias], ["atrasada", "Atrasada 1 d", -1]);
-  assert.equal(atrasada.description, "Atrasada 1 dia: la entrega era el 05/10/2026");
+  assert.equal(atrasada.description, "Atrasada 1 día: la entrega era el 05/10/2026");
   assert.equal(status("EN_PROCESO", "2026-10-01").label, "Atrasada 5 d");
 
   const hoy = status("PENDIENTE", TODAY);
   assert.deepEqual([hoy.kind, hoy.label, hoy.dias], ["proxima", "Vence hoy", 0]);
   const manana = status("PENDIENTE", "2026-10-07");
-  assert.deepEqual([manana.kind, manana.label, manana.description], ["proxima", "Falta 1 d", "Falta 1 dia: se entrega el 07/10/2026"], "en singular");
+  assert.deepEqual([manana.kind, manana.label, manana.description], ["proxima", "Falta 1 d", "Falta 1 día: se entrega el 07/10/2026"], "en singular");
   assert.equal(status("PENDIENTE", "2026-10-08").label, "Faltan 2 d");
   assert.equal(status("PENDIENTE", "2026-10-09").kind, "proxima", "justo en el aviso (3 dias)");
   assert.equal(status("PENDIENTE", "2026-10-10").kind, "en-plazo", "un dia despues del aviso");
-  assert.equal(status("PENDIENTE", "2026-10-10").description, "Faltan 4 dias: se entrega el 10/10/2026");
+  assert.equal(status("PENDIENTE", "2026-10-10").description, "Faltan 4 días: se entrega el 10/10/2026");
 
   // Con aviso 0, solo el dia de la entrega es amarillo.
   assert.equal(status("PENDIENTE", TODAY, 0).kind, "proxima");
@@ -163,18 +163,18 @@ test("exportar: nombre del archivo (spec 11.1) y tope por vez", () => {
   assert.equal(exportFileName([{ numero: 1 }, { numero: 2 }]), "pedidos-carpinteria.xlsx");
   assert.equal(exportFileName([]), DEFAULT_EXPORT_NAME);
   assert.equal(exportProblem(MAX_EXPORT), null);
-  assert.equal(exportProblem(MAX_EXPORT + 1), "Se pueden exportar hasta 200 solicitudes por vez: elegi menos.");
+  assert.equal(exportProblem(MAX_EXPORT + 1), "Se pueden exportar hasta 200 solicitudes por vez: elegí menos.");
 });
 
 test("exportar: mensajes de error, con el cuerpo que llega como Blob", async () => {
   const blob = (text: string, type: string) => new Blob([text], { type });
   assert.equal(await exportErrorMessage({ isAxiosError: true, response: { status: 403, data: blob('{"message":"Solo un administrador puede exportar."}', "application/json") } }), "Solo un administrador puede exportar.");
-  assert.equal(await exportErrorMessage({ isAxiosError: true, response: { status: 502, data: blob("<html>Bad gateway</html>", "text/html") } }), "No se pudo exportar. Intenta de nuevo en un momento.");
-  assert.equal(await exportErrorMessage({ isAxiosError: true, response: { status: 500, data: blob('{"otro":1}', "application/json") } }), "No se pudo exportar. Intenta de nuevo en un momento.");
-  assert.equal(await exportErrorMessage({ isAxiosError: true, response: { status: 414, data: blob("", "text/html") } }), "Son demasiadas solicitudes para exportar juntas: elegi menos.");
-  assert.equal(await exportErrorMessage({ isAxiosError: true }), "Se corto la conexion. Revisa la conexion e intenta de nuevo.");
-  assert.equal(await exportErrorMessage(new Error("cualquier cosa")), "No se pudo exportar. Intenta de nuevo en un momento.");
-  assert.equal(await exportErrorMessage(null), "No se pudo exportar. Intenta de nuevo en un momento.");
+  assert.equal(await exportErrorMessage({ isAxiosError: true, response: { status: 502, data: blob("<html>Bad gateway</html>", "text/html") } }), "No se pudo exportar. Intentá de nuevo en un momento.");
+  assert.equal(await exportErrorMessage({ isAxiosError: true, response: { status: 500, data: blob('{"otro":1}', "application/json") } }), "No se pudo exportar. Intentá de nuevo en un momento.");
+  assert.equal(await exportErrorMessage({ isAxiosError: true, response: { status: 414, data: blob("", "text/html") } }), "Son demasiadas solicitudes para exportar juntas: elegí menos.");
+  assert.equal(await exportErrorMessage({ isAxiosError: true }), "Se cortó la conexión. Revisá la conexión e intentá de nuevo.");
+  assert.equal(await exportErrorMessage(new Error("cualquier cosa")), "No se pudo exportar. Intentá de nuevo en un momento.");
+  assert.equal(await exportErrorMessage(null), "No se pudo exportar. Intentá de nuevo en un momento.");
 });
 
 test("aviso de resultados para lectores de pantalla", () => {
@@ -187,5 +187,5 @@ test("aviso de resultados para lectores de pantalla", () => {
   assert.equal(announce(3), "3 solicitudes coinciden con los filtros");
   assert.equal(announce(7, false), "Sin filtros: 7 solicitudes");
   assert.equal(announce(1, false), "Sin filtros: 1 solicitud");
-  assert.equal(announce(0, false, { emptyCatalog: true }), "Todavia no hay solicitudes de modulos");
+  assert.equal(announce(0, false, { emptyCatalog: true }), "Todavía no hay solicitudes de módulos");
 });

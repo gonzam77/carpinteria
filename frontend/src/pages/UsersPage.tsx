@@ -81,7 +81,7 @@ export function UsersPage() {
       { field: "nombre", headerName: "Nombre", flex: 1 },
       { field: "apellido", headerName: "Apellido", flex: 1 },
       { field: "email", headerName: "Email", flex: 1.5 },
-      { field: "telefono", headerName: "Telefono", flex: 1, valueGetter: (_value, row) => row.telefono ?? "-" },
+      { field: "telefono", headerName: "Teléfono", flex: 1, valueGetter: (_value, row) => row.telefono ?? "-" },
       { field: "rol", headerName: "Rol", width: 150 },
       {
         field: "acciones",
@@ -103,8 +103,8 @@ export function UsersPage() {
   return (
     <Stack spacing={3}>
       <Stack spacing={0.5}>
-        <Typography variant="h4">Gestion de usuarios</Typography>
-        <Typography color="text.secondary">Alta y administracion de perfiles con acceso al sistema.</Typography>
+        <Typography variant="h4">Gestión de usuarios</Typography>
+        <Typography color="text.secondary">Alta y administración de perfiles con acceso al sistema.</Typography>
       </Stack>
       <Paper sx={{ p: { xs: 2, sm: 2.25 }, borderRadius: "8px", overflow: "hidden" }}>
         <Stack
@@ -122,7 +122,7 @@ export function UsersPage() {
           <TextField fullWidth label="Nombre" value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} required />
           <TextField fullWidth label="Apellido" value={form.apellido} onChange={(event) => setForm({ ...form, apellido: event.target.value })} required />
           <TextField fullWidth label="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required sx={{ flex: { lg: "1.5 1 220px" } }} />
-          <TextField fullWidth label="Telefono" value={form.telefono} onChange={(event) => setForm({ ...form, telefono: event.target.value })} />
+          <TextField fullWidth label="Teléfono" value={form.telefono} onChange={(event) => setForm({ ...form, telefono: event.target.value })} />
           <TextField fullWidth label="Password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required={!editingId} placeholder={editingId ? "Opcional al editar" : ""} />
           <TextField fullWidth select label="Rol" value={form.rol} onChange={(event) => setForm({ ...form, rol: event.target.value as Rol })} sx={{ minWidth: { lg: 150 } }}>
             <MenuItem value="CARPINTERO">CARPINTERO</MenuItem>

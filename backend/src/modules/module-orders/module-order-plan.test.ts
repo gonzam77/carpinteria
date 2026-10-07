@@ -182,13 +182,13 @@ test("codigo de barra, remark, nombre, pieza de origen, orden y origen", () => {
     ],
     "sin estantes, el estante no se genera y no ocupa numero"
   );
-  assert.ok(first.rows.every((row) => row.remark === "Modulo 1 · Bajo mesada" && row.origen === "CALCULADO"));
+  assert.ok(first.rows.every((row) => row.remark === null && row.origen === "CALCULADO"), "sin Remark (DECISIONES 20)");
   assert.deepEqual(first.rows.map((row) => row.nombreProducto), ["Lateral", "Puerta", "Estante", "Zocalo", "Fondo"]);
   const puerta = byCode(second.rows, "PUERTA");
   assert.equal(puerta.origen, "EDITADO");
   assert.deepEqual([puerta.cantoLargo1Id, puerta.cantoLargo2Id, puerta.cantoAncho1Id, puerta.cantoAncho2Id], ["canto-blanco-045", null, null, null]);
   assert.ok(second.rows.filter((row) => row.piezaCodigo !== "PUERTA").every((row) => row.origen === "CALCULADO"));
-  assert.ok(second.rows.every((row) => row.remark === "Modulo 2 · Bajo mesada"));
+  assert.ok(second.rows.every((row) => row.remark === null));
   assert.equal(moduleBarcode(1044, 1, 3), "M1044-01-03");
   assert.equal(moduleBarcode(null, 12, 7), "M----12-07");
 });
@@ -223,11 +223,11 @@ test("materiales que no sirven: todos juntos y sin repetir", () => {
   );
   assert.equal(error.code, "MODULE_MATERIAL_INVALID");
   assert.deepEqual(error.problems.slice(0, 5), [
-    'Modulo 1 (Bajo mesada): el color de esqueleto "Blanco 5,5" es de 5,5 mm y el modulo esta pensado para placas de 18 mm.',
-    'Modulo 1 (Bajo mesada): el color de frentes "Roble" esta inactivo.',
-    "Modulo 1 (Bajo mesada): el color de los cantos no es una placa del sistema.",
-    "Modulo 1 (Bajo mesada): tiene piezas de fondo y no hay material de fondo. Configuralo en Catalogo de modulos > Configuracion.",
-    'Modulo 1 (Bajo mesada): el material fijo de "Zocalo" "Roble" esta inactivo.'
+    'Módulo 1 (Bajo mesada): el color de esqueleto "Blanco 5,5" es de 5,5 mm y el módulo está pensado para placas de 18 mm.',
+    'Módulo 1 (Bajo mesada): el color de frentes "Roble" está inactivo.',
+    "Módulo 1 (Bajo mesada): el color de los cantos no es una placa del sistema.",
+    "Módulo 1 (Bajo mesada): tiene piezas de fondo y no hay material de fondo. Configuralo en Catálogo de módulos > Configuración.",
+    'Módulo 1 (Bajo mesada): el material fijo de "Zocalo" "Roble" está inactivo.'
   ]);
   assert.equal(error.problems.length, 10, "cada modulo informa lo suyo");
 });
@@ -235,21 +235,21 @@ test("materiales que no sirven: todos juntos y sin repetir", () => {
 test("orden de los errores: primero los modulos, despues las formulas", () => {
   const inactivo = errorOf(planModuleOrder(input([line({ moduloId: "m2" }), line({ moduloId: "no-existe", colorCantoId: "gris" })], {}, [sampleModule({ id: "m2", activo: false })])));
   assert.equal(inactivo.code, "MODULE_NOT_AVAILABLE");
-  assert.deepEqual(inactivo.problems, ["El modulo 1 (Bajo mesada) esta inactivo: no se puede pedir.", "El modulo 2 no existe en el catalogo."]);
+  assert.deepEqual(inactivo.problems, ["El módulo 1 (Bajo mesada) está inactivo: no se puede pedir.", "El módulo 2 no existe en el catálogo."]);
 
   const formulas = errorOf(planModuleOrder(input([line(), line({ valores: { ANCHOO: 1 } }), line({ perfilCantoOrden: 2 }, ), line({ valores: { ANCHO: 20 } })], {}, [sampleModule()])));
   assert.equal(formulas.code, "MODULE_FORMULA_ERRORS");
-  assert.equal(formulas.message, "Hay 2 modulos con errores.");
+  assert.equal(formulas.message, "Hay 2 módulos con errores.");
   assert.equal(formulas.details.posicion, 2);
   assert.deepEqual(
     (formulas.details.modulos as Array<{ posicion: number }>).map((item) => item.posicion),
     [2, 4]
   );
-  assert.equal(formulas.problems[0], "Modulo 2 (Bajo mesada), ANCHOO: No existe la medida ANCHOO.");
+  assert.equal(formulas.problems[0], "Módulo 2 (Bajo mesada), ANCHOO: No existe la medida ANCHOO.");
 
   const perfil = errorOf(planModuleOrder(input([line({ perfilCantoOrden: 2 })], {}, [sampleModule({ perfiles: [{ orden: 1 }] })])));
-  assert.equal(perfil.message, "El modulo 1 (Bajo mesada) tiene errores.");
-  assert.deepEqual(perfil.problems, ["Modulo 1 (Bajo mesada), PERFIL: El modulo no tiene el perfil de canto 2."]);
+  assert.equal(perfil.message, "El módulo 1 (Bajo mesada) tiene errores.");
+  assert.deepEqual(perfil.problems, ["Módulo 1 (Bajo mesada), PERFIL: El módulo no tiene el perfil de canto 2."]);
 });
 
 test("encaje con la funcion del optimizador: ejes, rotacion y placas sin medidas", () => {
@@ -257,13 +257,13 @@ test("encaje con la funcion del optimizador: ejes, rotacion y placas sin medidas
   const girable = errorOf(planModuleOrder(input([line({ valores: { ANCHO: 2000 } })])));
   assert.equal(girable.code, "MODULE_PIECES_DO_NOT_FIT");
   assert.deepEqual(girable.problems, [
-    '"Fondo" del Modulo 1 (718 × 1998 mm) no entra en la placa Fibro (2590 × 1820 mm utiles). Girada entraria: si la veta lo permite, marcala para rotar en el catalogo.'
+    '"Fondo" del Módulo 1 (718 × 1998 mm) no entra en la placa Fibro (2590 × 1820 mm útiles). Girada entraría: si la veta lo permite, marcala para rotar en el catálogo.'
   ]);
   // El estante rota (1964 × 540 entra girado) y el zocalo de 2000 × 100 entra derecho: ninguno es un error.
 
   const grande = errorOf(planModuleOrder(input([line({ valores: { ANCHO: 3000 } })])));
-  assert.ok(grande.problems.includes('"Estante" del Modulo 1 (2964 × 540 mm) no entra en la placa Blanco (2590 × 1820 mm utiles).'), grande.problems.join("\n"));
-  assert.ok(grande.problems.some((problem) => problem.startsWith('"Zocalo" del Modulo 1 (3000 × 100 mm) no entra en la placa Negro')));
+  assert.ok(grande.problems.includes('"Estante" del Módulo 1 (2964 × 540 mm) no entra en la placa Blanco (2590 × 1820 mm útiles).'), grande.problems.join("\n"));
+  assert.ok(grande.problems.some((problem) => problem.startsWith('"Zocalo" del Módulo 1 (3000 × 100 mm) no entra en la placa Negro')));
 
   const sinMedidas = errorOf(planModuleOrder(input([line({ colorEsqueletoId: "sinmedidas" })])));
   assert.deepEqual(sinMedidas.problems, ['La placa "Sin medidas" no tiene medidas cargadas. Completalas en Materiales.']);
@@ -301,9 +301,9 @@ test("cada lado de canto va a su campo, con un perfil asimetrico", () => {
 
 test("el espesor de diseno se exige a esqueleto y frentes, mas fino o mas grueso", () => {
   const frentes = errorOf(planModuleOrder(input([line({ colorFrentesId: "fina" })])));
-  assert.deepEqual(frentes.problems, ['Modulo 1 (Bajo mesada): el color de frentes "Blanco 5,5" es de 5,5 mm y el modulo esta pensado para placas de 18 mm.']);
+  assert.deepEqual(frentes.problems, ['Módulo 1 (Bajo mesada): el color de frentes "Blanco 5,5" es de 5,5 mm y el módulo está pensado para placas de 18 mm.']);
   const gruesa = errorOf(planModuleOrder(input([line({ colorEsqueletoId: "gruesa" })])));
-  assert.deepEqual(gruesa.problems, ['Modulo 1 (Bajo mesada): el color de esqueleto "Gruesa" es de 25 mm y el modulo esta pensado para placas de 18 mm.']);
+  assert.deepEqual(gruesa.problems, ['Módulo 1 (Bajo mesada): el color de esqueleto "Gruesa" es de 25 mm y el módulo está pensado para placas de 18 mm.']);
   okPlan(planModuleOrder(input([line({ colorCantoId: "blanco" })])));
 });
 
@@ -358,9 +358,9 @@ test("fondo elegido en la solicitud: le gana al del modulo y al de la configurac
 test("el fondo elegido se revisa aunque el modulo no tenga piezas de fondo, y si no hay fondo no se guarda", () => {
   const sinFondo = sampleModule({ piezas: sampleModule().piezas.filter((pieza) => pieza.rol !== "FONDO") });
   const error = errorOf(planModuleOrder(input([line({ materialFondoId: "inactiva" })], {}, [sinFondo])));
-  assert.deepEqual(error.problems, ['Modulo 1 (Bajo mesada): el material de fondo elegido "Roble" esta inactivo.']);
+  assert.deepEqual(error.problems, ['Módulo 1 (Bajo mesada): el material de fondo elegido "Roble" está inactivo.']);
   const noEsPlaca = errorOf(planModuleOrder(input([line({ materialFondoId: "canto-blanco-045" })])));
-  assert.deepEqual(noEsPlaca.problems, ["Modulo 1 (Bajo mesada): el material de fondo elegido no es una placa del sistema."]);
+  assert.deepEqual(noEsPlaca.problems, ["Módulo 1 (Bajo mesada): el material de fondo elegido no es una placa del sistema."]);
   const [sinPiezasDeFondo] = okPlan(planModuleOrder(input([line({ materialFondoId: "fina" })], {}, [sinFondo]))).lines;
   assert.equal(sinPiezasDeFondo.materialFondoId, null);
 });

@@ -62,7 +62,7 @@ authRouter.post(
     const user = await prisma.usuario.findUnique({ where: { email: data.email } });
 
     if (!user || !user.password || !(await bcrypt.compare(data.password, user.password))) {
-      throw new AppError(401, "Credenciales invalidas");
+      throw new AppError(401, "Credenciales inválidas");
     }
 
     const token = signToken(user);
@@ -89,7 +89,7 @@ authRouter.post(
     const payload = ticket.getPayload();
 
     if (!payload?.email || !payload.sub) {
-      throw new AppError(401, "Cuenta de Google invalida");
+      throw new AppError(401, "Cuenta de Google inválida");
     }
 
     const [givenName = payload.name ?? "", ...familyNameParts] = (payload.name ?? "").split(" ");
@@ -157,7 +157,7 @@ authRouter.post(
     // Tope absoluto: se puede renovar dentro de la ventana, no indefinidamente.
     const sessionStart = typeof req.user.ses === "number" ? req.user.ses : Date.now();
     if (Date.now() - sessionStart > env.SESSION_MAX_HOURS * 60 * 60 * 1000) {
-      throw new AppError(401, "La sesion alcanzo su duracion maxima");
+      throw new AppError(401, "La sesión alcanzó su duración máxima");
     }
 
     res.json({ token: signToken(user, sessionStart), user: publicUser(user) });

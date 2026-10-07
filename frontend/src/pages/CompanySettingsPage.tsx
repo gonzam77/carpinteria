@@ -35,14 +35,14 @@ export function CompanySettingsPage() {
     <Stack spacing={3}>
       <Stack spacing={0.5}>
         <Typography variant="h4">Datos de contacto de la empresa</Typography>
-        <Typography color="text.secondary">Configura el nombre visible del panel y los datos de contacto que se imprimen en el comprobante de solicitud.</Typography>
+        <Typography color="text.secondary">Configurá el nombre visible del panel y los datos de contacto que se imprimen en el comprobante de solicitud.</Typography>
       </Stack>
       {message && <Alert severity="success">{message}</Alert>}
       <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "8px" }}>
         <Stack component="form" spacing={2.5} onSubmit={submit}>
           <TextField fullWidth label="Nombre de la empresa" value={form.nombre} onChange={(event) => setForm((current) => ({ ...current, nombre: event.target.value }))} required />
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-            <TextField fullWidth label="Telefono" value={form.telefono} onChange={(event) => setForm((current) => ({ ...current, telefono: event.target.value }))} />
+            <TextField fullWidth label="Teléfono" value={form.telefono} onChange={(event) => setForm((current) => ({ ...current, telefono: event.target.value }))} />
             <TextField fullWidth label="Email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
           </Stack>
           <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ width: { xs: "100%", sm: "auto" } }}>

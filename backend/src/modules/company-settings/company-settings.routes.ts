@@ -10,7 +10,7 @@ export const companySettingsRouter = Router();
 const companySettingsSchema = z.object({
   nombre: z.string().trim().min(1, "El nombre es obligatorio").max(120),
   telefono: z.string().trim().max(40).default(""),
-  email: z.union([z.literal(""), z.string().trim().email("Ingrese un email valido")])
+  email: z.union([z.literal(""), z.string().trim().email("Ingresá un email válido")])
 });
 
 companySettingsRouter.use(authenticate);

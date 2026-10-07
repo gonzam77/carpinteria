@@ -49,7 +49,7 @@ function buildWhatsappLink(order: Order) {
   if (!phone) return "";
 
   const orderLabel = order.id.slice(0, 8).toUpperCase();
-  const message = `Hola ${order.cliente}, te avisamos que tu pedido ${orderLabel} ya esta listo para retirar. Cuando quieras podes pasar a buscarlo. Si necesitas coordinar horario o tenes alguna consulta, escribinos por este medio.`;
+  const message = `Hola ${order.cliente}, te avisamos que tu pedido ${orderLabel} ya está listo para retirar. Cuando quieras podés pasar a buscarlo. Si necesitás coordinar horario o tenés alguna consulta, escribinos por este medio.`;
   return `https://api.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
 }
 
@@ -145,7 +145,7 @@ export function OrdersPage() {
                   </Tooltip>
                 ) : null}
               </Box>
-              <Tooltip title={canNotifyByWhatsapp ? "Avisar por WhatsApp" : "La solicitud no tiene telefono de contacto"}>
+              <Tooltip title={canNotifyByWhatsapp ? "Avisar por WhatsApp" : "La solicitud no tiene teléfono de contacto"}>
                 <span>
                   <IconButton
                     sx={{ color: canNotifyByWhatsapp ? "#25D366" : undefined }}
@@ -195,7 +195,7 @@ export function OrdersPage() {
     <Stack spacing={2.5}>
       <Stack spacing={0.5}>
         <Typography variant="h4">{user?.rol === "ADMIN" ? "Solicitudes recibidas" : "Mis solicitudes"}</Typography>
-        <Typography color="text.secondary">Seguimiento de pedidos, filtros rapidos y exportacion de cortes.</Typography>
+        <Typography color="text.secondary">Seguimiento de pedidos, filtros rápidos y exportación de cortes.</Typography>
       </Stack>
       <Paper sx={{ p: { xs: 2, sm: 2.25 }, borderRadius: "8px", overflow: "hidden" }}>
         <Stack
@@ -224,7 +224,7 @@ export function OrdersPage() {
           </Button>
           {user?.rol === "ADMIN" && (
             <Button sx={{ color: "#fff", flexShrink: 0, width: { xs: "100%", sm: "auto" } }} variant="contained" startIcon={<DownloadIcon />} disabled={!selection.length} onClick={() => exportOrders(selection as string[])}>
-              Exportar seleccion
+              Exportar selección
             </Button>
           )}
         </Stack>

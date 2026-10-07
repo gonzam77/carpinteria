@@ -71,7 +71,7 @@ function TestValuesPanel({
         <Box>
           <Typography fontWeight={800}>Probar con medidas</Typography>
           <Typography variant="body2" color="text.secondary">
-            Cambia las medidas para ver como quedan las piezas. No se guardan: el modulo guarda los valores por defecto de la pestana Medidas.
+            Cambiá las medidas para ver cómo quedan las piezas. No se guardan: el módulo guarda los valores por defecto de la pestaña Medidas.
           </Typography>
         </Box>
         <Button size="small" startIcon={<RestartAltIcon />} onClick={onReset} sx={{ flexShrink: 0 }}>
@@ -201,7 +201,7 @@ function PieceCard({
           />
           <TextField
             size="small"
-            label="Codigo"
+            label="Código"
             value={pieza.codigo}
             onFocus={() => setFocusedName(pieza.codigo)}
             onChange={(event) => onPatch({ codigo: event.target.value.toUpperCase().replace(/\s+/g, "_") })}
@@ -210,7 +210,7 @@ function PieceCard({
               setFocusedName(null);
             }}
             error={Boolean(nameProblem)}
-            helperText={nameProblem ?? "Para usarla en otras formulas"}
+            helperText={nameProblem ?? "Para usarla en otras fórmulas"}
             slotProps={{ htmlInput: { style: { fontFamily: "ui-monospace, Consolas, monospace", fontSize: 13 } } }}
             sx={{ width: { xs: "100%", sm: 170 } }}
           />
@@ -237,7 +237,7 @@ function PieceCard({
               value={pieza.materialFijoId ?? ""}
               onChange={(event) => onPatch({ materialFijoId: event.target.value || null })}
               error={!pieza.materialFijoId}
-              helperText={pieza.materialFijoId ? " " : "Elegi la placa"}
+              helperText={pieza.materialFijoId ? " " : "Elegí la placa"}
               sx={{ width: { xs: "100%", sm: 240 } }}
             >
               {plateOptions(placas, pieza.materialFijoId).map((material) => (
@@ -396,7 +396,7 @@ export function PiecesTab({
         </Alert>
       ))}
       <Typography variant="body2" color="text.secondary">
-        Las formulas usan las claves de las medidas, ESP (espesor de diseno) y otras piezas con CODIGO.largo, CODIGO.ancho y CODIGO.cant. Las referencias
+        Las fórmulas usan las claves de las medidas, ESP (espesor de diseño) y otras piezas con CODIGO.largo, CODIGO.ancho y CODIGO.cant. Las referencias
         entre piezas usan los valores exactos; solo el resultado final se redondea al mm. Los cantos de cada lado se eligen por perfil: L1 y L2 son los
         lados largos; A1 y A2, los anchos.
       </Typography>
@@ -421,7 +421,7 @@ export function PiecesTab({
       ))}
       {!draft.piezas.length && (
         <Paper variant="outlined" sx={{ p: 3, textAlign: "center", borderRadius: "10px" }}>
-          <Typography color="text.secondary">Todavia no hay piezas. Agrega la primera para armar el despiece.</Typography>
+          <Typography color="text.secondary">Todavía no hay piezas. Agregá la primera para armar el despiece.</Typography>
         </Paper>
       )}
       <Stack direction="row">

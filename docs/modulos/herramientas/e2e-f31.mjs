@@ -59,7 +59,7 @@ try {
   check("alta: modulo valido", ok.status === 201 && ok.data.version === 1);
   check("alta: ida y vuelta igual", ok.status === 201 && JSON.stringify(ok.data.piezas) === JSON.stringify(base.piezas));
   const dup = await call("POST", "/modulos", input());
-  check("alta: codigo repetido", dup.status === 400 && dup.data.details?.errores?.some((e) => /Ya existe un modulo/.test(e)));
+  check("alta: codigo repetido", dup.status === 400 && dup.data.details?.errores?.some((e) => /Ya existe un módulo/.test(e)));
   const circular = input({ codigo: "PRUEBA_CIRC", piezas: base.piezas.map((p, i) => (i === 0 ? { ...p, formulaLargo: `${base.piezas[1].codigo}.largo` } : i === 1 ? { ...p, formulaLargo: `${base.piezas[0].codigo}.largo` } : p)) });
   const circularActive = await call("POST", "/modulos", circular);
   check("validacion: activo con referencia circular", circularActive.status === 400 && circularActive.data.code === "MODULE_INVALID" && JSON.stringify(circularActive.data.details).includes("circular"));
@@ -71,7 +71,7 @@ try {
   const twoDefaults = await call("POST", "/modulos", input({ codigo: "PRUEBA_PERF", perfiles: base.perfiles.map((p) => ({ ...p, predeterminado: true })) }));
   check("validacion: dos perfiles predeterminados", twoDefaults.status === 400);
   const reserved = await call("POST", "/modulos", input({ codigo: "PRUEBA_SI", parametros: [...base.parametros, { clave: "SI", etiqueta: "Si", tipo: "MEDIDA", valorDefecto: 1, orden: 9 }] }));
-  check("validacion: nombre reservado", reserved.status === 400 && JSON.stringify(reserved.data.details).includes("funcion"));
+  check("validacion: nombre reservado", reserved.status === 400 && JSON.stringify(reserved.data.details).includes("función"));
   const fixedWithout = await call("POST", "/modulos", input({ codigo: "PRUEBA_FIJO", piezas: base.piezas.map((p, i) => (i === 0 ? { ...p, rol: "FIJO", materialFijoId: null } : p)) }));
   check("validacion: material fijo sin material", fixedWithout.status === 400);
   const badCode = await call("POST", "/modulos", input({ codigo: "minusculas" }));

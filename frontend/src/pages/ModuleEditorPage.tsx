@@ -123,7 +123,7 @@ export function ModuleEditorPage() {
         setTestValues({});
       })
       .catch((error) => {
-        if (!cancelled) setLoadError(catalogErrorMessage(error, "No se pudo cargar el modulo."));
+        if (!cancelled) setLoadError(catalogErrorMessage(error, "No se pudo cargar el módulo."));
       });
     return () => {
       cancelled = true;
@@ -152,7 +152,7 @@ export function ModuleEditorPage() {
     if ((roles.has("ESQUELETO") || roles.has("FRENTE")) && !design.length) {
       general.push(`No hay placas de ${formatMm(espesor)} mm activas: al cargar una solicitud no se va a poder elegir el color de esqueleto ni el de frentes.`);
     }
-    if (roles.has("FONDO") && !fondo) general.push("Hay piezas que van en fondo y no hay material de fondo: elegilo en General, o para todos los modulos en Catalogo de modulos > Configuracion.");
+    if (roles.has("FONDO") && !fondo) general.push("Hay piezas que van en fondo y no hay material de fondo: elegilo en General, o para todos los módulos en Catálogo de módulos > Configuración.");
     const byCode = new Map(input.piezas.map((pieza) => [pieza.codigo, pieza]));
     const pieces: FitPiece[] = evaluation.piezas.flatMap((result) => {
       const pieza = byCode.get(result.codigo);
@@ -188,17 +188,17 @@ export function ModuleEditorPage() {
       if (id) {
         const saved = await updateModule(id, input);
         applyDefinition(saved);
-        setFeedback({ severity: "success", message: `Cambios guardados. "${saved.nombre}" esta en la version ${saved.version}.` });
+        setFeedback({ severity: "success", message: `Cambios guardados. "${saved.nombre}" está en la versión ${saved.version}.` });
       } else {
         const saved = await createModule(input);
         applyDefinition(saved);
         justCreated.current = saved.id;
-        navigate(`/configuracion-modulos/${saved.id}`, { replace: true, state: { notification: `Modulo "${saved.nombre}" creado.` } });
+        navigate(`/configuracion-modulos/${saved.id}`, { replace: true, state: { notification: `Módulo "${saved.nombre}" creado.` } });
       }
     } catch (error) {
       const data = (error as { response?: { data?: { message?: string; details?: { errores?: string[] } } } })?.response?.data;
       setServerErrors(data?.details?.errores ?? []);
-      setFeedback({ severity: "error", message: data?.message ?? "No se pudo guardar el modulo. Revisa la conexion e intenta de nuevo." });
+      setFeedback({ severity: "error", message: data?.message ?? "No se pudo guardar el módulo. Revisá la conexión e intentá de nuevo." });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSaving(false);
@@ -222,7 +222,7 @@ export function ModuleEditorPage() {
       <Stack spacing={2}>
         <Alert severity="error">{loadError}</Alert>
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/configuracion-modulos")} sx={{ alignSelf: "flex-start" }}>
-          Volver al catalogo
+          Volver al catálogo
         </Button>
       </Stack>
     );
@@ -259,7 +259,7 @@ export function ModuleEditorPage() {
       const { [from]: value, ...rest } = values;
       return { ...rest, [to]: value };
     });
-    if (cambiadas) setFeedback({ severity: "info", message: `Se actualizaron ${cambiadas} ${cambiadas === 1 ? "formula que usaba" : "formulas que usaban"} ${from}: ahora usan ${to}.` });
+    if (cambiadas) setFeedback({ severity: "info", message: `Se actualizaron ${cambiadas} ${cambiadas === 1 ? "fórmula que usaba" : "fórmulas que usaban"} ${from}: ahora usan ${to}.` });
   }
 
   function askRemove(kind: "medida" | "pieza", index: number) {
@@ -270,26 +270,26 @@ export function ModuleEditorPage() {
     if (!dependents.length) return remove();
     setConfirm({
       title: `Quitar ${kind === "medida" ? "la medida" : "la pieza"} ${name}`,
-      message: `La ${dependents.length === 1 ? "usa" : "usan"} ${dependents.join(", ")}. Si la quitas, esas formulas van a dar error hasta que las corrijas.`,
+      message: `La ${dependents.length === 1 ? "usa" : "usan"} ${dependents.join(", ")}. Si la quitás, esas fórmulas van a dar error hasta que las corrijas.`,
       confirmLabel: "Quitar igual",
       action: remove
     });
   }
 
   const cantosB = draft.piezas.reduce((total, pieza) => total + pieza.cantos.filter((canto) => canto.perfilOrden === 2).length, 0);
-  const activeErrors = input.activo ? [...(input.piezas.length ? [] : [{ ref: "Piezas", mensaje: "Un modulo activo necesita al menos una pieza" }]), ...defaults.errores] : [];
+  const activeErrors = input.activo ? [...(input.piezas.length ? [] : [{ ref: "Piezas", mensaje: "Un módulo activo necesita al menos una pieza" }]), ...defaults.errores] : [];
 
   return (
     <Stack spacing={2.5}>
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems={{ md: "flex-end" }}>
         <Stack spacing={0.75}>
           <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => guard.requestLeave("/configuracion-modulos")} sx={{ alignSelf: "flex-start" }}>
-            Catalogo de modulos
+            Catálogo de módulos
           </Button>
-          <Typography variant="h4">{id ? draft.nombre.trim() || "Modulo sin nombre" : "Nuevo modulo"}</Typography>
+          <Typography variant="h4">{id ? draft.nombre.trim() || "Módulo sin nombre" : "Nuevo módulo"}</Typography>
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
             <Chip size="small" color={draft.activo ? "success" : "default"} label={draft.activo ? "Activo" : "Inactivo"} />
-            {definition && <Chip size="small" variant="outlined" label={`Version ${definition.version}`} />}
+            {definition && <Chip size="small" variant="outlined" label={`Versión ${definition.version}`} />}
             {definition?.tienePedidos && <Chip size="small" variant="outlined" label="Usado en solicitudes" />}
             {dirty && <Chip size="small" color="warning" label="Cambios sin guardar" />}
           </Stack>
@@ -303,14 +303,14 @@ export function ModuleEditorPage() {
               onClick={() =>
                 setConfirm({
                   title: `Eliminar "${definition.nombre}"`,
-                  message: "Se borra del catalogo con sus medidas, piezas, cantos e imagen. No se puede deshacer. Si solo queres que no aparezca al cargar, desactivalo.",
+                  message: "Se borra del catálogo con sus medidas, piezas, cantos e imagen. No se puede deshacer. Si solo querés que no aparezca al cargar, desactivalo.",
                   confirmLabel: "Eliminar",
                   action: async () => {
                     try {
                       await deleteModule(definition.id);
-                      navigate("/configuracion-modulos", { state: { notification: `Modulo "${definition.nombre}" eliminado.` } });
+                      navigate("/configuracion-modulos", { state: { notification: `Módulo "${definition.nombre}" eliminado.` } });
                     } catch (error) {
-                      setFeedback({ severity: "error", message: catalogErrorMessage(error, "No se pudo eliminar el modulo.") });
+                      setFeedback({ severity: "error", message: catalogErrorMessage(error, "No se pudo eliminar el módulo.") });
                     }
                   }
                 })
@@ -331,7 +331,7 @@ export function ModuleEditorPage() {
             </Button>
           )}
           <Button variant="contained" startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />} disabled={saving || (Boolean(id) && !dirty)} onClick={save}>
-            {id ? "Guardar cambios" : "Crear modulo"}
+            {id ? "Guardar cambios" : "Crear módulo"}
           </Button>
         </Stack>
       </Stack>
@@ -350,19 +350,19 @@ export function ModuleEditorPage() {
       )}
       {activeErrors.length > 0 && (
         <Alert severity="warning">
-          <AlertTitle>Asi no se puede guardar activo</AlertTitle>
+          <AlertTitle>Así no se puede guardar activo</AlertTitle>
           Con los valores por defecto hay {activeErrors.length} {activeErrors.length === 1 ? "error" : "errores"}
           {": "}
           {activeErrors
             .slice(0, 4)
             .map((error) => `${error.ref}: ${error.mensaje}`)
             .join(" · ")}
-          {activeErrors.length > 4 ? " · ..." : ""}. Corregilos o desactiva el modulo para guardarlo como borrador.
+          {activeErrors.length > 4 ? " · ..." : ""}. Corregilos o desactivá el módulo para guardarlo como borrador.
         </Alert>
       )}
 
       <Paper sx={{ borderRadius: "10px", px: 1 }}>
-        <Tabs value={tab} onChange={(_, value: number) => setTab(value)} variant="scrollable" allowScrollButtonsMobile aria-label="Secciones del modulo">
+        <Tabs value={tab} onChange={(_, value: number) => setTab(value)} variant="scrollable" allowScrollButtonsMobile aria-label="Secciones del módulo">
           {TABS.map((label, index) => (
             <Tab
               key={label}
@@ -460,7 +460,7 @@ export function ModuleEditorPage() {
             Hay cambios sin guardar
           </Typography>
           <Button variant="contained" size="small" startIcon={<SaveIcon />} disabled={saving} onClick={save}>
-            {id ? "Guardar cambios" : "Crear modulo"}
+            {id ? "Guardar cambios" : "Crear módulo"}
           </Button>
         </Paper>
       )}
@@ -489,7 +489,7 @@ export function ModuleEditorPage() {
       <Dialog open={guard.leaving} onClose={guard.cancelLeave} maxWidth="xs" fullWidth>
         <DialogTitle>Hay cambios sin guardar</DialogTitle>
         <DialogContent>
-          <DialogContentText>Si salis ahora, se pierden los cambios de este modulo.</DialogContentText>
+          <DialogContentText>Si salís ahora, se pierden los cambios de este módulo.</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={guard.cancelLeave}>Seguir editando</Button>

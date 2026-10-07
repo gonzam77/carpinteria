@@ -493,7 +493,7 @@ export function OrderItemsTable({
                           </TextField>
                         </TableCell>
                         <TableCell align="center">
-                          <Tooltip title={selectedCanto ? "Marcar o quitar todos los lados" : "Seleccione un canto"}>
+                          <Tooltip title={selectedCanto ? "Marcar o quitar todos los lados" : "Seleccioná un canto"}>
                             <span>
                               <Checkbox
                                 checked={allEdgesMatch(row, selectedCantoId)}
@@ -507,7 +507,7 @@ export function OrderItemsTable({
                         </TableCell>
                         {edgeFields.map((config) => (
                           <TableCell key={config.idField} align="center">
-                            <Tooltip title={selectedCanto ? config.label : "Seleccione un canto"}>
+                            <Tooltip title={selectedCanto ? config.label : "Seleccioná un canto"}>
                               <span>
                                 <Checkbox
                                   checked={edgeMatches(row, config, selectedCantoId)}
@@ -543,13 +543,13 @@ export function OrderItemsTable({
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
-              Telefono
+              Teléfono
             </Typography>
             <TextField
               size="small"
               value={clientPhone}
               onChange={(event) => onClientPhoneChange(event.target.value)}
-              placeholder="Telefono de contacto"
+              placeholder="Teléfono de contacto"
               sx={{ minWidth: { md: 240 } }}
             />
           </Box>

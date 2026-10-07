@@ -38,14 +38,14 @@ export function BudgetSettingsPage() {
       manoObraCanto2Mm: String(response.data.manoObraCanto2Mm),
       manoObraPlacaPorPlaca: String(response.data.manoObraPlacaPorPlaca)
     });
-    setMessage("Configuracion de presupuesto actualizada.");
+    setMessage("Configuración de presupuesto actualizada.");
   }
 
   return (
     <Stack spacing={3}>
       <Stack spacing={0.5}>
-        <Typography variant="h4">Configuracion de presupuesto</Typography>
-        <Typography color="text.secondary">Define la mano de obra de pegado de cantos por espesor y el costo fijo por cada placa utilizada.</Typography>
+        <Typography variant="h4">Configuración de presupuesto</Typography>
+        <Typography color="text.secondary">Definí la mano de obra de pegado de cantos por espesor y el costo fijo por cada placa utilizada.</Typography>
       </Stack>
       {message && <Alert severity="success">{message}</Alert>}
       <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "8px" }}>
@@ -91,7 +91,7 @@ export function BudgetSettingsPage() {
             />
           </Stack>
           <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Guardar configuracion
+            Guardar configuración
           </Button>
         </Stack>
       </Paper>

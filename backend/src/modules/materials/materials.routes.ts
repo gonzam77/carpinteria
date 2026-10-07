@@ -122,7 +122,7 @@ async function findCantoPlate(placaMaterialId: string) {
   });
 
   if (!placa) {
-    throw new AppError(400, "Seleccione una placa valida para crear el canto.");
+    throw new AppError(400, "Seleccioná una placa válida para crear el canto.");
   }
 
   return placa;
@@ -370,7 +370,7 @@ materialsRouter.put(
         if (delta !== 0) {
           result = await tx.material.update({ where: { id: updatedMaterial.id }, data: { stockPlacas: { increment: delta } } });
           if ((result.stockPlacas ?? 0) < 0) {
-            throw new AppError(409, "El stock no puede quedar negativo: cambio mientras editabas por las reservas de pedidos. Volve a abrir el material.");
+            throw new AppError(409, "El stock no puede quedar negativo: cambió mientras editabas por las reservas de pedidos. Volvé a abrir el material.");
           }
         }
       }
@@ -430,7 +430,7 @@ materialsRouter.delete(
     const linkedModules = (await catalogLinkCounts([material.id])).get(material.id) ?? 0;
     if (linkedModules > 0) {
       res.json({
-        aviso: `El material se usa en el catalogo de modulos o en solicitudes de modulos (${linkedModules} vinculos). Deja de aparecer en los selectores: revisa los modulos que lo usan.`
+        aviso: `El material se usa en el catálogo de módulos o en solicitudes de módulos (${linkedModules} vínculos). Deja de aparecer en los selectores: revisá los módulos que lo usan.`
       });
       return;
     }
@@ -450,7 +450,7 @@ materialsRouter.delete(
     if (linkedModules > 0) {
       throw new AppError(
         409,
-        `No se puede eliminar definitivamente: el material se usa en el catalogo de modulos o en solicitudes de modulos (${linkedModules} vinculos). Desactivalo en su lugar.`,
+        `No se puede eliminar definitivamente: el material se usa en el catálogo de módulos o en solicitudes de módulos (${linkedModules} vínculos). Desactivalo en su lugar.`,
         { code: "MATERIAL_IN_USE_BY_MODULES" }
       );
     }

@@ -142,7 +142,7 @@ export async function deleteOrderReturningStock(
       where: { id: existing.id, estado: existing.estado, fechaActualizacion: existing.fechaActualizacion }
     });
     if (claimed.count !== 1) {
-      throw new AppError(409, "La solicitud cambio mientras tanto. Recarga la pagina y volve a intentar.", { code: "ORDER_CHANGED" });
+      throw new AppError(409, "La solicitud cambió mientras tanto. Recargá la página y volvé a intentar.", { code: "ORDER_CHANGED" });
     }
     if (hasStockCommitment(existing)) await returnOrderStock(tx as unknown as PrismaClient, existing);
   });

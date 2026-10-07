@@ -74,7 +74,7 @@ function CategoriesDialog({ open, onClose, categories, onChanged }: { open: bool
       await updateModuleCategory(category.id, { nombre: category.nombre, orden: category.orden, activo: category.activo });
       onChanged();
     } catch (saveError) {
-      setError(catalogErrorMessage(saveError, "No se pudo guardar la categoria."));
+      setError(catalogErrorMessage(saveError, "No se pudo guardar la categoría."));
     }
   }
 
@@ -85,13 +85,13 @@ function CategoriesDialog({ open, onClose, categories, onChanged }: { open: bool
       setNewName("");
       onChanged();
     } catch (saveError) {
-      setError(catalogErrorMessage(saveError, "No se pudo crear la categoria."));
+      setError(catalogErrorMessage(saveError, "No se pudo crear la categoría."));
     }
   }
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Categorias de modulos</DialogTitle>
+      <DialogTitle>Categorías de módulos</DialogTitle>
       <DialogContent>
         <Stack spacing={1.5} sx={{ pt: 1 }}>
           {error && <Alert severity="error">{error}</Alert>}
@@ -122,7 +122,7 @@ function CategoriesDialog({ open, onClose, categories, onChanged }: { open: bool
             </Stack>
           ))}
           <Stack direction="row" spacing={1}>
-            <TextField size="small" label="Nueva categoria" value={newName} onChange={(event) => setNewName(event.target.value)} sx={{ flex: 1 }} />
+            <TextField size="small" label="Nueva categoría" value={newName} onChange={(event) => setNewName(event.target.value)} sx={{ flex: 1 }} />
             <Button variant="outlined" startIcon={<AddIcon />} onClick={add} disabled={newName.trim().length < 2}>
               Agregar
             </Button>
@@ -155,7 +155,7 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
         setConfig(cfg);
         setPlacas(materials.data.filter((material) => material.tipo === "PLACA" && (material.activo || material.id === cfg.materialFondoId)));
       })
-      .catch((loadError) => setError(catalogErrorMessage(loadError, "No se pudo cargar la configuracion.")));
+      .catch((loadError) => setError(catalogErrorMessage(loadError, "No se pudo cargar la configuración.")));
   }, [open]);
 
   async function save() {
@@ -165,10 +165,10 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
     try {
       const { id: _id, ...data } = config;
       await updateModulesConfig(data);
-      onSaved("Configuracion del catalogo guardada.");
+      onSaved("Configuración del catálogo guardada.");
       onClose();
     } catch (saveError) {
-      setError(catalogErrorMessage(saveError, "No se pudo guardar la configuracion."));
+      setError(catalogErrorMessage(saveError, "No se pudo guardar la configuración."));
     } finally {
       setSaving(false);
     }
@@ -177,7 +177,7 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
   const days = (value: string) => Math.max(0, Math.round(Number(value) || 0));
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Configuracion del catalogo</DialogTitle>
+      <DialogTitle>Configuración del catálogo</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {error && <Alert severity="error">{error}</Alert>}
@@ -191,7 +191,7 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
                 value={config.materialFondoId ?? ""}
                 onChange={(event) => setConfig({ ...config, materialFondoId: event.target.value || null })}
                 slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
-                helperText="Para las piezas que van en fondo, salvo que el modulo tenga uno propio. Por ejemplo, fibrofacil blanco de 3 mm."
+                helperText="Para las piezas que van en fondo, salvo que el módulo tenga uno propio. Por ejemplo, fibrofácil blanco de 3 mm."
               >
                 <MenuItem value="">Sin configurar</MenuItem>
                 {placas.map((material) => (
@@ -205,14 +205,14 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
                 label="Redondeo de las medidas"
                 value={config.redondeo}
                 onChange={(event) => setConfig({ ...config, redondeo: event.target.value as ModulesConfig["redondeo"] })}
-                helperText="Las formulas pueden dar decimales; la maquina corta en mm enteros. Se redondea solo el resultado final de cada pieza. Pendiente de confirmar con ROMA."
+                helperText="Las fórmulas pueden dar decimales; la máquina corta en mm enteros. Se redondea solo el resultado final de cada pieza. Pendiente de confirmar con ROMA."
               >
-                <MenuItem value="REDONDEAR">Al mm mas cercano (412,5 → 413)</MenuItem>
+                <MenuItem value="REDONDEAR">Al mm más cercano (412,5 → 413)</MenuItem>
                 <MenuItem value="TRUNCAR">Siempre hacia abajo (412,9 → 412)</MenuItem>
               </TextField>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <TextField
-                  label="Dias de entrega por defecto"
+                  label="Días de entrega por defecto"
                   type="number"
                   value={config.diasEntregaDefecto}
                   onChange={(event) => setConfig({ ...config, diasEntregaDefecto: days(event.target.value) })}
@@ -220,7 +220,7 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
                   fullWidth
                 />
                 <TextField
-                  label="Avisar dias antes del vencimiento"
+                  label="Avisar días antes del vencimiento"
                   type="number"
                   value={config.diasAvisoVencimiento}
                   onChange={(event) => setConfig({ ...config, diasAvisoVencimiento: days(event.target.value) })}
@@ -261,7 +261,7 @@ export function ModuleCatalogPage() {
       setCategories(cats);
     } catch (error) {
       setModules([]);
-      setFeedback({ severity: "error", message: catalogErrorMessage(error, "No se pudo cargar el catalogo de modulos.") });
+      setFeedback({ severity: "error", message: catalogErrorMessage(error, "No se pudo cargar el catálogo de módulos.") });
     }
   }, [categoriaId, search, showInactive]);
 
@@ -283,11 +283,11 @@ export function ModuleCatalogPage() {
     setBusyId(module.id);
     try {
       const copy = await duplicateModule(module.id);
-      setFeedback({ severity: "success", message: `Se creo "${copy.nombre}" (${copy.codigo}), inactivo. Revisalo y activalo cuando este listo.` });
+      setFeedback({ severity: "success", message: `Se creó "${copy.nombre}" (${copy.codigo}), inactivo. Revisalo y activalo cuando esté listo.` });
       setShowInactive(true);
       await load();
     } catch (error) {
-      setFeedback({ severity: "error", message: catalogErrorMessage(error, "No se pudo duplicar el modulo.") });
+      setFeedback({ severity: "error", message: catalogErrorMessage(error, "No se pudo duplicar el módulo.") });
     } finally {
       setBusyId(null);
     }
@@ -297,10 +297,10 @@ export function ModuleCatalogPage() {
     setBusyId(module.id);
     try {
       await setModuleActive(module.id, !module.activo);
-      setFeedback({ severity: "success", message: module.activo ? `"${module.nombre}" quedo inactivo: no aparece al cargar solicitudes.` : `"${module.nombre}" quedo activo.` });
+      setFeedback({ severity: "success", message: module.activo ? `"${module.nombre}" quedó inactivo: no aparece al cargar solicitudes.` : `"${module.nombre}" quedó activo.` });
       await load();
     } catch (error) {
-      setFeedback({ severity: "error", message: catalogErrorMessage(error, "No se pudo cambiar el estado del modulo.") });
+      setFeedback({ severity: "error", message: catalogErrorMessage(error, "No se pudo cambiar el estado del módulo.") });
     } finally {
       setBusyId(null);
     }
@@ -310,18 +310,18 @@ export function ModuleCatalogPage() {
     <Stack spacing={3}>
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems={{ md: "flex-end" }}>
         <Stack spacing={0.5}>
-          <Typography variant="h4">Catalogo de modulos</Typography>
-          <Typography color="text.secondary">Los muebles que se pueden pedir a medida: medidas, piezas, formulas y cantos de cada uno.</Typography>
+          <Typography variant="h4">Catálogo de módulos</Typography>
+          <Typography color="text.secondary">Los muebles que se pueden pedir a medida: medidas, piezas, fórmulas y cantos de cada uno.</Typography>
         </Stack>
         <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
           <Button variant="outlined" startIcon={<SettingsOutlinedIcon />} onClick={() => setConfigOpen(true)}>
-            Configuracion
+            Configuración
           </Button>
           <Button variant="outlined" startIcon={<CategoryOutlinedIcon />} onClick={() => setCategoriesOpen(true)}>
-            Categorias
+            Categorías
           </Button>
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate("/configuracion-modulos/nuevo")}>
-            Nuevo modulo
+            Nuevo módulo
           </Button>
         </Stack>
       </Stack>
@@ -333,14 +333,14 @@ export function ModuleCatalogPage() {
       )}
 
       <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
-        <Metric label="Modulos" value={metrics.modulos} />
-        <Metric label="Piezas con formula" value={metrics.piezas} />
+        <Metric label="Módulos" value={metrics.modulos} />
+        <Metric label="Piezas con fórmula" value={metrics.piezas} />
         <Metric label="Observaciones para revisar" value={metrics.observaciones} />
       </Stack>
 
       <Paper sx={{ p: 2, borderRadius: "10px" }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }}>
-          <TextField select size="small" label="Categoria" value={categoriaId} onChange={(event) => setCategoriaId(event.target.value)} sx={{ minWidth: 220 }}>
+          <TextField select size="small" label="Categoría" value={categoriaId} onChange={(event) => setCategoriaId(event.target.value)} sx={{ minWidth: 220 }}>
             <MenuItem value="">Todas</MenuItem>
             {categories.map((category) => (
               <MenuItem key={category.id} value={category.id}>
@@ -348,7 +348,7 @@ export function ModuleCatalogPage() {
               </MenuItem>
             ))}
           </TextField>
-          <TextField size="small" label="Buscar por nombre o codigo" value={search} onChange={(event) => setSearch(event.target.value)} sx={{ flex: 1 }} />
+          <TextField size="small" label="Buscar por nombre o código" value={search} onChange={(event) => setSearch(event.target.value)} sx={{ flex: 1 }} />
           <FormControlLabel control={<Switch checked={showInactive} onChange={(event) => setShowInactive(event.target.checked)} />} label="Mostrar inactivos" />
         </Stack>
       </Paper>
@@ -386,7 +386,7 @@ export function ModuleCatalogPage() {
       {modules !== null && modules.length === 0 && (
         <Paper variant="outlined" sx={{ p: 4, textAlign: "center", borderRadius: "10px" }}>
           <Typography color="text.secondary" gutterBottom>
-            {search || categoriaId ? "No hay modulos que coincidan con el filtro." : "Todavia no hay modulos en el catalogo."}
+            {search || categoriaId ? "No hay módulos que coincidan con el filtro." : "Todavía no hay módulos en el catálogo."}
           </Typography>
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate("/configuracion-modulos/nuevo")}>
             Cargar el primero

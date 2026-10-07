@@ -40,7 +40,7 @@ export type DeliveryStatus = {
   dias: number | null;
 };
 
-const dayWord = (value: number) => (value === 1 ? "dia" : "dias");
+const dayWord = (value: number) => (value === 1 ? "día" : "días");
 const faltan = (value: number) => (value === 1 ? "Falta" : "Faltan");
 
 /**
@@ -49,7 +49,7 @@ const faltan = (value: number) => (value === 1 ? "Falta" : "Faltan");
  * Una rechazada no tiene plazo, y una sin fecha tampoco (gris).
  */
 export function deliveryStatus(order: Pick<ModuleOrderListItem, "estado" | "fechaEntrega">, today: string, diasAviso: number): DeliveryStatus {
-  if (order.estado === "ENTREGADA") return { kind: "entregada", label: "Entregada", description: "Ya se entrego", dias: null };
+  if (order.estado === "ENTREGADA") return { kind: "entregada", label: "Entregada", description: "Ya se entregó", dias: null };
   if (order.estado === "RECHAZADA") return { kind: "sin-plazo", label: "Sin plazo", description: "Rechazada: no tiene plazo de entrega", dias: null };
   if (!order.fechaEntrega) return { kind: "sin-plazo", label: "Sin fecha", description: "No tiene fecha de entrega", dias: null };
   const dias = daysBetween(today, order.fechaEntrega);
@@ -161,7 +161,7 @@ export function exportFileName(selected: Pick<ModuleOrderListItem, "numero">[]) 
 
 /** Lo que impide exportar una seleccion, o null. */
 export function exportProblem(count: number) {
-  if (count > MAX_EXPORT) return `Se pueden exportar hasta ${MAX_EXPORT} solicitudes por vez: elegi menos.`;
+  if (count > MAX_EXPORT) return `Se pueden exportar hasta ${MAX_EXPORT} solicitudes por vez: elegí menos.`;
   return null;
 }
 
@@ -171,9 +171,9 @@ export function exportProblem(count: number) {
  */
 export async function exportErrorMessage(error: unknown) {
   const failure = error as { isAxiosError?: boolean; response?: { status?: number; data?: unknown } } | null;
-  if (failure?.isAxiosError && !failure.response) return "Se corto la conexion. Revisa la conexion e intenta de nuevo.";
+  if (failure?.isAxiosError && !failure.response) return "Se cortó la conexión. Revisá la conexión e intentá de nuevo.";
   const response = failure?.response;
-  if (response?.status === 414) return "Son demasiadas solicitudes para exportar juntas: elegi menos.";
+  if (response?.status === 414) return "Son demasiadas solicitudes para exportar juntas: elegí menos.";
   if (typeof Blob !== "undefined" && response?.data instanceof Blob) {
     try {
       const parsed = JSON.parse(await response.data.text()) as { message?: unknown };
@@ -182,7 +182,7 @@ export async function exportErrorMessage(error: unknown) {
       // Un cuerpo que no es JSON (por ejemplo, el HTML de un proxy): queda el mensaje general.
     }
   }
-  return "No se pudo exportar. Intenta de nuevo en un momento.";
+  return "No se pudo exportar. Intentá de nuevo en un momento.";
 }
 
 // ---------------------------------------------------------------- aviso de resultados (lectores de pantalla)
@@ -195,7 +195,7 @@ const solicitudes = (count: number) => (count === 1 ? "1 solicitud" : `${count} 
  */
 export function resultsAnnouncement(input: { count: number | null; active: boolean; emptyCatalog: boolean; blocked: boolean }) {
   if (input.blocked || input.count === null) return "";
-  if (input.emptyCatalog) return "Todavia no hay solicitudes de modulos";
+  if (input.emptyCatalog) return "Todavía no hay solicitudes de módulos";
   if (!input.active) return `Sin filtros: ${solicitudes(input.count)}`;
   if (input.count === 0) return "No hay solicitudes que coincidan con los filtros";
   return input.count === 1 ? "1 solicitud coincide con los filtros" : `${input.count} solicitudes coinciden con los filtros`;

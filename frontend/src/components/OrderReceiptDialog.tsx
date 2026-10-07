@@ -119,7 +119,7 @@ export function OrderReceiptDialog({
       `
         <div class="card">
           <h1 style="margin:0;">${companySettings.nombre}</h1>
-          <div class="muted">Telefono: ${companySettings.telefono || "-"}</div>
+          <div class="muted">Teléfono: ${companySettings.telefono || "-"}</div>
           <div class="muted">Email: ${companySettings.email || "-"}</div>
           <div class="section">
             <strong>Constancia de solicitud</strong><br />
@@ -132,10 +132,10 @@ export function OrderReceiptDialog({
             <span class="muted">Placas: ${formatMoney(printableOrder.costoPlacas)} - Mano de obra de cortes: ${formatMoney(printableCuttingLaborCost)} - Material canto: ${formatMoney(printableOrder.costoMaterialCantos)} - Pegado canto: ${formatMoney(printableOrder.costoPegadoCantos)} - Total cantos (material + pegado): ${formatMoney(printableOrder.costoCantos)} (${printableOrder.metrosCanto.toFixed(2)} m)</span>
           </div>
           <div class="section">
-            <strong>Entrega estimada:</strong> "Observacion: la entrega puede demorar algunos dias adicionales segun disponibilidad del material al momento de procesar la solicitud."
+            <strong>Entrega estimada:</strong> "Observación: la entrega puede demorar algunos días adicionales según disponibilidad del material al momento de procesar la solicitud."
           </div>
           <div class="section">
-            <strong>Condicion de pago:</strong> El pago se realizara en el momento de la entrega.
+            <strong>Condición de pago:</strong> El pago se realizará en el momento de la entrega.
           </div>
         </div>
       `
@@ -166,7 +166,7 @@ export function OrderReceiptDialog({
                 <Typography variant="h3" sx={{ fontWeight: 900, lineHeight: 1 }}>
                   {companySettings.nombre}
                 </Typography>
-                <Typography color="text.secondary">Telefono: {companySettings.telefono || "-"}</Typography>
+                <Typography color="text.secondary">Teléfono: {companySettings.telefono || "-"}</Typography>
                 <Typography color="text.secondary">Email: {companySettings.email || "-"}</Typography>
               </Box>
               <Paper variant="outlined" sx={{ p: 2, minWidth: { md: 280 }, borderRadius: "12px" }}>
@@ -220,15 +220,15 @@ export function OrderReceiptDialog({
                     Entrega estimada
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-                    Observacion: la entrega puede demorar algunos dias adicionales segun disponibilidad del material al momento de procesar la solicitud.
+                    Observación: la entrega puede demorar algunos días adicionales según disponibilidad del material al momento de procesar la solicitud.
                   </Typography>
                 </Paper>
 
                 <Paper variant="outlined" sx={{ p: 2, borderRadius: "12px" }}>
                   <Typography variant="h6" sx={{ mb: 1 }}>
-                    Condicion de pago
+                    Condición de pago
                   </Typography>
-                  <Typography>El pago se realizara en el momento de la entrega.</Typography>
+                  <Typography>El pago se realizará en el momento de la entrega.</Typography>
                 </Paper>
               </Stack>
             </Box>

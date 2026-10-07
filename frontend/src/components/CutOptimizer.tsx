@@ -80,15 +80,15 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
   const withoutPlate = preparedRows.filter((row) => !plateIndex.has(row.materialId));
   if (withoutPlate.length) {
     const names = [...new Set(withoutPlate.map((row) => row.material || "sin placa"))].join(", ");
-    errores.push(`Hay ${withoutPlate.length} pieza(s) con una placa que no esta disponible (inactiva o eliminada): ${names}. Elegi otra placa para poder guardar la solicitud.`);
+    errores.push(`Hay ${withoutPlate.length} pieza(s) con una placa que no está disponible (inactiva o eliminada): ${names}. Elegí otra placa para poder guardar la solicitud.`);
   }
   const withoutCanto = preparedRows.filter((row) => EDGE_ID_FIELDS.some((field) => row[field] && !cantoIds.has(row[field] as string)));
   if (withoutCanto.length) {
-    errores.push(`Hay ${withoutCanto.length} pieza(s) con un canto que no esta disponible (inactivo o eliminado). Elegi otro canto para poder guardar la solicitud.`);
+    errores.push(`Hay ${withoutCanto.length} pieza(s) con un canto que no está disponible (inactivo o eliminado). Elegí otro canto para poder guardar la solicitud.`);
   }
   const notWhole = preparedRows.filter((row) => [row.largo, row.ancho, row.cantidad].some((value) => !Number.isInteger(Number(value)) || Number(value) <= 0));
   if (notWhole.length) {
-    errores.push("El largo, el ancho y la cantidad de cada pieza tienen que ser numeros enteros mayores a 0.");
+    errores.push("El largo, el ancho y la cantidad de cada pieza tienen que ser números enteros mayores a 0.");
   }
 
   const estimate = computeOrderEstimate({
@@ -425,8 +425,8 @@ function CutResults({ calculation, settings, hideCosts = false }: { calculation:
               Plano de cortes estimativo
             </Typography>
             <Typography variant="body2" sx={{ mt: 0.35 }}>
-              Este plano tiene un fin informativo y se utiliza para estimar la cantidad de tableros y los metros de tapacantos necesarios en cada optimizacion de cortes.
-              La optimizacion final puede variar al ingresar la solicitud en la maquina de cortes.
+              Este plano tiene un fin informativo y se utiliza para estimar la cantidad de tableros y los metros de tapacantos necesarios en cada optimización de cortes.
+              La optimización final puede variar al ingresar la solicitud en la máquina de cortes.
             </Typography>
           </Box>
         </Alert>
@@ -477,7 +477,7 @@ function CutResults({ calculation, settings, hideCosts = false }: { calculation:
                     pointerEvents: "none"
                   }}
                 >
-                  Desliza para ver
+                  Deslizá para ver
                   <KeyboardArrowRightIcon sx={{ fontSize: 16 }} />
                 </Box>
               )}
@@ -551,8 +551,8 @@ export function CutOptimizer({
         setSettings(null);
         setSettingsError(
           axios.isAxiosError(error) && error.response?.status === 401
-            ? "Tu sesion expiro. Volve a ingresar para calcular el plano de cortes."
-            : "No se pudo traer la configuracion del optimizador (sierra y perfilado). Revisa la conexion e intenta de nuevo."
+            ? "Tu sesión expiró. Volvé a ingresar para calcular el plano de cortes."
+            : "No se pudo traer la configuración del optimizador (sierra y perfilado). Revisá la conexión e intentá de nuevo."
         );
       });
 
@@ -569,8 +569,8 @@ export function CutOptimizer({
         // problema. Casi siempre es la sesion.
         setBudgetSettingsError(
           axios.isAxiosError(error) && error.response?.status === 401
-            ? "Tu sesion expiro. Volve a ingresar para calcular el presupuesto."
-            : "No se pudo contactar al servidor para traer las tarifas de mano de obra. Revisa la conexion e intenta de nuevo."
+            ? "Tu sesión expiró. Volvé a ingresar para calcular el presupuesto."
+            : "No se pudo contactar al servidor para traer las tarifas de mano de obra. Revisá la conexión e intentá de nuevo."
         );
       });
   }, []);
@@ -618,7 +618,7 @@ export function CutOptimizer({
         budgetSettings.manoObraCanto1Mm === 0 &&
         budgetSettings.manoObraCanto2Mm === 0 && (
           <Alert severity="warning">
-            Todas las tarifas de mano de obra estan configuradas en $0. Actualizalas desde Configuracion &gt; Presupuesto.
+            Todas las tarifas de mano de obra están configuradas en $0. Actualizalas desde Configuración &gt; Presupuesto.
           </Alert>
         )}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
@@ -636,7 +636,7 @@ export function CutOptimizer({
         </Button>
         {results.length > 0 && (
           <Button type="button" variant="outlined" startIcon={<CalculateIcon />} onClick={() => calculate(variant + 1)} aria-disabled={calculating || undefined} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Recalcular distribucion
+            Recalcular distribución
           </Button>
         )}
       </Stack>

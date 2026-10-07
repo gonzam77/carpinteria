@@ -175,7 +175,7 @@ export function OrderMaterialsDialog({ order, open, onClose }: { order: Order | 
             <>
               {summary.origen === "RECALCULADO" && (
                 <Alert severity="info">
-                  Esta solicitud se guardo antes de que se registrara el detalle de su constancia: las placas se recalcularon con los valores de hoy y pueden no coincidir con la constancia.
+                  Esta solicitud se guardó antes de que se registrara el detalle de su constancia: las placas se recalcularon con los valores de hoy y pueden no coincidir con la constancia.
                 </Alert>
               )}
               <Box>

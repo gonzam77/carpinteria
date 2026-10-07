@@ -42,17 +42,17 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
   }
 
   const isGoogleMode = mode === "google";
-  const title = isGoogleMode ? "Bienvenido a ROMA" : "Panel de administracion";
+  const title = isGoogleMode ? "Bienvenido a ROMA" : "Panel de administración";
   const subtitle = isGoogleMode
-    ? "Accede con tu cuenta de Google para cargar solicitudes, seguir pedidos y trabajar mas rapido."
-    : "Ingresa con tu usuario administrador para gestionar materiales, usuarios y configuraciones del sistema.";
+    ? "Accedé con tu cuenta de Google para cargar solicitudes, seguir pedidos y trabajar más rápido."
+    : "Ingresá con tu usuario administrador para gestionar materiales, usuarios y configuraciones del sistema.";
   const featureItems = isGoogleMode
     ? [
         { icon: <TaskAltIcon fontSize="small" />, text: "Carga de cortes y seguimiento simple" },
         { icon: <SecurityIcon fontSize="small" />, text: "Acceso seguro con tu cuenta de Google" }
       ]
     : [
-        { icon: <AdminPanelSettingsIcon fontSize="small" />, text: "Control total del panel y la operacion" },
+        { icon: <AdminPanelSettingsIcon fontSize="small" />, text: "Control total del panel y la operación" },
         { icon: <SecurityIcon fontSize="small" />, text: "Ingreso reservado para administradores" }
       ];
 
@@ -158,8 +158,8 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
               </Typography>
               <Typography sx={{ color: "rgba(255,255,255,0.84)", lineHeight: 1.6 }}>
                 {isGoogleMode
-                  ? "Desde aqui puedes ingresar rapido, revisar tus solicitudes y mantener ordenado cada pedido en produccion."
-                  : "Utiliza este acceso para administrar el flujo operativo, revisar el estado general y mantener actualizada la informacion clave del sistema."}
+                  ? "Desde aquí podés ingresar rápido, revisar tus solicitudes y mantener ordenado cada pedido en producción."
+                  : "Utilizá este acceso para administrar el flujo operativo, revisar el estado general y mantener actualizada la información clave del sistema."}
               </Typography>
             </Paper>
           </Stack>
@@ -173,8 +173,8 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
               </Typography>
               <Typography color="text.secondary" sx={{ lineHeight: 1.65 }}>
                 {isGoogleMode
-                  ? "Usa tu cuenta habilitada para empezar a cargar y seguir solicitudes de forma simple."
-                  : "Accede con tus credenciales para administrar pedidos, materiales, usuarios y configuraciones."}
+                  ? "Usá tu cuenta habilitada para empezar a cargar y seguir solicitudes de forma simple."
+                  : "Accedé con tus credenciales para administrar pedidos, materiales, usuarios y configuraciones."}
               </Typography>
             </Stack>
 
@@ -195,10 +195,10 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
                       <Box sx={{ width: 38, height: 38, borderRadius: "12px", display: "grid", placeItems: "center", bgcolor: alpha("#f28c28", 0.12), color: "#cf6d14" }}>
                         <GoogleIcon fontSize="small" />
                       </Box>
-                      <Typography sx={{ fontWeight: 800 }}>Acceso rapido y seguro</Typography>
+                      <Typography sx={{ fontWeight: 800 }}>Acceso rápido y seguro</Typography>
                     </Stack>
                     <Typography color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                      Inicia sesion con Google para continuar directamente con tus solicitudes y el seguimiento de cada trabajo.
+                      Iniciá sesión con Google para continuar directamente con tus solicitudes y el seguimiento de cada trabajo.
                     </Typography>
                   </Box>
                   <Box sx={{ width: "100%", display: "flex", justifyContent: "center", "& > div": { width: "100% !important" }, "& iframe": { width: "100% !important" } }}>
@@ -209,7 +209,7 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
                           await loginWithGoogle(response.credential);
                           navigate("/solicitar");
                         } catch (err) {
-                          setError(getErrorMessage(err, "Google inicio sesion correctamente, pero la API rechazo el acceso"));
+                          setError(getErrorMessage(err, "Google inició sesión correctamente, pero la API rechazó el acceso"));
                         }
                       }}
                       onError={() => setError("No se pudo ingresar con Google")}
@@ -218,7 +218,7 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
                   </Box>
                 </Stack>
               ) : (
-                <Alert severity="warning">Configura VITE_GOOGLE_CLIENT_ID para habilitar Google Login.</Alert>
+                <Alert severity="warning">Configurá VITE_GOOGLE_CLIENT_ID para habilitar Google Login.</Alert>
               )
             ) : (
               <Stack spacing={2.25} component="form" onSubmit={handleSubmit}>
@@ -237,7 +237,7 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
                     <Typography sx={{ fontWeight: 800 }}>Acceso operativo</Typography>
                   </Stack>
                   <Typography color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                    Desde este ingreso puedes gestionar el panel completo, revisar estados y mantener la operacion ordenada.
+                    Desde este ingreso podés gestionar el panel completo, revisar estados y mantener la operación ordenada.
                   </Typography>
                 </Box>
                 <TextField label="Email" type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} fullWidth />

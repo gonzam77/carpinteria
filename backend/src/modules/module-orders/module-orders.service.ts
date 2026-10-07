@@ -17,7 +17,7 @@ import { compareForList } from "./module-order-list.js";
 import { moduleBarcode, planModuleOrder, type PlanModule } from "./module-order-plan.js";
 import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderLine } from "./module-orders.schemas.js";
 
-export { moduleBarcode, moduleRemark } from "./module-order-plan.js";
+export { moduleBarcode } from "./module-order-plan.js";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 type ModuleWithRelations = Prisma.ModuloGetPayload<{ include: typeof MODULE_INCLUDE }>;
@@ -165,7 +165,7 @@ function serializeModuleOrder(order: ModuleOrderWithRelations) {
 
 export async function getModuleOrder(tx: Tx, id: string) {
   const order = await tx.pedido.findFirst({ where: { id, tipo: TipoPedido.MODULOS }, include: MODULE_ORDER_INCLUDE });
-  if (!order) throw new AppError(404, "Solicitud de modulos no encontrada.");
+  if (!order) throw new AppError(404, "Solicitud de módulos no encontrada.");
   return serializeModuleOrder(order);
 }
 
@@ -174,9 +174,9 @@ function assertSameVersions(expected: Array<{ posicion: number; moduloId: string
   const changed = expected.filter((item) => item.version !== undefined && current.get(item.moduloId) !== item.version);
   if (!changed.length) return;
   const problems = changed.map(
-    (item) => `El modulo ${item.posicion} (${item.nombreModulo}) cambio en el catalogo (version ${item.version} -> ${current.get(item.moduloId) ?? "borrado"}).`
+    (item) => `El módulo ${item.posicion} (${item.nombreModulo}) cambió en el catálogo (versión ${item.version} -> ${current.get(item.moduloId) ?? "borrado"}).`
   );
-  throw new AppError(409, `${problems.join(" ")} Volve a revisar la vista previa antes de crear la solicitud.`, {
+  throw new AppError(409, `${problems.join(" ")} Volvé a revisar la vista previa antes de crear la solicitud.`, {
     code: "MODULE_CHANGED",
     details: {
       errores: problems,
@@ -226,7 +226,7 @@ export async function findModuleOrderByAltaKey(prisma: PrismaClient, claveAlta: 
   const existing = await prisma.pedido.findUnique({ where: { claveAlta }, select: { id: true, usuarioId: true, tipo: true } });
   if (!existing) return null;
   if (existing.usuarioId !== userId || existing.tipo !== TipoPedido.MODULOS) {
-    throw new AppError(409, "Esa clave de alta ya se uso en otra solicitud. Volve a tocar Crear solicitud.", { code: "ALTA_KEY_CONFLICT" });
+    throw new AppError(409, "Esa clave de alta ya se usó en otra solicitud. Volvé a tocar Crear solicitud.", { code: "ALTA_KEY_CONFLICT" });
   }
   return getModuleOrder(prisma, existing.id);
 }

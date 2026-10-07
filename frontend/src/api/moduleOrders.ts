@@ -45,8 +45,8 @@ export function moduleOrderError(error: unknown, fallback: string, writes = fals
   if (axios.isAxiosError(error) && !error.response) {
     return {
       message: writes
-        ? "Se corto la conexion antes de recibir la respuesta. Revisa si la solicitud quedo cargada antes de volver a crearla."
-        : "Se corto la conexion. Revisa la conexion e intenta de nuevo.",
+        ? "Se cortó la conexión antes de recibir la respuesta. Revisá si la solicitud quedó cargada antes de volver a crearla."
+        : "Se cortó la conexión. Revisá la conexión e intentá de nuevo.",
       items: [],
       noResponse: true
     };

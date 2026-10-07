@@ -28,7 +28,7 @@ export function detectImageMime(buffer: Buffer): ImageMime | null {
 
 /** Ruta del archivo de una imagen guardada. Rechaza cualquier nombre que no sea uno generado aca. */
 export function moduleImagePath(archivo: string) {
-  if (!FILE_NAME.test(archivo)) throw new AppError(500, "Nombre de archivo de imagen no valido.");
+  if (!FILE_NAME.test(archivo)) throw new AppError(500, "Nombre de archivo de imagen no válido.");
   return join(imageDir(), archivo);
 }
 
@@ -38,12 +38,12 @@ export function moduleImagePath(archivo: string) {
  * que no existe.
  */
 export async function storeModuleImage(prisma: PrismaClient, moduloId: string, buffer: Buffer) {
-  if (!buffer.length) throw new AppError(400, "La imagen esta vacia.");
+  if (!buffer.length) throw new AppError(400, "La imagen está vacía.");
   if (buffer.length > MAX_IMAGE_BYTES) {
     throw new AppError(413, "La imagen supera 1 MB. Achicala o comprimila antes de subirla.", { code: "IMAGE_TOO_LARGE" });
   }
   const mime = detectImageMime(buffer);
-  if (!mime) throw new AppError(415, "Solo se aceptan imagenes JPEG, PNG o WebP.", { code: "IMAGE_TYPE_NOT_ALLOWED" });
+  if (!mime) throw new AppError(415, "Solo se aceptan imágenes JPEG, PNG o WebP.", { code: "IMAGE_TYPE_NOT_ALLOWED" });
 
   const hash = createHash("sha256").update(buffer).digest("hex").slice(0, 16);
   const archivo = `${moduloId}-${hash}.${EXTENSION[mime]}`;

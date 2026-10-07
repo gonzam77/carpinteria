@@ -180,7 +180,7 @@ ordersRouter.put(
     });
     if (!existing) throw new AppError(404, "Pedido no encontrado");
     if (existing.tipo === TipoPedido.MODULOS) {
-      throw new AppError(400, "Esta solicitud es de modulos a medida: editala desde Modulos a medida.", { code: "ORDER_IS_MODULES" });
+      throw new AppError(400, "Esta solicitud es de módulos a medida: editala desde Módulos a medida.", { code: "ORDER_IS_MODULES" });
     }
     if (!canEditOrder(existing.estado)) {
       throw new AppError(403, "No se pueden editar pedidos en proceso, terminados o entregados.");
@@ -232,7 +232,7 @@ ordersRouter.patch(
         data: { estado: schema.estado }
       });
       if (claimed.count !== 1) {
-        throw new AppError(409, "La solicitud cambio mientras tanto. Recarga la pagina y volve a intentar.", { code: "ORDER_CHANGED" });
+        throw new AppError(409, "La solicitud cambió mientras tanto. Recargá la página y volvé a intentar.", { code: "ORDER_CHANGED" });
       }
 
       // El stock depende solo de si el estado nuevo lo compromete (en proceso, terminado, entregado) y de si

@@ -10,7 +10,7 @@ export function errorMiddleware(error: any, _req: any, res: any, _next: any) {
   }
 
   if (error?.name === "ZodError") {
-    return res.status(400).json({ message: "Datos invalidos", errors: error.errors });
+    return res.status(400).json({ message: "Datos inválidos", errors: error.errors });
   }
 
   console.error(error);

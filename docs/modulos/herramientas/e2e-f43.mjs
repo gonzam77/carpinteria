@@ -393,7 +393,7 @@ await prisma.$disconnect();
   const texto = (data) => JSON.stringify(data);
   await intento("fecha de entrega anterior a hoy: 400", { ...datos({ fechaEntrega: enDias(-1) }), modulos: lines }, 400, (data) => texto(data).includes("no puede ser anterior a hoy"));
   await intento("hoy si se puede", { ...datos({ fechaEntrega: hoy }), modulos: [placardLine] }, 201);
-  await intento("email invalido: 400", { ...datos({ emailContacto: "no-es-un-email" }), modulos: lines }, 400, (data) => texto(data).includes("El email no es valido"));
+  await intento("email invalido: 400", { ...datos({ emailContacto: "no-es-un-email" }), modulos: lines }, 400, (data) => texto(data).includes("El email no es válido"));
   await intento("cliente demasiado corto: 400", { ...datos({ cliente: "A" }), modulos: lines }, 400, (data) => texto(data).includes("al menos 2"));
   await intento("un campo desconocido: 400", { ...datos(), fechaEntraga: enDias(3), modulos: lines }, 400, (data) => texto(data).includes("no se reconocen"));
   await intento(
@@ -403,7 +403,7 @@ await prisma.$disconnect();
     (data) => data.code === "MODULE_CHANGED" && data.details.modulos[0].posicion === 2
   );
   await intento("sin modulos: 400", { ...datos(), modulos: [] }, 400);
-  await intento("clave de alta mal formada: 400", { ...datos(), claveAlta: "no-es-uuid", modulos: [placardLine] }, 400, (data) => texto(data).includes("La clave de alta no es valida"));
+  await intento("clave de alta mal formada: 400", { ...datos(), claveAlta: "no-es-uuid", modulos: [placardLine] }, 400, (data) => texto(data).includes("La clave de alta no es válida"));
   const prohibido = await call("POST", "/pedidos-modulos", { ...datos(), modulos: lines }, carpintero);
   check("un carpintero no accede (403)", prohibido.status === 403 && (await call("GET", "/pedidos-modulos", undefined, carpintero)).status === 403);
 } catch (error) {

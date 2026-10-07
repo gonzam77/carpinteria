@@ -32,7 +32,7 @@ test("la clave de alta es opcional y tiene que ser un UUID (DECISIONES 40)", () 
   for (const value of ["", "123", "3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0", 42, null]) {
     const parsed = claveAlta.safeParse(value);
     assert.equal(parsed.success, false, String(value));
-    assert.match(JSON.stringify(parsed.error?.issues), /La clave de alta no es valida/);
+    assert.match(JSON.stringify(parsed.error?.issues), /La clave de alta no es válida/);
   }
   assert.equal(moduleOrderFiltersSchema.safeParse({ clave: "3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b" }).success, true);
   assert.equal(moduleOrderFiltersSchema.safeParse({ clave: "x" }).success, false);

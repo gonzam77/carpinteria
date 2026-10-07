@@ -33,7 +33,7 @@ export function AppLayout() {
 
   // Solo ADMIN (spec §14.2): el listado, y desde ahi el asistente y el detalle.
   const modulesNavItem = {
-    label: "Modulos a medida",
+    label: "Módulos a medida",
     to: "/modulos",
     icon: <KitchenIcon />,
     match: (pathname: string) => pathname === "/modulos" || pathname.startsWith("/modulos/")
@@ -64,7 +64,7 @@ export function AppLayout() {
             { label: "Presupuesto", to: "/configuracion-presupuesto", icon: <RequestQuoteIcon />, match: (pathname: string) => pathname === "/configuracion-presupuesto" },
             { label: "Materiales", to: "/materiales", icon: <Inventory2Icon />, match: (pathname: string) => pathname === "/materiales" },
             {
-              label: "Catalogo de modulos",
+              label: "Catálogo de módulos",
               to: "/configuracion-modulos",
               icon: <ViewModuleIcon />,
               match: (pathname: string) => pathname.startsWith("/configuracion-modulos")
@@ -153,7 +153,7 @@ export function AppLayout() {
               <ListItemIcon>
                 <SettingsIcon />
               </ListItemIcon>
-              <ListItemText primary="Configuracion" />
+              <ListItemText primary="Configuración" />
               {settingsOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
             </ListItemButton>
 
@@ -194,7 +194,7 @@ export function AppLayout() {
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "transparent" }}>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, ml: { md: `${drawerWidth}px` }, width: { xs: "100%", md: `calc(100% - ${drawerWidth}px)` } }}>
         <Toolbar sx={{ minHeight: { xs: 64, sm: 72 }, px: { xs: 1.5, sm: 2.5, md: 3 }, gap: { xs: 1, sm: 1.5 } }}>
-          <IconButton color="inherit" aria-label="Abrir menu" edge="start" onClick={() => setMobileOpen(true)} sx={{ display: { md: "none" }, flexShrink: 0 }}>
+          <IconButton color="inherit" aria-label="Abrir menú" edge="start" onClick={() => setMobileOpen(true)} sx={{ display: { md: "none" }, flexShrink: 0 }}>
             <MenuIcon />
           </IconButton>
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>

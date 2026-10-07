@@ -59,19 +59,19 @@ export function SessionExpiredDialog() {
       <DialogTitle>
         <Stack direction="row" spacing={1.25} alignItems="center">
           <LockClockIcon color="warning" />
-          <span>Tu sesion expiro</span>
+          <span>Tu sesión expiró</span>
         </Stack>
       </DialogTitle>
 
       <DialogContent>
         <Stack spacing={2}>
           <Alert severity="info">
-            Volve a ingresar para continuar. <strong>No vas a perder lo que estabas cargando</strong>: apenas entres, la accion se reintenta sola.
+            Volvé a ingresar para continuar. <strong>No vas a perder lo que estabas cargando</strong>: apenas entres, la acción se reintenta sola.
           </Alert>
 
           {user && (
             <Typography color="text.secondary" variant="body2">
-              Sesion de {user.nombre} {user.apellido} ({user.email}). Si entra otra persona, la accion
+              Sesión de {user.nombre} {user.apellido} ({user.email}). Si entra otra persona, la acción
               pendiente se descarta en vez de guardarse a su nombre.
             </Typography>
           )}
@@ -87,7 +87,7 @@ export function SessionExpiredDialog() {
                   try {
                     await loginWithGoogle(response.credential);
                   } catch (err) {
-                    setError(describe(err, "Google respondio, pero la API rechazo el acceso"));
+                    setError(describe(err, "Google respondió, pero la API rechazó el acceso"));
                   }
                 }}
                 onError={() => setError("No se pudo ingresar con Google")}

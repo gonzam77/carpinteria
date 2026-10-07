@@ -65,9 +65,6 @@ export function moduleBarcode(numero: number | null, posicion: number, orden: nu
   return `M${numero ?? "---"}-${pad2(posicion)}-${pad2(orden)}`;
 }
 
-/** Remark de las filas de un modulo: lo lee el operario en la maquina. */
-export const moduleRemark = (posicion: number, nombreModulo: string) => `Modulo ${posicion} · ${nombreModulo}`;
-
 /**
  * Material de las piezas de fondo de un modulo de la solicitud (DECISIONES 32): el elegido en la solicitud, si no el
  * del modulo y si no el de la configuracion del catalogo.
@@ -96,8 +93,8 @@ export function planModuleOrder(input: PlanInput): Plan {
   // 1. Modulos
   const unavailable = lines.flatMap((line, index) => {
     const module = modules.get(line.moduloId);
-    if (!module) return [`El modulo ${index + 1} no existe en el catalogo.`];
-    if (!module.activo) return [`El modulo ${index + 1} (${module.nombre}) esta inactivo: no se puede pedir.`];
+    if (!module) return [`El módulo ${index + 1} no existe en el catálogo.`];
+    if (!module.activo) return [`El módulo ${index + 1} (${module.nombre}) está inactivo: no se puede pedir.`];
     return [];
   });
   if (unavailable.length) return failure("MODULE_NOT_AVAILABLE", unavailable);
@@ -113,9 +110,9 @@ export function planModuleOrder(input: PlanInput): Plan {
     const [first] = withErrors;
     return failure(
       "MODULE_FORMULA_ERRORS",
-      withErrors.flatMap((item) => item.errores.map((error: ModuleError) => `Modulo ${item.posicion} (${item.module.nombre}), ${error.ref}: ${error.mensaje}.`)),
+      withErrors.flatMap((item) => item.errores.map((error: ModuleError) => `Módulo ${item.posicion} (${item.module.nombre}), ${error.ref}: ${error.mensaje}.`)),
       { posicion: first.posicion, modulos: withErrors.map((item) => ({ posicion: item.posicion, nombre: item.module.nombre, errores: item.errores })) },
-      withErrors.length === 1 ? `El modulo ${first.posicion} (${first.module.nombre}) tiene errores.` : `Hay ${withErrors.length} modulos con errores.`
+      withErrors.length === 1 ? `El módulo ${first.posicion} (${first.module.nombre}) tiene errores.` : `Hay ${withErrors.length} módulos con errores.`
     );
   }
 
@@ -124,14 +121,14 @@ export function planModuleOrder(input: PlanInput): Plan {
   const checkPlate = (id: string | null, where: string, rotulo: string, espesorDisenoMm?: number) => {
     const plate = id ? materials.get(id) : undefined;
     if (!plate || plate.tipo !== "PLACA") materialProblems.push(`${where}: ${rotulo} no es una placa del sistema.`);
-    else if (!plate.activo) materialProblems.push(`${where}: ${rotulo} "${plate.nombre.trim()}" esta inactivo.`);
+    else if (!plate.activo) materialProblems.push(`${where}: ${rotulo} "${plate.nombre.trim()}" está inactivo.`);
     else if (espesorDisenoMm !== undefined && !sameThickness(plate.espesorMm, espesorDisenoMm)) {
       // Las formulas suponen el espesor de diseno (spec §8.6): con otra placa el mueble sale mal.
-      materialProblems.push(`${where}: ${rotulo} "${plate.nombre.trim()}" es de ${mm(plate.espesorMm)} mm y el modulo esta pensado para placas de ${mm(espesorDisenoMm)} mm.`);
+      materialProblems.push(`${where}: ${rotulo} "${plate.nombre.trim()}" es de ${mm(plate.espesorMm)} mm y el módulo está pensado para placas de ${mm(espesorDisenoMm)} mm.`);
     }
   };
   for (const { posicion, line, module, piezas } of built) {
-    const where = `Modulo ${posicion} (${module.nombre})`;
+    const where = `Módulo ${posicion} (${module.nombre})`;
     checkPlate(line.colorEsqueletoId, where, "el color de esqueleto", module.espesorDisenoMm);
     checkPlate(line.colorFrentesId, where, "el color de frentes", module.espesorDisenoMm);
     checkPlate(line.colorCantoId, where, "el color de los cantos");
@@ -139,7 +136,7 @@ export function planModuleOrder(input: PlanInput): Plan {
     if (line.materialFondoId) checkPlate(line.materialFondoId, where, "el material de fondo elegido");
     else if (piezas.some((pieza) => pieza.rol === "FONDO")) {
       const fondoId = fondoIdFor(line, module, config);
-      if (!fondoId) materialProblems.push(`${where}: tiene piezas de fondo y no hay material de fondo. Configuralo en Catalogo de modulos > Configuracion.`);
+      if (!fondoId) materialProblems.push(`${where}: tiene piezas de fondo y no hay material de fondo. Configuralo en Catálogo de módulos > Configuración.`);
       else checkPlate(fondoId, where, "el material de fondo");
     }
     for (const pieza of piezas.filter((item) => item.rol === "FIJO")) checkPlate(pieza.materialFijoId, where, `el material fijo de "${pieza.nombre}"`);
@@ -184,7 +181,8 @@ export function planModuleOrder(input: PlanInput): Plan {
         cantoAncho2: Boolean(edgeIds.cantoAncho2Id),
         permiteRotar: pieza.permiteRotar,
         codigoBarraCentro: null,
-        remark: moduleRemark(posicion, module.nombre),
+        // Sin Remark por ahora: el Excel de solicitudes no lo usa (DECISIONES 20).
+        remark: null,
         numeroCliente: null,
         nombreCliente: null,
         nombreProducto: pieza.nombre,
@@ -214,8 +212,8 @@ export function planModuleOrder(input: PlanInput): Plan {
       const girada = !row.permiteRotar && !findPiecesThatDoNotFit([{ ...row, permiteRotar: true }], usable.width, usable.height).length;
       // Pieza y placa en el mismo orden, largo × ancho: el largo de la pieza va contra el alto de la placa (DECISIONES 0.7).
       fitProblems.push(
-        `"${piezas[index].nombre}" del Modulo ${posicion} (${row.largo} × ${row.ancho} mm) no entra en la placa ${plate.nombre.trim()} (${usable.height} × ${usable.width} mm utiles)${
-          girada ? ". Girada entraria: si la veta lo permite, marcala para rotar en el catalogo" : ""
+        `"${piezas[index].nombre}" del Módulo ${posicion} (${row.largo} × ${row.ancho} mm) no entra en la placa ${plate.nombre.trim()} (${usable.height} × ${usable.width} mm útiles)${
+          girada ? ". Girada entraría: si la veta lo permite, marcala para rotar en el catálogo" : ""
         }.`
       );
     });

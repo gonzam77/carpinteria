@@ -4,14 +4,14 @@ import { z } from "zod";
 import { LadoCanto, RolPiezaModulo, TipoParametroModulo } from "../../generated/prisma/client.js";
 import { MAX_FORMULA_LENGTH } from "../../shared/moduleFormula.js";
 
-const clave = z.string().trim().regex(/^[A-Z][A-Z0-9_]*$/, "Usa mayusculas, numeros y _, empezando con una letra (ej. ANCHO, LUZ_ABAJO)");
-const formula = z.string().max(MAX_FORMULA_LENGTH, `La formula supera los ${MAX_FORMULA_LENGTH} caracteres`);
+const clave = z.string().trim().regex(/^[A-Z][A-Z0-9_]*$/, "Usá mayúsculas, números y _, empezando con una letra (ej. ANCHO, LUZ_ABAJO)");
+const formula = z.string().max(MAX_FORMULA_LENGTH, `La fórmula supera los ${MAX_FORMULA_LENGTH} caracteres`);
 const espesorCanto = z.union([z.literal(0.45), z.literal(1), z.literal(2)]);
 const optionalText = z.string().trim().optional().nullable();
 
 export const parametroSchema = z.object({
   clave,
-  etiqueta: z.string().trim().min(1, "Completa la etiqueta"),
+  etiqueta: z.string().trim().min(1, "Completá la etiqueta"),
   tipo: z.nativeEnum(TipoParametroModulo),
   valorDefecto: z.number().nullable().optional().default(null),
   minimo: z.number().nullable().optional().default(null),
@@ -24,14 +24,14 @@ export const parametroSchema = z.object({
 
 export const perfilSchema = z.object({
   orden: z.union([z.literal(1), z.literal(2)]),
-  nombre: z.string().trim().min(1, "Completa el nombre del perfil"),
+  nombre: z.string().trim().min(1, "Completá el nombre del perfil"),
   descripcion: optionalText,
   predeterminado: z.boolean()
 });
 
 export const piezaSchema = z.object({
   codigo: clave,
-  nombre: z.string().trim().min(1, "Completa el nombre de la pieza"),
+  nombre: z.string().trim().min(1, "Completá el nombre de la pieza"),
   rol: z.nativeEnum(RolPiezaModulo),
   materialFijoId: z.string().uuid().nullable().optional().default(null),
   formulaLargo: formula,
@@ -48,14 +48,14 @@ export const piezaSchema = z.object({
 export const moduloSchema = z.object({
   codigo: clave,
   nombre: z.string().trim().min(2, "El nombre necesita al menos 2 caracteres"),
-  categoriaId: z.string().uuid("Elegi una categoria"),
+  categoriaId: z.string().uuid("Elegí una categoría"),
   descripcion: optionalText,
   activo: z.boolean(),
   espesorDisenoMm: z.coerce.number().positive(),
   materialFondoId: z.string().uuid().nullable().optional().default(null),
   observaciones: optionalText,
-  parametros: z.array(parametroSchema).min(1, "El modulo necesita al menos una medida"),
-  perfiles: z.array(perfilSchema).min(1, "El modulo necesita al menos un perfil de canto").max(2, "Un modulo tiene como maximo dos perfiles de canto"),
+  parametros: z.array(parametroSchema).min(1, "El módulo necesita al menos una medida"),
+  perfiles: z.array(perfilSchema).min(1, "El módulo necesita al menos un perfil de canto").max(2, "Un módulo tiene como máximo dos perfiles de canto"),
   piezas: z.array(piezaSchema),
   herrajes: z.array(z.object({ herrajeId: z.string().uuid(), formulaCantidad: formula, orden: z.number().int() })).optional().default([])
 });

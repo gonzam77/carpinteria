@@ -225,7 +225,7 @@ test("validacion en vivo con el armador compartido: medidas, piezas y colores", 
   assert.equal(vacia.ok, false);
 
   const fuera = validateUnit({ ...newUnit(definition(), DEFAULTS, MATERIALS), valores: { ANCHO: "2500", ALTO: "720" } }, definition(), "REDONDEAR");
-  assert.deepEqual(fuera.porMedida.ANCHO, ["Maximo 2400"]);
+  assert.deepEqual(fuera.porMedida.ANCHO, ["Máximo 2400"]);
 
   const coma = validateUnit({ ...newUnit(definition(), DEFAULTS, MATERIALS), valores: { ANCHO: "800,5", ALTO: "720" } }, definition(), "REDONDEAR");
   assert.equal(coma.ok, true, "acepta la coma decimal");
@@ -236,7 +236,7 @@ test("validacion en vivo con el armador compartido: medidas, piezas y colores", 
 
   const roto = definition({ piezas: definition().piezas.map((pieza) => (pieza.codigo === "PUERTA" ? { ...pieza, formulaAncho: "ANCHO / 0" } : pieza)) });
   const errorPieza = validateUnit(newUnit(roto, DEFAULTS, MATERIALS), roto, "REDONDEAR");
-  assert.deepEqual(errorPieza.generales, ["PUERTA: Division por cero"]);
+  assert.deepEqual(errorPieza.generales, ["PUERTA: División por cero"]);
 });
 
 test("pedido para la API: solo los campos de la spec, medidas numericas y lo opcional solo si se eligio", () => {
@@ -319,17 +319,17 @@ test("medidas mal escritas: se dice que tienen y no se leen mal", () => {
   assert.equal(measureTextError(" 800 "), null);
   assert.equal(measureTextError("800,5"), null);
   assert.equal(measureTextError("800.5"), null);
-  assert.equal(measureTextError("1.200"), "Escribi la medida sin punto de miles (por ejemplo 1200)");
-  assert.equal(measureTextError("12.000"), "Escribi la medida sin punto de miles (por ejemplo 12000)");
-  for (const text of ["720mm", "72O", "0x10", "1e3", "- 5", "Infinity", "800,", ",5"]) assert.equal(measureTextError(text), "Escribi solo el numero, en mm", text);
+  assert.equal(measureTextError("1.200"), "Escribí la medida sin punto de miles (por ejemplo 1200)");
+  assert.equal(measureTextError("12.000"), "Escribí la medida sin punto de miles (por ejemplo 12000)");
+  for (const text of ["720mm", "72O", "0x10", "1e3", "- 5", "Infinity", "800,", ",5"]) assert.equal(measureTextError(text), "Escribí solo el número, en mm", text);
   assert.equal(measureTextError("-5"), null, "el signo lo deciden el minimo y el maximo");
   assert.equal(measureTextError("0.333"), null, "un cero adelante no es punto de miles");
-  assert.equal(measureTextError("-1.200"), "Escribi la medida sin punto de miles (por ejemplo -1200)");
+  assert.equal(measureTextError("-1.200"), "Escribí la medida sin punto de miles (por ejemplo -1200)");
   assert.deepEqual(numericValues({ valores: { A: "800,5", B: "1.200", C: "0x10", D: "" } }), { A: 800.5, B: Number.NaN, C: Number.NaN, D: Number.NaN });
 
   const unit = { ...newUnit(definition(), DEFAULTS, MATERIALS), valores: { ANCHO: "1.200", ALTO: "720mm" } };
   const validation = validateUnit(unit, definition(), "REDONDEAR");
-  assert.deepEqual(validation.porMedida, { ANCHO: ["Escribi la medida sin punto de miles (por ejemplo 1200)"], ALTO: ["Escribi solo el numero, en mm"] });
+  assert.deepEqual(validation.porMedida, { ANCHO: ["Escribí la medida sin punto de miles (por ejemplo 1200)"], ALTO: ["Escribí solo el número, en mm"] });
   assert.equal(validation.ok, false);
 });
 
@@ -433,15 +433,15 @@ test("borrador: que cuenta como contenido, antiguedad y validacion del cliente",
   assert.equal(hasWizardContent({ ...empty, selecciones: [{ moduloId: "bajo", cantidad: 1 }] }), true);
   assert.equal(hasWizardContent(null), false);
   const now = Date.parse("2026-10-05T12:00:00Z");
-  assert.equal(describeAge(now - 30_000, now), "recien");
+  assert.equal(describeAge(now - 30_000, now), "recién");
   assert.equal(describeAge(now - 5 * 60_000, now), "hace 5 min");
   assert.equal(describeAge(now - 3 * 3_600_000, now), "hace 3 h");
-  assert.equal(describeAge(now - 50 * 3_600_000, now), "hace 2 dias");
+  assert.equal(describeAge(now - 50 * 3_600_000, now), "hace 2 días");
   assert.deepEqual(validateClient({ cliente: "Ana", numeroContacto: "1234567", emailContacto: "", fechaEntrega: "2026-10-05" }, "2026-10-05"), []);
   assert.deepEqual(validateClient({ cliente: "A", numeroContacto: "123", emailContacto: "x@", fechaEntrega: "2026-10-04" }, "2026-10-05"), [
-    "Completa el cliente (al menos 2 caracteres).",
-    "Completa el telefono (al menos 6 caracteres).",
-    "El email no es valido.",
+    "Completá el cliente (al menos 2 caracteres).",
+    "Completá el teléfono (al menos 6 caracteres).",
+    "El email no es válido.",
     "La fecha de entrega no puede ser anterior a hoy."
   ]);
 });
@@ -482,18 +482,18 @@ test("borrador recuperado contra el catalogo de hoy: modulos, colores, fecha y p
 test("paso 1: las mismas reglas que el alta (email como zod, fecha que existe, largos maximos)", () => {
   const base = { cliente: "Ana", numeroContacto: "1234567", emailContacto: "", fechaEntrega: "2026-10-05" };
   for (const email of ["ana@gmail.com.", "ana@gmail.com,", "ana..perez@gmail.com", "ana@gmail.c", "josé@gmail.com", "ana@gmail..com", ".ana@gmail.com", "ana@ñandu.com.ar"]) {
-    assert.deepEqual(validateClient({ ...base, emailContacto: email }, "2026-10-05"), ["El email no es valido."], email);
+    assert.deepEqual(validateClient({ ...base, emailContacto: email }, "2026-10-05"), ["El email no es válido."], email);
   }
   for (const email of ["ana@gmail.com", " ana.perez+roma@empresa.com.ar ", "a_b-c@sub.dominio.ar"]) {
     assert.deepEqual(validateClient({ ...base, emailContacto: email }, "2026-10-05"), [], email);
   }
-  assert.deepEqual(validateClient({ ...base, fechaEntrega: "2026-02-30" }, "2026-01-01"), ["Elegi la fecha de entrega."]);
+  assert.deepEqual(validateClient({ ...base, fechaEntrega: "2026-02-30" }, "2026-01-01"), ["Elegí la fecha de entrega."]);
   assert.equal(isValidDay("2028-02-29"), true);
   assert.equal(isValidDay("2027-02-29"), false);
   assert.equal(isValidDay("2026-13-01"), false);
   assert.deepEqual(validateClient({ ...base, direccionEntrega: "x".repeat(301), observaciones: "y".repeat(1001) }, "2026-10-05"), [
-    "La direccion de entrega tiene como maximo 300 caracteres.",
-    "La referencia del trabajo tiene como maximo 1000 caracteres."
+    "La dirección de entrega tiene como máximo 300 caracteres.",
+    "La referencia del trabajo tiene como máximo 1000 caracteres."
   ]);
   assert.deepEqual(validateClient({ ...base, direccionEntrega: ` ${"x".repeat(300)} `, observaciones: "y".repeat(1000) }, "2026-10-05"), [], "cuenta sin los espacios de los bordes, como el alta");
 });
@@ -545,13 +545,13 @@ test("materiales como el servidor: fondo del catalogo, fondo elegido y materiale
   const unit = newUnit(definition(), DEFAULTS, MATERIALS);
   assert.equal(validateUnit(unit, definition(), "REDONDEAR", { activePlateIds: activas, configFondoId: "fibro" }).ok, true);
   const sinFondo = validateUnit(unit, definition(), "REDONDEAR", { activePlateIds: activas, configFondoId: null });
-  assert.deepEqual(sinFondo.faltantes, ["el material de fondo (el catalogo no tiene uno configurado)"]);
-  assert.equal(sinFondo.fondo, "el catalogo no tiene uno configurado");
+  assert.deepEqual(sinFondo.faltantes, ["el material de fondo (el catálogo no tiene uno configurado)"]);
+  assert.equal(sinFondo.fondo, "el catálogo no tiene uno configurado");
   assert.equal(validateUnit(unit, definition(), "REDONDEAR", { activePlateIds: activas, configFondoId: "fibro" }).fondo, null);
-  assert.deepEqual(validateUnit(unit, definition(), "REDONDEAR", { activePlateIds: activas, configFondoId: "viejo" }).faltantes, ["el material de fondo (el del catalogo esta inactivo)"]);
+  assert.deepEqual(validateUnit(unit, definition(), "REDONDEAR", { activePlateIds: activas, configFondoId: "viejo" }).faltantes, ["el material de fondo (el del catálogo está inactivo)"]);
   assert.equal(validateUnit(unit, definition({ materialFondoId: "fino" }), "REDONDEAR", { activePlateIds: activas, configFondoId: null }).ok, true, "el fondo del modulo alcanza");
   assert.equal(validateUnit({ ...unit, materialFondoId: "fino" }, definition(), "REDONDEAR", { activePlateIds: activas, configFondoId: null }).ok, true, "el elegido alcanza");
-  assert.deepEqual(validateUnit({ ...unit, materialFondoId: "viejo" }, definition(), "REDONDEAR", { activePlateIds: activas }).faltantes, ["el material de fondo (el elegido ya no esta activo)"]);
+  assert.deepEqual(validateUnit({ ...unit, materialFondoId: "viejo" }, definition(), "REDONDEAR", { activePlateIds: activas }).faltantes, ["el material de fondo (el elegido ya no está activo)"]);
   const sinPiezaFondo = definition({ piezas: definition().piezas.filter((pieza) => pieza.rol !== "FONDO") });
   assert.equal(validateUnit(unit, sinPiezaFondo, "REDONDEAR", { activePlateIds: activas, configFondoId: null }).ok, true, "sin piezas de fondo no hace falta");
   const conFijo = definition({
@@ -559,7 +559,7 @@ test("materiales como el servidor: fondo del catalogo, fondo elegido y materiale
   });
   const fijo = validateUnit(unit, conFijo, "REDONDEAR", { activePlateIds: activas, configFondoId: "fibro" });
   assert.equal(fijo.ok, false);
-  assert.deepEqual(fijo.generales, ["TAPA: su material fijo no esta activo. Revisalo en el catalogo de modulos."]);
+  assert.deepEqual(fijo.generales, ["TAPA: su material fijo no está activo. Revisalo en el catálogo de módulos."]);
 });
 
 test("opciones y valores por defecto del catalogo: no se toman como texto mal escrito", () => {

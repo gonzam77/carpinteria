@@ -85,12 +85,12 @@ function SummaryPanel({
         {busy && <LinearProgress aria-label="Calculando" />}
         {!preview ? (
           <Typography variant="body2" color="text.secondary">
-            {status === "error" ? "No se pudo calcular: revisa el aviso del despiece. Cuando se corrige, el resumen se calcula de nuevo." : "Calculando placas y presupuesto..."}
+            {status === "error" ? "No se pudo calcular: revisá el aviso del despiece. Cuando se corrige, el resumen se calcula de nuevo." : "Calculando placas y presupuesto..."}
           </Typography>
         ) : (
           <Box sx={{ opacity: busy ? 0.5 : 1, transition: "opacity 120ms" }}>
             <Stack spacing={1.25}>
-              {line("Modulos", String(units))}
+              {line("Módulos", String(units))}
               {line("Piezas", String(piezas))}
               <Divider />
               <Typography variant="caption" fontWeight={800} color="text.secondary">
@@ -163,7 +163,7 @@ function ModuleDespieceCard({
     <Paper component="section" aria-labelledby={titleId} sx={{ borderRadius: "10px", overflow: "hidden" }}>
       <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1} sx={{ px: 2, py: 1.25, bgcolor: "primary.main", color: "primary.contrastText" }}>
         <Typography id={titleId} component="h3" fontWeight={900} fontSize="1rem">
-          Modulo {posicion} · {definition.nombre}
+          Módulo {posicion} · {definition.nombre}
         </Typography>
         <Typography variant="body2" sx={{ opacity: 0.9 }}>
           {rows.length} {rows.length === 1 ? "pieza" : "piezas"}
@@ -217,7 +217,7 @@ function ModuleDespieceCard({
                   <TableCell>
                     <EdgeToggleButtons
                       edges={edges}
-                      context={`${nombre} del modulo ${posicion}`}
+                      context={`${nombre} del módulo ${posicion}`}
                       editedSides={sides}
                       available={available}
                       disabled={locked}
@@ -294,7 +294,7 @@ export function ReviewStep({
   // Un renglon de estado de alto fijo: aparecer y desaparecer avisos arriba de las tablas las correria mientras se tocan cantos.
   const statusText =
     status === "loading"
-      ? "Calculando placas y presupuesto con el optimizador. Con muchos modulos puede tardar unos segundos."
+      ? "Calculando placas y presupuesto con el optimizador. Con muchos módulos puede tardar unos segundos."
       : status === "stale"
         ? "Cambiaste cantos: en un momento se recalcula el resumen."
         : status === "ready"
@@ -366,7 +366,7 @@ export function ReviewStep({
                   Plano de cortes
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Como se acomodan las piezas en las placas. Los importes son los del resumen.
+                  Cómo se acomodan las piezas en las placas. Los importes son los del resumen.
                 </Typography>
               </Box>
             </AccordionSummary>

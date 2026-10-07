@@ -50,7 +50,7 @@ export function ModulePickerStep({
     <Stack spacing={2}>
       <Paper sx={{ p: 2, borderRadius: "10px" }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }}>
-          <TextField select size="small" label="Categoria" value={categoriaId} onChange={(event) => setCategoriaId(event.target.value)} sx={{ minWidth: 220 }}>
+          <TextField select size="small" label="Categoría" value={categoriaId} onChange={(event) => setCategoriaId(event.target.value)} sx={{ minWidth: 220 }}>
             <MenuItem value="">Todas</MenuItem>
             {visibleCategories.map((category) => (
               <MenuItem key={category.id} value={category.id}>
@@ -58,8 +58,8 @@ export function ModulePickerStep({
               </MenuItem>
             ))}
           </TextField>
-          <TextField size="small" label="Buscar por nombre o codigo" value={search} onChange={(event) => setSearch(event.target.value)} sx={{ flex: 1 }} />
-          <Chip color={total ? "primary" : "default"} label={`${total} ${total === 1 ? "modulo elegido" : "modulos elegidos"}`} sx={{ fontWeight: 800 }} />
+          <TextField size="small" label="Buscar por nombre o código" value={search} onChange={(event) => setSearch(event.target.value)} sx={{ flex: 1 }} />
+          <Chip color={total ? "primary" : "default"} label={`${total} ${total === 1 ? "módulo elegido" : "módulos elegidos"}`} sx={{ fontWeight: 800 }} />
         </Stack>
       </Paper>
 
@@ -99,7 +99,7 @@ export function ModulePickerStep({
                       </Typography>
                       <IconButton
                         size="small"
-                        aria-label={`Una mas de ${module.nombre}`}
+                        aria-label={`Una más de ${module.nombre}`}
                         disabled={total >= MAX_MODULOS}
                         onClick={() => setCantidad(module.id, cantidad + 1)}
                       >
@@ -115,7 +115,7 @@ export function ModulePickerStep({
       </Box>
       {!filtered.length && (
         <Paper variant="outlined" sx={{ p: 4, textAlign: "center", borderRadius: "10px" }}>
-          <Typography color="text.secondary">{modules.length ? "No hay modulos que coincidan con el filtro." : "Todavia no hay modulos activos en el catalogo."}</Typography>
+          <Typography color="text.secondary">{modules.length ? "No hay módulos que coincidan con el filtro." : "Todavía no hay módulos activos en el catálogo."}</Typography>
         </Paper>
       )}
     </Stack>

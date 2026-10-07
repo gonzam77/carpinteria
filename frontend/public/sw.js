@@ -3,7 +3,7 @@ self.addEventListener("push", (event) => {
 
   const payload = event.data.json();
   event.waitUntil(
-    self.registration.showNotification(payload.title ?? "Nueva notificacion", {
+    self.registration.showNotification(payload.title ?? "Nueva notificación", {
       body: payload.body ?? "",
       data: { url: payload.url ?? "/" }
     })

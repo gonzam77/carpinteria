@@ -275,8 +275,8 @@ export function formulaSuggestions(draft: Pick<ModuleDraft, "parametros" | "piez
       .flatMap((pieza) =>
         (["largo", "ancho", "cant"] as const).map((acc) => ({ insert: `${pieza.codigo}.${acc}`, label: `${pieza.codigo}.${acc}`, detail: pieza.nombre || "Pieza" }))
       ),
-    ...FORMULA_CONSTANTS.map((constante) => ({ insert: constante, label: constante, detail: "Espesor de diseno" })),
-    ...FORMULA_FUNCTIONS.map((fn) => ({ insert: `${fn}(`, label: `${fn}(...)`, detail: "Funcion" }))
+    ...FORMULA_CONSTANTS.map((constante) => ({ insert: constante, label: constante, detail: "Espesor de diseño" })),
+    ...FORMULA_FUNCTIONS.map((fn) => ({ insert: `${fn}(`, label: `${fn}(...)`, detail: "Función" }))
   ];
 }
 
@@ -306,12 +306,12 @@ export function parseOptionsText(src: string): { opciones: ParamOption[]; error:
   for (const [index, line] of src.split(/\r?\n/).entries()) {
     if (!line.trim()) continue;
     const match = /^\s*(-?\d+(?:\.\d+)?)\s*[=:]\s*(.+?)\s*$/.exec(line);
-    if (!match) return { opciones, error: `Linea ${index + 1}: escribila como "1 = Descripcion"` };
+    if (!match) return { opciones, error: `Línea ${index + 1}: escribila como "1 = Descripción"` };
     const valor = Number(match[1]);
-    if (opciones.some((option) => option.valor === valor)) return { opciones, error: `El valor ${valor} esta repetido` };
+    if (opciones.some((option) => option.valor === valor)) return { opciones, error: `El valor ${valor} está repetido` };
     opciones.push({ valor, etiqueta: match[2] });
   }
-  return { opciones, error: opciones.length ? null : "Agrega al menos una opcion" };
+  return { opciones, error: opciones.length ? null : "Agregá al menos una opción" };
 }
 
 /** Medida en mm para mostrar: sin separador de miles (1200, no 1.200) y con coma decimal. */
@@ -319,7 +319,7 @@ export const formatMm = (value: number) => value.toLocaleString("es-AR", { useGr
 
 function plateNames(nombres: string[]) {
   const clean = nombres.map((nombre) => nombre.trim());
-  return clean.length <= 4 ? clean.join(", ") : `${clean.slice(0, 3).join(", ")} y ${clean.length - 3} placas mas`;
+  return clean.length <= 4 ? clean.join(", ") : `${clean.slice(0, 3).join(", ")} y ${clean.length - 3} placas más`;
 }
 
 // ---------------------------------------------------------------- encaje en la placa
@@ -350,8 +350,8 @@ export function fitWarnings(pieces: FitPiece[], settings: EstimateOptimizerSetti
       .filter((group) => !fits(row, group))
       .map((group) => ({
         codigo: piece.codigo,
-        mensaje: `"${piece.nombre}" (${piece.largo} × ${piece.ancho} mm) no entra en ${plateNames(group.nombres)} (${group.height} × ${group.width} mm utiles)${
-          !piece.permiteRotar && fits({ ...row, permiteRotar: true }, group) ? ". Girada entraria: si la veta lo permite, marcala para rotar" : ""
+        mensaje: `"${piece.nombre}" (${piece.largo} × ${piece.ancho} mm) no entra en ${plateNames(group.nombres)} (${group.height} × ${group.width} mm útiles)${
+          !piece.permiteRotar && fits({ ...row, permiteRotar: true }, group) ? ". Girada entraría: si la veta lo permite, marcala para rotar" : ""
         }.`
       }));
   });

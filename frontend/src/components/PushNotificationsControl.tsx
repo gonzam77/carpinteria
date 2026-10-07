@@ -50,7 +50,7 @@ export function PushNotificationsControl() {
 
   async function enableNotifications() {
     if (!config?.enabled) {
-      setMessage("Configura primero las claves VAPID en el backend.");
+      setMessage("Configurá primero las claves VAPID en el backend.");
       return;
     }
 
@@ -59,7 +59,7 @@ export function PushNotificationsControl() {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        setMessage("El navegador no concedio permisos para mostrar notificaciones.");
+        setMessage("El navegador no concedió permisos para mostrar notificaciones.");
         return;
       }
 
@@ -176,14 +176,14 @@ export function PushNotificationsControl() {
                   <Typography variant="body2" color="text.secondary">
                     {subscribed
                       ? "Este dispositivo ya recibe avisos cuando ingresan nuevas solicitudes."
-                      : "Activa Web Push para recibir avisos apenas entre una nueva solicitud."}
+                      : "Activá Web Push para recibir avisos apenas entre una nueva solicitud."}
                   </Typography>
                 </Box>
               </Stack>
             </Paper>
 
             {message && <Alert severity={subscribed ? "success" : "info"}>{message}</Alert>}
-            {!supported && <Alert severity="info">Este navegador o contexto no soporta Web Push. Necesitas HTTPS o localhost y un navegador compatible.</Alert>}
+            {!supported && <Alert severity="info">Este navegador o contexto no soporta Web Push. Necesitás HTTPS o localhost y un navegador compatible.</Alert>}
             {supported && !config?.enabled && <Alert severity="warning">Faltan configurar las claves VAPID del backend para habilitar las notificaciones push.</Alert>}
 
             <Box sx={{ display: "grid", gap: 1.25, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>

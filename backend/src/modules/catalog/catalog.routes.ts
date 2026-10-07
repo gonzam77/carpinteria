@@ -39,7 +39,7 @@ catalogRouter.post(
   "/categorias",
   asyncHandler(async (req: any, res: any) => {
     const data = categoriaSchema.parse(req.body);
-    if (await prisma.categoriaModulo.findUnique({ where: { nombre: data.nombre } })) throw new AppError(409, "Ya existe una categoria con ese nombre.");
+    if (await prisma.categoriaModulo.findUnique({ where: { nombre: data.nombre } })) throw new AppError(409, "Ya existe una categoría con ese nombre.");
     const categoria = await prisma.categoriaModulo.create({ data });
     await prisma.auditoria.create({ data: { usuarioId: req.user.id, accion: "CREAR_CATEGORIA_MODULO", entidad: "CategoriaModulo", entidadId: categoria.id } });
     res.status(201).json(categoria);
@@ -51,7 +51,7 @@ catalogRouter.put(
   asyncHandler(async (req: any, res: any) => {
     const data = categoriaSchema.parse(req.body);
     const sameName = await prisma.categoriaModulo.findUnique({ where: { nombre: data.nombre } });
-    if (sameName && sameName.id !== req.params.id) throw new AppError(409, "Ya existe una categoria con ese nombre.");
+    if (sameName && sameName.id !== req.params.id) throw new AppError(409, "Ya existe una categoría con ese nombre.");
     const categoria = await prisma.categoriaModulo.update({ where: { id: req.params.id }, data });
     await prisma.auditoria.create({ data: { usuarioId: req.user.id, accion: "EDITAR_CATEGORIA_MODULO", entidad: "CategoriaModulo", entidadId: categoria.id } });
     res.json(categoria);
@@ -199,7 +199,7 @@ catalogRouter.put(
     }),
   asyncHandler(async (req: any, res: any) => {
     await loadModule(prisma, req.params.id);
-    if (!Buffer.isBuffer(req.body)) throw new AppError(415, "Solo se aceptan imagenes JPEG, PNG o WebP.", { code: "IMAGE_TYPE_NOT_ALLOWED" });
+    if (!Buffer.isBuffer(req.body)) throw new AppError(415, "Solo se aceptan imágenes JPEG, PNG o WebP.", { code: "IMAGE_TYPE_NOT_ALLOWED" });
     const image = await storeModuleImage(prisma, req.params.id, req.body);
     await prisma.auditoria.create({ data: { usuarioId: req.user.id, accion: "CAMBIAR_IMAGEN_MODULO", entidad: "Modulo", entidadId: req.params.id } });
     res.json({ mime: image.mime, tamanoBytes: image.tamanoBytes, fechaActualizacion: image.fechaActualizacion });
@@ -210,14 +210,14 @@ catalogRouter.get(
   "/:id/imagen",
   asyncHandler(async (req: any, res: any) => {
     const image = await prisma.moduloImagen.findUnique({ where: { moduloId: req.params.id } });
-    if (!image) throw new AppError(404, "El modulo no tiene imagen.");
+    if (!image) throw new AppError(404, "El módulo no tiene imagen.");
     // El nombre del archivo lleva el hash del contenido: sirve de ETag.
     const etag = `"${image.archivo}"`;
     res.set({ ETag: etag, "Cache-Control": "private, max-age=86400" });
     if (req.headers["if-none-match"] === etag) return res.status(304).end();
     res.type(image.mime);
     res.sendFile(moduleImagePath(image.archivo), (error: any) => {
-      if (error && !res.headersSent) res.status(404).json({ message: "No se encontro el archivo de la imagen." });
+      if (error && !res.headersSent) res.status(404).json({ message: "No se encontró el archivo de la imagen." });
     });
   })
 );

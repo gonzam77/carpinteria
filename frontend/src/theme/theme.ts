@@ -147,7 +147,7 @@ export const theme = createTheme({
     },
     MuiTablePagination: {
       defaultProps: {
-        labelRowsPerPage: "Filas por pagina:"
+        labelRowsPerPage: "Filas por página:"
       }
     },
     MuiDataGrid: {

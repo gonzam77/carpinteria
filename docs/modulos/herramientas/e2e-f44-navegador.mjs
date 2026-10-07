@@ -153,7 +153,7 @@ try {
     const { context, page } = await newPage(carpintero);
     await page.goto(`${APP}/`);
     await page.getByRole("link", { name: "Solicitar cortes" }).waitFor();
-    check("carpintero: el menu no tiene Modulos a medida", (await page.getByRole("link", { name: "Modulos a medida" }).count()) === 0);
+    check("carpintero: el menu no tiene Modulos a medida", (await page.getByRole("link", { name: "Módulos a medida" }).count()) === 0);
     await page.goto(`${APP}/modulos/nueva`);
     await page.waitForTimeout(1500);
     check("carpintero: /modulos/nueva vuelve al inicio", new URL(page.url()).pathname === "/", new URL(page.url()).pathname);
@@ -196,41 +196,41 @@ try {
       const main = document.querySelector("main");
       return document.documentElement.scrollWidth <= document.documentElement.clientWidth && main.scrollWidth <= main.clientWidth;
     });
-  const card = (n, nombre) => page.getByRole("region", { name: `Modulo ${n} · ${nombre}`, exact: true });
+  const card = (n, nombre) => page.getByRole("region", { name: `Módulo ${n} · ${nombre}`, exact: true });
   const estados = async () => (await page.locator("section[data-modulo] .MuiChip-label").allInnerTexts()).filter((label) => label === "Listo" || label === "Revisar");
   const moduleButton = (nombre) => page.getByRole("button", { name: nombre, exact: true });
 
   await page.goto(`${APP}/`);
-  const menu = page.getByRole("link", { name: "Modulos a medida" });
+  const menu = page.getByRole("link", { name: "Módulos a medida" });
   await menu.waitFor();
   const menuItems = await page.locator("nav a, .MuiDrawer-root a").evaluateAll((links) => [...new Set(links.map((link) => link.textContent.trim()))]);
-  check("menu: Modulos a medida debajo de Solicitar cortes", menuItems.indexOf("Modulos a medida") === menuItems.indexOf("Solicitar cortes") + 1, menuItems.join(" / "));
+  check("menu: Modulos a medida debajo de Solicitar cortes", menuItems.indexOf("Módulos a medida") === menuItems.indexOf("Solicitar cortes") + 1, menuItems.join(" / "));
   // El menu lleva al listado (F4.5); desde ahi se entra al asistente.
   await menu.click();
   await page.waitForURL(`${APP}/modulos`);
-  await page.getByRole("button", { name: "Nueva solicitud de modulos" }).click();
+  await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
   await page.waitForURL("**/modulos/nueva");
-  await page.getByRole("heading", { name: "Nueva solicitud de modulos" }).waitFor();
+  await page.getByRole("heading", { name: "Nueva solicitud de módulos" }).waitFor();
   check("menu: queda marcado en el asistente", await menu.evaluate((link) => link.classList.contains("Mui-selected")));
 
   // Paso 1
   const fecha = page.getByLabel("Fecha de entrega comprometida");
   await page.waitForFunction(() => document.querySelector('input[type="date"]')?.value, null, { timeout: 15000 });
   check("paso 1: fecha por defecto, hoy en Argentina + dias de la configuracion", (await fecha.inputValue()) === addDays(hoy, dias), await fecha.inputValue());
-  check("paso 1: teclado de telefono en el input", (await page.getByLabel("Telefono").getAttribute("inputmode")) === "tel");
+  check("paso 1: teclado de telefono en el input", (await page.getByLabel("Teléfono").getAttribute("inputmode")) === "tel");
   await shot("w1-cliente");
   await next();
   let text = await firstError();
-  check("paso 1: sin datos no avanza y dice que falta", text.includes("Completa el cliente") && text.includes("Completa el telefono"), text);
+  check("paso 1: sin datos no avanza y dice que falta", text.includes("Completá el cliente") && text.includes("Completá el teléfono"), text);
   check("paso 1: el error toma el foco", await page.evaluate(() => document.activeElement?.classList.contains("MuiAlert-root")));
-  await page.getByLabel("Nombre o razon social").fill(`${PREFIJO} navegador`);
-  await page.getByLabel("Telefono").fill("000000");
+  await page.getByLabel("Nombre o razón social").fill(`${PREFIJO} navegador`);
+  await page.getByLabel("Teléfono").fill("000000");
   await page.getByLabel("Email").fill("ana@gmail.com.");
   await next();
   text = await firstError();
-  check("paso 1: email que el alta rechaza (como zod)", text === "El email no es valido.", text);
+  check("paso 1: email que el alta rechaza (como zod)", text === "El email no es válido.", text);
   await page.getByLabel("Email").fill("prueba@ejemplo.com");
-  await page.getByLabel("Direccion de entrega").fill("Calle de prueba 123");
+  await page.getByLabel("Dirección de entrega").fill("Calle de prueba 123");
   await page.getByLabel("Referencia del trabajo").fill("Cocina de prueba");
   await fecha.fill("2020-01-01");
   await next();
@@ -241,11 +241,11 @@ try {
   await next();
 
   // Paso 2
-  const search = page.getByLabel("Buscar por nombre o codigo");
+  const search = page.getByLabel("Buscar por nombre o código");
   await search.waitFor();
   await next();
   text = await firstError();
-  check("paso 2: sin modulos no avanza", text === "Elegi al menos un modulo.", text);
+  check("paso 2: sin modulos no avanza", text === "Elegí al menos un módulo.", text);
   const cardNames = () => page.locator('[role="button"][aria-pressed]').evaluateAll((cards) => cards.map((element) => element.getAttribute("aria-label")));
   await search.fill("bajo mesada 2");
   await page.waitForTimeout(200);
@@ -254,7 +254,7 @@ try {
   await moduleButton("Bajo mesada 2 puertas").click();
   check("paso 2: al elegir se borra el error", (await page.locator(".MuiAlert-standardError").count()) === 0);
   check("paso 2: click marca la tarjeta (aria-pressed, el nombre no cambia)", (await moduleButton("Bajo mesada 2 puertas").getAttribute("aria-pressed")) === "true");
-  await page.getByRole("button", { name: "Una mas de Bajo mesada 2 puertas" }).click();
+  await page.getByRole("button", { name: "Una más de Bajo mesada 2 puertas" }).click();
   await search.fill("alacena 2");
   await moduleButton("Alacena 2 puertas").click();
   await search.fill("");
@@ -272,8 +272,8 @@ try {
   await page.keyboard.press(" ");
   check("paso 2: espacio la desmarca", (await moduleButton("Especiero").getAttribute("aria-pressed")) === "false");
   const contador = norm(await page.locator(".MuiChip-label", { hasText: /elegidos?$/ }).innerText());
-  check("paso 2: contador", contador === "3 modulos elegidos", contador);
-  await page.getByRole("combobox", { name: /^Categoria/ }).click();
+  check("paso 2: contador", contador === "3 módulos elegidos", contador);
+  await page.getByRole("combobox", { name: /^Categoría/ }).click();
   const categorias = await page.getByRole("option").allInnerTexts();
   await page.keyboard.press("Escape");
   check("paso 2: filtro de categorias", categorias[0] === "Todas" && categorias.length > 2, categorias.join(" / "));
@@ -291,8 +291,8 @@ try {
   check("paso 3: medidas por defecto del catalogo", (await c1.getByLabel("Ancho (mm)").inputValue()) === "1200" && (await c3.getByLabel("Ancho (mm)").inputValue()) === "780");
   await page.getByRole("button", { name: "Revisar despiece" }).click();
   text = await firstError();
-  check("paso 3: sin colores no avanza y dice que falta", text.includes("Modulo 1 (Bajo mesada 2 puertas): falta elegir el color de esqueleto, el color de frentes, el color de los cantos"), text.slice(0, 160));
-  check("paso 3: colores sin elegir dicen que hacer", (await c1.getByText("Elegi un color").count()) === 3);
+  check("paso 3: sin colores no avanza y dice que falta", text.includes("Módulo 1 (Bajo mesada 2 puertas): falta elegir el color de esqueleto, el color de frentes, el color de los cantos"), text.slice(0, 160));
+  check("paso 3: colores sin elegir dicen que hacer", (await c1.getByText("Elegí un color").count()) === 3);
   const barra = page.locator(".MuiPaper-root", { hasText: "Colores por defecto" });
   await selectIn(barra, "Esqueleto", colorA);
   await selectIn(barra, "Frentes", colorB);
@@ -305,9 +305,9 @@ try {
   check("paso 3: color de cantos sin el canto de 2 mm marca la tarjeta", (await estados())[0] === "Revisar" && helperCantos.includes("sin canto de 2 mm"), helperCantos.slice(0, 120));
   await selectIn(c1, "Cantos", colorA);
   const fondoTexto = norm(await c1.getByRole("combobox", { name: /^Material de fondo/ }).innerText());
-  check("paso 3: fondo del catalogo por defecto", fondoTexto === `El del catalogo (${fondoConfig})`, fondoTexto);
+  check("paso 3: fondo del catalogo por defecto", fondoTexto === `El del catálogo (${fondoConfig})`, fondoTexto);
   await selectIn(c2, "Material de fondo", fondoLabel);
-  check("paso 3: fondo elegido en el modulo 2", (await c2.getByText("Elegido para este modulo").count()) === 1);
+  check("paso 3: fondo elegido en el modulo 2", (await c2.getByText("Elegido para este módulo").count()) === 1);
   const ancho1 = c1.getByLabel("Ancho (mm)");
   await ancho1.fill("");
   await page.waitForTimeout(150);
@@ -316,11 +316,11 @@ try {
   await ancho1.fill("1.200");
   await page.waitForTimeout(150);
   const miles = norm(await c1.locator(".MuiFormHelperText-root.Mui-error").first().innerText().catch(() => ""));
-  check("paso 3: punto de miles: lo dice en vez de leer 1,2 mm", miles === "Escribi la medida sin punto de miles (por ejemplo 1200)", miles);
+  check("paso 3: punto de miles: lo dice en vez de leer 1,2 mm", miles === "Escribí la medida sin punto de miles (por ejemplo 1200)", miles);
   await ancho1.fill("720mm");
   await page.getByRole("button", { name: "Revisar despiece" }).click();
   text = await firstError();
-  check("paso 3: con errores no avanza y nombra la medida", text.startsWith("Modulo 1 (Bajo mesada 2 puertas): ANCHO: Escribi solo el numero, en mm"), text.slice(0, 160));
+  check("paso 3: con errores no avanza y nombra la medida", text.startsWith("Módulo 1 (Bajo mesada 2 puertas): ANCHO: Escribí solo el número, en mm"), text.slice(0, 160));
   await ancho1.fill("900");
   check("paso 3: al corregir se borra la lista de problemas", (await page.locator(".MuiAlert-standardError").count()) === 0);
   await c1.getByLabel("Alto (mm)").fill("800");
@@ -329,7 +329,7 @@ try {
   check("paso 3: copiar medidas, en singular", (await c1.getByRole("button", { name: "Copiar medidas al otro igual" }).count()) === 1 && (await c2.getByRole("button", { name: /^Copiar medidas/ }).count()) === 0);
   await c1.getByRole("button", { name: "Copiar medidas al otro igual" }).click();
   check("paso 3: copio ancho y alto al modulo 2", (await c2.getByLabel("Ancho (mm)").inputValue()) === "900" && (await c2.getByLabel("Alto (mm)").inputValue()) === "800");
-  await c1.getByLabel("Observaciones del modulo").fill("Va contra la pared");
+  await c1.getByLabel("Observaciones del módulo").fill("Va contra la pared");
   await c3.getByRole("button", { name: "Economico" }).click();
   check("paso 3: perfil de cantos", (await c3.getByRole("button", { name: "Economico" }).getAttribute("aria-pressed")) === "true");
   await shot("w3-medidas");
@@ -362,7 +362,7 @@ try {
       body.modulos.every((line) => line.colorEsqueletoId === colorAId && line.colorFrentesId === colorBId && line.colorCantoId === colorAId && !line.cantosOverride),
     JSON.stringify(body.modulos.map((line) => Object.keys(line)))
   );
-  const despiece = (n, nombre) => page.getByRole("region", { name: `Modulo ${n} · ${nombre}`, exact: true });
+  const despiece = (n, nombre) => page.getByRole("region", { name: `Módulo ${n} · ${nombre}`, exact: true });
   await despiece(1, "Bajo mesada 2 puertas").waitFor();
   const filasPorModulo = [1, 2, 3].map((posicion) => preview.detalles.filter((row) => row.posicionModulo === posicion).length);
   const filasEnPantalla = [
@@ -400,7 +400,7 @@ try {
     ].every((part) => panelText.includes(part));
     check(
       `${label}: el resumen es el de la vista previa (placas, m², canto e importes)`,
-      placas === data.placasEstimadas && panelText.includes(`Modulos 3 Piezas ${piezas}`) && m2 && metros && importes && !panelText.includes("Herrajes") && panelText.includes("Las placas finales las define el optimizador al cortar."),
+      placas === data.placasEstimadas && panelText.includes(`Módulos 3 Piezas ${piezas}`) && m2 && metros && importes && !panelText.includes("Herrajes") && panelText.includes("Las placas finales las define el optimizador al cortar."),
       `${placas} placas en pantalla, ${data.placasEstimadas} en la vista previa`
     );
   };
@@ -455,7 +455,7 @@ try {
   await page.waitForTimeout(200);
   check(
     "paso 4: mientras falta recalcular no deja crear",
-    posts.length === postsDuranteCalculo && (await page.getByText("Espera a que termine el calculo para crear la solicitud.").count()) === 1
+    posts.length === postsDuranteCalculo && (await page.getByText("Esperá a que termine el cálculo para crear la solicitud.").count()) === 1
   );
   for (let waited = 0; previewDone.length < hechosAntes + 2 && waited < 60000; waited += 100) await page.waitForTimeout(100);
   await page.waitForTimeout(1500);
@@ -477,7 +477,7 @@ try {
   );
   check(
     "paso 4: al terminar queda lista y se borra el aviso de espera",
-    (await page.getByText("Despiece y resumen calculados por el servidor.").count()) === 1 && (await page.getByText("Espera a que termine el calculo para crear la solicitud.").count()) === 0
+    (await page.getByText("Despiece y resumen calculados por el servidor.").count()) === 1 && (await page.getByText("Esperá a que termine el cálculo para crear la solicitud.").count()) === 0
   );
   const editada = preview.detalles.find((row) => row.posicionModulo === 1 && row.piezaCodigo === codigo);
   const azules = await fila.getByRole("button").evaluateAll((buttons) => buttons.slice(0, 4).map((button) => (button.getAttribute("aria-label") ?? "").endsWith("cambiado a mano")));
@@ -502,7 +502,7 @@ try {
   const junto = norm(await page.locator(".MuiAlert-standardError").last().innerText());
   check(
     "paso 4: con error no crea y dice por que junto al boton",
-    posts.length === postsAntes && junto.startsWith("Todavia no se puede crear: corregi lo que dice el aviso del despiece.") && junto.includes("Falta el canto de 1 mm"),
+    posts.length === postsAntes && junto.startsWith("Todavía no se puede crear: corregí lo que dice el aviso del despiece.") && junto.includes("Falta el canto de 1 mm"),
     junto.slice(0, 160)
   );
   await shot("w4-error-canto");
@@ -562,7 +562,7 @@ try {
   const avisoVersion = norm(await page.locator(".MuiAlert-standardWarning").first().innerText().catch(() => ""));
   check(
     "crear con el modulo cambiado: avisa, revisa el catalogo y vuelve a calcular",
-    text.includes("Volve a revisar la vista previa antes de crear la solicitud.") && preview.modulos[2].version === Number(versionAlacena) + 1 && avisoVersion.includes("Se usa la version nueva de Alacena 2 puertas"),
+    text.includes("Volvé a revisar la vista previa antes de crear la solicitud.") && preview.modulos[2].version === Number(versionAlacena) + 1 && avisoVersion.includes("Se usa la versión nueva de Alacena 2 puertas"),
     `${text.slice(0, 100)} || ${avisoVersion.slice(0, 100)}`
   );
 
@@ -594,7 +594,7 @@ try {
   await page.getByRole("button", { name: "Crear solicitud" }).dblclick();
   await page.waitForTimeout(300);
   check("mientras se crea, los cantos y volver quedan bloqueados", (await lado(0).isDisabled()) && (await page.getByRole("button", { name: "Volver", exact: true }).isDisabled()));
-  await page.getByText("no se pudo revisar si quedo cargada", { exact: false }).waitFor({ timeout: 60000 });
+  await page.getByText("no se pudo revisar si quedó cargada", { exact: false }).waitFor({ timeout: 60000 });
   await page.unroute("**/pedidos-modulos", perdida);
   check(
     "respuesta perdida y busqueda caida: un solo alta, y dice que no pudo revisar (no que no se creo)",
@@ -611,7 +611,7 @@ try {
   await page.getByText("Despiece y resumen calculados por el servidor.").waitFor();
   const postsAntesDeReintentar = posts.length;
   await page.getByRole("button", { name: "Crear solicitud" }).click();
-  const yaCargada = page.locator(".MuiAlert-standardError", { hasText: `La solicitud M-${creadaA.numero} ya habia quedado cargada` });
+  const yaCargada = page.locator(".MuiAlert-standardError", { hasText: `La solicitud M-${creadaA.numero} ya había quedado cargada` });
   await yaCargada.waitFor({ timeout: 30000 });
   check(
     "reintento con cambios: avisa que ya habia quedado cargada, ofrece verla y no crea otra",
@@ -655,16 +655,16 @@ try {
 
   // Cargar otra: asistente vacio, sin borrador
   await page.getByRole("button", { name: "Cargar otra solicitud" }).click();
-  await page.getByLabel("Nombre o razon social").waitFor();
+  await page.getByLabel("Nombre o razón social").waitFor();
   check(
     "cargar otra: arranca de cero con la fecha por defecto",
-    (await page.getByLabel("Nombre o razon social").inputValue()) === "" && (await fecha.inputValue()) === addDays(hoy, dias) && (await page.getByText("Tenes una solicitud sin terminar").count()) === 0
+    (await page.getByLabel("Nombre o razón social").inputValue()) === "" && (await fecha.inputValue()) === addDays(hoy, dias) && (await page.getByText("Tenés una solicitud sin terminar").count()) === 0
   );
 
   // ---------------------------------------------------------------- C. salir mientras se crea
   const armar = async (cliente, modulos) => {
-    await page.getByLabel("Nombre o razon social").fill(cliente);
-    await page.getByLabel("Telefono").fill("222222");
+    await page.getByLabel("Nombre o razón social").fill(cliente);
+    await page.getByLabel("Teléfono").fill("222222");
     await next();
     await search.waitFor();
     for (const nombre of modulos) await moduleButton(nombre).click();
@@ -690,10 +690,10 @@ try {
   await page.waitForTimeout(300);
   await page.getByRole("link", { name: "Dashboard" }).click();
   await page.waitForURL(`${APP}/`);
-  await page.getByRole("link", { name: "Modulos a medida" }).click();
-  await page.getByRole("button", { name: "Nueva solicitud de modulos" }).click();
+  await page.getByRole("link", { name: "Módulos a medida" }).click();
+  await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
   const esperando = await page
-    .getByText("Se esta terminando de crear la solicitud que mandaste antes de salir de la pantalla.")
+    .getByText("Se está terminando de crear la solicitud que mandaste antes de salir de la pantalla.")
     .waitFor({ state: "visible", timeout: 2500 })
     .then(() => true)
     .catch(() => false);
@@ -701,11 +701,11 @@ try {
   await page.unroute("**/pedidos-modulos", lenta);
   check(
     "salir mientras se crea: al volver espera ese alta y muestra el exito, sin ofrecer el borrador",
-    esperando && psql(`select count(*) from pedidos where cliente = '${PREFIJO} salir'`) === "1" && (await page.getByText("Tenes una solicitud sin terminar").count()) === 0
+    esperando && psql(`select count(*) from pedidos where cliente = '${PREFIJO} salir'`) === "1" && (await page.getByText("Tenés una solicitud sin terminar").count()) === 0
   );
   for (const id of psql(`select id from pedidos where cliente like '${PREFIJO}%'`).split("\n").filter(Boolean)) creados.add(id);
   await page.getByRole("button", { name: "Cargar otra solicitud" }).click();
-  await page.getByLabel("Nombre o razon social").waitFor();
+  await page.getByLabel("Nombre o razón social").waitFor();
 
   // ---------------------------------------------------------------- C2. salir mientras se crea y la respuesta se pierde
   // La marca de envio queda en el borrador en el momento. Al volver, se ofrece el borrador con el aviso y, al crearla,
@@ -729,14 +729,14 @@ try {
   await page.waitForTimeout(200);
   await page.getByRole("link", { name: "Dashboard" }).click();
   await page.waitForURL(`${APP}/`);
-  await page.getByRole("link", { name: "Modulos a medida" }).click();
-  await page.getByRole("button", { name: "Nueva solicitud de modulos" }).click();
-  const bannerPerdida = page.locator(".MuiAlert-root", { hasText: "Tenes una solicitud sin terminar" });
+  await page.getByRole("link", { name: "Módulos a medida" }).click();
+  await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
+  const bannerPerdida = page.locator(".MuiAlert-root", { hasText: "Tenés una solicitud sin terminar" });
   await bannerPerdida.waitFor({ timeout: 60000 });
   await page.unroute("**/pedidos-modulos", perdidaLenta);
   check(
     "salir y perder la respuesta: al volver, el borrador trae el aviso de que se estaba creando",
-    norm(await bannerPerdida.innerText()).includes("Se estaba creando cuando se cerro la pantalla") && Boolean(creadaC?.numero)
+    norm(await bannerPerdida.innerText()).includes("Se estaba creando cuando se cerró la pantalla") && Boolean(creadaC?.numero)
   );
   await bannerPerdida.getByRole("button", { name: "Recuperar" }).click();
   await page.getByText("Colores por defecto").waitFor();
@@ -760,21 +760,21 @@ try {
   await page.waitForURL(`**/modulos/${creadaC.id}`, { timeout: 15000 }).catch(() => undefined);
   await page.getByRole("button", { name: "Volver" }).waitFor({ timeout: 30000 });
   let barraDetalle = "";
-  for (let waited = 0; waited < 5000 && barraDetalle !== "Modulos a medida"; waited += 100) {
+  for (let waited = 0; waited < 5000 && barraDetalle !== "Módulos a medida"; waited += 100) {
     barraDetalle = norm(await page.locator("header .MuiTypography-h6").innerText());
     await page.waitForTimeout(100);
   }
-  check("exito: Ver la solicitud abre /modulos/:id con la barra de la seccion", new URL(page.url()).pathname === `/modulos/${creadaC.id}` && barraDetalle === "Modulos a medida", barraDetalle);
+  check("exito: Ver la solicitud abre /modulos/:id con la barra de la seccion", new URL(page.url()).pathname === `/modulos/${creadaC.id}` && barraDetalle === "Módulos a medida", barraDetalle);
   await page.getByRole("button", { name: "Volver" }).click();
   await page.waitForURL(`${APP}/modulos`, { timeout: 15000 }).catch(() => undefined);
   check("exito: Volver del detalle lleva al listado de modulos", new URL(page.url()).pathname === "/modulos");
-  await page.getByRole("button", { name: "Nueva solicitud de modulos" }).click();
-  await page.getByLabel("Nombre o razon social").waitFor();
+  await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
+  await page.getByLabel("Nombre o razón social").waitFor();
 
   // ---------------------------------------------------------------- D. catalogo que cambia con el asistente abierto
   // Un modulo elegido mientras se cargan las definiciones tambien llega al paso 3.
-  await page.getByLabel("Nombre o razon social").fill(`${PREFIJO} catalogo`);
-  await page.getByLabel("Telefono").fill("222222");
+  await page.getByLabel("Nombre o razón social").fill(`${PREFIJO} catalogo`);
+  await page.getByLabel("Teléfono").fill("222222");
   await next();
   await search.waitFor();
   const definicionLenta = async (route) => {
@@ -798,7 +798,7 @@ try {
   await barra.getByRole("button", { name: "Aplicar a todos" }).click();
   psql(`update modulos set activo = false where id = '${ESPECIERO}'`);
   await page.getByRole("button", { name: "Revisar despiece" }).click();
-  const avisoQuitado = page.locator(".MuiAlert-standardWarning", { hasText: "Se quito Especiero" });
+  const avisoQuitado = page.locator(".MuiAlert-standardWarning", { hasText: "Se quitó Especiero" });
   await avisoQuitado.waitFor({ timeout: 15000 });
   await page.waitForTimeout(300);
   check("catalogo: el aviso queda a la vista y con el foco", await avisoQuitado.evaluate((element) => element === document.activeElement || element.contains(document.activeElement)));
@@ -814,8 +814,8 @@ try {
   await page.getByRole("button", { name: "Volver", exact: true }).click();
   await page.getByRole("button", { name: "Volver", exact: true }).click();
   await page.getByRole("button", { name: "Volver", exact: true }).click();
-  await page.getByLabel("Nombre o razon social").fill("");
-  await page.getByLabel("Telefono").fill("");
+  await page.getByLabel("Nombre o razón social").fill("");
+  await page.getByLabel("Teléfono").fill("");
   await page.goto(`${APP}/`);
   await page.evaluate((key) => {
     localStorage.removeItem(key);
@@ -825,9 +825,9 @@ try {
 
   // ---------------------------------------------------------------- E. borrador
   await page.goto(`${APP}/modulos/nueva`);
-  await page.getByLabel("Nombre o razon social").waitFor();
-  await page.getByLabel("Nombre o razon social").fill(`${PREFIJO} borrador`);
-  await page.getByLabel("Telefono").fill("111111");
+  await page.getByLabel("Nombre o razón social").waitFor();
+  await page.getByLabel("Nombre o razón social").fill(`${PREFIJO} borrador`);
+  await page.getByLabel("Teléfono").fill("111111");
   await next();
   await search.waitFor();
   await moduleButton("Bajo mesada 2 puertas").click();
@@ -848,17 +848,17 @@ try {
   // Chromium guarda localStorage en diferido: sin esta espera, la pagina nueva puede leer el valor anterior.
   await page.waitForTimeout(2000);
   await page.goto(`${APP}/modulos/nueva`);
-  const banner = page.locator(".MuiAlert-root", { hasText: "Tenes una solicitud sin terminar" });
+  const banner = page.locator(".MuiAlert-root", { hasText: "Tenés una solicitud sin terminar" });
   await banner.waitFor();
-  check("borrador: lo ofrece al volver", norm(await banner.innerText()).includes("Tenes una solicitud sin terminar (1 modulo, guardada"), norm(await banner.innerText()));
+  check("borrador: lo ofrece al volver", norm(await banner.innerText()).includes("Tenés una solicitud sin terminar (1 módulo, guardada"), norm(await banner.innerText()));
   await banner.getByRole("button", { name: "Recuperar" }).click();
   await page.getByText("Colores por defecto").waitFor();
   const avisos = norm(await page.locator(".MuiAlert-standardWarning").first().innerText().catch(() => ""));
   check("borrador: vuelve al paso 3 con lo cargado", (await c1.getByLabel("Ancho (mm)").inputValue()) === "700", await c1.getByLabel("Ancho (mm)").inputValue());
-  check("borrador: avisa que la fecha ya paso", avisos.includes("La fecha de entrega del borrador ya paso: se puso la de por defecto."), avisos);
+  check("borrador: avisa que la fecha ya paso", avisos.includes("La fecha de entrega del borrador ya pasó: se puso la de por defecto."), avisos);
   await page.getByRole("button", { name: "Volver", exact: true }).click();
   await page.getByRole("button", { name: "Volver", exact: true }).click();
-  check("borrador: datos del cliente y fecha por defecto", (await page.getByLabel("Nombre o razon social").inputValue()) === `${PREFIJO} borrador` && (await fecha.inputValue()) === addDays(hoy, dias));
+  check("borrador: datos del cliente y fecha por defecto", (await page.getByLabel("Nombre o razón social").inputValue()) === `${PREFIJO} borrador` && (await fecha.inputValue()) === addDays(hoy, dias));
   await page.waitForTimeout(1500);
   await page.getByRole("link", { name: "Dashboard" }).click();
   await page.waitForURL(`${APP}/`);
@@ -868,10 +868,10 @@ try {
   await banner.getByRole("button", { name: "Descartar" }).click();
   await page.waitForTimeout(1200);
   guardado = await page.evaluate((key) => [localStorage.getItem(key), localStorage.getItem(`${key}~live`)], draftKey);
-  check("borrador: descartar lo borra", (await banner.count()) === 0 && guardado[0] === null && guardado[1] === null && (await page.getByLabel("Nombre o razon social").inputValue()) === "");
+  check("borrador: descartar lo borra", (await banner.count()) === 0 && guardado[0] === null && guardado[1] === null && (await page.getByLabel("Nombre o razón social").inputValue()) === "");
   await page.waitForTimeout(1000);
   await page.reload();
-  await page.getByLabel("Nombre o razon social").waitFor();
+  await page.getByLabel("Nombre o razón social").waitFor();
   await page.waitForTimeout(800);
   check("borrador: despues de descartar no vuelve a aparecer", (await banner.count()) === 0);
 
@@ -896,7 +896,7 @@ try {
   check("corte: el formulario de corte abre igual", (await page.getByRole("link", { name: "Solicitar cortes" }).evaluate((link) => link.classList.contains("Mui-selected"))) === true);
   // Editor de modulos (F3.4): con overflow-x: clip en <main>, su barra de cambios sin guardar queda pegada abajo al bajar.
   await page.goto(`${APP}/configuracion-modulos/${BAJO}`);
-  await page.getByLabel("Codigo").waitFor({ timeout: 30000 });
+  await page.getByLabel("Código").waitFor({ timeout: 30000 });
   await page.getByLabel("Observaciones").first().fill("prueba sin guardar");
   await page.waitForTimeout(300);
   const barraEditor = page.getByText("Hay cambios sin guardar");

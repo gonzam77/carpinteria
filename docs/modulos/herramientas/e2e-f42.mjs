@@ -186,7 +186,7 @@ try {
       ),
       filas[0].codigoBarra
     );
-    check("remark y nombre de producto", filas.every((row) => row.remark === `Modulo ${row.posicionModulo} · ${result.modulos[row.posicionModulo - 1].nombreModulo}` && row.nombreProducto));
+    check("sin remark (DECISIONES 20) y con nombre de producto", filas.every((row) => (row.remark ?? "") === "" && row.nombreProducto));
     check("pieza de origen y cliente", filas.every((row) => row.piezaCodigo && row.nombreCliente === "Prueba F4.2" && row.numeroCliente === "000000"));
     const editadas = filas.filter((row) => row.origen === "EDITADO");
     check(
@@ -253,11 +253,11 @@ try {
     (data) => data.details.faltantes.length === sinCanto2.length && data.details.faltantes.every((item) => item.espesorMm === 2) && /Cargalo en Materiales\.$/.test(data.message)
   );
   if (faltan) console.log(`    ${faltan.message}`);
-  await code("pieza que no entra en la placa (spec §8.3)", [line(bajo.id, { valores: { ANCHO: 5000 } })], "MODULE_PIECES_DO_NOT_FIT", (data) => /del Modulo 1 \(5000 × \d+ mm\) no entra en la placa .+ \(\d+ × \d+ mm utiles\)/.test(data.message));
+  await code("pieza que no entra en la placa (spec §8.3)", [line(bajo.id, { valores: { ANCHO: 5000 } })], "MODULE_PIECES_DO_NOT_FIT", (data) => /del Módulo 1 \(5000 × \d+ mm\) no entra en la placa .+ \(\d+ × \d+ mm útiles\)/.test(data.message));
 
   psql(`update configuracion_modulos set "materialFondoId" = null where id = 'default'`);
   const modConFondo = modules.find((module) => conFondo.has(module.id));
-  await code("sin material de fondo", [line(modConFondo.id)], "MODULE_MATERIAL_INVALID", (data) => /Catalogo de modulos > Configuracion/.test(data.message));
+  await code("sin material de fondo", [line(modConFondo.id)], "MODULE_MATERIAL_INVALID", (data) => /Catálogo de módulos > Configuración/.test(data.message));
   psql(`update configuracion_modulos set "materialFondoId" = '${fondo}' where id = 'default'`);
 
   // Un modulo de prueba con una pieza de material fijo y fondo propio: ningun modulo del catalogo los tiene.
@@ -292,7 +292,7 @@ try {
   }
 
   const sinPerfil = await preview([{ moduloId: bajo.id, valores: {}, colorEsqueletoId: colorA, colorFrentesId: colorB, colorCantoId: colorA }]);
-  check("sin perfil de cantos: 400 (spec §13.2)", sinPerfil.status === 400 && JSON.stringify(sinPerfil.data).includes("Elegi el perfil de cantos"), `${sinPerfil.status}`);
+  check("sin perfil de cantos: 400 (spec §13.2)", sinPerfil.status === 400 && JSON.stringify(sinPerfil.data).includes("Elegí el perfil de cantos"), `${sinPerfil.status}`);
   const malEscrito = await preview([{ ...line(bajo.id), perfilOrden: 2 }]);
   check("un campo mal escrito no se ignora: 400", malEscrito.status === 400 && JSON.stringify(malEscrito.data).includes("no se reconocen"), `${malEscrito.status}`);
 
@@ -300,7 +300,7 @@ try {
   const mensajes = (validacion.data?.errors ?? []).map((issue) => issue.message);
   check(
     "datos invalidos: 400 con mensajes en espanol",
-    validacion.status === 400 && ["Elegi un modulo del catalogo", "Faltan las medidas del modulo", "Elegi el color de esqueleto", "Elegi el perfil de cantos del modulo (1 o 2)"].every((m) => mensajes.includes(m)),
+    validacion.status === 400 && ["Elegí un módulo del catálogo", "Faltan las medidas del módulo", "Elegí el color de esqueleto", "Elegí el perfil de cantos del módulo (1 o 2)"].every((m) => mensajes.includes(m)),
     mensajes.join(" / ")
   );
   const prohibido = await call("POST", "/pedidos-modulos/preview", { modulos: [line(bajo.id)] }, carpintero);

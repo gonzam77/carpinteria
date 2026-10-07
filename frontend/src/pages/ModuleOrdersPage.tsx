@@ -154,7 +154,7 @@ function ListNoRowsOverlay({ motivo, onClear, ...props }: GridSlotProps["noRowsO
     <GridOverlay {...props} sx={{ alignItems: "flex-start", pt: 3 }}>
       <Stack spacing={1.5} alignItems="center" sx={{ px: 2, textAlign: "center" }}>
         {motivo === "error" ? (
-          <Typography color="text.secondary">No se pudo cargar el listado. Revisa el aviso de arriba.</Typography>
+          <Typography color="text.secondary">No se pudo cargar el listado. Revisá el aviso de arriba.</Typography>
         ) : (
           <>
             <Typography fontWeight={800}>No hay solicitudes que coincidan con los filtros</Typography>
@@ -321,7 +321,7 @@ export function ModuleOrdersPage() {
       })
       .catch((reason) => {
         if (controller.signal.aborted) return;
-        setResultError(moduleOrderError(reason, key === "{}" ? "No se pudo cargar el listado de solicitudes de modulos." : "No se pudo buscar en las solicitudes de modulos."));
+        setResultError(moduleOrderError(reason, key === "{}" ? "No se pudo cargar el listado de solicitudes de módulos." : "No se pudo buscar en las solicitudes de módulos."));
       });
     return () => controller.abort();
   }, [filters, problem, reload]);
@@ -534,7 +534,7 @@ export function ModuleOrdersPage() {
               {row.cliente}
             </Typography>
             <Typography variant="caption" color="text.secondary" noWrap component="div">
-              {row.numeroContacto || "Sin telefono"}
+              {row.numeroContacto || "Sin teléfono"}
             </Typography>
           </Box>
         )
@@ -563,7 +563,7 @@ export function ModuleOrdersPage() {
         renderCell: ({ value }) => <StatusChip size="small" status={value as EstadoSolicitud} />
       },
       { field: "observaciones", headerName: "Referencia", flex: 1, minWidth: 120, valueGetter: (value: string | null) => value ?? "" },
-      { field: "cantidadModulos", headerName: "Modulos", width: 110, type: "number" },
+      { field: "cantidadModulos", headerName: "Módulos", width: 110, type: "number" },
       { field: "fechaCreacion", headerName: "Creada", width: 100, valueFormatter: (value: string) => formatCreatedDay(value) }
     ];
     // Un ancho acomodado a mano reemplaza al de la definicion (y al flex, que si no ganaria).
@@ -620,12 +620,12 @@ export function ModuleOrdersPage() {
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" alignItems={{ sm: "flex-end" }}>
         <Stack spacing={0.5}>
           <Typography variant="h4" component="h1">
-            Modulos a medida
+            Módulos a medida
           </Typography>
           <Typography color="text.secondary">Solicitudes de muebles armados por ROMA. Van aparte de las solicitudes de corte de los carpinteros.</Typography>
         </Stack>
         <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate("/modulos/nueva")} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
-          Nueva solicitud de modulos
+          Nueva solicitud de módulos
         </Button>
       </Stack>
 
@@ -634,9 +634,9 @@ export function ModuleOrdersPage() {
 
       <Box component="section" aria-label="Indicadores" sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" } }}>
         <Indicator label="En curso" value={indicators?.enCurso ?? null} unavailable={indicatorsUnavailable} hint="Pendientes, en proceso y terminadas" />
-        <Indicator label="Modulos a fabricar" value={indicators?.modulosAFabricar ?? null} unavailable={indicatorsUnavailable} hint="De las pendientes y en proceso" />
-        <Indicator label="Vencen esta semana" value={indicators?.vencenEstaSemana ?? null} unavailable={indicatorsUnavailable} hint={`Hoy y los proximos ${DIAS_SEMANA} dias`} />
-        <Indicator label="Atrasadas" value={indicators?.atrasadas ?? null} unavailable={indicatorsUnavailable} hint="Ya paso la fecha de entrega" alert={Boolean(indicators?.atrasadas)} />
+        <Indicator label="Módulos a fabricar" value={indicators?.modulosAFabricar ?? null} unavailable={indicatorsUnavailable} hint="De las pendientes y en proceso" />
+        <Indicator label="Vencen esta semana" value={indicators?.vencenEstaSemana ?? null} unavailable={indicatorsUnavailable} hint={`Hoy y los próximos ${DIAS_SEMANA} días`} />
+        <Indicator label="Atrasadas" value={indicators?.atrasadas ?? null} unavailable={indicatorsUnavailable} hint="Ya pasó la fecha de entrega" alert={Boolean(indicators?.atrasadas)} />
       </Box>
 
       {/* Desde md, los filtros en una o dos lineas: en una notebook de 1024 px se ve alguna solicitud sin bajar. Los dos
@@ -646,7 +646,7 @@ export function ModuleOrdersPage() {
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} useFlexGap sx={{ alignItems: { md: "center" }, flexWrap: "wrap" }}>
           <TextField
             label="Buscar"
-            placeholder="Cliente, telefono, ref. o M-1044"
+            placeholder="Cliente, teléfono, ref. o M-1044"
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
             inputRef={searchInput}
@@ -706,7 +706,7 @@ export function ModuleOrdersPage() {
             // Deshabilitado, sin el degradado del tema (si no, parece activo). En el tema queda pendiente para todos (F7.2).
             sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" }, minWidth: { sm: "16.5em" }, "&.Mui-disabled": { backgroundImage: "none" } }}
           >
-            {exporting ? "Exportando..." : selectedRows.length ? `Exportar seleccion (${selectedRows.length})` : "Exportar seleccion"}
+            {exporting ? "Exportando..." : selectedRows.length ? `Exportar selección (${selectedRows.length})` : "Exportar selección"}
           </Button>
         </Stack>
       </Paper>
@@ -726,8 +726,8 @@ export function ModuleOrdersPage() {
       {emptyCatalog ? (
         <Paper variant="outlined" sx={{ p: 4, textAlign: "center", borderRadius: "10px" }}>
           <Stack spacing={1.5} alignItems="center">
-            <Typography fontWeight={800}>Todavia no hay solicitudes de modulos</Typography>
-            <Typography color="text.secondary">Se cargan con el asistente: elegis los muebles del catalogo, sus medidas y colores, y revisas el despiece.</Typography>
+            <Typography fontWeight={800}>Todavía no hay solicitudes de módulos</Typography>
+            <Typography color="text.secondary">Se cargan con el asistente: elegís los muebles del catálogo, sus medidas y colores, y revisás el despiece.</Typography>
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate("/modulos/nueva")}>
               Cargar la primera solicitud
             </Button>
@@ -766,7 +766,7 @@ export function ModuleOrdersPage() {
             slots={{ noRowsOverlay: ListNoRowsOverlay, loadingOverlay: ListLoadingOverlay }}
             // El nombre y "ocupada" van en el elemento con role=grid (el `aria-label` de la grilla queda en un div sin rol).
             slotProps={{
-              main: { "aria-label": "Solicitudes de modulos", "aria-busy": loading },
+              main: { "aria-label": "Solicitudes de módulos", "aria-busy": loading },
               loadingOverlay: { variant: "linear-progress", noRowsVariant: "skeleton" },
               noRowsOverlay: { motivo: rowsError ? "error" : "sin-resultados", onClear: clearFilters }
             }}

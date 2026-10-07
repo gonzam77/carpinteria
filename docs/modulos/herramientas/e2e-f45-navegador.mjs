@@ -137,7 +137,7 @@ const FIXTURES = [
 // entregada. Es el mismo que el de la columna Plazo.
 const ORDEN = ["alfa", "beta", "gamma", "eta", "delta", "zeta", "epsilon"];
 const COLUMNAS = ["__check__", "ver", "numero", "cliente", "fechaEntrega", "plazo", "estado", "observaciones", "cantidadModulos", "fechaCreacion"];
-const TITULOS = ["N°", "Cliente", "Entrega", "Plazo", "Estado", "Referencia", "Modulos", "Creada"];
+const TITULOS = ["N°", "Cliente", "Entrega", "Plazo", "Estado", "Referencia", "Módulos", "Creada"];
 
 // Con barras de desplazamiento reales, como en Windows: ocupan lugar y cambian lo que entra en pantalla.
 const browser = await chromium.launch({ channel: "msedge", headless: true, ignoreDefaultArgs: ["--hide-scrollbars"] });
@@ -164,7 +164,7 @@ async function newPage(user, { viewport = { width: 1366, height: 900 }, timezone
 }
 // Helpers de una pagina con el listado.
 function listadoDe(page) {
-  const listado = page.locator('[aria-label="Solicitudes de modulos"]');
+  const listado = page.locator('[aria-label="Solicitudes de módulos"]');
   // Solo las filas de datos: mientras carga, el esqueleto tambien dibuja filas (sin data-id).
   const filas = () => listado.locator(".MuiDataGrid-row[data-id]");
   const clientes = async () => (await filas().locator('[data-field="cliente"] .MuiTypography-body2').allInnerTexts()).map((text) => text.replace(`${PREFIJO} `, ""));
@@ -213,7 +213,7 @@ try {
     const { barra } = listadoDe(page);
     await page.goto(`${APP}/`);
     await page.getByRole("link", { name: "Solicitar cortes" }).waitFor();
-    check("carpintero: no ve Modulos a medida y la barra sigue igual", (await page.getByRole("link", { name: "Modulos a medida" }).count()) === 0 && (await barra()) === "Panel de solicitudes");
+    check("carpintero: no ve Modulos a medida y la barra sigue igual", (await page.getByRole("link", { name: "Módulos a medida" }).count()) === 0 && (await barra()) === "Panel de solicitudes");
     await page.goto(`${APP}/modulos`);
     await page.waitForTimeout(1500);
     check("carpintero: /modulos vuelve al inicio", new URL(page.url()).pathname === "/", new URL(page.url()).pathname);
@@ -272,7 +272,7 @@ try {
   const buscar = page.getByLabel("Buscar");
   const desdeInput = page.getByLabel("Entrega desde");
   const hastaInput = page.getByLabel("Entrega hasta");
-  const exportar = page.getByRole("button", { name: /^Exportar seleccion/ });
+  const exportar = page.getByRole("button", { name: /^Exportar selección/ });
   // Sin resultados, el aviso va dentro de la grilla (que queda montada).
   const panelSinResultados = listado.locator(".MuiDataGrid-overlay").filter({ hasText: "No hay solicitudes que coincidan con los filtros" });
   const anuncio = async () => norm(await page.locator('main [role="status"]').first().textContent());
@@ -356,9 +356,9 @@ try {
 
   // ---------------------------------------------------------------- B. vacio (la copia no tiene solicitudes de modulos)
   await page.goto(`${APP}/`);
-  await page.getByRole("link", { name: "Modulos a medida" }).click();
+  await page.getByRole("link", { name: "Módulos a medida" }).click();
   await page.waitForURL(`${APP}/modulos`);
-  await page.getByText("Todavia no hay solicitudes de modulos").waitFor();
+  await page.getByText("Todavía no hay solicitudes de módulos").waitFor();
   check("vacio: lo dice y ofrece cargar la primera", (await page.getByRole("button", { name: "Cargar la primera solicitud" }).count()) === 1);
   check("vacio: los cuatro indicadores en cero", JSON.stringify(await valoresIndicadores()) === '["0","0","0","0"]', (await valoresIndicadores()).join(", "));
   check("indicadores: los numeros no son encabezados", (await page.locator('[aria-label="Indicadores"]').getByRole("heading").count()) === 0);
@@ -377,12 +377,12 @@ try {
     () => true,
     () => false
   );
-  const titulosDelVacio = await page.getByRole("heading", { level: 1, name: "Modulos a medida" }).count();
+  const titulosDelVacio = await page.getByRole("heading", { level: 1, name: "Módulos a medida" }).count();
   check(
     "vacio: un filtro muestra la tabla sin resultados y limpiar vuelve al aviso (y lo anuncia), sin errores en la consola",
     tablaSinCoincidencias &&
       vuelveElAviso &&
-      (await esperarAnuncio("Todavia no hay solicitudes de modulos")) &&
+      (await esperarAnuncio("Todavía no hay solicitudes de módulos")) &&
       new URL(page.url()).search === "" &&
       titulosDelVacio === 1 &&
       errors.length === erroresAntesDelVacio,
@@ -406,9 +406,9 @@ try {
   }
   await page.reload();
   check("orden: las que siguen en curso por fecha, despues la rechazada y al final la entregada", await esperarClientes(ORDEN, 30000), (await clientes()).join(", "));
-  check("menu: Modulos a medida queda marcado", await page.getByRole("link", { name: "Modulos a medida" }).evaluate((link) => link.classList.contains("Mui-selected")));
-  check("titulo de la barra: Modulos a medida (y el de la pantalla, un solo encabezado)", (await barra()) === "Modulos a medida" && (await page.getByRole("heading", { name: "Modulos a medida" }).count()) === 1);
-  check("la tabla tiene nombre para los lectores de pantalla", (await page.getByRole("grid", { name: "Solicitudes de modulos" }).count()) === 1);
+  check("menu: Modulos a medida queda marcado", await page.getByRole("link", { name: "Módulos a medida" }).evaluate((link) => link.classList.contains("Mui-selected")));
+  check("titulo de la barra: Modulos a medida (y el de la pantalla, un solo encabezado)", (await barra()) === "Módulos a medida" && (await page.getByRole("heading", { name: "Módulos a medida" }).count()) === 1);
+  check("la tabla tiene nombre para los lectores de pantalla", (await page.getByRole("grid", { name: "Solicitudes de módulos" }).count()) === 1);
   const indicadores = norm(await page.locator('[aria-label="Indicadores"]').innerText());
   check("indicadores: 5 en curso, 6 modulos a fabricar, 3 vencen esta semana y 1 atrasada", JSON.stringify(await valoresIndicadores()) === '["5","6","3","1"]', indicadores);
   const atrasadasColor = await page.locator('[aria-label="Indicadores"] .MuiPaper-root').nth(3).evaluate((element) => getComputedStyle(element).backgroundColor);
@@ -687,7 +687,7 @@ try {
     return cantidad;
   });
   const vaciaDelTodo = await desdeInput.evaluate((input) => input.value === "" && !input.validity.badInput);
-  await page.getByRole("heading", { name: "Modulos a medida" }).click();
+  await page.getByRole("heading", { name: "Módulos a medida" }).click();
   const sacadaConElMouse =
     (await page.waitForFunction(() => !new URL(location.href).searchParams.has("desde"), null, { timeout: 3000 }).then(
       () => true,
@@ -898,13 +898,13 @@ try {
   await page.waitForTimeout(500);
   check(
     "rango invertido: avisa, no lo pide, no queda nada para exportar y el pie de la tabla no cuenta filas ocultas",
-    (await filas().count()) === 0 && pedidos.length === 0 && (await anuncio()) === "" && (await exportar.isDisabled()) && norm(await exportar.innerText()) === "Exportar seleccion" && (await contadorPie()) === "",
+    (await filas().count()) === 0 && pedidos.length === 0 && (await anuncio()) === "" && (await exportar.isDisabled()) && norm(await exportar.innerText()) === "Exportar selección" && (await contadorPie()) === "",
     `${JSON.stringify(pedidos)} | pie "${await contadorPie()}"`
   );
   await hastaInput.fill(addDays(hoy, 7));
   check(
     "al corregir el rango, la fila marcada vuelve marcada",
-    (await esperarClientes(["beta", "gamma", "eta"])) && (await casilla("gamma").isChecked()) && norm(await exportar.innerText()) === "Exportar seleccion (1)" && (await contadorPie()) === "1 fila seleccionada",
+    (await esperarClientes(["beta", "gamma", "eta"])) && (await casilla("gamma").isChecked()) && norm(await exportar.innerText()) === "Exportar selección (1)" && (await contadorPie()) === "1 fila seleccionada",
     `pie "${await contadorPie()}"`
   );
   await casilla("gamma").uncheck();
@@ -929,8 +929,8 @@ try {
   check(
     "click en la fila: abre el detalle en /modulos/:id, con el menu y la barra de la seccion",
     (await page.getByText(`${PREFIJO} gamma`).count()) >= 1 &&
-      (await esperarBarra("Modulos a medida")) &&
-      (await page.getByRole("link", { name: "Modulos a medida" }).evaluate((link) => link.classList.contains("Mui-selected"))) &&
+      (await esperarBarra("Módulos a medida")) &&
+      (await page.getByRole("link", { name: "Módulos a medida" }).evaluate((link) => link.classList.contains("Mui-selected"))) &&
       !(await page.getByRole("link", { name: "Solicitudes", exact: true }).evaluate((link) => link.classList.contains("Mui-selected")))
   );
   await page.getByRole("button", { name: "Volver" }).click();
@@ -1052,7 +1052,7 @@ try {
   const cargasConRedireccion = detalles.length;
   check(
     "/pedidos/:id de una solicitud de modulos pasa a /modulos/:id, sin cargarla de nuevo",
-    new URL(page.url()).pathname === `/modulos/${fila.get("delta").id}` && (await esperarBarra("Modulos a medida")) && cargasConRedireccion === cargasDirectas,
+    new URL(page.url()).pathname === `/modulos/${fila.get("delta").id}` && (await esperarBarra("Módulos a medida")) && cargasConRedireccion === cargasDirectas,
     `cargas: directa ${cargasDirectas}, con redireccion ${cargasConRedireccion}`
   );
   await page.getByRole("button", { name: "Volver" }).click();
@@ -1095,7 +1095,7 @@ try {
   };
   detalles.length = 0;
   await page.evaluate(() => window.history.go(-2));
-  const llegoAtras = await esperarQue(async () => (await page.getByText(`${PREFIJO} eta`).count()) >= 1 && (await barra()) === "Modulos a medida");
+  const llegoAtras = await esperarQue(async () => (await page.getByText(`${PREFIJO} eta`).count()) >= 1 && (await barra()) === "Módulos a medida");
   await page.waitForTimeout(1500);
   const saltoAtras = {
     llego: llegoAtras,
@@ -1131,7 +1131,7 @@ try {
   };
   await page.route(detalleDeEta, demorarEta);
   await page.evaluate(() => window.history.go(-2));
-  await esperarQue(async () => (await barra()) === "Modulos a medida");
+  await esperarQue(async () => (await barra()) === "Módulos a medida");
   const titulosMientrasCarga = await page.locator("main h4").count();
   const llegoEta = await esperarQue(tituloEsEta);
   await page.unroute(detalleDeEta, demorarEta);
@@ -1153,7 +1153,7 @@ try {
   const volvioAEta = await esperarQue(tituloEsEta);
   soltarCorte();
   await page.waitForTimeout(1500);
-  const sigueEta = (await tituloEsEta()) && new URL(page.url()).pathname === `/modulos/${fila.get("eta").id}` && (await barra()) === "Modulos a medida";
+  const sigueEta = (await tituloEsEta()) && new URL(page.url()).pathname === `/modulos/${fila.get("eta").id}` && (await barra()) === "Módulos a medida";
   await page.unroute(detalleDeCorte, retenerCorte);
   check("si la solicitud anterior responde tarde, no reemplaza a la que se esta viendo", volvioAEta && sigueEta);
   await page.goto(`${APP}/modulos`);
@@ -1162,12 +1162,12 @@ try {
   // ---------------------------------------------------------------- F. seleccion y exportar
   await casilla("alfa").check();
   await casilla("eta").check();
-  check("exportar: el boton cuenta la seleccion", norm(await exportar.innerText()) === "Exportar seleccion (2)");
+  check("exportar: el boton cuenta la seleccion", norm(await exportar.innerText()) === "Exportar selección (2)");
   await elegirEstado("Pendiente");
   await esperarClientes(["alfa", "eta", "delta"]);
   check(
     "un filtro que deja las filas marcadas no las desmarca",
-    norm(await exportar.innerText()) === "Exportar seleccion (2)" && (await casilla("alfa").isChecked()) && (await casilla("eta").isChecked()) && !(await casilla("delta").isChecked())
+    norm(await exportar.innerText()) === "Exportar selección (2)" && (await casilla("alfa").isChecked()) && (await casilla("eta").isChecked()) && !(await casilla("delta").isChecked())
   );
   exportaciones.length = 0;
   let descarga = await descargar();
@@ -1179,7 +1179,7 @@ try {
   );
   await buscar.fill("no existe ningun cliente asi");
   await panelSinResultados.waitFor();
-  check("sin resultados: no queda nada para exportar", (await exportar.isDisabled()) && norm(await exportar.innerText()) === "Exportar seleccion");
+  check("sin resultados: no queda nada para exportar", (await exportar.isDisabled()) && norm(await exportar.innerText()) === "Exportar selección");
   await limpiar();
   await esperarClientes(ORDEN);
   check("las que salieron del resultado quedan desmarcadas", !(await casilla("alfa").isChecked()) && !(await casilla("eta").isChecked()) && (await exportar.isDisabled()));
@@ -1230,7 +1230,7 @@ try {
     (await esperarClientes(ORDEN)) &&
       (await casilla("alfa").isChecked()) &&
       (await casilla("beta").isChecked()) &&
-      norm(await exportar.innerText()) === "Exportar seleccion (2)" &&
+      norm(await exportar.innerText()) === "Exportar selección (2)" &&
       (await contadorPie()) === "2 filas seleccionadas" &&
       JSON.stringify(pedidos) === '[{"search":"Prueba"}]',
     `pie "${await contadorPie()}" | ${JSON.stringify(pedidos)}`
@@ -1430,7 +1430,7 @@ try {
   await esperarClientes(["alfa", "eta"]);
   const filtrada = new URL(page.url()).search;
   pedidos.length = 0;
-  await page.getByRole("link", { name: "Modulos a medida" }).click();
+  await page.getByRole("link", { name: "Módulos a medida" }).click();
   await page.waitForURL(`${APP}/modulos`);
   await page.waitForTimeout(1000);
   check(
@@ -1456,11 +1456,11 @@ try {
   await esperarClientes(ORDEN);
   // El menu enseguida despues de escribir (antes de la pausa), con la URL ya sin filtros: tambien manda sobre lo escrito.
   await desdeInput.fill(addDays(hoy, 5));
-  await page.getByRole("link", { name: "Modulos a medida" }).click();
+  await page.getByRole("link", { name: "Módulos a medida" }).click();
   await page.waitForTimeout(1200);
   check("el menu enseguida despues de elegir una fecha: no queda la fecha ni su filtro", new URL(page.url()).search === "" && (await desdeInput.inputValue()) === "" && (await esperarClientes(ORDEN)), new URL(page.url()).search);
   await buscar.fill("gamma");
-  await page.getByRole("link", { name: "Modulos a medida" }).click();
+  await page.getByRole("link", { name: "Módulos a medida" }).click();
   await page.waitForTimeout(1200);
   check("el menu enseguida despues de escribir en Buscar: no queda la busqueda", new URL(page.url()).search === "" && (await buscar.inputValue()) === "" && (await esperarClientes(ORDEN)), new URL(page.url()).search);
 
@@ -1511,7 +1511,7 @@ try {
   await page.evaluate(() => {
     window.__capturar = false;
   });
-  await page.getByRole("link", { name: "Modulos a medida" }).click();
+  await page.getByRole("link", { name: "Módulos a medida" }).click();
   let tomoElMenu = false;
   for (let waited = 0; waited < 5000 && !tomoElMenu; waited += 100) {
     tomoElMenu = (await buscar.inputValue()) === "";
@@ -1538,7 +1538,7 @@ try {
   await page.waitForTimeout(200);
   await page.evaluate((id) => {
     window.__capturar = false;
-    document.querySelector(`[aria-label="Solicitudes de modulos"] .MuiDataGrid-row[data-id="${id}"] [data-field="cliente"]`).click();
+    document.querySelector(`[aria-label="Solicitudes de módulos"] .MuiDataGrid-row[data-id="${id}"] [data-field="cliente"]`).click();
     for (const pausa of window.__pausas) pausa();
   }, fila.get("alfa").id);
   await page.waitForURL(`**/modulos/${fila.get("alfa").id}`, { timeout: 10000 }).catch(() => undefined);
@@ -1550,7 +1550,7 @@ try {
   // Atras con una fecha a medio escribir, sin salir del campo: el campo queda como la URL (vacio, sin segmentos sueltos).
   await elegirEstado("Pendiente");
   await esperarClientes(["alfa", "eta", "delta"]);
-  await page.getByRole("link", { name: "Modulos a medida" }).click();
+  await page.getByRole("link", { name: "Módulos a medida" }).click();
   await page.waitForURL(`${APP}/modulos`);
   await esperarClientes(ORDEN);
   await escribirFecha(desdeInput, dmy(hoy).slice(0, 5).replace("/", ""), 0);
@@ -1565,12 +1565,12 @@ try {
   await esperarClientes(ORDEN);
 
   // ---------------------------------------------------------------- I. otras pantallas
-  await page.getByRole("button", { name: "Nueva solicitud de modulos" }).click();
+  await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
   await page.waitForURL("**/modulos/nueva");
-  await page.getByRole("heading", { name: "Nueva solicitud de modulos" }).waitFor({ timeout: 30000 });
-  check("boton Nueva solicitud: abre el asistente, con la barra de la seccion", await esperarBarra("Modulos a medida"), await barra());
+  await page.getByRole("heading", { name: "Nueva solicitud de módulos" }).waitFor({ timeout: 30000 });
+  check("boton Nueva solicitud: abre el asistente, con la barra de la seccion", await esperarBarra("Módulos a medida"), await barra());
   await page.goto(`${APP}/configuracion-modulos`);
-  check("titulo de la barra en el catalogo", await esperarBarra("Catalogo de modulos"), await barra());
+  check("titulo de la barra en el catalogo", await esperarBarra("Catálogo de módulos"), await barra());
   await page.goto(`${APP}/pedidos`);
   check("titulo de la barra en las solicitudes de corte: el de siempre", await esperarBarra("Panel de solicitudes"), await barra());
 
@@ -1955,7 +1955,7 @@ try {
   await filaDe("delta").locator('[data-field="cliente"]').click();
   await page.waitForURL(`**/modulos/${fila.get("delta").id}`);
   await page.getByRole("button", { name: "Eliminar" }).click();
-  await page.getByRole("button", { name: "Si, eliminar" }).click();
+  await page.getByRole("button", { name: "Sí, eliminar" }).click();
   await page.waitForURL(`**/modulos${conEstado}`, { timeout: 15000 }).catch(() => undefined);
   const avisoBorrado = await page
     .getByText("Solicitud eliminada correctamente.")
