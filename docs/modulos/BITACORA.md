@@ -27,6 +27,32 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-08 (30) · equipo Pinformatico15 · rama main
+
+**Pasos:** F7.2 terminado.
+
+**Hecho:**
+- Push de los 2 commits de F7.1, con el OK de Gonzalo.
+- Pulido (DECISIONES 54):
+  - Autocompletado de clientes en el paso 1 del asistente: `GET /api/pedidos-modulos/clientes`, con `module-order-clients.ts` y `clientSuggestionPatch`, cada uno con su test.
+  - Chips de plazo con contraste AA.
+  - En el tema: el botón principal deshabilitado sin el degradado y el foco del teclado visible en todas las grillas. Las grillas de los carpinteros cambian solo con el teclado.
+- Se ajustaron los colores esperados en e2e-f45 y e2e-f51.
+
+**Decisiones nuevas:** DECISIONES 54 (y la 44 queda resuelta).
+
+**Verificaciones:**
+- frontend `npm test` (en verde, asistente 22), backend `npm test` (35), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f72-navegador 14/14, f44-navegador sin fallas, f45-navegador 139/139, f51-navegador 63/63, f52-navegador 40/40, f54-navegador 23/23 y f71-navegador 17/17. La copia quedó como estaba.
+
+**Commits:** dos commits locales (código y pruebas, y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F7.4, agilizar el optimizador: lo primero es medir con `npm --prefix frontend run bench:optimizer` y perfilar. Regla: nunca más placas.
+
+**Esperando a Gonzalo o a ROMA:** P5, P6 y P14; las reglas de los herrajes (Fase 6); la aceptación con ROMA (F7.3).
+
+---
+
 ## 2026-10-08 (29) · equipo Pinformatico15 · rama main
 
 **Pasos:** F7.1 terminado. La Fase 6 (herrajes) queda para más adelante.

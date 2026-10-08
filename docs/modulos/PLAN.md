@@ -12,9 +12,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-07
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F5.5 está commiteado y subido (con el OK de Gonzalo). F7.1 está commiteado en local; su push espera el OK. Cada push espera su OK.
-- **Último paso terminado:** F7.1 (recalcular un módulo). Las Fases 0 a 5 están completas; la 6 (herrajes) espera que se definan las reglas.
-- **Próximo paso:** **F7.2**, pulido (spec §14.5). La **Fase 6** (herrajes) queda para después: Gonzalo pidió seguir y definir los herrajes más adelante (2026-10-08).
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F7.1 está commiteado y subido (con el OK de Gonzalo). F7.2 está commiteado en local; su push espera el OK. Cada push espera su OK.
+- **Último paso terminado:** F7.2 (pulido). Las Fases 0 a 5 están completas; la 6 (herrajes) espera que se definan las reglas.
+- **Próximo paso:** **F7.4**, agilizar los tiempos del optimizador (sin dar nunca más placas). La **Fase 6** (herrajes) queda para después: Gonzalo pidió seguir y definir los herrajes más adelante (2026-10-08).
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -38,7 +38,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [x] |
 | F6 | Herrajes (contratados, DECISIONES 10) | [ ] se definen más adelante |
-| F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [~] F7.1 hecho |
+| F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [~] F7.1 y F7.2 hechos |
 | F8 | Pase a producción (VPS), al final | [ ] |
 
 ---
@@ -611,13 +611,14 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 Regenera las piezas de ese módulo y **recalcula el pedido entero** en la misma transacción: las placas no se suman por módulo (DECISIONES R4). Mantiene los colores y el fondo guardados del módulo (DECISIONES 32). Lo registra en el historial (`RECALCULAR_MODULO`).
 - **Hecho (2026-10-08):** "Cambiar medidas o colores" en cada módulo del Despiece (`RecalcModuleDialog`, con la tarjeta del asistente) y `POST /api/pedidos-modulos/:id/modulos/:moduloPedidoId/recalcular` (más `/vista-previa`), que reemplaza solo las filas de ese módulo, guarda sus medidas, colores, fondo y copia de la definición, recalcula el pedido entero y deja `RECALCULAR_MODULO` (DECISIONES 53). Pruebas: tests unitarios (`module-recalc.test.ts`, detalle 6) y de punta a punta: e2e-f71 25/25 y e2e-f71-navegador 17/17 (nuevas), y sin fallas f52 43/43, f43, f42, f51-navegador 63/63, f52-navegador 40/40, f54-navegador 23/23, f45-navegador 139/139 y f44-navegador.
 
-#### F7.2 Pulido · [ ]
+#### F7.2 Pulido · [x]
 Autocompletar clientes, estados vacíos y de carga, y accesibilidad (spec §14.5).
 - **Pendiente de F4.5 (DECISIONES 44):**
   - el contraste de los chips de semáforo y de estado: es la paleta del prototipo, con algunos pares apenas debajo de 4,5:1. Si se cambia, va en todo el sistema;
   - los textos con tilde de las grillas de MUI ("Filas por página"): se corrigen en `theme.ts` según lo que decida Gonzalo en DECISIONES 15;
   - el foco del teclado no se ve en las otras grillas (el tema lo saca): en el listado de módulos se agregó solo ahí;
   - los botones principales deshabilitados conservan el degradado del tema y parecen activos: en el listado de módulos se sacó solo en "Exportar seleccion".
+- **Hecho (2026-10-08):** autocompletar clientes de solicitudes anteriores en el paso 1 del asistente (`GET /api/pedidos-modulos/clientes`); chips de plazo con contraste AA (verde y amarillo más oscuros); en el tema, los botones principales deshabilitados sin el degradado y el foco del teclado visible en todas las grillas. Los textos de las grillas de MUI ya tenían tildes (DECISIONES 15). Los botones de canto y los campos de fórmula ya cumplían spec §14.5 desde F3, y los estados vacíos y de carga del listado desde F4.5 (DECISIONES 54). Pruebas: tests (asistente 22, backend 35) y de punta a punta: e2e-f72-navegador 14/14 (nueva), f44-navegador sin fallas, f45-navegador 139/139, f51-navegador 63/63, f52-navegador 40/40, f54-navegador 23/23 y f71-navegador 17/17.
 
 #### F7.4 Agilizar los tiempos del optimizador · [ ]
 - **Por qué:** en F0.9 se aceptó esperar más para ahorrar placas (DECISIONES 0.12). Gonzalo pidió ver al final cómo agilizarlo.
