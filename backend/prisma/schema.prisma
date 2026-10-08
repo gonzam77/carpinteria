@@ -28,63 +28,63 @@ enum TipoMaterial {
 }
 
 model Usuario {
-  id            String          @id @default(uuid())
-  nombre        String
-  apellido      String
-  email         String          @unique
-  password      String?
-  telefono      String?
-  googleId      String?         @unique
-  rol           Rol             @default(CARPINTERO)
-  fechaCreacion DateTime        @default(now())
-  pedidos       Pedido[]
-  auditorias    Auditoria[]     @relation("AuditoriaUsuario")
-  cambios       HistorialPedido[] @relation("CambioUsuario")
+  id                String             @id @default(uuid())
+  nombre            String
+  apellido          String
+  email             String             @unique
+  password          String?
+  telefono          String?
+  googleId          String?            @unique
+  rol               Rol                @default(CARPINTERO)
+  fechaCreacion     DateTime           @default(now())
+  pedidos           Pedido[]
+  auditorias        Auditoria[]        @relation("AuditoriaUsuario")
+  cambios           HistorialPedido[]  @relation("CambioUsuario")
   pushSubscriptions PushSubscription[]
 
   @@map("usuarios")
 }
 
 model Pedido {
-  id            String            @id @default(uuid())
-  cliente       String
-  numeroContacto String?
-  observaciones String?
-  estado        EstadoPedido      @default(PENDIENTE)
-  stockReservado Boolean          @default(false)
-  placasEstimadas Int             @default(0)
-  costoPlacas   Float             @default(0)
-  costoManoObraCortes Float       @default(0)
-  costoMaterialCantos Float       @default(0)
-  costoPegadoCantos Float         @default(0)
-  costoCantos   Float             @default(0)
-  metrosCanto   Float             @default(0)
-  presupuestoEstimado Float       @default(0)
-  faltanteStock Boolean           @default(false)
+  id                  String            @id @default(uuid())
+  cliente             String
+  numeroContacto      String?
+  observaciones       String?
+  estado              EstadoPedido      @default(PENDIENTE)
+  stockReservado      Boolean           @default(false)
+  placasEstimadas     Int               @default(0)
+  costoPlacas         Float             @default(0)
+  costoManoObraCortes Float             @default(0)
+  costoMaterialCantos Float             @default(0)
+  costoPegadoCantos   Float             @default(0)
+  costoCantos         Float             @default(0)
+  metrosCanto         Float             @default(0)
+  presupuestoEstimado Float             @default(0)
+  faltanteStock       Boolean           @default(false)
   // Detalle del calculo con el que se armo la constancia: placas por material, mm por canto, y los precios
   // y la configuracion usados. Lo leen el listado de materiales y el dashboard. Null en pedidos anteriores.
-  estimacionDetalle Json?
+  estimacionDetalle   Json?
   // Stock comprometido por el pedido: las placas por material que se descontaron, para devolver exactamente
   // eso. forzada = se avanzo sin descontar. Null si no tiene stock comprometido (o en pedidos anteriores).
-  reservaStock Json?
+  reservaStock        Json?
   // Numero correlativo legible (spec D6). Las solicitudes de modulos se muestran como M-{numero}.
-  numero        Int               @unique @default(autoincrement())
-  tipo          TipoPedido        @default(CORTE)
-  fechaEntrega  DateTime?         @db.Date // fecha comprometida, sin hora (DECISIONES 8)
-  emailContacto String?
-  direccionEntrega String?
-  costoHerrajes Float             @default(0) // aparte de presupuestoEstimado (DECISIONES R1)
+  numero              Int               @unique @default(autoincrement())
+  tipo                TipoPedido        @default(CORTE)
+  fechaEntrega        DateTime?         @db.Date // fecha comprometida, sin hora (DECISIONES 8)
+  emailContacto       String?
+  direccionEntrega    String?
+  costoHerrajes       Float             @default(0) // aparte de presupuestoEstimado (DECISIONES R1)
   // Clave de alta del asistente de modulos (UUID del navegador, DECISIONES 40): si el mismo intento llega dos veces,
   // se devuelve la solicitud ya creada en vez de crear otra.
-  claveAlta     String?           @unique
-  usuarioId     String
-  fechaCreacion DateTime          @default(now())
-  fechaActualizacion DateTime     @updatedAt
-  usuario       Usuario           @relation(fields: [usuarioId], references: [id])
-  detalles      DetallePedido[]
-  historial     HistorialPedido[]
-  modulos       PedidoModulo[]
-  herrajes      PedidoHerraje[]
+  claveAlta           String?           @unique
+  usuarioId           String
+  fechaCreacion       DateTime          @default(now())
+  fechaActualizacion  DateTime          @updatedAt
+  usuario             Usuario           @relation(fields: [usuarioId], references: [id])
+  detalles            DetallePedido[]
+  historial           HistorialPedido[]
+  modulos             PedidoModulo[]
+  herrajes            PedidoHerraje[]
 
   @@index([estado])
   @@index([tipo])
@@ -95,28 +95,28 @@ model Pedido {
 }
 
 model Material {
-  id                 String          @id @default(uuid())
-  nombre             String          @unique
-  tipo               TipoMaterial    @default(PLACA)
-  valor              Float
-  espesorMm          Float           @default(18)
-  anchoPlaca         Int?
-  altoPlaca          Int?
-  colorCanto         String?
-  placaMaterialId    String?
-  stockPlacas        Int?
-  activo             Boolean         @default(true)
-  fechaCreacion      DateTime        @default(now())
-  fechaActualizacion DateTime        @updatedAt
-  detalles           DetallePedido[]
-  placaMaterial      Material?       @relation("CantoPlaca", fields: [placaMaterialId], references: [id], onDelete: SetNull)
-  cantos             Material[]      @relation("CantoPlaca")
-  modulosFondo       Modulo[]        @relation("ModuloFondo")
-  piezasModuloFijas  ModuloPieza[]   @relation("ModuloPiezaFijo")
+  id                          String                 @id @default(uuid())
+  nombre                      String                 @unique
+  tipo                        TipoMaterial           @default(PLACA)
+  valor                       Float
+  espesorMm                   Float                  @default(18)
+  anchoPlaca                  Int?
+  altoPlaca                   Int?
+  colorCanto                  String?
+  placaMaterialId             String?
+  stockPlacas                 Int?
+  activo                      Boolean                @default(true)
+  fechaCreacion               DateTime               @default(now())
+  fechaActualizacion          DateTime               @updatedAt
+  detalles                    DetallePedido[]
+  placaMaterial               Material?              @relation("CantoPlaca", fields: [placaMaterialId], references: [id], onDelete: SetNull)
+  cantos                      Material[]             @relation("CantoPlaca")
+  modulosFondo                Modulo[]               @relation("ModuloFondo")
+  piezasModuloFijas           ModuloPieza[]          @relation("ModuloPiezaFijo")
   configuracionesModulosFondo ConfiguracionModulos[] @relation("ConfiguracionModulosFondo")
-  pedidosModuloEsqueleto PedidoModulo[] @relation("PMEsqueleto")
-  pedidosModuloFrentes   PedidoModulo[] @relation("PMFrentes")
-  pedidosModuloFondo     PedidoModulo[] @relation("PMFondo")
+  pedidosModuloEsqueleto      PedidoModulo[]         @relation("PMEsqueleto")
+  pedidosModuloFrentes        PedidoModulo[]         @relation("PMFrentes")
+  pedidosModuloFondo          PedidoModulo[]         @relation("PMFondo")
 
   @@index([tipo])
   @@index([activo])
@@ -125,59 +125,58 @@ model Material {
 }
 
 model DetallePedido {
-  id                 String  @id @default(uuid())
-  pedidoId           String
-  materialId         String?
-  codigoBarra        String
-  material           String
-  largo              Int
-  ancho              Int
-  cantidad           Int
-  cantoLargo1Id      String?
-  cantoLargo1Nombre  String?
-  cantoLargo1        Boolean @default(false)
-  cantoLargo2Id      String?
-  cantoLargo2Nombre  String?
-  cantoLargo2        Boolean @default(false)
-  cantoAncho1Id      String?
-  cantoAncho1Nombre  String?
-  cantoAncho1        Boolean @default(false)
-  cantoAncho2Id      String?
-  cantoAncho2Nombre  String?
-  cantoAncho2        Boolean @default(false)
-  permiteRotar       Boolean @default(false)
-  codigoBarraCentro  String?
-  remark             String?
-  numeroCliente      String?
-  nombreCliente      String?
-  nombreProducto     String?
+  id                String         @id @default(uuid())
+  pedidoId          String
+  materialId        String?
+  codigoBarra       String
+  material          String
+  largo             Int
+  ancho             Int
+  cantidad          Int
+  cantoLargo1Id     String?
+  cantoLargo1Nombre String?
+  cantoLargo1       Boolean        @default(false)
+  cantoLargo2Id     String?
+  cantoLargo2Nombre String?
+  cantoLargo2       Boolean        @default(false)
+  cantoAncho1Id     String?
+  cantoAncho1Nombre String?
+  cantoAncho1       Boolean        @default(false)
+  cantoAncho2Id     String?
+  cantoAncho2Nombre String?
+  cantoAncho2       Boolean        @default(false)
+  permiteRotar      Boolean        @default(false)
+  codigoBarraCentro String?
+  remark            String?
+  numeroCliente     String?
+  nombreCliente     String?
+  nombreProducto    String?
   // Posicion de la fila dentro del pedido. Todas las lecturas ordenan por este campo.
-  indice             Int     @default(0)
-  pedidoModuloId     String? // null = pieza de corte normal o "pieza adicional" de una solicitud de modulos
-  piezaCodigo        String? // codigo de ModuloPieza de donde salio (null si es MANUAL)
-  origen             OrigenDetalle? // null en solicitudes de corte
-  orden              Int     @default(0) // orden de la pieza dentro de su modulo (DECISIONES 11)
-  pedido             Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  pedidoModulo       PedidoModulo? @relation(fields: [pedidoModuloId], references: [id], onDelete: Cascade)
-  materialRef        Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+  indice            Int            @default(0)
+  pedidoModuloId    String? // null = pieza de corte normal o "pieza adicional" de una solicitud de modulos
+  piezaCodigo       String? // codigo de ModuloPieza de donde salio (null si es MANUAL)
+  origen            OrigenDetalle? // null en solicitudes de corte
+  orden             Int            @default(0) // orden de la pieza dentro de su modulo (DECISIONES 11)
+  pedido            Pedido         @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  pedidoModulo      PedidoModulo?  @relation(fields: [pedidoModuloId], references: [id], onDelete: Cascade)
+  materialRef       Material?      @relation(fields: [materialId], references: [id], onDelete: SetNull)
 
   @@index([materialId])
   @@index([pedidoId, indice])
   @@index([pedidoModuloId])
-
   @@map("detalle_pedidos")
 }
 
 model HistorialPedido {
-  id            String       @id @default(uuid())
+  id            String   @id @default(uuid())
   pedidoId      String
   usuarioId     String
   accion        String
   valorAnterior String?
   valorNuevo    String?
-  fechaCreacion DateTime     @default(now())
-  pedido        Pedido       @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  usuario       Usuario      @relation("CambioUsuario", fields: [usuarioId], references: [id])
+  fechaCreacion DateTime @default(now())
+  pedido        Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  usuario       Usuario  @relation("CambioUsuario", fields: [usuarioId], references: [id])
 
   @@index([pedidoId])
   @@map("historial_pedidos")
@@ -217,12 +216,12 @@ model ConfiguracionEmpresa {
 }
 
 model ConfiguracionPresupuesto {
-  id                 String   @id @default("default")
-  manoObraCanto045Mm Float @default(0)
-  manoObraCanto1Mm   Float @default(0)
-  manoObraCanto2Mm   Float @default(0)
-  manoObraPlacaPorPlaca Float @default(0)
-  fechaActualizacion DateTime @updatedAt
+  id                    String   @id @default("default")
+  manoObraCanto045Mm    Float    @default(0)
+  manoObraCanto1Mm      Float    @default(0)
+  manoObraCanto2Mm      Float    @default(0)
+  manoObraPlacaPorPlaca Float    @default(0)
+  fechaActualizacion    DateTime @updatedAt
 
   @@map("configuracion_presupuesto")
 }
@@ -241,8 +240,6 @@ model PushSubscription {
   @@index([usuarioId])
   @@map("push_subscriptions")
 }
-
-
 
 // ---------------------------------------------------------------- Modulos a medida: catalogo (F2.1)
 // Especificacion: docs/modulos/ESPECIFICACION-MODULOS-A-MEDIDA.md §5. Las relaciones con los pedidos
@@ -399,17 +396,37 @@ model ConfiguracionModulos {
 }
 
 // Herrajes (opcional, detras de ConfiguracionModulos.herrajesHabilitados). Las tablas se crean igual.
+// Tipo de herraje (bisagra, corredera, pata...): en el modulo y en la solicitud se elige un modelo de su tipo (DECISIONES 57).
+model TipoHerraje {
+  id                 String    @id @default(uuid())
+  nombre             String    @unique
+  orden              Int       @default(0)
+  activo             Boolean   @default(true)
+  fechaCreacion      DateTime  @default(now())
+  fechaActualizacion DateTime  @updatedAt
+  herrajes           Herraje[]
+
+  @@map("tipos_herraje")
+}
+
+// Un modelo de herraje, con su precio. Los que van por medida (correderas) llevan la medida en mm y una linea: los
+// modelos del mismo tipo y la misma linea son las medidas de esa linea (DECISIONES 57).
 model Herraje {
   id                 String          @id @default(uuid())
   nombre             String          @unique
   unidad             String          @default("unidad") // unidad | par | juego | metro
   valor              Float           @default(0)
   activo             Boolean         @default(true)
+  tipoId             String?
+  linea              String?
+  medidaMm           Float?
   fechaCreacion      DateTime        @default(now())
   fechaActualizacion DateTime        @updatedAt
+  tipo               TipoHerraje?    @relation(fields: [tipoId], references: [id], onDelete: Restrict)
   modulos            ModuloHerraje[]
   pedidos            PedidoHerraje[]
 
+  @@index([tipoId])
   @@map("herrajes")
 }
 
@@ -418,6 +435,8 @@ model ModuloHerraje {
   moduloId        String
   herrajeId       String
   formulaCantidad String // ej. "PUERTAS.cant * SI(PUERTAS.largo > 900; 3; 2)"
+  // Medida que necesita (ej. "PROFUNDIDAD - 50"): se elige de la linea del modelo por defecto el mas largo que entra.
+  formulaMedida   String?
   orden           Int     @default(0)
   modulo          Modulo  @relation(fields: [moduloId], references: [id], onDelete: Cascade)
   herraje         Herraje @relation(fields: [herrajeId], references: [id], onDelete: Restrict)
@@ -469,17 +488,22 @@ model PedidoModulo {
 }
 
 model PedidoHerraje {
-  id             String        @id @default(uuid())
+  id             String         @id @default(uuid())
   pedidoId       String
   pedidoModuloId String?
   herrajeId      String?
   nombre         String // snapshot
   unidad         String
+  tipo           String? // snapshot del nombre del tipo
+  linea          String? // snapshot
+  medidaMm       Float? // snapshot
   cantidad       Float
   valorUnitario  Float // snapshot del precio al crear o editar
-  pedido         Pedido        @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  pedidoModulo   PedidoModulo? @relation(fields: [pedidoModuloId], references: [id], onDelete: Cascade)
-  herraje        Herraje?      @relation(fields: [herrajeId], references: [id], onDelete: SetNull)
+  orden          Int            @default(0)
+  origen         OrigenDetalle? // CALCULADO del catalogo, EDITADO a mano, MANUAL agregado a mano
+  pedido         Pedido         @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  pedidoModulo   PedidoModulo?  @relation(fields: [pedidoModuloId], references: [id], onDelete: Cascade)
+  herraje        Herraje?       @relation(fields: [herrajeId], references: [id], onDelete: SetNull)
 
   @@map("pedidos_herraje")
 }

@@ -5,6 +5,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import GroupIcon from "@mui/icons-material/Group";
 import BusinessIcon from "@mui/icons-material/Business";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import HardwareIcon from "@mui/icons-material/Hardware";
 import KitchenIcon from "@mui/icons-material/Kitchen";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -63,6 +64,7 @@ export function AppLayout() {
             { label: "Optimizador", to: "/configuracion-optimizador", icon: <TuneIcon />, match: (pathname: string) => pathname === "/configuracion-optimizador" },
             { label: "Presupuesto", to: "/configuracion-presupuesto", icon: <RequestQuoteIcon />, match: (pathname: string) => pathname === "/configuracion-presupuesto" },
             { label: "Materiales", to: "/materiales", icon: <Inventory2Icon />, match: (pathname: string) => pathname === "/materiales" },
+            { label: "Herrajes", to: "/configuracion-herrajes", icon: <HardwareIcon />, match: (pathname: string) => pathname === "/configuracion-herrajes" },
             {
               label: "Catálogo de módulos",
               to: "/configuracion-modulos",

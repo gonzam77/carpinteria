@@ -435,3 +435,27 @@ export type ModuleOrderListItem = {
   usuarioId: string;
   cantidadModulos: number;
 };
+
+// ---------------------------------------------------------------- Herrajes (Fase 6, spec §12 y DECISIONES 57)
+
+export type HardwareUnit = "unidad" | "par" | "juego" | "metro";
+
+export type HardwareType = { id: string; nombre: string; orden: number; activo: boolean; herrajes: number };
+
+export type Hardware = {
+  id: string;
+  nombre: string;
+  unidad: HardwareUnit;
+  valor: number;
+  activo: boolean;
+  tipoId: string | null;
+  tipo: { id: string; nombre: string; activo: boolean } | null;
+  /** Solo los que van por medida: la linea agrupa las medidas de un mismo modelo. */
+  linea: string | null;
+  medidaMm: number | null;
+  usoModulos: number;
+  usoSolicitudes: number;
+  canDeletePermanently: boolean;
+};
+
+export type HardwareInput = { nombre: string; tipoId: string; unidad: HardwareUnit; valor: number; linea: string | null; medidaMm: number | null };
