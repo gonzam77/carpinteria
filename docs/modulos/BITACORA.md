@@ -27,6 +27,41 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-08 (28) · equipo Pinformatico15 · rama main
+
+**Pasos:** F5.5 terminado. La Fase 5 está completa.
+
+**Hecho:**
+- Push de los 2 commits de F5.4, con el OK de Gonzalo.
+- Dashboard: `/api/stats` con `byTipo` y `byStatus[].modulos` (`stats-summary.ts` y su test), y en pantalla "de los cuales N son módulos a medida" y "N de módulos a medida" por estado (DECISIONES 52).
+- e2e-f55 nueva: el checklist de spec §15 y la integración de spec §17.2. Para el Excel de corte se levantó el backend de antes de F5.3 en un worktree temporal (puerto 4101) y se comparó archivo por archivo; después se borró la junction y el worktree.
+
+**Checklist de spec §15, con su evidencia:**
+1. `GET /api/orders` solo corte por defecto y Solicitudes sin módulos: e2e-f55 (admin y carpintero) y e2e-f45 (listados).
+2. `POST` crea CORTE y `PUT /api/orders/:id` sobre módulos da 400 `ORDER_IS_MODULES`: e2e-f55 y e2e-f52.
+3. `GET /api/orders/:id` sobre módulos responde y `/pedidos/:id` lleva a `/modulos/:id`: e2e-f55 y e2e-f51.
+4. Dashboard con los dos tipos y `byTipo`: e2e-f55, `stats-summary.test.ts` y una captura revisada.
+5. Sin push ni WhatsApp al crear módulos: e2e-f55 (el código del alta no los importa ni los llama).
+6. Carpintero: 403 en las 24 rutas nuevas (e2e-f55) y redirección en el frontend (e2e-f51 y e2e-f54).
+7. `OrderItemsTable` sin `groups` igual: e2e-f52-navegador (formulario de corte sin grupos, con Agregar pieza abajo) y el código (sin grupos, `rows.map` como antes).
+8. Excel de corte igual byte a byte salvo la fecha: e2e-f55 contra el backend de antes de F5.3 (16 archivos del .xlsx iguales; solo cambia `docProps/core.xml`) y e2e-f53.
+9. Materiales, `canDeletePermanently` y avisos: e2e-f23 4/4.
+10. `cutOptimizer.test.ts` (39) y `check:optimizer` en verde, ahora con cuatro archivos compartidos.
+
+**Decisiones nuevas:** DECISIONES 52.
+
+**Verificaciones:**
+- frontend `npm test` (10 suites en verde), backend `npm test` (32), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f55 27/27, f53 21/21, f05 22/22 y f04 12/12. La copia quedó como estaba.
+
+**Commits:** dos commits locales (código y pruebas, y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** Fase 6, herrajes. Lo primero: leer spec §12 y §13.4 y "Tener en cuenta" de PLAN Fase 6. Las reglas reales las pasa ROMA.
+
+**Esperando a Gonzalo o a ROMA:** P5, P6 y P14; las reglas de los herrajes.
+
+---
+
 ## 2026-10-08 (27) · equipo Pinformatico15 · rama main
 
 **Pasos:** F5.4 terminado.

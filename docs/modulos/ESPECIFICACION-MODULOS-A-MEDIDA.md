@@ -936,16 +936,16 @@ Agregá `TipoPedido`, `Modulo`, `ModuloParametro`, `ModuloPieza`, `ModuloPerfilC
 
 ## 15. Impacto en lo existente: checklist de no-regresión
 
-- [ ] `GET /api/orders` filtra `tipo: CORTE` **por defecto**. `OrdersPage` (Solicitudes / Mis solicitudes) no muestra módulos.
-- [ ] `POST/PUT /api/orders` crea y edita solo `CORTE`. `PUT /api/orders/:id` sobre un pedido `MODULOS` responde 400 ("Editá esta solicitud desde Módulos a medida").
-- [ ] `GET /api/orders/:id` sobre un `MODULOS` funciona, pero el frontend redirige `/pedidos/:id` → `/modulos/:id` si `tipo = MODULOS`.
-- [ ] **Dashboard (`/api/stats`):** los totales y las alertas de stock **incluyen ambos tipos**, porque el stock de placas es uno solo. Agregá un desglose `byTipo` para mostrar "de los cuales N son módulos a medida".
-- [ ] No hay notificaciones push ni WhatsApp al crear solicitudes de módulos.
-- [ ] Un carpintero no puede acceder a ninguna ruta nueva (403 en la API y redirección en el frontend).
-- [ ] `OrderItemsTable` sin la prop `groups` se ve y funciona idéntico.
-- [ ] Exportar varias solicitudes de corte sigue dando el mismo Excel byte a byte, salvo la fecha de creación del archivo.
-- [ ] Materiales: el cálculo de `canDeletePermanently` y los avisos de desactivación contemplan el uso en el catálogo y en las solicitudes de módulos.
-- [ ] `cutOptimizer.test.ts` sigue pasando y `sync-optimizer --check` está en verde con los dos archivos.
+- [x] `GET /api/orders` filtra `tipo: CORTE` **por defecto**. `OrdersPage` (Solicitudes / Mis solicitudes) no muestra módulos.
+- [x] `POST/PUT /api/orders` crea y edita solo `CORTE`. `PUT /api/orders/:id` sobre un pedido `MODULOS` responde 400 ("Editá esta solicitud desde Módulos a medida").
+- [x] `GET /api/orders/:id` sobre un `MODULOS` funciona, pero el frontend redirige `/pedidos/:id` → `/modulos/:id` si `tipo = MODULOS`.
+- [x] **Dashboard (`/api/stats`):** los totales y las alertas de stock **incluyen ambos tipos**, porque el stock de placas es uno solo. Agregá un desglose `byTipo` para mostrar "de los cuales N son módulos a medida".
+- [x] No hay notificaciones push ni WhatsApp al crear solicitudes de módulos.
+- [x] Un carpintero no puede acceder a ninguna ruta nueva (403 en la API y redirección en el frontend).
+- [x] `OrderItemsTable` sin la prop `groups` se ve y funciona idéntico.
+- [x] Exportar varias solicitudes de corte sigue dando el mismo Excel byte a byte, salvo la fecha de creación del archivo.
+- [x] Materiales: el cálculo de `canDeletePermanently` y los avisos de desactivación contemplan el uso en el catálogo y en las solicitudes de módulos.
+- [x] `cutOptimizer.test.ts` sigue pasando y `sync-optimizer --check` está en verde con los dos archivos.
 
 ---
 
