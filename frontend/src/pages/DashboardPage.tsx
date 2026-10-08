@@ -30,11 +30,14 @@ export function DashboardPage() {
     );
   }
 
+  // Los totales incluyen las solicitudes de modulos (el stock es uno solo); se dice cuantas son (spec §15).
+  const modulos = stats?.byTipo?.find((item) => item.tipo === "MODULOS")?.total ?? 0;
   const cards = [
     {
       label: "Pedidos",
       subtitle: "Pedidos activos",
       value: stats?.totalOrders ?? 0,
+      detail: modulos ? `de los cuales ${modulos} ${modulos === 1 ? "es de" : "son"} módulos a medida` : "",
       icon: <AssignmentTurnedInIcon fontSize="small" />,
       accent: "#f29a3c",
       halo: alpha("#f29a3c", 0.2),
@@ -116,6 +119,11 @@ export function DashboardPage() {
               <Typography variant="h4" sx={{ mt: 1.5, color: "#181512", lineHeight: 1 }}>
                 {card.value}
               </Typography>
+              {"detail" in card && card.detail && (
+                <Typography variant="body2" sx={{ color: "#8b8177", fontWeight: 700 }}>
+                  {card.detail}
+                </Typography>
+              )}
             </Stack>
           </Paper>
         ))}
@@ -145,6 +153,11 @@ export function DashboardPage() {
               <Box>
                 <Typography variant="h6">{item.total}</Typography>
                 <StatusChip size="small" status={item.estado as EstadoSolicitud} />
+                {item.modulos > 0 && (
+                  <Typography variant="caption" sx={{ display: "block", mt: 0.5, color: "text.secondary", fontWeight: 700 }}>
+                    {item.modulos} de módulos a medida
+                  </Typography>
+                )}
               </Box>
               <ArrowForwardIcon sx={{ color: getStatusStyle(item.estado as EstadoSolicitud).fg }} fontSize="small" />
             </ButtonBase>

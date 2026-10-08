@@ -5,6 +5,7 @@ import { authenticate, authorize } from "../../middlewares/auth.js";
 import { orderMaterialBoards } from "../orders/order-estimate.service.js";
 import { DETALLES_ORDENADOS } from "../orders/order-queries.js";
 import { asyncHandler } from "../../utils/http.js";
+import { summarizeOrders } from "./stats-summary.js";
 
 export const statsRouter = Router();
 
@@ -13,8 +14,8 @@ statsRouter.get(
   authenticate,
   authorize(Rol.ADMIN),
   asyncHandler(async (_req: any, res: any) => {
-    const [byStatus, totalOrders, totalUsers, totalPieces, pendingOrders] = await Promise.all([
-      prisma.pedido.groupBy({ by: ["estado"], _count: { _all: true } }),
+    const [byStatusAndType, totalOrders, totalUsers, totalPieces, pendingOrders] = await Promise.all([
+      prisma.pedido.groupBy({ by: ["estado", "tipo"], _count: { _all: true } }),
       prisma.pedido.count(),
       prisma.usuario.count(),
       prisma.detallePedido.aggregate({ _sum: { cantidad: true }, _count: { _all: true } }),
@@ -67,7 +68,8 @@ statsRouter.get(
       totalUsers,
       totalPieces: totalPieces._sum.cantidad ?? 0,
       totalRows: totalPieces._count._all,
-      byStatus: byStatus.map((item) => ({ estado: item.estado, total: item._count._all })),
+      // Los totales incluyen los dos tipos (el stock es uno solo); `modulos` y `byTipo` dicen cuantos son de modulos.
+      ...summarizeOrders(byStatusAndType),
       stockAlerts
     });
   })

@@ -39,7 +39,9 @@ export type DashboardStats = {
   totalUsers: number;
   totalPieces: number;
   totalRows: number;
-  byStatus: Array<{ estado: EstadoSolicitud; total: number }>;
+  /** Los totales incluyen los dos tipos; `modulos` dice cuantos de ese estado son de modulos a medida (spec §15). */
+  byStatus: Array<{ estado: EstadoSolicitud; total: number; modulos?: number }>;
+  byTipo?: Array<{ tipo: TipoPedido; total: number }>;
   stockAlerts: StockAlert[];
 };
 
