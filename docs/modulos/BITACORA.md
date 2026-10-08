@@ -27,6 +27,29 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-08 (27) · equipo Pinformatico15 · rama main
+
+**Pasos:** F5.4 terminado.
+
+**Hecho:**
+- Push de los 2 commits de F5.3, con el OK de Gonzalo.
+- Hoja de taller (DECISIONES 51): `ModuleOrderWorkshopPage` en `/modulos/:id/taller`, para imprimir en A4, con una hoja por módulo y otra de piezas adicionales. Lógica sin React en `moduleWorkshop.ts`: hojas, orden igual al Excel, marcas, cantos por lado y medidas con su nombre. Botón "Hoja de taller" en el detalle.
+- Pruebas: `moduleWorkshop.test.ts` y e2e-f54-navegador nueva. Esta revisa el PDF impreso: una página por hoja aunque un módulo tenga 26 piezas. Ojo: `page.pdf` usa los estilos de pantalla si antes se llamó `emulateMedia({ media: "screen" })`.
+
+**Decisiones nuevas:** DECISIONES 51.
+
+**Verificaciones:**
+- frontend `npm test` (39, 17, 6, 5, 8, 21, 11, 5, 5 y 4), backend `npm test` (30), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f54 23/23, f51-navegador 63/63, f52-navegador 40/40 y f45-navegador 139/139 (el detalle con el botón nuevo). La copia quedó como estaba.
+
+**Commits:** dos commits locales (código y pruebas, y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F5.5, no regresión y pruebas de integración: leer spec §15 y §17.2 y "Tener en cuenta" de PLAN F5.5.
+
+**Esperando a Gonzalo o a ROMA:** P5, P6 y P14.
+
+---
+
 ## 2026-10-07 (26) · equipo Pinformatico15 · rama main
 
 **Pasos:** F5.3 terminado.

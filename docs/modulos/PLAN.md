@@ -12,9 +12,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-07
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F5.2 está commiteado y subido (2026-10-07, con el OK de Gonzalo). F5.3 está commiteado en local; su push espera el OK. Cada push espera su OK.
-- **Último paso terminado:** F5.3 (Excel para la máquina). Las Fases 0 a 4 están completas.
-- **Próximo paso:** **F5.4**, la hoja de taller (spec §11.2).
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F5.3 está commiteado y subido (con el OK de Gonzalo). F5.4 está commiteado en local; su push espera el OK. Cada push espera su OK.
+- **Último paso terminado:** F5.4 (hoja de taller). Las Fases 0 a 4 están completas.
+- **Próximo paso:** **F5.5**, no regresión y pruebas de integración (spec §15 y §17.2).
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -36,7 +36,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F3.1–F3.4 | API y pantallas del catálogo | [x] |
 | F4.1–F4.5 | API, asistente y listado de solicitudes de módulos | [x] |
 | F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
-| F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [~] F5.1 a F5.3 hechos |
+| F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [~] F5.1 a F5.4 hechos |
 | F6 | Herrajes (contratados, DECISIONES 10) | [ ] |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
 | F8 | Pase a producción (VPS), al final | [ ] |
@@ -586,18 +586,21 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 - **Hecho (2026-10-07):** `GET /api/orders/export` ordena las filas de las solicitudes de módulos por posición y orden, con las adicionales al final (`export-order.ts`); las de corte salen como antes. Suma `?tipo=CORTE|MODULOS` opcional (zod, 400 si es otro) y el nombre `pedido-M{numero}.xlsx` para una sola de módulos. `buildOrdersWorkbook` no cambió (DECISIONES 50). Pruebas: tests del backend (30) y de punta a punta: e2e-f53 21/21 (nueva), f51-navegador 63/63 y f45-navegador 139/139 (leen el Excel exportado), f52 43/43.
 - **Tener en cuenta (de F4.5):** el nombre del archivo que ve el usuario lo pone el navegador (`saveAs`), no el `Content-Disposition` del servidor: el CORS no expone ese encabezado. El listado de módulos ya baja `pedido-M{numero}.xlsx` con una sola solicitud y `pedidos-carpinteria.xlsx` con varias (DECISIONES 42); el detalle común sigue con `<cliente>-<fecha>.xlsx`.
 
-#### F5.4 Hoja de taller · [ ]
+#### F5.4 Hoja de taller · [x]
 - **Depende de:** F5.1.
 - **Tener en cuenta (de F5.3):** el Excel ordena las piezas de cada módulo por `orden`; la hoja de taller conviene que use el mismo orden (`machineRows` en `backend/src/modules/orders/export-order.ts`), así la hoja y el Excel coinciden pieza por pieza.
 - **Hacer:** `/modulos/:id/taller`, en A4, una página por módulo y otra para las piezas adicionales (spec §11.2).
+- **Hecho (2026-10-08):** `ModuleOrderWorkshopPage` en `/modulos/:id/taller`, sin el menú, con Volver e Imprimir. Una hoja A4 por módulo y una de piezas adicionales, con el encabezado, el bloque del módulo, el despiece en el orden del Excel (`moduleWorkshop.ts`), las marcas EDITADA y AGREGADA, los cantos por lado y espesor, y el pie con observaciones y firmas. Botón "Hoja de taller" en el detalle (DECISIONES 51). Pruebas: tests unitarios (hoja 4) y de punta a punta: e2e-f54-navegador 23/23 (nueva, con el PDF: una página por hoja aunque un módulo tenga 26 piezas), f51-navegador 63/63, f52-navegador 40/40 y f45-navegador 139/139 (el detalle con el botón nuevo).
 
 #### F5.5 No regresión y pruebas de integración · [ ]
 - **Depende de:** F5.1 a F5.4.
 - **Hacer:** dashboard con `byTipo`, el checklist completo de spec §15 y las pruebas de integración de spec §17.2.
+- **Tener en cuenta (de F5.2 a F5.4):** las e2e de F5 (f51 a f54) ya recorren el detalle, la edición, el Excel y la hoja de taller contra la copia del backup; sirven de evidencia para varios puntos de §15. Falta P14 (el comprobante que se abre solo al llegar al Resumen).
 - **Terminado cuando:** todos los puntos de §15 están tildados, con su evidencia en la bitácora.
 
 ### Fase 6: Herrajes · [!] solo si se contrató
 - **Antes de empezar, preguntar a Gonzalo si el cliente lo contrató** (spec §0.4).
+- **Tener en cuenta (de F5.4):** la hoja de taller todavía no tiene la sección de herrajes (casilla, herraje y cantidad, spec §11.2): sumarla en `ModuleOrderWorkshopPage` cuando estén habilitados.
 - **Hacer:** lo de spec §12 y §13.4, detrás de `herrajesHabilitados`. Las cantidades se redondean con la misma tolerancia que `roundMm` (DECISIONES R7). Las reglas reales las tiene que pasar ROMA.
 
 ### Fase 7: Cierre (spec §10.6 y §17.3)

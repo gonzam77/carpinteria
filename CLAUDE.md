@@ -66,7 +66,7 @@ Sistema de gestión de solicitudes de corte de placas de melamina para ROMA Amob
 
 ```bash
 npm run install:all                     # dependencias de backend y frontend
-cd frontend && npm test                 # tests del optimizador, del motor de fórmulas, del presupuesto, del editor, del asistente, del listado, del detalle y de la edición de módulos
+cd frontend && npm test                 # tests del optimizador, del motor de fórmulas, del presupuesto, del editor, del asistente, del listado, del detalle, de la edición y de la hoja de taller de módulos
 cd backend && npm test                  # tests del armado, del listado y de los esquemas de solicitudes de módulos (sin base de datos)
 npm run sync:optimizer                  # copia el código compartido al backend
 npm run check:optimizer                 # falla si las copias difieren
