@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { emptyHardwareForm, groupByType, readHardwareForm } from "./hardware.ts";
+import { emptyHardwareForm, groupByType, hardwareLabel, hardwareLineSummary, readHardwareForm } from "./hardware.ts";
 
 test("formulario de herraje: las mismas reglas que el servidor", () => {
   const ok = readHardwareForm({ ...emptyHardwareForm("t1"), nombre: " Corredera telescópica 400 ", unidad: "par", valor: "9800,5", linea: "Telescópica", medidaMm: "400" });
@@ -25,4 +25,23 @@ test("agrupar por tipo, sin tipo al final", () => {
       ["Sin tipo", ["b"]]
     ]
   );
+});
+
+test("línea de herraje del módulo: cómo queda con las medidas de prueba", () => {
+  const byId = new Map([
+    ["b", { nombre: "Cazoleta común" }],
+    ["t350", { nombre: "Telescópica 350" }],
+    ["t450", { nombre: "Telescópica 450" }]
+  ]);
+  const line = (patch: object) => ({ herrajeId: "b", elegidoId: "b", cantidad: 4, medidaNecesaria: null, eleccion: "POR_DEFECTO" as const, error: null, ...patch });
+  assert.equal(hardwareLineSummary(line({}), byId), "4 × Cazoleta común");
+  assert.equal(hardwareLineSummary(line({ elegidoId: "t450", cantidad: 3, medidaNecesaria: 530, eleccion: "POR_MEDIDA" }), byId), "3 × Telescópica 450 · necesita 530 mm: la más larga que entra");
+  assert.equal(
+    hardwareLineSummary(line({ elegidoId: "t350", cantidad: 3, medidaNecesaria: 300, eleccion: "MAS_CHICO" }), byId),
+    "3 × Telescópica 350 · necesita 300 mm: ninguna entra, va la más chica (se cambia en la solicitud)"
+  );
+  assert.equal(hardwareLineSummary(line({ elegidoId: null }), byId), "Elegí el modelo por defecto.");
+  assert.equal(hardwareLineSummary(line({ error: "Cantidad: No existe la medida X" }), byId), "Cantidad: No existe la medida X");
+  assert.equal(hardwareLabel({ nombre: "Telescópica", medidaMm: 400, activo: true }), "Telescópica · 400 mm");
+  assert.equal(hardwareLabel({ nombre: "Telescópica 400", medidaMm: 400, activo: false }), "Telescópica 400 (inactivo)");
 });

@@ -1,4 +1,5 @@
 // Configuracion › Herrajes sin React (DECISIONES 57): validar el formulario como el servidor y agrupar por tipo.
+import type { ResolvedHardware } from "./moduleFormula.ts";
 import type { Hardware, HardwareInput, HardwareUnit } from "../types/index.ts";
 
 export const HARDWARE_UNITS: Array<{ value: HardwareUnit; label: string }> = [
@@ -53,3 +54,27 @@ export function groupByType(herrajes: Hardware[]) {
 }
 
 export const formatHardwarePrice = (value: number) => value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 2 });
+
+const mmText = (value: number) => `${Number(value.toFixed(2)).toLocaleString("es-AR")} mm`;
+
+/** El nombre de un modelo con su medida, para los selectores: "Telescópica 400 · 400 mm". */
+export const hardwareLabel = (herraje: Pick<Hardware, "nombre" | "medidaMm" | "activo">) =>
+  `${herraje.nombre}${herraje.medidaMm !== null && !herraje.nombre.includes(String(herraje.medidaMm)) ? ` · ${mmText(herraje.medidaMm)}` : ""}${herraje.activo ? "" : " (inactivo)"}`;
+
+/**
+ * Como queda una linea de herraje del modulo con las medidas de prueba (editor del catalogo, DECISIONES 57):
+ * "4 × Cazoleta común", "3 × Telescópica 450 · necesita 530 mm: la más larga que entra" o el aviso que corresponda.
+ */
+export function hardwareLineSummary(resolved: ResolvedHardware, byId: Map<string, Pick<Hardware, "nombre">>) {
+  if (resolved.error) return resolved.error;
+  const elegido = resolved.elegidoId ? byId.get(resolved.elegidoId) : undefined;
+  if (!elegido) return "Elegí el modelo por defecto.";
+  const base = `${resolved.cantidad ?? "?"} × ${elegido.nombre}`;
+  if (resolved.eleccion === "POR_MEDIDA") return `${base} · necesita ${mmText(resolved.medidaNecesaria!)}: la más larga que entra`;
+  if (resolved.eleccion === "MAS_CHICO") {
+    return resolved.medidaNecesaria === null
+      ? `${base} · no se pudo calcular la medida: va la más chica (se cambia en la solicitud)`
+      : `${base} · necesita ${mmText(resolved.medidaNecesaria)}: ninguna entra, va la más chica (se cambia en la solicitud)`;
+  }
+  return base;
+}

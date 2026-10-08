@@ -29,6 +29,8 @@ import { GeneralTab } from "../components/moduleEditor/GeneralTab";
 import { ParametersTab } from "../components/moduleEditor/ParametersTab";
 import { PiecesTab } from "../components/moduleEditor/PiecesTab";
 import { ProfilesTab } from "../components/moduleEditor/ProfilesTab";
+import { HardwareTab } from "../components/moduleEditor/HardwareTab";
+import { listHardware, listHardwareTypes } from "../api/hardware";
 import { useUnsavedChangesGuard } from "../hooks/useUnsavedChangesGuard";
 import {
   codeFromName,
@@ -48,13 +50,13 @@ import {
   type FitPiece,
   type ModuleDraft
 } from "../lib/moduleEditor";
-import { evaluateModuleDefinition, type RoundingMode } from "../lib/moduleFormula";
-import type { Material, ModuleCategory, ModuleDefinition, ModuleProfile, ModulesConfig, OptimizerSettings } from "../types";
+import { evaluateModuleDefinition, resolveModuleHardware, type RoundingMode } from "../lib/moduleFormula";
+import type { Material, ModuleCategory, ModuleDefinition, ModuleProfile, ModulesConfig, OptimizerSettings, Hardware, HardwareType } from "../types";
 
 type Feedback = { severity: "success" | "error" | "info"; message: string } | null;
 type Confirm = { title: string; message: string; confirmLabel: string; action: () => void | Promise<void> } | null;
 
-const TABS = ["General", "Medidas", "Despiece y cantos", "Perfiles de canto"];
+const TABS = ["General", "Medidas", "Despiece y cantos", "Perfiles de canto", "Herrajes"];
 
 /** Editor de un modulo del catalogo (spec §6.2): /configuracion-modulos/nuevo y /configuracion-modulos/:id. */
 export function ModuleEditorPage() {
@@ -67,6 +69,9 @@ export function ModuleEditorPage() {
   const [categories, setCategories] = useState<ModuleCategory[]>([]);
   const [config, setConfig] = useState<ModulesConfig | null>(null);
   const [placas, setPlacas] = useState<Material[]>([]);
+  // Herrajes (Fase 6): los modelos (tambien los inactivos, para mostrar los que ya tiene) y sus tipos.
+  const [hardware, setHardware] = useState<Hardware[]>([]);
+  const [hardwareTypes, setHardwareTypes] = useState<HardwareType[]>([]);
   const [optimizer, setOptimizer] = useState<OptimizerSettings | null>(null);
   const [loadError, setLoadError] = useState("");
   const [tab, setTab] = useState(0);
@@ -104,10 +109,14 @@ export function ModuleEditorPage() {
       listModuleCategories(),
       getModulesConfig(),
       api.get<Material[]>("/materiales", { params: { incluirInactivos: true } }),
-      api.get<OptimizerSettings>("/optimizer-settings")
+      api.get<OptimizerSettings>("/optimizer-settings"),
+      listHardware(true),
+      listHardwareTypes()
     ])
-      .then(([module, cats, cfg, materials, optimizerSettings]) => {
+      .then(([module, cats, cfg, materials, optimizerSettings, herrajes, tiposHerraje]) => {
         if (cancelled) return;
+        setHardware(herrajes);
+        setHardwareTypes(tiposHerraje);
         setCategories(cats);
         setConfig(cfg);
         setPlacas(materials.data.filter((material) => material.tipo === "PLACA"));
@@ -138,6 +147,12 @@ export function ModuleEditorPage() {
   // Mismo motor y mismo redondeo que la API y el armado de solicitudes (DECISIONES R6).
   const evaluation = useMemo(() => (input ? evaluateModuleDefinition(input, testValues, redondeo) : null), [input, testValues, redondeo]);
   const defaults = useMemo(() => (input ? evaluateModuleDefinition(input, {}, redondeo) : null), [input, redondeo]);
+  // Los herrajes con las medidas de prueba, con el mismo calculo que la solicitud (DECISIONES 57).
+  const resolvedHardware = useMemo(() => {
+    if (!input || !evaluation) return [];
+    const models = new Map(hardware.map((herraje) => [herraje.id, { id: herraje.id, tipoId: herraje.tipoId, linea: herraje.linea, medidaMm: herraje.medidaMm, activo: herraje.activo }]));
+    return resolveModuleHardware(input.herrajes, evaluation.evaluarExpresion, models);
+  }, [input, evaluation, hardware]);
   const suggestions = useMemo(() => (draft ? formulaSuggestions(draft) : []), [draft]);
 
   // Encaje en las placas en las que se puede cortar cada pieza, con la funcion del optimizador (DECISIONES R2).
@@ -165,7 +180,7 @@ export function ModuleEditorPage() {
   }, [input, evaluation, optimizer, placas, config]);
 
   const tabProblems = useMemo(() => {
-    if (!draft || !evaluation || !defaults) return [0, 0, 0, 0];
+    if (!draft || !evaluation || !defaults) return [0, 0, 0, 0, 0];
     const names = [...draft.parametros.map((param) => param.clave), ...draft.piezas.map((pieza) => pieza.codigo)];
     const claves = new Set(draft.parametros.map((param) => param.clave.toUpperCase()));
     const general = (draft.nombre.trim().length < 2 ? 1 : 0) + (identifierProblem(draft.codigo, [draft.codigo]) ? 1 : 0) + (draft.categoriaId ? 0 : 1);
@@ -176,8 +191,9 @@ export function ModuleEditorPage() {
       draft.piezas.filter((pieza) => identifierProblem(pieza.codigo, names) || !pieza.nombre.trim() || (pieza.rol === "FIJO" && !pieza.materialFijoId)).length +
       evaluation.errores.filter((error) => !claves.has(error.ref.toUpperCase())).length;
     const perfiles = draft.perfiles.filter((perfil) => !perfil.nombre.trim()).length;
-    return [general, medidas, piezas, perfiles];
-  }, [draft, evaluation, defaults]);
+    const herrajes = resolvedHardware.filter((item) => item.error || !item.elegidoId).length;
+    return [general, medidas, piezas, perfiles, herrajes];
+  }, [draft, evaluation, defaults, resolvedHardware]);
 
   const save = useCallback(async () => {
     if (!input || saving) return;
@@ -373,6 +389,7 @@ export function ModuleEditorPage() {
                   <span>{label}</span>
                   {index === 1 && <Chip size="small" label={draft.parametros.length} sx={{ height: 20 }} />}
                   {index === 2 && <Chip size="small" label={draft.piezas.length} sx={{ height: 20 }} />}
+                  {index === 4 && <Chip size="small" label={draft.herrajes.length} sx={{ height: 20 }} />}
                   {tabProblems[index] > 0 && <Chip size="small" color="error" label={`${tabProblems[index]} con error`} sx={{ height: 20 }} />}
                 </Stack>
               }
@@ -421,6 +438,17 @@ export function ModuleEditorPage() {
             generalWarnings={fit.general}
             onRename={rename}
             onRemove={(index) => askRemove("pieza", index)}
+          />
+        )}
+        {tab === 4 && (
+          <HardwareTab
+            lines={draft.herrajes}
+            setLines={(change) => setDraft((current) => (current ? { ...current, herrajes: change(current.herrajes) } : current))}
+            resolved={resolvedHardware}
+            hardware={hardware}
+            types={hardwareTypes}
+            suggestions={suggestions}
+            enabled={Boolean(config?.herrajesHabilitados)}
           />
         )}
         {tab === 3 && (

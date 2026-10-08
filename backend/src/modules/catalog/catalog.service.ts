@@ -3,7 +3,7 @@
 import { readFile } from "node:fs/promises";
 import { Prisma, RolPiezaModulo, TipoMaterial, type PrismaClient } from "../../generated/prisma/client.js";
 import { AppError } from "../../utils/http.js";
-import { evaluateModuleDefinition, validateIdentifier, type ModuleError, type ParamDef, type RoundingMode } from "../../shared/moduleFormula.js";
+import { evaluateModuleDefinition, resolveModuleHardware, validateIdentifier, type ModuleError, type ParamDef, type RoundingMode } from "../../shared/moduleFormula.js";
 import type { ModuloInput } from "./catalog.schemas.js";
 import { moduleImagePath, removeModuleImage, storeModuleImage } from "./module-images.service.js";
 
@@ -25,14 +25,13 @@ export async function getModulesConfig(tx: Tx) {
   return tx.configuracionModulos.upsert({ where: { id: "default" }, update: {}, create: { id: "default" } });
 }
 
-/** Cantidad de herrajes: hacia arriba, con la misma tolerancia que el redondeo de medidas (DECISIONES R7). */
-function hardwareQuantity(value: number) {
-  return Math.max(0, Math.ceil(value - 1e-9));
-}
+type Definition = Pick<ModuloInput, "parametros" | "piezas" | "espesorDisenoMm"> & { herrajes?: Array<{ herrajeId: string; formulaCantidad: string; formulaMedida?: string | null }> };
 
-type Definition = Pick<ModuloInput, "parametros" | "piezas" | "espesorDisenoMm"> & { herrajes?: Array<{ herrajeId: string; formulaCantidad: string }> };
-
-/** Evalua una definicion con el motor compartido: piezas, errores y cantidad de cada herraje. */
+/**
+ * Evalua una definicion con el motor compartido: piezas, errores y, de cada herraje, la cantidad y la medida que
+ * necesita (resolveModuleHardware, DECISIONES 57). El modelo elegido por medida se resuelve al armar la solicitud, con los
+ * herrajes de la base; aca no hacen falta.
+ */
 export function evaluateDefinition(definition: Definition, valores: Record<string, number>, redondeo: RoundingMode) {
   const evaluation = evaluateModuleDefinition(
     { parametros: definition.parametros as ParamDef[], piezas: definition.piezas, espesorDisenoMm: definition.espesorDisenoMm },
@@ -40,13 +39,10 @@ export function evaluateDefinition(definition: Definition, valores: Record<strin
     redondeo
   );
   const errores: ModuleError[] = [...evaluation.errores];
-  const herrajes = (definition.herrajes ?? []).map((herraje) => {
-    try {
-      return { herrajeId: herraje.herrajeId, cantidad: hardwareQuantity(evaluation.evaluarExpresion(herraje.formulaCantidad)) };
-    } catch (error) {
-      errores.push({ ref: `herraje ${herraje.herrajeId}`, mensaje: error instanceof Error ? error.message : String(error) });
-      return { herrajeId: herraje.herrajeId, cantidad: null };
-    }
+  const lines = definition.herrajes ?? [];
+  const herrajes = resolveModuleHardware(lines, evaluation.evaluarExpresion, new Map()).map((resolved, index) => {
+    if (resolved.error) errores.push({ ref: `herraje ${index + 1}`, mensaje: resolved.error });
+    return { herrajeId: resolved.herrajeId, cantidad: resolved.cantidad, medidaNecesaria: resolved.medidaNecesaria };
   });
   return { piezas: evaluation.piezas, errores, herrajes };
 }
@@ -99,7 +95,7 @@ export function toDefinition(module: ModuleWithRelations) {
       observaciones: pieza.observaciones,
       cantos: pieza.cantos.map((canto) => ({ perfilOrden: canto.perfil.orden as 1 | 2, lado: canto.lado, espesorMm: canto.espesorMm as 0.45 | 1 | 2 }))
     })),
-    herrajes: module.herrajes.map((herraje) => ({ herrajeId: herraje.herrajeId, formulaCantidad: herraje.formulaCantidad, orden: herraje.orden }))
+    herrajes: module.herrajes.map((herraje) => ({ herrajeId: herraje.herrajeId, formulaCantidad: herraje.formulaCantidad, formulaMedida: herraje.formulaMedida, orden: herraje.orden }))
   };
 }
 
@@ -164,10 +160,12 @@ export async function validateModuleInput(tx: Tx, input: ModuloInput, moduleId?:
 
   // Herrajes.
   const herrajeIds = input.herrajes.map((herraje) => herraje.herrajeId);
-  if (new Set(herrajeIds).size !== herrajeIds.length) problems.push("Hay un herraje repetido.");
+  if (new Set(herrajeIds).size !== herrajeIds.length) problems.push("Hay un modelo de herraje repetido: cada línea va con un modelo distinto.");
   if (herrajeIds.length) {
-    const found = await tx.herraje.count({ where: { id: { in: herrajeIds } } });
-    if (found !== new Set(herrajeIds).size) problems.push("Hay herrajes que no existen.");
+    const found = await tx.herraje.findMany({ where: { id: { in: herrajeIds } }, select: { id: true, nombre: true, activo: true } });
+    if (found.length !== new Set(herrajeIds).size) problems.push("Hay herrajes que no existen.");
+    // Un modulo activo se pide: sus modelos por defecto tienen que estar activos (DECISIONES 57).
+    if (input.activo) found.filter((herraje) => !herraje.activo).forEach((herraje) => problems.push(`El herraje "${herraje.nombre}" está inactivo: elegí otro modelo o activalo.`));
   }
 
   const evaluation = evaluateDefinition(input, {}, config.redondeo as RoundingMode);
@@ -236,7 +234,13 @@ async function writeDefinition(tx: Prisma.TransactionClient, moduleId: string, i
   }
   if (input.herrajes.length) {
     await tx.moduloHerraje.createMany({
-      data: input.herrajes.map((herraje) => ({ moduloId: moduleId, herrajeId: herraje.herrajeId, formulaCantidad: herraje.formulaCantidad, orden: herraje.orden }))
+      data: input.herrajes.map((herraje) => ({
+        moduloId: moduleId,
+        herrajeId: herraje.herrajeId,
+        formulaCantidad: herraje.formulaCantidad,
+        formulaMedida: herraje.formulaMedida ?? null,
+        orden: herraje.orden
+      }))
     });
   }
 }

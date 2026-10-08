@@ -33,7 +33,7 @@ export function draftFromDefinition(definition: ModuleDefinition): ModuleDraft {
     parametros: definition.parametros.map((param) => ({ ...param, uid: newUid() })),
     perfiles: definition.perfiles.map((perfil) => ({ ...perfil })),
     piezas: definition.piezas.map((pieza) => ({ ...pieza, cantos: pieza.cantos.map((canto) => ({ ...canto })), uid: newUid() })),
-    herrajes: definition.herrajes.map((herraje) => ({ ...herraje }))
+    herrajes: definition.herrajes.map((herraje) => ({ ...herraje, formulaMedida: herraje.formulaMedida ?? null }))
   };
 }
 
@@ -155,7 +155,12 @@ export function draftToInput(draft: ModuleDraft): ModuleInput {
         .filter((canto) => perfilOrdenes.has(canto.perfilOrden))
         .sort((a, b) => a.perfilOrden - b.perfilOrden || LADOS.indexOf(a.lado) - LADOS.indexOf(b.lado))
     })),
-    herrajes: draft.herrajes.map((herraje, index) => ({ ...herraje, orden: index + 1 }))
+    herrajes: draft.herrajes.map((herraje, index) => ({
+      herrajeId: herraje.herrajeId,
+      formulaCantidad: herraje.formulaCantidad.trim(),
+      formulaMedida: text(herraje.formulaMedida),
+      orden: index + 1
+    }))
   };
 }
 

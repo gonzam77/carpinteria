@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { buildModulePieces, evaluateModule, evaluateModuleDefinition, parseFormula, roundMm, validateIdentifier, type ModuleDef, type CatalogModuleDef, type CatalogPieceDef } from "./moduleFormula.ts";
+import { buildModulePieces, evaluateModule, evaluateModuleDefinition, parseFormula, roundMm, validateIdentifier, type ModuleDef, type CatalogModuleDef, type CatalogPieceDef, hardwareQuantity, pickHardwareModel, resolveModuleHardware, type HardwareModel } from "./moduleFormula.ts";
 
 // Mismo archivo que importa el seed del catalogo: si alguien lo modifica, la paridad con el Excel se vuelve a verificar.
 const catalog = JSON.parse(readFileSync(new URL("../../../backend/prisma/data/modulos-muebles.json", import.meta.url), "utf8"));
@@ -290,4 +290,62 @@ test("buildModulePieces da las mismas medidas que el motor en las 305 piezas del
     }
   }
   assert.ok(checked >= 600, `piezas comparadas: ${checked}`);
+});
+
+// ---------------------------------------------------------------- herrajes (Fase 6, DECISIONES 57)
+
+test("herrajes: el modelo por medida es el más largo de la línea que entra; si ninguno entra, el más chico", () => {
+  const model = (id: string, linea: string | null, medidaMm: number | null, activo = true, tipoId = "corredera"): HardwareModel => ({ id, tipoId, linea, medidaMm, activo });
+  const models = new Map([
+    ["t350", model("t350", "Telescópica", 350)],
+    ["t400", model("t400", "Telescópica", 400)],
+    ["t450", model("t450", "Telescópica", 450)],
+    ["t500", model("t500", "Telescópica", 500, false)], // inactivo: no se elige
+    ["c400", model("c400", "Común", 400)],
+    ["bisagra", model("bisagra", null, null, true, "bisagra")]
+  ].map((item) => [item[0] as string, item[1] as HardwareModel]));
+  assert.deepEqual(pickHardwareModel("t400", 530, models), { elegidoId: "t450", eleccion: "POR_MEDIDA" }, "530 mm: entra la de 450 (la de 500 está inactiva)");
+  assert.deepEqual(pickHardwareModel("t400", 400, models), { elegidoId: "t400", eleccion: "POR_MEDIDA" }, "justo la medida");
+  assert.deepEqual(pickHardwareModel("t450", 300, models), { elegidoId: "t350", eleccion: "MAS_CHICO" }, "ninguna entra: la más chica");
+  assert.deepEqual(pickHardwareModel("c400", 600, models), { elegidoId: "c400", eleccion: "POR_MEDIDA" }, "solo la misma línea");
+  assert.deepEqual(pickHardwareModel("bisagra", 600, models), { elegidoId: "bisagra", eleccion: "POR_DEFECTO" }, "un modelo sin medida queda el por defecto");
+  assert.deepEqual(pickHardwareModel("no-existe", 600, models), { elegidoId: null, eleccion: "POR_DEFECTO" });
+});
+
+test("herrajes: cantidad hacia arriba con tolerancia, medida con su fórmula y errores por línea", () => {
+  assert.equal(hardwareQuantity(2.0000000001), 2, "errores de punto flotante no suman uno");
+  assert.equal(hardwareQuantity(2.4), 3);
+  assert.equal(hardwareQuantity(-1), 0);
+  const models = new Map<string, HardwareModel>([
+    ["t350", { id: "t350", tipoId: "c", linea: "T", medidaMm: 350, activo: true }],
+    ["t450", { id: "t450", tipoId: "c", linea: "T", medidaMm: 450, activo: true }],
+    ["b", { id: "b", tipoId: "b", linea: null, medidaMm: null, activo: true }]
+  ]);
+  const evaluar = (formula: string) => {
+    if (formula === "PUERTAS * 2") return 4;
+    if (formula === "PROFUNDIDAD - 50") return 530;
+    if (formula === "CAJONES") return 3;
+    throw new Error("No existe la medida X");
+  };
+  const result = resolveModuleHardware(
+    [
+      { herrajeId: "b", formulaCantidad: "PUERTAS * 2" },
+      { herrajeId: "t350", formulaCantidad: "CAJONES", formulaMedida: "PROFUNDIDAD - 50" },
+      { herrajeId: "t450", formulaCantidad: "CAJONES" },
+      { herrajeId: "t350", formulaCantidad: "X", formulaMedida: "X" }
+    ],
+    evaluar,
+    models
+  );
+  assert.deepEqual(
+    result.map((item) => [item.elegidoId, item.cantidad, item.medidaNecesaria, item.eleccion]),
+    [
+      ["b", 4, null, "POR_DEFECTO"],
+      ["t450", 3, 530, "POR_MEDIDA"],
+      ["t450", 3, null, "POR_DEFECTO"],
+      ["t350", null, null, "MAS_CHICO"]
+    ],
+    "sin fórmula de medida queda el modelo que eligió quien armó el módulo"
+  );
+  assert.match(result[3].error ?? "", /^Cantidad: No existe la medida X/);
 });

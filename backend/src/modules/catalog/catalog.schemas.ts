@@ -8,6 +8,8 @@ const clave = z.string().trim().regex(/^[A-Z][A-Z0-9_]*$/, "Usá mayúsculas, n�
 const formula = z.string().max(MAX_FORMULA_LENGTH, `La fórmula supera los ${MAX_FORMULA_LENGTH} caracteres`);
 const espesorCanto = z.union([z.literal(0.45), z.literal(1), z.literal(2)]);
 const optionalText = z.string().trim().optional().nullable();
+/** Formula opcional: vacia queda null (la medida de un herraje, por ejemplo). */
+const optionalFormula = z.preprocess((value) => (typeof value === "string" && !value.trim() ? null : value), formula.trim().nullable().optional());
 
 export const parametroSchema = z.object({
   clave,
@@ -57,7 +59,11 @@ export const moduloSchema = z.object({
   parametros: z.array(parametroSchema).min(1, "El módulo necesita al menos una medida"),
   perfiles: z.array(perfilSchema).min(1, "El módulo necesita al menos un perfil de canto").max(2, "Un módulo tiene como máximo dos perfiles de canto"),
   piezas: z.array(piezaSchema),
-  herrajes: z.array(z.object({ herrajeId: z.string().uuid(), formulaCantidad: formula, orden: z.number().int() })).optional().default([])
+  // Cada linea: el modelo por defecto, la formula de cantidad y, si va por medida, la de la medida (DECISIONES 57).
+  herrajes: z
+    .array(z.object({ herrajeId: z.string().uuid("Elegí el modelo de cada herraje"), formulaCantidad: formula, formulaMedida: optionalFormula, orden: z.number().int() }))
+    .optional()
+    .default([])
 });
 
 export type ModuloInput = z.infer<typeof moduloSchema>;
@@ -72,7 +78,7 @@ export const activeSchema = z.object({ activo: z.boolean() });
 
 export const evaluarSchema = z.object({
   definicion: moduloSchema.pick({ parametros: true, piezas: true, espesorDisenoMm: true }).extend({
-    herrajes: z.array(z.object({ herrajeId: z.string(), formulaCantidad: formula })).optional().default([])
+    herrajes: z.array(z.object({ herrajeId: z.string(), formulaCantidad: formula, formulaMedida: optionalFormula })).optional().default([])
   }),
   valores: z.record(z.string(), z.number()).optional().default({})
 });

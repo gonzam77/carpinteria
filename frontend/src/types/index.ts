@@ -221,7 +221,8 @@ export type ModuleInput = {
   parametros: ModuleParameter[];
   perfiles: ModuleProfile[];
   piezas: ModulePiece[];
-  herrajes: Array<{ herrajeId: string; formulaCantidad: string; orden: number }>;
+  /** Modelo por defecto, formula de cantidad y, si va por medida, la de la medida (DECISIONES 57). */
+  herrajes: Array<{ herrajeId: string; formulaCantidad: string; formulaMedida: string | null; orden: number }>;
 };
 
 export type ModuleDefinition = ModuleInput & {
@@ -265,7 +266,7 @@ export type ModulesConfig = {
 export type ModuleEvaluation = {
   piezas: Array<{ codigo: string; nombre: string; largo: number; ancho: number; cantidad: number; largoExacto: number; anchoExacto: number }>;
   errores: ModuleFormulaError[];
-  herrajes: Array<{ herrajeId: string; cantidad: number | null }>;
+  herrajes: Array<{ herrajeId: string; cantidad: number | null; medidaNecesaria?: number | null }>;
 };
 
 // ---------------------------------------------------------------- Solicitudes de modulos (spec §13.2)

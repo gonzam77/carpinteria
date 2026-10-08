@@ -498,3 +498,90 @@ export function buildModulePieces(
 
   return { piezas, errores, valores: efectivos };
 }
+
+// ---------------------------------------------------------------- herrajes del modulo (Fase 6, DECISIONES 57)
+
+/** Lo que hace falta de un modelo de herraje para elegirlo por medida. */
+export type HardwareModel = { id: string; tipoId: string | null; linea: string | null; medidaMm: number | null; activo: boolean };
+/** Una linea de herraje del modulo: el modelo por defecto, la formula de cantidad y, si va por medida, la de la medida. */
+export type ModuleHardwareLine = { herrajeId: string; formulaCantidad: string; formulaMedida?: string | null };
+/**
+ * Como se eligio el modelo: POR_DEFECTO (el del modulo), POR_MEDIDA (el mas largo de la linea que entra en la medida
+ * necesaria) o MAS_CHICO (ninguno entra, o no se pudo calcular la medida: el mas chico de la linea, para cambiar a mano).
+ */
+export type HardwarePick = "POR_DEFECTO" | "POR_MEDIDA" | "MAS_CHICO";
+export type ResolvedHardware = {
+  /** El modelo por defecto del modulo. */
+  herrajeId: string;
+  /** El modelo que corresponde (el por defecto o el elegido por medida); null si el por defecto no existe. */
+  elegidoId: string | null;
+  cantidad: number | null;
+  medidaNecesaria: number | null;
+  eleccion: HardwarePick;
+  /** Error de una formula, para mostrar en el editor o devolver en la API. */
+  error: string | null;
+};
+
+const HARDWARE_EPSILON = 1e-9;
+
+/** Cantidad de herrajes: hacia arriba, con la misma tolerancia que el redondeo de medidas (DECISIONES R7). */
+export const hardwareQuantity = (value: number) => Math.max(0, Math.ceil(value - HARDWARE_EPSILON));
+
+/**
+ * El modelo de una linea por medida (DECISIONES 57): de los modelos activos del mismo tipo y la misma linea que el
+ * por defecto, el mas largo que entra en la medida necesaria; si ninguno entra, el mas chico (y se cambia a mano en la
+ * solicitud). Sin medida necesaria, o si el por defecto no va por medida, queda el por defecto.
+ */
+export function pickHardwareModel(defaultId: string, medidaNecesaria: number | null, models: Map<string, HardwareModel>): { elegidoId: string | null; eleccion: HardwarePick } {
+  const base = models.get(defaultId);
+  if (!base) return { elegidoId: null, eleccion: "POR_DEFECTO" };
+  if (!base.linea || base.medidaMm === null) return { elegidoId: base.id, eleccion: "POR_DEFECTO" };
+  const linea = [...models.values()]
+    .filter((model) => model.activo && model.tipoId === base.tipoId && model.linea === base.linea && model.medidaMm !== null)
+    .sort((a, b) => a.medidaMm! - b.medidaMm! || a.id.localeCompare(b.id));
+  if (!linea.length) return { elegidoId: base.id, eleccion: "POR_DEFECTO" };
+  if (medidaNecesaria === null) return { elegidoId: linea[0].id, eleccion: "MAS_CHICO" };
+  const entran = linea.filter((model) => model.medidaMm! <= medidaNecesaria + HARDWARE_EPSILON);
+  return entran.length ? { elegidoId: entran[entran.length - 1].id, eleccion: "POR_MEDIDA" } : { elegidoId: linea[0].id, eleccion: "MAS_CHICO" };
+}
+
+/**
+ * Los herrajes de un modulo evaluado (con evaluarExpresion de evaluateModule): la cantidad de cada linea, la medida que
+ * necesita (si tiene formula) y el modelo que corresponde. Una formula con error deja la cantidad en null y el error.
+ * La usan el editor del catalogo, la API y el armado de solicitudes: todos eligen lo mismo.
+ */
+export function resolveModuleHardware(
+  lines: ModuleHardwareLine[],
+  evaluarExpresion: (formula: string) => number,
+  models: Map<string, HardwareModel>
+): ResolvedHardware[] {
+  return lines.map((line) => {
+    let cantidad: number | null = null;
+    let medidaNecesaria: number | null = null;
+    let error: string | null = null;
+    try {
+      cantidad = hardwareQuantity(evaluarExpresion(line.formulaCantidad));
+    } catch (failure) {
+      error = `Cantidad: ${failure instanceof Error ? failure.message : String(failure)}`;
+    }
+    if (line.formulaMedida && line.formulaMedida.trim()) {
+      try {
+        const value = evaluarExpresion(line.formulaMedida);
+        medidaNecesaria = Number.isFinite(value) ? value : null;
+      } catch (failure) {
+        error ??= `Medida: ${failure instanceof Error ? failure.message : String(failure)}`;
+      }
+    }
+    const { elegidoId, eleccion } = pickHardwareModel(line.herrajeId, line.formulaMedida && line.formulaMedida.trim() ? medidaNecesaria : null, models);
+    // Sin formula de medida, un modelo por medida queda el por defecto (no hay con que elegir).
+    const sinRegla = !(line.formulaMedida && line.formulaMedida.trim());
+    return {
+      herrajeId: line.herrajeId,
+      elegidoId: sinRegla && models.has(line.herrajeId) ? line.herrajeId : elegidoId,
+      cantidad,
+      medidaNecesaria,
+      eleccion: sinRegla ? "POR_DEFECTO" : eleccion,
+      error
+    };
+  });
+}
