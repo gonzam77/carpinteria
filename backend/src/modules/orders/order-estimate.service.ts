@@ -1,6 +1,7 @@
 import { TipoMaterial, type DetallePedido, type Material, type PrismaClient } from "../../generated/prisma/client.js";
 import { AppError } from "../../utils/http.js";
-import { computeOrderEstimate, toCentavos, type OrderEstimate } from "../../shared/orderEstimate.js";
+import { toCentavos, type OrderEstimate } from "../../shared/orderEstimate.js";
+import { computeOrderEstimateInWorker } from "./estimate-pool.js";
 import { heldBoardsByMaterial } from "./order-stock.service.js";
 
 /**
@@ -82,7 +83,8 @@ async function estimateOrder(tx: PrismaClient, detalles: DetallePedido[], withBu
     cantoIds.length ? tx.material.findMany({ where: { id: { in: cantoIds }, tipo: TipoMaterial.CANTO } }) : Promise.resolve([])
   ]);
 
-  const estimate = computeOrderEstimate({
+  // El mismo calculo compartido, en un hilo aparte para no frenar al servidor (F7.4).
+  const estimate = await computeOrderEstimateInWorker({
     rows: detalles,
     plates: materials,
     cantos,

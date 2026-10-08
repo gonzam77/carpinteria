@@ -39,6 +39,10 @@ export function RecalcModuleDialog({
   const [error, setError] = useState<{ message: string; items: string[] } | null>(null);
   const request = useRef<AbortController | null>(null);
   const open = Boolean(modulo);
+  // Mientras se cierra (una animacion corta), el titulo sigue diciendo que modulo era.
+  const lastModulo = useRef(modulo);
+  if (modulo) lastModulo.current = modulo;
+  const shown = modulo ?? lastModulo.current;
 
   useEffect(() => {
     setDefinition(null);
@@ -107,7 +111,7 @@ export function RecalcModuleDialog({
   return (
     <Dialog open={open} onClose={() => !busy && onClose()} fullWidth maxWidth="md" aria-labelledby="recalcular-titulo">
       <DialogTitle id="recalcular-titulo">
-        Cambiar medidas o colores · Módulo {modulo?.posicion} · {modulo?.nombreModulo}
+        Cambiar medidas o colores · Módulo {shown?.posicion} · {shown?.nombreModulo}
       </DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2}>

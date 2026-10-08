@@ -5,7 +5,8 @@ import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { BoardPlan, FreeRect, PlacedPiece, calculateBoardUtilization, getLargestFreeRect } from "../lib/cutOptimizer";
-import { computeOrderEstimate, type EstimateTotals } from "../lib/orderEstimate";
+import { computeOrderEstimateAsync } from "../lib/estimateInWorker";
+import { type EstimateTotals } from "../lib/orderEstimate";
 import { BudgetSettings, Material, OptimizerSettings, OrderDetail } from "../types";
 
 type MaterialCutResult = {
@@ -69,7 +70,7 @@ type CutCalculation = {
 // materiales y el stock (lib/orderEstimate.ts): para las mismas filas, el plano muestra los mismos numeros.
 // Lo que el backend rechazaria (placas o cantos no disponibles, medidas no enteras, piezas que no entran)
 // se muestra como error y sin costo, en lugar de calcular un costo parcial.
-function calculateCuts(rows: OrderDetail[], materials: Material[], variant: number, settings: OptimizerSettings, budgetSettings: BudgetSettings): CutCalculation {
+async function calculateCuts(rows: OrderDetail[], materials: Material[], variant: number, settings: OptimizerSettings, budgetSettings: BudgetSettings): Promise<CutCalculation> {
   const plates = materials.filter((material) => material.tipo === "PLACA");
   const cantos = materials.filter((material) => material.tipo === "CANTO");
   const plateIndex = new Map(plates.map((plate, index) => [plate.id, index]));
@@ -91,7 +92,8 @@ function calculateCuts(rows: OrderDetail[], materials: Material[], variant: numb
     errores.push("El largo, el ancho y la cantidad de cada pieza tienen que ser números enteros mayores a 0.");
   }
 
-  const estimate = computeOrderEstimate({
+  // En un hilo aparte del navegador (F7.4): la pagina no se congela mientras calcula.
+  const estimate = await computeOrderEstimateAsync({
     rows: preparedRows.filter((row) => plateIndex.has(row.materialId)),
     plates,
     cantos,
@@ -575,42 +577,51 @@ export function CutOptimizer({
       });
   }, []);
 
-  // Con muchas piezas el calculo ocupa el navegador unos segundos: primero se muestra "calculando" y despues se calcula.
-  // Si cambian las filas mientras tanto, el calculo pendiente se descarta.
+  // Con muchas piezas el calculo tarda unos segundos: corre en un hilo aparte (F7.4) y mientras tanto se muestra
+  // "Calculando...". Si cambian las filas mientras tanto, el resultado del calculo viejo se descarta.
   const [calculating, setCalculating] = useState(false);
+  const [calculationError, setCalculationError] = useState("");
   const calculationToken = useRef(0);
+
+  function run(token: number, nextVariant: number) {
+    if (!settings || !budgetSettings) return;
+    setCalculating(true);
+    setCalculationError("");
+    calculateCuts(rows, materials, nextVariant, settings, budgetSettings)
+      .then((result) => {
+        if (calculationToken.current !== token) return;
+        setVariant(nextVariant);
+        setCalculation(result);
+      })
+      .catch(() => {
+        if (calculationToken.current === token) setCalculationError("No se pudo calcular el plano de cortes. Probá de nuevo.");
+      })
+      .finally(() => {
+        if (calculationToken.current === token) setCalculating(false);
+      });
+  }
 
   function calculate(nextVariant = 0) {
     if (!settings || !budgetSettings || calculating) return;
-    const token = ++calculationToken.current;
-    setCalculating(true);
-    window.requestAnimationFrame(() =>
-      window.setTimeout(() => {
-        if (calculationToken.current !== token) return;
-        try {
-          setVariant(nextVariant);
-          setCalculation(calculateCuts(rows, materials, nextVariant, settings, budgetSettings));
-        } finally {
-          setCalculating(false);
-        }
-      }, 0)
-    );
+    run(++calculationToken.current, nextVariant);
   }
 
   useEffect(() => {
-    calculationToken.current += 1;
+    const token = ++calculationToken.current;
     setCalculating(false);
+    setCalculationError("");
     setCalculation(null);
     setVariant(0);
-    if (autoCalculate && rows.length && materials.length && settings && budgetSettings) {
-      setCalculation(calculateCuts(rows, materials, 0, settings, budgetSettings));
-    }
+    if (autoCalculate && rows.length && materials.length && settings && budgetSettings) run(token, 0);
+    // run usa las mismas dependencias.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCalculate, rows, materials, settings, budgetSettings]);
 
   return (
     <Stack spacing={2}>
       {settingsError && <Alert severity="error">{settingsError}</Alert>}
       {budgetSettingsError && <Alert severity="error">{budgetSettingsError}</Alert>}
+      {calculationError && <Alert severity="error">{calculationError}</Alert>}
       {!hideCosts &&
         budgetSettings &&
         budgetSettings.manoObraPlacaPorPlaca === 0 &&

@@ -135,6 +135,33 @@ export function usableBoardSize(plate: Pick<EstimatePlate, "anchoPlaca" | "altoP
   };
 }
 
+// Resultados recientes del optimizador por entrada EXACTA (piezas, placa util, sierra y variante), F7.4. El optimizador es
+// determinista: la misma entrada da el mismo resultado, asi que reusarlo no puede cambiar ninguna placa. Sirve cuando
+// se calcula dos veces lo mismo: la vista previa y el alta, el comprobante y el guardado, la vista previa de recalcular y
+// el recalculo, o el plano que se vuelve a dibujar. Se guardan y se devuelven copias: nadie puede cambiar lo guardado.
+const OPTIMIZATION_CACHE_SIZE = 48;
+const optimizationCache = new Map<string, ReturnType<typeof optimizeCutLayout>>();
+
+function cachedOptimization(params: Parameters<typeof optimizeCutLayout>[0]) {
+  const key = JSON.stringify([params.pieces, params.usableBoardWidthMm, params.usableBoardHeightMm, params.settings.espesorSierraMm, params.variant]);
+  const cached = optimizationCache.get(key);
+  if (cached) {
+    // El mas usado queda al final: se descartan los mas viejos.
+    optimizationCache.delete(key);
+    optimizationCache.set(key, cached);
+    return structuredClone(cached);
+  }
+  const result = optimizeCutLayout(params);
+  optimizationCache.set(key, structuredClone(result));
+  if (optimizationCache.size > OPTIMIZATION_CACHE_SIZE) optimizationCache.delete(optimizationCache.keys().next().value!);
+  return result;
+}
+
+/** Cuantos resultados del optimizador hay guardados (para los tests). */
+export const optimizationCacheSize = () => optimizationCache.size;
+/** Olvida los resultados guardados (para los tests y para medir). */
+export const clearOptimizationCache = () => optimizationCache.clear();
+
 /** Placas de un material con el optimizador compartido. */
 export function estimateMaterialBoards(rows: OptimizerRow[], plate: EstimatePlate, settings: EstimateOptimizerSettings, variant = 0) {
   const pieces = buildPiecesFromRows(rows, plate.id);
@@ -145,7 +172,7 @@ export function estimateMaterialBoards(rows: OptimizerRow[], plate: EstimatePlat
   if (!usable.width || !usable.height) {
     return { placas: 0, entra: false, boards: [] as BoardPlan[], unplaced: pieces, minimumPieceArea: 0, usable };
   }
-  const optimization = optimizeCutLayout({
+  const optimization = cachedOptimization({
     pieces,
     usableBoardWidthMm: usable.width,
     usableBoardHeightMm: usable.height,

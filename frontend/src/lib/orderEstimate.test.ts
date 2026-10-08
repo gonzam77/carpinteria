@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { evaluateModule } from "./moduleFormula.ts";
-import { computeOrderEstimate, toCentavos, type EstimateRow } from "./orderEstimate.ts";
+import { clearOptimizationCache, computeOrderEstimate, optimizationCacheSize, toCentavos, type EstimateRow } from "./orderEstimate.ts";
 
 // Presupuesto: las mismas piezas tienen que dar exactamente los mismos numeros (===) se carguen como
 // solicitud de corte o desde modulos, en cualquier orden y con cualquier particion de filas.
@@ -182,4 +182,31 @@ test("superficie por material en mm² enteros: la suma exacta de las piezas, sin
   // La pieza rotable cargada al reves (ancho por largo) y de a una da la misma superficie.
   const swapped = estimate([rows[0], { ...rows[1], largo: 1164, ancho: 545, cantidad: 1 }, { ...rows[1], largo: 1164, ancho: 545, cantidad: 2 }, rows[2]]);
   assert.deepEqual(Object.fromEntries(swapped.porMaterial.map((material) => [material.materialId, material.mm2])), mm2);
+});
+
+test("F7.4: la misma entrada reusa el resultado (iguales números, más rápido) y nadie puede cambiar lo guardado", () => {
+  clearOptimizationCache();
+  const rows = moduleRows(["BAJO_MESADA_4_PUERTAS", "PLACARD_3_PUERTAS_DE_EMBUTIR", "ALACENA_2_PUERTAS", "CAJONERA_3_CAJONES"]);
+  const started = performance.now();
+  const first = computeOrderEstimate({ rows, plates, cantos, optimizerSettings, budgetSettings });
+  const firstMs = performance.now() - started;
+  const cachedAfterFirst = optimizationCacheSize();
+  assert.equal(cachedAfterFirst, first.porMaterial.length, "un resultado por material");
+  const again = performance.now();
+  const second = computeOrderEstimate({ rows, plates, cantos, optimizerSettings, budgetSettings });
+  const secondMs = performance.now() - again;
+  assert.deepEqual(second, first, "los mismos números y el mismo plano");
+  assert.equal(optimizationCacheSize(), cachedAfterFirst, "no calcula de nuevo");
+  assert.ok(secondMs < Math.max(5, firstMs / 3), `la segunda vez es más rápida (${firstMs.toFixed(0)} ms -> ${secondMs.toFixed(0)} ms)`);
+
+  // Cambiar lo que devolvio no cambia lo guardado.
+  second.porMaterial[0].boards.length = 0;
+  second.porMaterial[0].placas = 999;
+  const third = computeOrderEstimate({ rows, plates, cantos, optimizerSettings, budgetSettings });
+  assert.deepEqual(third, first);
+
+  // Otra sierra u otra placa es otra entrada: se calcula de nuevo.
+  computeOrderEstimate({ rows, plates, cantos, optimizerSettings: { ...optimizerSettings, espesorSierraMm: 3.2 }, budgetSettings });
+  assert.ok(optimizationCacheSize() > cachedAfterFirst);
+  clearOptimizationCache();
 });

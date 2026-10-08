@@ -136,7 +136,9 @@ try {
   // ---------------------------------------------------------------- recalcular
   await dialogo.getByRole("button", { name: "Recalcular el módulo" }).click();
   const avisado = await page.getByText("Módulo 1 recalculado.").waitFor({ timeout: 60000 }).then(() => true, () => false);
-  check("recalcular: cierra y avisa", avisado && (await dialogo.count()) === 0);
+  // El dialogo se va con una animacion corta: el aviso puede llegar antes de que termine.
+  const cerrado = await dialogo.waitFor({ state: "detached", timeout: 5000 }).then(() => true, () => false);
+  check("recalcular: cierra y avisa", avisado && cerrado);
   const guardada = (await api("GET", `/pedidos-modulos/${o.id}`)).data;
   const pm1 = guardada.modulos.find((m) => m.id === m1.id);
   check("guardado: ancho 900 y las observaciones nuevas", pm1.valores.ANCHO === 900 && pm1.observaciones === "Contra la pared, sin zócalo");
