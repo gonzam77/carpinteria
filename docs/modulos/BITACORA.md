@@ -27,6 +27,26 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-08 (32) · equipo Pinformatico15 · rama main
+
+**Pasos:** P14 resuelto.
+
+**Hecho:**
+- P14, a pedido de Gonzalo (DECISIONES 56): en el formulario de corte (alta y edición) y en la edición de módulos, Siguiente en Cantos ahora muestra el Resumen. El comprobante se abre con Revisar y enviar (o Revisar y guardar). Era una `key` por botón en `OrderFormPage`.
+- Pruebas: e2e-f72-navegador suma el alta y la edición de corte (sin guardar), y e2e-f52-navegador ahora exige llegar al Resumen sin el comprobante.
+
+**Decisiones nuevas:** DECISIONES 56.
+
+**Verificaciones:** `tsc` y build en verde. e2e contra la copia: f72-navegador 18/18 y f52-navegador 40/40. La copia quedó como estaba.
+
+**Commits:** dos commits locales (código y pruebas, y documentación), detrás de los 2 de F7.4. El push espera el OK de Gonzalo.
+
+**Próximo paso:** lo que queda depende de otros: F7.3 (aceptación con ROMA), Fase 6 (herrajes, cuando se definan) y F8 (pase a producción, lo hace Gonzalo).
+
+**Esperando a Gonzalo o a ROMA:** P5 y P6; las reglas de los herrajes; la aceptación con ROMA.
+
+---
+
 ## 2026-10-08 (31) · equipo Pinformatico15 · rama main
 
 **Pasos:** F7.4 terminado.

@@ -665,7 +665,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 | P12 | La vista previa de 20 módulos tarda de 1,5 a 8,4 s, según las piezas (100 módulos: unos 28 s). Spec §20 pide caché si pasa de 2 s | Gonzalo | **Resuelto (2026-10-07):** se acepta como está; los tiempos se optimizan en F7.4 (DECISIONES 24) |
 | P7 | La placa "metal cepillado bronce" figura como 1830×26000, con un cero de más | Gonzalo | **Resuelto (2026-10-07):** se deja como está; se le avisa al cliente (DECISIONES 47) |
 | P8 | ¿Se conserva el contenedor `carpinteria-analisis-db` con el backup en la PC de la primera sesión? | Gonzalo | **Resuelto (2026-10-07):** se borró, con su volumen (DECISIONES 47) |
-| P14 | En el formulario de corte (alta y edición), al tocar Siguiente en Cantos ya se abre el comprobante: el mismo botón pasa a ser el de enviar en ese clic, y el Resumen se ve recién al cerrarlo. Pasa también al editar módulos, que usa el mismo formulario | Gonzalo | Se deja como está, igual que hoy en corte. Corregirlo es una línea (una `key` en cada botón) |
+| P14 | En el formulario de corte (alta y edición), al tocar Siguiente en Cantos ya se abre el comprobante: el mismo botón pasa a ser el de enviar en ese clic, y el Resumen se ve recién al cerrarlo. Pasa también al editar módulos, que usa el mismo formulario | Gonzalo | **Resuelto (2026-10-08):** Gonzalo pidió corregirlo: Siguiente muestra el Resumen y el comprobante se abre con Revisar y enviar o Revisar y guardar (DECISIONES 56) |
 | P13 | Base para las pruebas de punta a punta, ahora que no está el contenedor con el backup | Gonzalo | **Resuelto (2026-10-07):** el backup se restaura en `carpinteria-analisis-db` y se conserva hasta terminar la fase de desarrollo (DECISIONES 47) |
 
 ---
