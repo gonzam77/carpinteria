@@ -12,9 +12,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-07
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F7.2 está commiteado y subido (con el OK de Gonzalo). F7.4 está commiteado en local; su push espera el OK. Cada push espera su OK.
-- **Último paso terminado:** F7.4 (optimizador más ágil, con los mismos números). Las Fases 0 a 5 están completas; la 6 (herrajes) espera que se definan las reglas.
-- **Próximo paso:** lo que queda depende de otros: **F7.3**, la aceptación con ROMA (spec §17.3, con el Excel real en la máquina); la **Fase 6**, herrajes, cuando se definan; y **F8**, el pase a producción, que hace Gonzalo después de probar en local. La **Fase 6** (herrajes) queda para después: Gonzalo pidió seguir y definir los herrajes más adelante (2026-10-08).
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F7.2 está commiteado y subido (con el OK de Gonzalo). F7.4, P14 y F6.1 están commiteados en local; su push espera el OK. Cada push espera su OK.
+- **Último paso terminado:** F6.1 (modelo de datos y Configuración › Herrajes). Las Fases 0 a 5 están completas; la 6 (herrajes) espera que se definan las reglas.
+- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.2 (herrajes en el módulo del catálogo). Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -37,7 +37,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F4.1–F4.5 | API, asistente y listado de solicitudes de módulos | [x] |
 | F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [x] |
-| F6 | Herrajes (contratados, DECISIONES 10) | [ ] se definen más adelante |
+| F6 | Herrajes (contratados, DECISIONES 10 y 57) | [~] en curso, con datos de ejemplo |
 | F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [~] F7.1, F7.2 y F7.4 hechos; falta F7.3 (con ROMA) |
 | F8 | Pase a producción (VPS), al final | [ ] |
 
@@ -599,8 +599,16 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 - **Terminado cuando:** todos los puntos de §15 están tildados, con su evidencia en la bitácora.
 - **Hecho (2026-10-08):** `/api/stats` suma `byTipo` y `byStatus[].modulos`, y el dashboard dice "de los cuales N son módulos a medida" y cuántas de cada estado son de módulos (DECISIONES 52). Los 10 puntos de spec §15 quedaron tildados, con la evidencia en la bitácora (entrada 28). e2e-f55 (nueva) cubre spec §17.2 y lo de §15 que faltaba probar, incluido el Excel de corte comparado archivo por archivo con el backend de antes de F5.3. Pruebas: tests del backend (32) y de punta a punta: e2e-f55 27/27, f53 21/21, f05 22/22 y f04 12/12.
 
-### Fase 6: Herrajes · [ ] se definen más adelante
-- **Gonzalo, 2026-10-08:** seguir con el resto y definir los herrajes más adelante.
+### Fase 6: Herrajes · [~]
+- **Gonzalo, 2026-10-08:** seguir con el resto y definir los herrajes más adelante. Después, ese mismo día, definió cómo funcionan (DECISIONES 57): se arma con datos de ejemplo y el listado real lo pasa ROMA (ya pedido).
+- **Pasos:**
+  - **F6.1** · [x] Modelo de datos y Configuración › Herrajes: tipos, modelos (precio, unidad, línea y medida), ABM y ajuste de precios por porcentaje (spec §12 y §13.4). Migración nueva.
+    - **Hecho (2026-10-08):** migración `20261008120000_herrajes_tipos_y_medidas` (solo agrega; probada en la copia); `/api/herrajes` y `/api/herrajes/tipos` (`hardware.routes.ts`, con sus esquemas y tests); pantalla `/configuracion-herrajes` (`HardwarePage`, en el menú Configuración) con el interruptor "Herrajes habilitados". Pruebas: tests (backend 37, `hardware.test.ts` 2) y e2e-f61-navegador 28/28 (nueva); sin fallas f31, f23, f43 y f44-navegador.
+    - **Tener en cuenta para F6.2:** el catálogo ya evalúa `formulaCantidad` (`evaluateDefinition` en `catalog.service.ts`) y `ModuleInput.herrajes` ya existe en el editor (sin pantalla). Falta `formulaMedida` en el esquema de la API, la evaluación de la medida y la elección del modelo por línea (compartida, para que el asistente y el servidor elijan lo mismo).
+  - **F6.2** · [ ] Herrajes en el módulo (editor del catálogo): modelo por defecto, fórmula de cantidad y fórmula de medida, con el resultado en vivo.
+  - **F6.3** · [ ] En la solicitud: herrajes calculados por módulo en el asistente, con selector de modelo; se guardan con la solicitud, suman `costoHerrajes` y salen en el detalle y la constancia.
+  - **F6.4** · [ ] Edición y salidas: ajustar herrajes a mano y "Recalcular herrajes"; recalcular un módulo regenera sus herrajes; hoja de taller con la sección de herrajes.
+  - **F6.5** · [ ] Pruebas de punta a punta y no regresión.
 - **Contratada** (Gonzalo, 2026-10-07, DECISIONES 10). Las reglas reales de cada herraje las pasa ROMA.
 - **Tener en cuenta (de F5.4):** la hoja de taller todavía no tiene la sección de herrajes (casilla, herraje y cantidad, spec §11.2): sumarla en `ModuleOrderWorkshopPage` cuando estén habilitados.
 - **Hacer:** lo de spec §12 y §13.4, detrás de `herrajesHabilitados`. Las cantidades se redondean con la misma tolerancia que `roundMm` (DECISIONES R7). Las reglas reales las tiene que pasar ROMA.

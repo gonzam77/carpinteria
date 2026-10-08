@@ -27,6 +27,38 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-08 (33) · equipo Pinformatico15 · rama main
+
+**Pasos:** Fase 6 en curso; F6.1 terminado.
+
+**Hecho:**
+- Gonzalo definió cómo funcionan los herrajes (DECISIONES 57):
+  - un modelo por defecto en cada módulo, y en la solicitud se cambia por línea (un solo modelo por línea);
+  - las correderas se eligen por medida y, si no se puede, la más chica;
+  - al editar, se ajustan a mano, con "Recalcular herrajes";
+  - solo precio y cantidad.
+  El listado real lo pasa ROMA (ya pedido): no hace falta planilla. Se arma con datos de ejemplo. También pidió no seguir con un pedido anterior sobre un Excel de migración.
+- PLAN: la Fase 6 en cinco pasos (F6.1 a F6.5).
+- F6.1:
+  - migración `20261008120000_herrajes_tipos_y_medidas`, probada en la copia;
+  - API `/api/herrajes` y `/api/herrajes/tipos`;
+  - pantalla Configuración › Herrajes, con el interruptor "Herrajes habilitados";
+  - tests y e2e-f61-navegador.
+
+**Decisiones nuevas:** DECISIONES 57.
+
+**Verificaciones:**
+- frontend `npm test` (11 suites en verde), backend `npm test` (37), `tsc`, `check:optimizer` y build en verde. La migración se aplicó en la copia con `prisma migrate deploy`.
+- e2e contra la copia: f61-navegador 28/28; sin fallas f31, f23, f43 y f44-navegador. La copia quedó como estaba (con la migración nueva aplicada).
+
+**Commits:** dos commits locales (código, migración y pruebas, y documentación), detrás de los de F7.4 y P14. El push espera el OK de Gonzalo.
+
+**Próximo paso:** F6.2, herrajes en el módulo del catálogo. Leer "Tener en cuenta para F6.2" en PLAN.
+
+**Esperando a Gonzalo o a ROMA:** P5 y P6; el listado de herrajes de ROMA; la aceptación con ROMA.
+
+---
+
 ## 2026-10-08 (32) · equipo Pinformatico15 · rama main
 
 **Pasos:** P14 resuelto.
