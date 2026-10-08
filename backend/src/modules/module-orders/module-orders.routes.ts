@@ -6,7 +6,7 @@ import { EstadoPedido, Rol, TipoPedido } from "../../generated/prisma/client.js"
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
 import { asyncHandler } from "../../utils/http.js";
-import { moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema, moduleOrderUpdateSchema, moduleRecalcPreviewSchema, moduleRecalcSchema } from "./module-orders.schemas.js";
+import { moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema, moduleOrderUpdateSchema, moduleRecalcPreviewSchema, moduleRecalcSchema, moduleOrderClientsSchema } from "./module-orders.schemas.js";
 import {
   buildModuleOrder,
   buildModuleOrderEstimate,
@@ -16,6 +16,7 @@ import {
   getModuleOrder,
   listModuleOrders,
   recalculateModule,
+  searchModuleOrderClients,
   updateModuleOrder
 } from "./module-orders.service.js";
 
@@ -76,6 +77,15 @@ moduleOrdersRouter.post(
     const data = moduleOrderCreateSchema.parse(req.body);
     const { order, created } = await createModuleOrder(prisma, data, req.user.id);
     res.status(created ? 201 : 200).json(order);
+  })
+);
+
+/** Clientes de solicitudes anteriores para autocompletar el paso 1 (por nombre o telefono). Va antes de /:id. */
+moduleOrdersRouter.get(
+  "/clientes",
+  asyncHandler(async (req: any, res: any) => {
+    const { q } = moduleOrderClientsSchema.parse(req.query);
+    res.json(await searchModuleOrderClients(prisma, q));
   })
 );
 

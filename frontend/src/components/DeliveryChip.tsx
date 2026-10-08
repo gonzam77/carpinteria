@@ -6,8 +6,9 @@ import type { DeliveryKind, DeliveryStatus } from "../lib/moduleOrdersList";
  * verde.
  */
 const COLORS: Record<DeliveryKind, { fg: string; bg: string; border: string }> = {
-  "en-plazo": { fg: "#2f7d4f", bg: "#e7f4ec", border: "#b7dcc5" },
-  proxima: { fg: "#a16807", bg: "#fff5df", border: "#f2d08a" },
+  // Texto sobre el fondo con contraste de 4,5:1 o mas (WCAG AA): verde 6,1:1 y amarillo 5,6:1 (F7.2).
+  "en-plazo": { fg: "#24663f", bg: "#e7f4ec", border: "#b7dcc5" },
+  proxima: { fg: "#8a5806", bg: "#fff5df", border: "#f2d08a" },
   atrasada: { fg: "#96382b", bg: "#fde9e5", border: "#efb1a6" },
   entregada: { fg: "#6f6760", bg: "#f1ece6", border: "#ddd2c5" },
   "sin-plazo": { fg: "#6f6760", bg: "#f1ece6", border: "#ddd2c5" }

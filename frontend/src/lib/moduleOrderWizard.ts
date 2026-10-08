@@ -711,3 +711,19 @@ export function validateClient(
   else if (data.fechaEntrega < today) problems.push("La fecha de entrega no puede ser anterior a hoy.");
   return problems;
 }
+
+/**
+ * Lo que completa elegir un cliente de una solicitud anterior (paso 1): el nombre y el telefono; el email y la direccion
+ * solo si estan vacios, para no pisar lo que ya se escribio para este trabajo.
+ */
+export function clientSuggestionPatch(
+  current: Pick<WizardDraft, "emailContacto" | "direccionEntrega">,
+  client: { cliente: string; numeroContacto: string; emailContacto: string | null; direccionEntrega: string | null }
+): Partial<Pick<WizardDraft, "cliente" | "numeroContacto" | "emailContacto" | "direccionEntrega">> {
+  return {
+    cliente: client.cliente,
+    numeroContacto: client.numeroContacto,
+    ...(!current.emailContacto.trim() && client.emailContacto ? { emailContacto: client.emailContacto } : {}),
+    ...(!current.direccionEntrega.trim() && client.direccionEntrega ? { direccionEntrega: client.direccionEntrega } : {})
+  };
+}

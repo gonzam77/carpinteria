@@ -145,6 +145,11 @@ export const moduleRecalcSchema = moduleLineSchema.extend({
 
 export type ModuleRecalcInput = z.infer<typeof moduleRecalcSchema>;
 
+/** Busqueda de clientes de solicitudes anteriores (autocompletar el paso 1): por nombre o telefono. */
+export const moduleOrderClientsSchema = z.object({
+  q: z.string({ required_error: "Escribí al menos 2 letras o números", invalid_type_error: "Escribí al menos 2 letras o números" }).trim().min(2, "Escribí al menos 2 letras o números").max(100, "La búsqueda tiene como máximo 100 caracteres")
+});
+
 /** Filtros del listado (spec §13.2 y §9.1). */
 export const moduleOrderFiltersSchema = z.object({
   estado: z.nativeEnum(EstadoPedido, { errorMap: () => ({ message: "Estado desconocido" }) }).optional(),

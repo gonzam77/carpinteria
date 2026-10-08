@@ -18,6 +18,7 @@ import { hasStockCommitment } from "../orders/order-stock.service.js";
 import { compareForList } from "./module-order-list.js";
 import { moduleBarcode, planModuleOrder, type MissingDefaultEdge, type PlanModule } from "./module-order-plan.js";
 import { composeRows, moduleLabel, renumberProblem } from "./module-recalc.js";
+import { uniqueClients } from "./module-order-clients.js";
 import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderLine, ModuleOrderUpdateInput, ModuleRecalcInput } from "./module-orders.schemas.js";
 
 export { moduleBarcode } from "./module-order-plan.js";
@@ -596,4 +597,22 @@ export async function recalculateModule(prisma: PrismaClient, id: string, pedido
     });
   });
   return getModuleOrder(prisma, id);
+}
+
+/**
+ * Clientes de solicitudes de modulos anteriores que coinciden con la busqueda (por nombre o por telefono, ignorando
+ * espacios y guiones), para autocompletar el paso 1 del asistente. Uno por nombre y telefono, los mas recientes primero.
+ */
+export async function searchModuleOrderClients(tx: Tx, q: string) {
+  const digits = q.replace(/\D/g, "");
+  const rows = await tx.pedido.findMany({
+    where: {
+      tipo: TipoPedido.MODULOS,
+      OR: [{ cliente: { contains: q, mode: "insensitive" } }, ...(digits.length >= 2 ? [{ numeroContacto: { contains: digits } }] : [])]
+    },
+    select: { cliente: true, numeroContacto: true, emailContacto: true, direccionEntrega: true },
+    orderBy: [{ fechaCreacion: "desc" }, { id: "asc" }],
+    take: 100
+  });
+  return uniqueClients(rows.map((row) => ({ ...row, numeroContacto: row.numeroContacto ?? "" })));
 }

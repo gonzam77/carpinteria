@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   activeEdges,
+  clientSuggestionPatch,
   activePlates,
   addDays,
   applyColorsToAll,
@@ -591,4 +592,11 @@ test("opciones y valores por defecto del catalogo: no se toman como texto mal es
   assert.deepEqual(validation.porMedida, {});
   assert.equal(validation.ok, true);
   assert.deepEqual(numericValues(unit), { ANCHO: 800, ALTO: 720, LADO: -1, TERCIO: 1.125 });
+});
+
+test("elegir un cliente anterior: nombre y teléfono; email y dirección solo si están vacíos", () => {
+  const client = { cliente: "Cliente Uno", numeroContacto: "2664000000", emailContacto: "uno@example.com", direccionEntrega: "Calle 1" };
+  assert.deepEqual(clientSuggestionPatch({ emailContacto: "", direccionEntrega: " " }, client), client);
+  assert.deepEqual(clientSuggestionPatch({ emailContacto: "otro@example.com", direccionEntrega: "Obra nueva" }, client), { cliente: "Cliente Uno", numeroContacto: "2664000000" });
+  assert.deepEqual(clientSuggestionPatch({ emailContacto: "", direccionEntrega: "" }, { ...client, emailContacto: null, direccionEntrega: null }), { cliente: "Cliente Uno", numeroContacto: "2664000000" });
 });

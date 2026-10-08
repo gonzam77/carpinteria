@@ -1,7 +1,7 @@
 // Llamadas a la API de solicitudes de modulos (/api/pedidos-modulos, spec §13.2).
 import axios from "axios";
 import { api } from "./client";
-import type { EstadoSolicitud, ModuleOrder, ModuleOrderClient, ModuleOrderLineInput, ModuleOrderListItem, ModuleOrderPreview, ModuleRecalcPreview } from "../types";
+import type { EstadoSolicitud, ModuleOrder, ModuleOrderClient, ModuleOrderLineInput, ModuleOrderClientSuggestion, ModuleOrderListItem, ModuleOrderPreview, ModuleRecalcPreview } from "../types";
 
 /** Vista previa (spec §8.5). La senal corta la espera en el navegador (el servidor la calcula igual, PLAN P12). */
 export const previewModuleOrder = async (data: Partial<ModuleOrderClient> & { modulos: ModuleOrderLineInput[] }, options: { signal?: AbortSignal } = {}) =>
@@ -19,6 +19,10 @@ export const getModuleOrder = async (id: string) => (await api.get<ModuleOrder>(
 /** Cambia la fecha de entrega (AAAA-MM-DD, spec §9.3). Responde la solicitud como GET /:id, con el historial. */
 export const changeModuleOrderDeliveryDate = async (id: string, fechaEntrega: string) =>
   (await api.patch<ModuleOrder>(`/pedidos-modulos/${id}/fecha-entrega`, { fechaEntrega })).data;
+
+/** Clientes de solicitudes anteriores que coinciden con el nombre o el telefono (2 caracteres o mas). */
+export const searchModuleOrderClients = async (q: string, options: { signal?: AbortSignal } = {}) =>
+  (await api.get<ModuleOrderClientSuggestion[]>("/pedidos-modulos/clientes", { params: { q }, signal: options.signal })).data;
 
 /** Recalcular un modulo desde el catalogo (spec §10.6): como queda, sin guardar. */
 export const previewModuleRecalc = async (id: string, moduloPedidoId: string, line: ModuleOrderLineInput, options: { signal?: AbortSignal } = {}) =>

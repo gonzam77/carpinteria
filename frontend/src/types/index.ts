@@ -390,6 +390,14 @@ export type ModuleOrder = Omit<Order, "detalles"> &
     detalles: ModuleOrderDetail[];
   };
 
+/** Un cliente de solicitudes de modulos anteriores, para autocompletar el paso 1 del asistente. */
+export type ModuleOrderClientSuggestion = {
+  cliente: string;
+  numeroContacto: string;
+  emailContacto: string | null;
+  direccionEntrega: string | null;
+};
+
 /** Respuesta de la vista previa de recalcular un modulo (spec §10.6). */
 export type ModuleRecalcPreview = {
   posicion: number;

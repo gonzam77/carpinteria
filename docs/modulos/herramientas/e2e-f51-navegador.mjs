@@ -38,7 +38,7 @@ const API = process.env.BASE ?? "http://127.0.0.1:4100/api";
 const SECRET = "prueba-local-analisis-0123456789";
 const PREFIJO = "Prueba F5.1";
 const ZONA = "America/Argentina/Buenos_Aires";
-const VERDE = "rgb(47, 125, 79)";
+const VERDE = "rgb(36, 102, 63)";
 const shotsDir = process.env.SHOTS_DIR ?? join(tmpdir(), "e2e-f51-capturas");
 mkdirSync(shotsDir, { recursive: true });
 const psql = (sql) =>

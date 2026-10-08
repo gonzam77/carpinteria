@@ -9,6 +9,7 @@ const brandCoal = "#111111";
 const brandStone = "#6f6760";
 const brandSand = "#f6f2eb";
 const brandPaper = "#fffdfa";
+const focusRing = { outline: `2px solid ${brandGraphite}`, outlineOffset: -2 };
 
 export const theme = createTheme({
   palette: {
@@ -66,6 +67,12 @@ export const theme = createTheme({
           boxShadow: "0 14px 32px rgba(198, 106, 18, 0.24)",
           "&:hover": {
             boxShadow: "0 16px 38px rgba(123, 66, 14, 0.3)"
+          },
+          // Deshabilitado se ve deshabilitado: sin el degradado ni la sombra, que lo hacian parecer activo (F7.2).
+          "&.Mui-disabled": {
+            background: "none",
+            backgroundColor: "rgba(0, 0, 0, 0.12)",
+            boxShadow: "none"
           }
         },
         outlined: {
@@ -175,7 +182,15 @@ export const theme = createTheme({
           },
           "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus-within": {
             outline: "none"
-          }
+          },
+          // El foco del teclado se ve en todas las grillas (F7.2, antes solo en la de modulos, DECISIONES 44): un contorno
+          // grafito que contrasta con las celdas y los encabezados, solo con el teclado (:focus-visible), asi un click se ve
+          // como siempre. En la columna de las casillas el foco pasa a la casilla de adentro. La fila se marca con una barra
+          // al costado, no con el fondo, que es el de las filas marcadas. Reglas separadas: un navegador sin :has()
+          // (Firefox ESR 115) descarta la regla entera, y asi pierde solo esas.
+          "& .MuiDataGrid-cell:focus-visible, & .MuiDataGrid-columnHeader:focus-visible": focusRing,
+          "& .MuiDataGrid-cell:has(:focus-visible), & .MuiDataGrid-columnHeader:has(:focus-visible)": focusRing,
+          "& .MuiDataGrid-row:has(:focus-visible)": { boxShadow: `inset 3px 0 0 ${brandGraphite}` }
         }
       }
     }

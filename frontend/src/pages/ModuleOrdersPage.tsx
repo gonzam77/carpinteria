@@ -69,7 +69,6 @@ const OWN_FILTERS_STATE = { filtrosPropios: true };
 /** La entrada del historial en la que esta el navegador. React Router guarda su clave; la primera al cargar no tiene. */
 const currentHistoryEntry = () => (window.history.state as { key?: string } | null)?.key ?? "default";
 /** El contorno del foco del teclado en la grilla. */
-const FOCUS_RING = { outline: "2px solid", outlineColor: "secondary.dark", outlineOffset: -2 } as const;
 /** Sin filas: la misma lista siempre, para que la grilla no reciba algo nuevo en cada dibujo. */
 const NO_ROWS: ModuleOrderListItem[] = [];
 
@@ -704,7 +703,7 @@ export function ModuleOrdersPage() {
             disabled={!selectedRows.length}
             aria-disabled={exporting || undefined}
             // Deshabilitado, sin el degradado del tema (si no, parece activo). En el tema queda pendiente para todos (F7.2).
-            sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" }, minWidth: { sm: "16.5em" }, "&.Mui-disabled": { backgroundImage: "none" } }}
+            sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" }, minWidth: { sm: "16.5em" } }}
           >
             {exporting ? "Exportando..." : selectedRows.length ? `Exportar selección (${selectedRows.length})` : "Exportar selección"}
           </Button>
@@ -772,14 +771,8 @@ export function ModuleOrdersPage() {
             }}
             sx={{
               "& .MuiDataGrid-row": { cursor: "pointer" },
-              "& .MuiDataGrid-cell": { display: "flex", alignItems: "center" },
-              // El tema saca el contorno del foco, y aca Enter abre la fila: el foco del teclado tiene que verse, con un
-              // color que contraste con las celdas y los encabezados. En la columna de las casillas el foco pasa a la
-              // casilla de adentro. La fila se marca con una barra al costado, no con el fondo, que es el de las marcadas.
-              // Reglas separadas: un navegador sin :has() (Firefox ESR 115) descarta la regla entera, y asi pierde solo esas.
-              "& .MuiDataGrid-cell:focus-visible, & .MuiDataGrid-columnHeader:focus-visible": FOCUS_RING,
-              "& .MuiDataGrid-cell:has(:focus-visible), & .MuiDataGrid-columnHeader:has(:focus-visible)": FOCUS_RING,
-              "& .MuiDataGrid-row:has(:focus-visible)": { boxShadow: (theme) => `inset 3px 0 0 ${theme.palette.secondary.dark}` }
+              // El foco del teclado (contorno y barra de la fila) lo pone el tema en todas las grillas (F7.2).
+              "& .MuiDataGrid-cell": { display: "flex", alignItems: "center" }
             }}
           />
         </Paper>
