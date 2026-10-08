@@ -12,9 +12,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-07
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F7.1 está commiteado y subido (con el OK de Gonzalo). F7.2 está commiteado en local; su push espera el OK. Cada push espera su OK.
-- **Último paso terminado:** F7.2 (pulido). Las Fases 0 a 5 están completas; la 6 (herrajes) espera que se definan las reglas.
-- **Próximo paso:** **F7.4**, agilizar los tiempos del optimizador (sin dar nunca más placas). La **Fase 6** (herrajes) queda para después: Gonzalo pidió seguir y definir los herrajes más adelante (2026-10-08).
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F7.2 está commiteado y subido (con el OK de Gonzalo). F7.4 está commiteado en local; su push espera el OK. Cada push espera su OK.
+- **Último paso terminado:** F7.4 (optimizador más ágil, con los mismos números). Las Fases 0 a 5 están completas; la 6 (herrajes) espera que se definan las reglas.
+- **Próximo paso:** lo que queda depende de otros: **F7.3**, la aceptación con ROMA (spec §17.3, con el Excel real en la máquina); la **Fase 6**, herrajes, cuando se definan; y **F8**, el pase a producción, que hace Gonzalo después de probar en local. La **Fase 6** (herrajes) queda para después: Gonzalo pidió seguir y definir los herrajes más adelante (2026-10-08).
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -38,7 +38,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [x] |
 | F6 | Herrajes (contratados, DECISIONES 10) | [ ] se definen más adelante |
-| F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [~] F7.1 y F7.2 hechos |
+| F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [~] F7.1, F7.2 y F7.4 hechos; falta F7.3 (con ROMA) |
 | F8 | Pase a producción (VPS), al final | [ ] |
 
 ---
@@ -620,7 +620,7 @@ Autocompletar clientes, estados vacíos y de carga, y accesibilidad (spec §14.5
   - los botones principales deshabilitados conservan el degradado del tema y parecen activos: en el listado de módulos se sacó solo en "Exportar seleccion".
 - **Hecho (2026-10-08):** autocompletar clientes de solicitudes anteriores en el paso 1 del asistente (`GET /api/pedidos-modulos/clientes`); chips de plazo con contraste AA (verde y amarillo más oscuros); en el tema, los botones principales deshabilitados sin el degradado y el foco del teclado visible en todas las grillas. Los textos de las grillas de MUI ya tenían tildes (DECISIONES 15). Los botones de canto y los campos de fórmula ya cumplían spec §14.5 desde F3, y los estados vacíos y de carga del listado desde F4.5 (DECISIONES 54). Pruebas: tests (asistente 22, backend 35) y de punta a punta: e2e-f72-navegador 14/14 (nueva), f44-navegador sin fallas, f45-navegador 139/139, f51-navegador 63/63, f52-navegador 40/40, f54-navegador 23/23 y f71-navegador 17/17.
 
-#### F7.4 Agilizar los tiempos del optimizador · [ ]
+#### F7.4 Agilizar los tiempos del optimizador · [x]
 - **Por qué:** en F0.9 se aceptó esperar más para ahorrar placas (DECISIONES 0.12). Gonzalo pidió ver al final cómo agilizarlo.
 - **Ideas:**
   - calcular el plano una sola vez y reutilizarlo entre la vista previa y el alta;
@@ -629,6 +629,7 @@ Autocompletar clientes, estados vacíos y de carga, y accesibilidad (spec §14.5
   - mover el optimizador del backend a `worker_threads`: hoy corre en el hilo de Node y, mientras calcula, frena las demás solicitudes y las transacciones abiertas (DECISIONES 29);
   - perfilar la búsqueda extra.
 - **Regla:** ninguna optimización de tiempo puede dar más placas. Se mide con `npm --prefix frontend run bench:optimizer`.
+- **Hecho (2026-10-08, DECISIONES 55):** sin tocar el optimizador. (1) Resultados guardados por entrada exacta en el código compartido: la vista previa y el alta calculan una sola vez. (2) En el backend, el cálculo en un hilo aparte (`worker_threads`): mientras calcula, el servidor sigue respondiendo; resuelve la causa de DECISIONES 29. (3) En el navegador, el plano en un Web Worker: la página no se congela. Medido con 20 bajo mesadas: antes, mientras calculaba 7,3 s, las otras consultas esperaban hasta 7,2 s y una falló, y el alta volvía a calcular 7,3 s; ahora responden en menos de 40 ms y el alta tarda 0,2 s. En el navegador, el cuadro más lento durante 5,1 s de cálculo fue de 0,27 s. Banco de pruebas: 55 casos, 200 placas antes y después, ninguno peor y todos cortables. Pruebas: tests (presupuesto 7) y de punta a punta: e2e-f74 8/8 (también contra el backend compilado, como en producción) y e2e-f74-navegador 5/5 (nuevas), f42 106/106, f43 96/96, f52 43/43, f53 21/21, f55 26/26, f71 25/25, f05 22/22, f04 12/12, f31 30/30, f23 4/4, f44-navegador sin fallas, f51-navegador 63/63 y f71-navegador 17/17 (con el cierre del diálogo esperado: ahora recalcular es casi instantáneo). **Quedan como ideas, si hicieran falta:** la caché por multiconjunto canónico (R5, sirve aunque cambie el orden de las filas) y perfilar la búsqueda extra.
 
 #### F7.3 Aceptación con ROMA · [ ]
 La prueba de spec §17.3 completa, incluida la importación real del Excel en la máquina.

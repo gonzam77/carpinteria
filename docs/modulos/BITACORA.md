@@ -27,6 +27,33 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-08 (31) · equipo Pinformatico15 · rama main
+
+**Pasos:** F7.4 terminado.
+
+**Hecho:**
+- Push de los 2 commits de F7.2, con el OK de Gonzalo.
+- Optimizador más ágil sin tocar el algoritmo (DECISIONES 55):
+  - resultados guardados por entrada exacta en `orderEstimate.ts`, sincronizado al backend;
+  - el cálculo del backend en un hilo aparte (`estimate-pool.ts` y `estimate-worker.ts`);
+  - el plano del navegador en un Web Worker (`estimate.worker.ts` y `estimateInWorker.ts`).
+- Medido contra el backend de antes de F7.4, en un worktree temporal en el puerto 4101 que después se borró (primero la junction). También se probó el backend compilado (`node dist/src/server.js`, puerto 4102), como corre en producción.
+- Banco de pruebas contra la versión anterior: 55 casos, 200 placas antes y después, ninguno peor y todos cortables.
+
+**Decisiones nuevas:** DECISIONES 55 (y la 29 queda resuelta de fondo).
+
+**Verificaciones:**
+- frontend `npm test` (en verde, presupuesto 7), backend `npm test` (35), `tsc`, `check:optimizer` y build en verde. El build genera el worker del navegador aparte.
+- e2e contra la copia: f74 8/8 (tsx y compilado), f74-navegador 5/5, f42 106/106, f43 96/96, f52 43/43, f53 21/21, f55 26/26, f71 25/25, f05 22/22, f04 12/12, f31 30/30, f23 4/4, f44-navegador sin fallas, f51-navegador 63/63 y f71-navegador 17/17 (con el cierre del diálogo esperado: ahora recalcular es casi instantáneo). La copia quedó como estaba.
+
+**Commits:** dos commits locales (código y pruebas, y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** lo que queda depende de otros: F7.3 (aceptación con ROMA), la Fase 6 (herrajes, cuando se definan) y F8 (pase a producción, lo hace Gonzalo).
+
+**Esperando a Gonzalo o a ROMA:** P5, P6 y P14; las reglas de los herrajes; la aceptación con ROMA.
+
+---
+
 ## 2026-10-08 (30) · equipo Pinformatico15 · rama main
 
 **Pasos:** F7.2 terminado.
