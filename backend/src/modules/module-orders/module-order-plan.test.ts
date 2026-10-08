@@ -2,7 +2,7 @@
 // remark, orden, origen y encaje en la placa. Datos armados a mano, sin base de datos.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { moduleBarcode, planModuleOrder, type PlanCanto, type PlanInput, type PlanMaterial, type PlanModule } from "./module-order-plan.js";
+import { moduleBarcode, planModuleOrder, type PlanCanto, type PlanHardware, type PlanInput, type PlanMaterial, type PlanModule } from "./module-order-plan.js";
 import type { ModuleOrderLine } from "./module-orders.schemas.js";
 
 const placa = (id: string, nombre: string, espesorMm: number, extra: Partial<PlanMaterial> = {}): PlanMaterial => ({
@@ -92,6 +92,7 @@ const line = (extra: Partial<ModuleOrderLine> = {}): ModuleOrderLine => ({
   perfilCantoOrden: 1,
   observaciones: null,
   cantosOverride: {},
+  herrajesOverride: {},
   ...extra
 });
 
@@ -382,4 +383,71 @@ test("el fondo elegido se revisa aunque el modulo no tenga piezas de fondo, y si
   assert.deepEqual(noEsPlaca.problems, ["Módulo 1 (Bajo mesada): el material de fondo elegido no es una placa del sistema."]);
   const [sinPiezasDeFondo] = okPlan(planModuleOrder(input([line({ materialFondoId: "fina" })], {}, [sinFondo]))).lines;
   assert.equal(sinPiezasDeFondo.materialFondoId, null);
+});
+
+// ---------------------------------------------------------------- herrajes (Fase 6, DECISIONES 57)
+
+const herraje = (id: string, tipoId: string, extra: Partial<PlanHardware> = {}): PlanHardware => ({
+  id,
+  tipoId,
+  nombre: id,
+  unidad: "unidad",
+  valor: 100,
+  tipo: tipoId,
+  linea: null,
+  medidaMm: null,
+  activo: true,
+  ...extra
+});
+const HARDWARE = new Map(
+  [
+    herraje("bisagra-comun", "bisagra", { valor: 850 }),
+    herraje("bisagra-suave", "bisagra", { valor: 1900 }),
+    herraje("bisagra-vieja", "bisagra", { activo: false }),
+    herraje("t350", "corredera", { unidad: "par", linea: "Telescópica", medidaMm: 350, valor: 9100 }),
+    herraje("t450", "corredera", { unidad: "par", linea: "Telescópica", medidaMm: 450, valor: 10500 }),
+    herraje("pata", "pata", { valor: 300 })
+  ].map((item) => [item.id, item])
+);
+const conHerrajes = (herrajes: PlanModule["herrajes"]) => [sampleModule({ herrajes })];
+const hardwareOn = { hardware: { enabled: true, models: HARDWARE } };
+
+test("herrajes: cantidad con las piezas del módulo, modelo por defecto o por medida, y los de cantidad 0 no van", () => {
+  const modules = conHerrajes([
+    { herrajeId: "bisagra-comun", formulaCantidad: "PUERTA.cant * 2" },
+    { herrajeId: "t350", formulaCantidad: "ESTANTES", formulaMedida: "ALTO - 220" },
+    { herrajeId: "pata", formulaCantidad: "SI(ANCHO > 1000; 6; 0)" }
+  ]);
+  const [planned] = okPlan(planModuleOrder(input([line()], hardwareOn, modules))).lines;
+  assert.deepEqual(
+    planned.herrajes.map((item) => [item.herrajeId, item.cantidad, item.medidaNecesaria, item.eleccion, item.origen, item.valorUnitario, item.unidad, item.orden]),
+    [
+      ["bisagra-comun", 4, null, "POR_DEFECTO", "CALCULADO", 850, "unidad", 1],
+      ["t450", 1, 500, "POR_MEDIDA", "CALCULADO", 10500, "par", 2]
+    ],
+    "la pata no va: cantidad 0 con 800 de ancho"
+  );
+  const apagados = okPlan(planModuleOrder(input([line()], { hardware: { enabled: false, models: HARDWARE } }, modules))).lines[0];
+  assert.deepEqual(apagados.herrajes, [], "con los herrajes apagados no se calculan");
+});
+
+test("herrajes: elegir otro modelo del mismo tipo; otro tipo, uno inactivo o una fórmula mala no pasan", () => {
+  const modules = conHerrajes([{ herrajeId: "bisagra-comun", formulaCantidad: "PUERTA.cant * 2" }]);
+  const elegido = okPlan(planModuleOrder(input([line({ herrajesOverride: { "bisagra-comun": "bisagra-suave" } })], hardwareOn, modules))).lines[0];
+  assert.deepEqual(
+    elegido.herrajes.map((item) => [item.herrajeId, item.herrajeDefectoId, item.eleccion, item.origen, item.valorUnitario]),
+    [["bisagra-suave", "bisagra-comun", "ELEGIDO", "EDITADO", 1900]]
+  );
+  const mismo = okPlan(planModuleOrder(input([line({ herrajesOverride: { "bisagra-comun": "bisagra-comun" } })], hardwareOn, modules))).lines[0];
+  assert.equal(mismo.herrajes[0].origen, "CALCULADO", "elegir el mismo que correspondía no lo marca como editado");
+  const otroTipo = errorOf(planModuleOrder(input([line({ herrajesOverride: { "bisagra-comun": "pata" } })], hardwareOn, modules)));
+  assert.equal(otroTipo.code, "MODULE_HARDWARE_INVALID");
+  assert.match(otroTipo.message, /no es del mismo tipo/);
+  const inactivo = errorOf(planModuleOrder(input([line({ herrajesOverride: { "bisagra-comun": "bisagra-vieja" } })], hardwareOn, modules)));
+  assert.ok(inactivo.message.includes(`Módulo 1 (Bajo mesada): el herraje "bisagra-vieja" está inactivo`), inactivo.message);
+  const ajeno = errorOf(planModuleOrder(input([line({ herrajesOverride: { pata: "pata" } })], hardwareOn, modules)));
+  assert.equal(ajeno.code, "MODULE_FORMULA_ERRORS");
+  const mala = errorOf(planModuleOrder(input([line()], hardwareOn, conHerrajes([{ herrajeId: "bisagra-comun", formulaCantidad: "PUERTAZ.cant" }]))));
+  assert.equal(mala.code, "MODULE_FORMULA_ERRORS");
+  assert.match(mala.problems.join(" "), /herraje 1: Cantidad: No existe la pieza PUERTAZ/);
 });

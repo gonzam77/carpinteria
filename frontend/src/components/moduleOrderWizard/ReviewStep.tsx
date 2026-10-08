@@ -29,8 +29,9 @@ import {
 import { useId, useMemo, useState } from "react";
 import type { ModuleOrderApiError } from "../../api/moduleOrders";
 import { changedSides, defaultEdgeId, edgeSummary, materialSummary, rowsByModule, type EdgeDefaultsContext, type WizardUnit } from "../../lib/moduleOrderWizard";
-import type { LadoCanto, Material, MissingDefaultEdge, ModuleDefinition, ModuleOrderDetail, ModuleOrderEstimate, ModuleOrderPreview } from "../../types";
+import type { LadoCanto, Material, MissingDefaultEdge, ModuleDefinition, ModuleOrderDetail, ModuleOrderEstimate, ModuleOrderPreview, Hardware } from "../../types";
 import { CutOptimizer } from "../CutOptimizer";
+import { ModuleHardwareCard } from "./ModuleHardware";
 import { EDITED_BLUE } from "../PieceEdgesToggles";
 
 export type PreviewStatus = "idle" | "loading" | "stale" | "error" | "ready";
@@ -352,9 +353,11 @@ export function ReviewStep({
   edgeContext,
   planMaterials,
   herrajesHabilitados,
+  hardware,
   locked,
   onEdgeChange,
   onResetPiece,
+  onHardwareChange,
   onRecalculate
 }: {
   preview: ModuleOrderPreview | null;
@@ -367,10 +370,13 @@ export function ReviewStep({
   edgeContext: EdgeDefaultsContext;
   planMaterials: Material[];
   herrajesHabilitados: boolean;
+  /** Los modelos de herraje, para elegir otro del mismo tipo (DECISIONES 57). */
+  hardware: Hardware[];
   /** Mientras se crea la solicitud no se puede cambiar nada: el alta ya salio con lo que habia. */
   locked: boolean;
   onEdgeChange: (uid: string, piezaCodigo: string, lado: LadoCanto, cantoId: string | null) => void;
   onResetPiece: (uid: string, piezaCodigo: string) => void;
+  onHardwareChange: (uid: string, defaultId: string, chosenId: string | null) => void;
   onRecalculate: () => void;
 }) {
   const [planOpen, setPlanOpen] = useState(false);
@@ -426,7 +432,8 @@ export function ReviewStep({
             const definition = definitions.get(unit.moduloId);
             const rows = groups.get(index + 1) ?? [];
             if (!definition) return null;
-            return (
+            const herrajes = herrajesHabilitados ? (preview.modulos[index]?.herrajes ?? []) : [];
+            return [
               <ModuleDespieceCard
                 key={unit.uid}
                 posicion={index + 1}
@@ -438,8 +445,18 @@ export function ReviewStep({
                 locked={locked}
                 onEdgeChange={(codigo, lado, espesor) => onEdgeChange(unit.uid, codigo, lado, espesor)}
                 onResetPiece={(codigo) => onResetPiece(unit.uid, codigo)}
-              />
-            );
+              />,
+              herrajes.length > 0 && (
+                <ModuleHardwareCard
+                  key={`${unit.uid}-herrajes`}
+                  posicion={index + 1}
+                  herrajes={herrajes}
+                  models={hardware}
+                  locked={locked}
+                  onChange={(defaultId, chosenId) => onHardwareChange(unit.uid, defaultId, chosenId)}
+                />
+              )
+            ];
           })}
         {preview && (
           <Accordion

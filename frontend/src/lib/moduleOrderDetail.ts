@@ -123,6 +123,8 @@ export function unitFromOrderModule(
     perfilCantoOrden: perfil as 1 | 2,
     materialFondoId: modulo.materialFondoId,
     observaciones: modulo.observaciones ?? "",
-    cantosOverride: {}
+    cantosOverride: {},
+    // Recalcular vuelve a los herrajes del catalogo (DECISIONES 57).
+    herrajesOverride: {}
   };
 }

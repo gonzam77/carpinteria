@@ -7,6 +7,7 @@ import axios from "axios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getModule, getModulesConfig, listModuleCategories, listModules } from "../api/catalog";
+import { listHardware } from "../api/hardware";
 import { api } from "../api/client";
 import { createModuleOrder, getModuleOrder, listModuleOrders, moduleOrderError, previewModuleOrder, type ModuleOrderApiError } from "../api/moduleOrders";
 import { ensureSession } from "../api/session";
@@ -44,9 +45,10 @@ import {
   type UnitCheckContext,
   type UnitValidation,
   type WizardDraft,
-  type WizardUnit
+  type WizardUnit,
+  withHardwareChoice
 } from "../lib/moduleOrderWizard";
-import type { LadoCanto, Material, ModuleCategory, ModuleDefinition, ModuleListItem, ModuleOrder, ModuleOrderPreview, ModulesConfig } from "../types";
+import type { LadoCanto, Material, ModuleCategory, ModuleDefinition, ModuleListItem, ModuleOrder, ModuleOrderPreview, ModulesConfig, Hardware } from "../types";
 
 const STEPS = ["Cliente y entrega", "Elegir módulos", "Medidas y colores", "Revisar despiece"];
 /** Espera antes de recalcular despues de cambiar un canto: no se calcula en cada click (PLAN P12). */
@@ -94,6 +96,7 @@ function ModuleOrderWizard() {
   const [definitions, setDefinitions] = useState<Map<string, ModuleDefinition>>(new Map());
   /** Materiales al dia: se vuelven a traer al revisar el despiece y con cada vista previa. */
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [hardware, setHardware] = useState<Hardware[]>([]);
 
   // ---------------------------------------------------------------- lo que carga la persona
   const [cliente, setCliente] = useState("");
@@ -147,6 +150,12 @@ function ModuleOrderWizard() {
         if (cancelled) return;
         setData({ modules, categories: categories.filter((category) => category.activo), config });
         setMaterials(materialsResponse.data);
+        // Los modelos de herraje, para elegir otro en el paso 4 (solo si estan habilitados).
+        if (config.herrajesHabilitados) {
+          listHardware(true)
+            .then((list) => !cancelled && setHardware(list))
+            .catch(() => undefined);
+        }
         // Precarga, no sincronizacion: si ya hay una fecha (borrador recuperado), no se pisa.
         setFechaEntrega((current) => current || defaultDeliveryDate(config.diasEntregaDefecto));
       })
@@ -783,6 +792,16 @@ function ModuleOrderWizard() {
     setUnits((list) => list.map((item) => (item.uid === uid ? next : item)));
     schedulePreview();
   };
+  // Herrajes (DECISIONES 57): elegir otro modelo de una linea, o volver al que corresponde (chosenId null).
+  const onHardwareChange = (uid: string, defaultId: string, chosenId: string | null) => {
+    if (creatingRef.current) return;
+    const unit = latest.current.units.find((item) => item.uid === uid);
+    if (!unit) return;
+    const next = withHardwareChoice(unit, defaultId, chosenId);
+    if (next === unit) return;
+    setUnits((list) => list.map((item) => (item.uid === uid ? next : item)));
+    schedulePreview();
+  };
   const onResetPiece = (uid: string, codigo: string) => {
     if (creatingRef.current) return;
     const unit = latest.current.units.find((item) => item.uid === uid);
@@ -955,9 +974,11 @@ function ModuleOrderWizard() {
           edgeContext={edgeContext}
           planMaterials={materials}
           herrajesHabilitados={data.config.herrajesHabilitados}
+          hardware={hardware}
           locked={creating}
           onEdgeChange={onEdgeChange}
           onResetPiece={onResetPiece}
+          onHardwareChange={onHardwareChange}
           onRecalculate={() => requestPreview()}
         />
       )}

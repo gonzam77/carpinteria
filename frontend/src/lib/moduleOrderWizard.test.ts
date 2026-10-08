@@ -35,6 +35,7 @@ import {
   validateUnit,
   withAvailableColors,
   withEdgeChoice,
+  withHardwareChoice,
   withoutEdgeOverride,
   type WizardUnit
 } from "./moduleOrderWizard.ts";
@@ -599,4 +600,29 @@ test("elegir un cliente anterior: nombre y teléfono; email y dirección solo si
   assert.deepEqual(clientSuggestionPatch({ emailContacto: "", direccionEntrega: " " }, client), client);
   assert.deepEqual(clientSuggestionPatch({ emailContacto: "otro@example.com", direccionEntrega: "Obra nueva" }, client), { cliente: "Cliente Uno", numeroContacto: "2664000000" });
   assert.deepEqual(clientSuggestionPatch({ emailContacto: "", direccionEntrega: "" }, { ...client, emailContacto: null, direccionEntrega: null }), { cliente: "Cliente Uno", numeroContacto: "2664000000" });
+});
+
+test("herrajes del paso 4: elegir otro modelo, volver al que corresponde y solo las lineas del modulo (DECISIONES 57)", () => {
+  const herrajes = [
+    { herrajeId: "bisagra-comun", formulaCantidad: "4", formulaMedida: null, orden: 1 },
+    { herrajeId: "corredera-350", formulaCantidad: "1", formulaMedida: "PROFUNDIDAD - 50", orden: 2 }
+  ] as ModuleDefinition["herrajes"];
+  const def = definition({ herrajes });
+  const unit = newUnit(def, DEFAULTS, MATERIALS);
+  assert.deepEqual(unit.herrajesOverride, {});
+  assert.ok(!("herrajesOverride" in linePayload(unit, def)));
+
+  const elegida = withHardwareChoice(unit, "bisagra-comun", "bisagra-suave");
+  assert.deepEqual(elegida.herrajesOverride, { "bisagra-comun": "bisagra-suave" });
+  assert.deepEqual(linePayload(elegida, def).herrajesOverride, { "bisagra-comun": "bisagra-suave" });
+  assert.equal(withHardwareChoice(elegida, "bisagra-comun", "bisagra-suave"), elegida, "lo mismo: no cambia nada");
+
+  const vuelta = withHardwareChoice(elegida, "bisagra-comun", null);
+  assert.deepEqual(vuelta.herrajesOverride, {});
+  assert.equal(withHardwareChoice(vuelta, "bisagra-comun", null), vuelta);
+
+  // Una linea que el modulo ya no tiene (catalogo que cambio, borrador viejo) se descarta.
+  const vieja = sanitizeUnit({ ...elegida, herrajesOverride: { "bisagra-comun": "bisagra-suave", "pata-vieja": "pata-nueva" } }, def);
+  assert.deepEqual(vieja.herrajesOverride, { "bisagra-comun": "bisagra-suave" });
+  assert.deepEqual(sanitizeUnit(elegida, definition({ herrajes: [] })).herrajesOverride, {});
 });

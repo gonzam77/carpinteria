@@ -45,6 +45,7 @@ import { DeliveryChip } from "../components/DeliveryChip";
 import { SummaryPanel } from "../components/moduleOrderWizard/ReviewStep";
 import { OrderMaterialsDialog } from "../components/OrderMaterialsDialog";
 import { RecalcModuleDialog } from "../components/RecalcModuleDialog";
+import { OrderHardwareList } from "../components/moduleOrderWizard/ModuleHardware";
 import { ActionSnackbar, OrderCompletedDialog, StockShortageDialog, type StockShortage } from "../components/OrderStatusDialogs";
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { EDITED_BLUE } from "../components/PieceEdgesToggles";
@@ -161,7 +162,17 @@ function PiecesTable({ titleId, rows }: { titleId: string; rows: ModuleOrderDeta
   );
 }
 
-function ModuleBlock({ modulo, rows, onRecalc }: { modulo: ModuleOrder["modulos"][number]; rows: ModuleOrderDetail[]; onRecalc?: () => void }) {
+function ModuleBlock({
+  modulo,
+  rows,
+  herrajes,
+  onRecalc
+}: {
+  modulo: ModuleOrder["modulos"][number];
+  rows: ModuleOrderDetail[];
+  herrajes: ModuleOrder["herrajes"];
+  onRecalc?: () => void;
+}) {
   const titleId = useId();
   const perfil = modulo.definicionSnapshot?.perfiles?.find((item) => item.orden === modulo.perfilCantoOrden);
   const colores = [
@@ -201,6 +212,7 @@ function ModuleBlock({ modulo, rows, onRecalc }: { modulo: ModuleOrder["modulos"
         </Typography>
       )}
       <PiecesTable titleId={titleId} rows={rows} />
+      <OrderHardwareList titulo={`Herrajes del módulo ${modulo.posicion}`} herrajes={herrajes} />
     </Paper>
   );
 }
@@ -582,6 +594,7 @@ export function ModuleOrderDetailPage() {
                 key={modulo.id}
                 modulo={modulo}
                 rows={rowsByModule.get(modulo.id) ?? []}
+                herrajes={(order.herrajes ?? []).filter((herraje) => herraje.pedidoModuloId === modulo.id)}
                 // Recalcular desde el catalogo (spec §10.6): en los estados editables y si el modulo sigue en el catalogo.
                 onRecalc={canEditModuleOrder(order.estado) && modulo.moduloId ? () => setRecalcModulo(modulo) : undefined}
               />
@@ -597,7 +610,7 @@ export function ModuleOrderDetailPage() {
               </Paper>
             )}
           </Stack>
-          <SummaryPanel preview={order} status="ready" units={order.modulos.length} materials={materials} herrajesHabilitados={Boolean(config?.herrajesHabilitados)} />
+          <SummaryPanel preview={order} status="ready" units={order.modulos.length} materials={materials} herrajesHabilitados={Boolean(config?.herrajesHabilitados) || order.costoHerrajes > 0} />
         </Box>
       )}
       {tab === "plano" && (

@@ -2,13 +2,54 @@
 // lo que hace falta y llama a planModuleOrder; asi esta logica se prueba con datos armados a mano (spec §17.1,
 // module-order-plan.test.ts) y la paridad con el corte no depende de nada mas que de estas filas.
 import { findPiecesThatDoNotFit } from "../../shared/cutOptimizer.js";
-import { buildModulePieces, EDGE_SIDES, type CatalogModuleDef, type EdgeSide, type ModuleError, type OrderedModulePiece, type RoundingMode } from "../../shared/moduleFormula.js";
+import {
+  buildModulePieces,
+  EDGE_SIDES,
+  resolveModuleHardware,
+  type CatalogModuleDef,
+  type EdgeSide,
+  type HardwareModel,
+  type HardwarePick,
+  type ModuleError,
+  type ModuleHardwareLine,
+  type OrderedModulePiece,
+  type RoundingMode
+} from "../../shared/moduleFormula.js";
 import { usableBoardSize } from "../../shared/orderEstimate.js";
 import type { DetailInput } from "../orders/order-details.service.js";
 import type { ModuleOrderLine } from "./module-orders.schemas.js";
 
 /** Un modulo del catalogo como lo devuelve toDefinition. */
-export type PlanModule = CatalogModuleDef & { id: string; nombre: string; activo: boolean; version: number; materialFondoId: string | null };
+export type PlanModule = CatalogModuleDef & {
+  id: string;
+  nombre: string;
+  activo: boolean;
+  version: number;
+  materialFondoId: string | null;
+  /** Los herrajes del modulo (DECISIONES 57): modelo por defecto, formula de cantidad y, si va por medida, de la medida. */
+  herrajes?: ModuleHardwareLine[];
+};
+/** Un modelo de herraje de la base, con lo que se guarda en la solicitud. */
+export type PlanHardware = HardwareModel & { nombre: string; unidad: string; valor: number; tipo: string | null };
+/** Un herraje de un modulo de la solicitud, listo para guardar (PedidoHerraje). */
+export type PlannedHardware = {
+  /** El modelo que va. */
+  herrajeId: string;
+  /** El modelo por defecto de la linea del modulo: la clave para elegir otro a mano. */
+  herrajeDefectoId: string;
+  nombre: string;
+  unidad: string;
+  tipo: string | null;
+  linea: string | null;
+  medidaMm: number | null;
+  cantidad: number;
+  valorUnitario: number;
+  medidaNecesaria: number | null;
+  /** Como se eligio: POR_DEFECTO, POR_MEDIDA, MAS_CHICO o ELEGIDO (a mano en la solicitud). */
+  eleccion: HardwarePick | "ELEGIDO";
+  origen: "CALCULADO" | "EDITADO";
+  orden: number;
+};
 export type PlanMaterial = {
   id: string;
   nombre: string;
@@ -33,6 +74,8 @@ export type PlanInput = {
   cantos: PlanCanto[];
   config: { redondeo: RoundingMode; materialFondoId: string | null };
   optimizer: { espesorSierraMm: number; perfiladoBordeMm: number };
+  /** Herrajes (Fase 6): si estan habilitados y todos los modelos de la base (tambien los inactivos). Sin esto, no hay herrajes. */
+  hardware?: { enabled: boolean; models: Map<string, PlanHardware> };
 };
 
 export type PlanError = { code: string; message: string; problems: string[]; details: Record<string, unknown> };
@@ -50,6 +93,8 @@ export type PlannedLine = {
   rows: DetailInput[];
   /** Lados que van sin canto porque la placa de la pieza no tiene uno de su color: se avisan, no son un error. */
   sinCanto: MissingDefaultEdge[];
+  /** Herrajes del modulo (vacio si estan apagados). Las lineas con cantidad 0 no van. */
+  herrajes: PlannedHardware[];
 };
 
 export type Plan = { ok: true; lines: PlannedLine[] } | { ok: false; error: PlanError };
@@ -89,7 +134,9 @@ const failure = (code: string, problems: string[], details: Record<string, unkno
  * 1. modulos que no existen o estan inactivos (MODULE_NOT_AVAILABLE);
  * 2. errores de formulas o de medidas (MODULE_FORMULA_ERRORS);
  * 3. colores, fondo, material fijo o cantos elegidos que no sirven (MODULE_MATERIAL_INVALID);
- * 4. piezas que no entran en su placa, con la funcion de encaje del optimizador (MODULE_PIECES_DO_NOT_FIT, R2).
+ * 4. piezas que no entran en su placa, con la funcion de encaje del optimizador (MODULE_PIECES_DO_NOT_FIT, R2);
+ * 5. herrajes que no se pueden usar: un modelo inactivo o que no existe, o uno elegido de otro tipo (MODULE_HARDWARE_INVALID).
+ * Con los herrajes habilitados, sus formulas con error van con las de las piezas (2).
  * Cada lado lleva por defecto el canto del color de la placa de su pieza y del espesor del perfil; si esa placa no
  * tiene uno, va sin canto y se avisa (sinCanto), sin error. Un cambio a mano elige cualquier canto activo, o ninguno
  * (DECISIONES 45).
@@ -117,7 +164,17 @@ export function planModuleOrder(input: PlanInput): Plan {
     for (const codigo of Object.keys(line.cantosOverride ?? {}).map((code) => code.toUpperCase())) {
       if (!codes.has(codigo)) result.errores.push({ ref: codigo, mensaje: `No existe la pieza ${codigo} para cambiarle los cantos` });
     }
-    return { posicion: index + 1, line, module, ...result };
+    // Herrajes (DECISIONES 57): cantidad y modelo con el calculo compartido, el mismo que muestra el editor del catalogo.
+    const hardwareLines = input.hardware?.enabled ? (module.herrajes ?? []) : [];
+    const resolved = resolveModuleHardware(hardwareLines, result.evaluarExpresion, input.hardware?.models ?? new Map());
+    resolved.forEach((item, position) => item.error && result.errores.push({ ref: `herraje ${position + 1}`, mensaje: item.error }));
+    if (input.hardware?.enabled) {
+      const defaults = new Set(hardwareLines.map((item) => item.herrajeId));
+      for (const defaultId of Object.keys(line.herrajesOverride ?? {})) {
+        if (!defaults.has(defaultId)) result.errores.push({ ref: "herraje", mensaje: "Un herraje elegido no es de este módulo" });
+      }
+    }
+    return { posicion: index + 1, line, module, ...result, resolved };
   });
   const withErrors = built.filter((item) => item.errores.length);
   if (withErrors.length) {
@@ -168,7 +225,7 @@ export function planModuleOrder(input: PlanInput): Plan {
   // Filas: cada lado con el canto elegido a mano o, si no se toco, el de la placa de la pieza (spec §8.2, DECISIONES 45)
   const defaultCanto = (placaId: string, espesorMm: number) =>
     cantos.find((canto) => canto.placaMaterialId === placaId && sameThickness(canto.espesorMm, espesorMm)) ?? null;
-  const planned: PlannedLine[] = built.map(({ posicion, line, module, piezas, valores }) => {
+  const planned: PlannedLine[] = built.map(({ posicion, line, module, piezas, valores, resolved }) => {
     const sinCanto: MissingDefaultEdge[] = [];
     const overrides = new Map(Object.entries(line.cantosOverride ?? {}).map(([codigo, lados]) => [codigo.toUpperCase(), lados]));
     const rows = piezas.map((pieza): DetailInput => {
@@ -223,7 +280,8 @@ export function planModuleOrder(input: PlanInput): Plan {
       valores,
       materialFondoId: piezas.some((pieza) => pieza.rol === "FONDO") ? fondoIdFor(line, module, config) : null,
       rows,
-      sinCanto
+      sinCanto,
+      herrajes: plannedHardware(resolved, line, input.hardware?.models ?? new Map())
     };
   });
 
@@ -249,5 +307,52 @@ export function planModuleOrder(input: PlanInput): Plan {
   }
   if (fitProblems.length) return failure("MODULE_PIECES_DO_NOT_FIT", [...new Set(fitProblems)]);
 
+  // 5. Herrajes: el modelo que va tiene que existir y estar activo; uno elegido a mano, ademas, del mismo tipo.
+  const hardwareProblems: string[] = [];
+  const models = input.hardware?.models ?? new Map<string, PlanHardware>();
+  for (const { posicion, module, line, herrajes } of planned) {
+    const where = `Módulo ${posicion} (${module.nombre})`;
+    for (const item of herrajes) {
+      const elegido = models.get(item.herrajeId);
+      const defecto = models.get(item.herrajeDefectoId);
+      if (!elegido) hardwareProblems.push(`${where}: un herraje ya no existe. Elegí otro modelo.`);
+      else if (!elegido.activo) hardwareProblems.push(`${where}: el herraje "${elegido.nombre}" está inactivo. Elegí otro modelo.`);
+      else if (line.herrajesOverride?.[item.herrajeDefectoId] && defecto && elegido.tipoId !== defecto.tipoId) {
+        hardwareProblems.push(`${where}: "${elegido.nombre}" no es del mismo tipo que "${defecto.nombre}".`);
+      }
+    }
+  }
+  if (hardwareProblems.length) return failure("MODULE_HARDWARE_INVALID", [...new Set(hardwareProblems)]);
+
   return { ok: true, lines: planned };
+}
+
+/**
+ * Los herrajes de un modulo de la solicitud: por cada linea con cantidad, el modelo elegido a mano (si hay) o el que
+ * corresponde, con su precio de hoy. Origen EDITADO si se eligio a mano un modelo distinto del que correspondia.
+ */
+function plannedHardware(resolved: ReturnType<typeof resolveModuleHardware>, line: ModuleOrderLine, models: Map<string, PlanHardware>): PlannedHardware[] {
+  return resolved.flatMap((item, index): PlannedHardware[] => {
+    if (!item.cantidad) return [];
+    const manual = line.herrajesOverride?.[item.herrajeId];
+    const herrajeId = manual ?? item.elegidoId ?? item.herrajeId;
+    const model = models.get(herrajeId);
+    return [
+      {
+        herrajeId,
+        herrajeDefectoId: item.herrajeId,
+        nombre: model?.nombre ?? "",
+        unidad: model?.unidad ?? "unidad",
+        tipo: model?.tipo ?? null,
+        linea: model?.linea ?? null,
+        medidaMm: model?.medidaMm ?? null,
+        cantidad: item.cantidad,
+        valorUnitario: model?.valor ?? 0,
+        medidaNecesaria: item.medidaNecesaria,
+        eleccion: manual ? "ELEGIDO" : item.eleccion,
+        origen: manual && manual !== item.elegidoId ? "EDITADO" : "CALCULADO",
+        orden: index + 1
+      }
+    ];
+  });
 }

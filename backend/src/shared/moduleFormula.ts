@@ -427,6 +427,8 @@ export type ModulePiecesResult = {
   errores: ModuleError[];
   /** Las medidas con las que se calculo: lo cargado o, si falta, el valor por defecto. Es lo que se guarda en la solicitud. */
   valores: Record<string, number>;
+  /** Evalua una expresion con estas medidas y piezas (la cantidad y la medida de los herrajes, Fase 6). */
+  evaluarExpresion: (formula: string) => number;
 };
 
 /**
@@ -496,7 +498,7 @@ export function buildModulePieces(
     };
   });
 
-  return { piezas, errores, valores: efectivos };
+  return { piezas, errores, valores: efectivos, evaluarExpresion: evaluation.evaluarExpresion };
 }
 
 // ---------------------------------------------------------------- herrajes del modulo (Fase 6, DECISIONES 57)

@@ -14,6 +14,11 @@ function cuttingLaborCost(order: Order) {
   return Math.abs(cost) < 0.01 ? 0 : cost;
 }
 
+/** Herrajes de una solicitud de modulos (DECISIONES 57): van aparte del presupuesto de placas y se suman al total. */
+function hardwareCost(order: Order) {
+  return order.costoHerrajes ?? 0;
+}
+
 function openPrintWindow(title: string, html: string) {
   const printWindow = window.open("", "_blank", "width=980,height=760");
   if (!printWindow) return;
@@ -111,6 +116,7 @@ export function OrderReceiptDialog({
     if (!currentOrder) return;
     const printableOrder = currentOrder;
     const printableCuttingLaborCost = cuttingLaborCost(printableOrder);
+    const printableHardware = hardwareCost(printableOrder);
     const title = `Constancia - ${printableOrder.cliente}`;
     const date = new Date(printableOrder.fechaCreacion).toLocaleDateString();
 
@@ -128,8 +134,8 @@ export function OrderReceiptDialog({
             Fecha: ${date}
           </div>
           <div class="section">
-            <strong>Presupuesto estimado:</strong> ${formatMoney(printableOrder.presupuestoEstimado)}<br />
-            <span class="muted">Placas: ${formatMoney(printableOrder.costoPlacas)} - Mano de obra de cortes: ${formatMoney(printableCuttingLaborCost)} - Material canto: ${formatMoney(printableOrder.costoMaterialCantos)} - Pegado canto: ${formatMoney(printableOrder.costoPegadoCantos)} - Total cantos (material + pegado): ${formatMoney(printableOrder.costoCantos)} (${printableOrder.metrosCanto.toFixed(2)} m)</span>
+            <strong>Presupuesto estimado:</strong> ${formatMoney(printableOrder.presupuestoEstimado + printableHardware)}<br />
+            <span class="muted">Placas: ${formatMoney(printableOrder.costoPlacas)} - Mano de obra de cortes: ${formatMoney(printableCuttingLaborCost)} - Material canto: ${formatMoney(printableOrder.costoMaterialCantos)} - Pegado canto: ${formatMoney(printableOrder.costoPegadoCantos)} - Total cantos (material + pegado): ${formatMoney(printableOrder.costoCantos)} (${printableOrder.metrosCanto.toFixed(2)} m)${printableHardware > 0 ? ` - Herrajes: ${formatMoney(printableHardware)}` : ""}</span>
           </div>
           <div class="section">
             <strong>Entrega estimada:</strong> "Observación: la entrega puede demorar algunos días adicionales según disponibilidad del material al momento de procesar la solicitud."
@@ -207,9 +213,10 @@ export function OrderReceiptDialog({
                   <Typography>Costo pegado de canto: {formatMoney(currentOrder.costoPegadoCantos)}</Typography>
                   <Typography>Total cantos (material + pegado): {formatMoney(currentOrder.costoCantos)}</Typography>
                   <Typography color="text.secondary">Metros de canto estimados: {currentOrder.metrosCanto.toFixed(2)} m</Typography>
+                  {hardwareCost(currentOrder) > 0 && <Typography>Herrajes: {formatMoney(hardwareCost(currentOrder))}</Typography>}
                   <Divider sx={{ my: 0.5 }} />
                   <Typography variant="h5" fontWeight={900}>
-                    {formatMoney(currentOrder.presupuestoEstimado)}
+                    {formatMoney(currentOrder.presupuestoEstimado + hardwareCost(currentOrder))}
                   </Typography>
                 </Stack>
               </Paper>

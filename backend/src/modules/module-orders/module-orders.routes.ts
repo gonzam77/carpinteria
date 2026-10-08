@@ -39,7 +39,7 @@ moduleOrdersRouter.post(
   asyncHandler(async (req: any, res: any) => {
     const data = moduleOrderPreviewSchema.parse(req.body);
     const order = await buildModuleOrder(prisma, data.modulos, { cliente: data.cliente, numeroContacto: data.numeroContacto });
-    const estimate = await buildModuleOrderEstimate(prisma, order.detalles);
+    const estimate = await buildModuleOrderEstimate(prisma, order.detalles, order.costoHerrajes);
     const now = new Date().toISOString();
 
     res.json({
@@ -54,7 +54,7 @@ moduleOrdersRouter.post(
       fechaActualizacion: now,
       modulos: order.lineas.map(({ definicionSnapshot: _snapshot, piezas: _piezas, detalles, ...linea }) => ({ ...linea, piezas: detalles.length })),
       detalles: order.lineas.flatMap((linea) => linea.detalles.map((detalle) => ({ ...detalle, posicionModulo: linea.posicion }))),
-      herrajes: [],
+      herrajes: order.lineas.flatMap((linea) => linea.herrajes.map((herraje) => ({ ...herraje, posicionModulo: linea.posicion }))),
       ...estimate
     });
   })

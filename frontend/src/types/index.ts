@@ -123,6 +123,8 @@ export type Order = {
   costoCantos: number;
   metrosCanto: number;
   presupuestoEstimado: number;
+  /** Herrajes de las solicitudes de modulos, aparte del presupuesto de placas (DECISIONES 57). */
+  costoHerrajes?: number;
   faltanteStock: boolean;
   usuarioId: string;
   fechaCreacion: string;
@@ -294,6 +296,8 @@ export type ModuleOrderLineInput = {
   observaciones?: string | null;
   /** Cantos elegidos a mano en el paso 4, por codigo de pieza (DECISIONES 45). */
   cantosOverride?: Record<string, PieceEdgeChoice>;
+  /** Herrajes elegidos a mano en el paso 4: por el modelo por defecto de cada linea, el modelo elegido (DECISIONES 57). */
+  herrajesOverride?: Record<string, string>;
   /** La version del modulo que mostro la vista previa: si el catalogo cambio, el alta responde 409. */
   version?: number;
 };
@@ -355,6 +359,42 @@ export type ModuleOrderPreviewModule = {
   piezas: number;
   /** Lados que van sin canto porque la placa de la pieza no tiene uno de su color (DECISIONES 45). */
   cantosSinElegir: MissingDefaultEdge[];
+  /** Herrajes del modulo (vacio si estan apagados, DECISIONES 57). */
+  herrajes: PlannedHardware[];
+};
+
+/** Un herraje de un modulo calculado por el servidor (vista previa). */
+export type PlannedHardware = {
+  herrajeId: string;
+  /** El modelo por defecto de la linea: la clave para elegir otro. */
+  herrajeDefectoId: string;
+  nombre: string;
+  unidad: string;
+  tipo: string | null;
+  linea: string | null;
+  medidaMm: number | null;
+  cantidad: number;
+  valorUnitario: number;
+  medidaNecesaria: number | null;
+  eleccion: "POR_DEFECTO" | "POR_MEDIDA" | "MAS_CHICO" | "ELEGIDO";
+  origen: "CALCULADO" | "EDITADO";
+  orden: number;
+};
+
+/** Un herraje guardado en una solicitud (PedidoHerraje). */
+export type OrderHardware = {
+  id: string;
+  pedidoModuloId: string | null;
+  herrajeId: string | null;
+  nombre: string;
+  unidad: string;
+  tipo: string | null;
+  linea: string | null;
+  medidaMm: number | null;
+  cantidad: number;
+  valorUnitario: number;
+  orden: number;
+  origen: OrigenDetalle | null;
 };
 
 /** Respuesta de POST /api/pedidos-modulos/preview (DECISIONES 17): el paso 4 muestra solo esto (R3). */
@@ -366,7 +406,7 @@ export type ModuleOrderPreview = ModuleOrderEstimate & {
   fechaCreacion: string;
   modulos: ModuleOrderPreviewModule[];
   detalles: ModuleOrderDetail[];
-  herrajes: unknown[];
+  herrajes: Array<PlannedHardware & { posicionModulo: number }>;
 };
 
 type PlateRef = { id: string; nombre: string; espesorMm: number };
@@ -379,7 +419,7 @@ export type ModuleOrder = Omit<Order, "detalles"> &
     emailContacto: string | null;
     direccionEntrega: string | null;
     modulos: Array<
-      Omit<ModuleOrderPreviewModule, "version" | "piezas" | "moduloId" | "cantosSinElegir"> & {
+      Omit<ModuleOrderPreviewModule, "version" | "piezas" | "moduloId" | "cantosSinElegir" | "herrajes"> & {
         id: string;
         moduloId: string | null;
         definicionSnapshot: Omit<ModuleDefinition, "imagen" | "tienePedidos">;
@@ -389,6 +429,7 @@ export type ModuleOrder = Omit<Order, "detalles"> &
       }
     >;
     detalles: ModuleOrderDetail[];
+    herrajes: OrderHardware[];
   };
 
 /** Un cliente de solicitudes de modulos anteriores, para autocompletar el paso 1 del asistente. */

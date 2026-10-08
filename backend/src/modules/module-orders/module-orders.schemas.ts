@@ -43,6 +43,15 @@ export const moduleLineSchema = z
       .optional(),
     observaciones: z.string().trim().max(500, "Las observaciones del módulo tienen como máximo 500 caracteres").optional().nullable(),
     cantosOverride: z.record(z.string(), cantosOverrideSchema).optional().default({}),
+    // Herrajes elegidos a mano (DECISIONES 57): por el modelo por defecto de cada linea del modulo, el modelo elegido
+    // (del mismo tipo y activo). Las lineas que no se tocaron llevan el que corresponde (por defecto o por medida).
+    herrajesOverride: z
+      .record(
+        z.string().uuid("Un herraje elegido no es válido"),
+        z.string({ invalid_type_error: "Un herraje elegido no es válido" }).uuid("Un herraje elegido no es válido")
+      )
+      .optional()
+      .default({}),
     // La version del modulo que mostro la vista previa. Si viene y el catalogo cambio, el alta responde 409.
     version: z.number({ invalid_type_error: "La versión del módulo tiene que ser un número" }).int().positive().optional()
   })

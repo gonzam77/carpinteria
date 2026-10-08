@@ -22,6 +22,8 @@ export type WizardUnit = {
    * canto elegido o null (sin canto). Los demas lados llevan el de por defecto: el de la placa de la pieza.
    */
   cantosOverride: Record<string, PieceEdgeChoice>;
+  /** Herrajes elegidos a mano en el paso 4 (DECISIONES 57): por el modelo por defecto de la linea, el elegido. */
+  herrajesOverride: Record<string, string>;
 };
 
 export type DefaultColors = { colorEsqueletoId: string; colorFrentesId: string };
@@ -95,7 +97,8 @@ export function newUnit(definition: ModuleDefinition, defaults: DefaultColors, m
     perfilCantoOrden: defaultProfile(definition),
     materialFondoId: null,
     observaciones: "",
-    cantosOverride: {}
+    cantosOverride: {},
+    herrajesOverride: {}
   };
 }
 
@@ -133,7 +136,10 @@ export function sanitizeUnit(unit: WizardUnit, definition: ModuleDefinition): Wi
   );
   const perfilCantoOrden = definition.perfiles.some((perfil) => perfil.orden === unit.perfilCantoOrden) ? unit.perfilCantoOrden : defaultProfile(definition);
   const materialFondoId = hasBackPieces(definition) ? unit.materialFondoId : null;
-  return normalizeOverrides({ ...unit, valores, perfilCantoOrden, materialFondoId, cantosOverride: unit.cantosOverride ?? {} }, definition);
+  // Los herrajes elegidos a mano solo de las lineas que el modulo tiene hoy.
+  const lineas = new Set((definition.herrajes ?? []).map((herraje) => herraje.herrajeId));
+  const herrajesOverride = Object.fromEntries(Object.entries(unit.herrajesOverride ?? {}).filter(([defecto]) => lineas.has(defecto)));
+  return normalizeOverrides({ ...unit, valores, perfilCantoOrden, materialFondoId, cantosOverride: unit.cantosOverride ?? {}, herrajesOverride }, definition);
 }
 
 /**
@@ -360,6 +366,7 @@ export function linePayload(unit: WizardUnit, definition: ModuleDefinition, vers
     ...(unit.materialFondoId ? { materialFondoId: unit.materialFondoId } : {}),
     ...(observaciones ? { observaciones } : {}),
     ...(Object.keys(cantosOverride).length ? { cantosOverride } : {}),
+    ...(Object.keys(unit.herrajesOverride ?? {}).length ? { herrajesOverride: unit.herrajesOverride } : {}),
     ...(version !== undefined ? { version } : {})
   };
 }
@@ -643,7 +650,11 @@ export function restoreWizardDraft(
         perfilCantoOrden: unit.perfilCantoOrden === 2 ? 2 : 1,
         materialFondoId: typeof unit.materialFondoId === "string" ? unit.materialFondoId : null,
         observaciones: asText(unit.observaciones),
-        cantosOverride: unit.cantosOverride && typeof unit.cantosOverride === "object" ? unit.cantosOverride : {}
+        cantosOverride: unit.cantosOverride && typeof unit.cantosOverride === "object" ? unit.cantosOverride : {},
+        herrajesOverride:
+          unit.herrajesOverride && typeof unit.herrajesOverride === "object"
+            ? Object.fromEntries(Object.entries(unit.herrajesOverride).filter((entry): entry is [string, string] => typeof entry[1] === "string"))
+            : {}
       };
       // Un borrador de antes de DECISIONES 45 guardaba espesores por lado: esos cambios no se pueden recuperar.
       const sanitized = sanitizeUnit(base, definition);
@@ -726,4 +737,19 @@ export function clientSuggestionPatch(
     ...(!current.emailContacto.trim() && client.emailContacto ? { emailContacto: client.emailContacto } : {}),
     ...(!current.direccionEntrega.trim() && client.direccionEntrega ? { direccionEntrega: client.direccionEntrega } : {})
   };
+}
+
+/**
+ * Elegir el modelo de una linea de herraje en el paso 4 (DECISIONES 57): con el id del modelo por defecto de la linea y
+ * el elegido; null vuelve al que corresponde (el por defecto o el elegido por medida).
+ */
+export function withHardwareChoice(unit: WizardUnit, defaultId: string, chosenId: string | null): WizardUnit {
+  const current = unit.herrajesOverride ?? {};
+  if (chosenId === null) {
+    if (!(defaultId in current)) return unit;
+    const { [defaultId]: _removed, ...rest } = current;
+    return { ...unit, herrajesOverride: rest };
+  }
+  if (current[defaultId] === chosenId) return unit;
+  return { ...unit, herrajesOverride: { ...current, [defaultId]: chosenId } };
 }

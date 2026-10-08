@@ -393,7 +393,8 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
 
     try {
       const response = await api.post<Order>("/orders/preview", buildPayload(), { signal: controller.signal });
-      setPreviewOrder(response.data);
+      // Editar las piezas de una de modulos no cambia sus herrajes (DECISIONES 57): el comprobante suma los guardados.
+      setPreviewOrder(modules && savedModuleOrder ? { ...response.data, costoHerrajes: savedModuleOrder.costoHerrajes } : response.data);
     } catch (previewError) {
       // Si lo cancelamos nosotros (el usuario se fue del paso) no es un error
       // que haya que mostrar, y el comprobante no se tiene que abrir.

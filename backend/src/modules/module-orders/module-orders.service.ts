@@ -16,7 +16,7 @@ import { buildOrderEstimateSnapshot, getOptimizerSettings } from "../orders/orde
 import { DETALLES_ORDENADOS } from "../orders/order-queries.js";
 import { hasStockCommitment } from "../orders/order-stock.service.js";
 import { compareForList } from "./module-order-list.js";
-import { moduleBarcode, planModuleOrder, type MissingDefaultEdge, type PlanModule } from "./module-order-plan.js";
+import { moduleBarcode, planModuleOrder, type MissingDefaultEdge, type PlanHardware, type PlanModule, type PlannedHardware } from "./module-order-plan.js";
 import { composeRows, moduleLabel, renumberProblem } from "./module-recalc.js";
 import { uniqueClients } from "./module-order-clients.js";
 import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderLine, ModuleOrderUpdateInput, ModuleRecalcInput } from "./module-orders.schemas.js";
@@ -50,7 +50,24 @@ export type BuiltModuleLine = {
   detalles: NormalizedDetail[];
   /** Lados que van sin canto porque la placa de la pieza no tiene uno de su color (DECISIONES 45): se avisan. */
   cantosSinElegir: MissingDefaultEdge[];
+  /** Herrajes del modulo (Fase 6); vacio si estan apagados. */
+  herrajes: PlannedHardware[];
 };
+
+/** Todos los modelos de herraje (tambien los inactivos: el armado avisa si se eligio uno), con el nombre de su tipo. */
+async function loadHardwareModels(tx: Tx) {
+  const herrajes = await tx.herraje.findMany({ include: { tipo: { select: { nombre: true } } } });
+  return new Map<string, PlanHardware>(
+    herrajes.map((herraje) => [
+      herraje.id,
+      { id: herraje.id, tipoId: herraje.tipoId, linea: herraje.linea, medidaMm: herraje.medidaMm, activo: herraje.activo, nombre: herraje.nombre, unidad: herraje.unidad, valor: herraje.valor, tipo: herraje.tipo?.nombre ?? null }
+    ])
+  );
+}
+
+/** Lo que cuestan los herrajes, sumado en centavos (DECISIONES R1): cantidad por precio unitario. */
+export const hardwareCost = (herrajes: Array<{ cantidad: number; valorUnitario: number }>) =>
+  herrajes.reduce((total, herraje) => total + Math.round(toCentavos(herraje.valorUnitario) * herraje.cantidad), 0) / 100;
 
 /**
  * Arma las filas de corte de los modulos de una solicitud (spec §8.2 y §8.3): trae de la base los modulos, las
@@ -87,7 +104,9 @@ export async function buildModuleOrder(tx: Tx, lines: ModuleOrderLine[], context
     materials: new Map(materials.map((material) => [material.id, material])),
     cantos,
     config: { redondeo: config.redondeo as RoundingMode, materialFondoId: config.materialFondoId },
-    optimizer
+    optimizer,
+    // Herrajes (Fase 6, DECISIONES 57): solo si estan habilitados.
+    hardware: { enabled: config.herrajesHabilitados, models: config.herrajesHabilitados ? await loadHardwareModels(tx) : new Map() }
   });
   if (!plan.ok) {
     const { code, message, problems, details } = plan.error;
@@ -98,7 +117,7 @@ export async function buildModuleOrder(tx: Tx, lines: ModuleOrderLine[], context
   const flat = plan.lines.flatMap((item) => item.rows).map((row, indice) => ({ ...row, indice }));
   const detalles = await normalizeDetails(flat, context.cliente, context.numeroContacto, tx);
   let offset = 0;
-  const lineas: BuiltModuleLine[] = plan.lines.map(({ posicion, line, module, piezas, valores, materialFondoId, sinCanto }) => {
+  const lineas: BuiltModuleLine[] = plan.lines.map(({ posicion, line, module, piezas, valores, materialFondoId, sinCanto, herrajes }) => {
     const item: BuiltModuleLine = {
       posicion,
       moduloId: module.id,
@@ -113,21 +132,22 @@ export async function buildModuleOrder(tx: Tx, lines: ModuleOrderLine[], context
       definicionSnapshot: snapshotOf(modules.get(module.id)!.raw),
       piezas,
       detalles: detalles.slice(offset, offset + piezas.length),
-      cantosSinElegir: sinCanto
+      cantosSinElegir: sinCanto,
+      herrajes
     };
     offset += piezas.length;
     return item;
   });
-  return { lineas, detalles };
+  return { lineas, detalles, costoHerrajes: hardwareCost(lineas.flatMap((linea) => linea.herrajes)) };
 }
 
 /**
  * Presupuesto de una solicitud de modulos (spec §8.4 y DECISIONES R1): presupuestoEstimado y todos sus
- * componentes son exactamente los de buildOrderEstimateSnapshot, como en corte. Los herrajes (Fase 6) van aparte.
+ * componentes son exactamente los de buildOrderEstimateSnapshot, como en corte. Los herrajes (Fase 6) van aparte, en
+ * costoHerrajes, y el total con herrajes se suma en centavos.
  */
-export async function buildModuleOrderEstimate(tx: Tx, detalles: NormalizedDetail[]) {
+export async function buildModuleOrderEstimate(tx: Tx, detalles: NormalizedDetail[], costoHerrajes = 0) {
   const snapshot = await buildOrderEstimateSnapshot(tx as PrismaClient, detalles as never);
-  const costoHerrajes = 0;
   return {
     ...snapshot,
     costoHerrajes,
@@ -150,7 +170,7 @@ export const MODULE_ORDER_INCLUDE = {
     }
   },
   detalles: DETALLES_ORDENADOS,
-  herrajes: true,
+  herrajes: { orderBy: [{ pedidoModulo: { posicion: "asc" } }, { orden: "asc" }] },
   historial: { include: { usuario: { select: { nombre: true, apellido: true } } }, orderBy: { fechaCreacion: "desc" } }
 } satisfies Prisma.PedidoInclude;
 
@@ -216,7 +236,7 @@ export const canEditModuleOrder = (estado: EstadoPedido) =>
 export async function updateModuleOrder(prisma: PrismaClient, id: string, input: ModuleOrderUpdateInput, userId: string) {
   const existing = await prisma.pedido.findFirst({
     where: { id, tipo: TipoPedido.MODULOS },
-    include: { detalles: DETALLES_ORDENADOS, modulos: { select: { id: true, posicion: true } } }
+    include: { detalles: DETALLES_ORDENADOS, modulos: { select: { id: true, posicion: true } }, herrajes: { select: { cantidad: true, valorUnitario: true } } }
   });
   if (!existing) throw new AppError(404, "Solicitud de módulos no encontrada.");
   if (!canEditModuleOrder(existing.estado)) throw new AppError(403, "No se pueden editar pedidos en proceso, terminados o entregados.");
@@ -287,7 +307,8 @@ export async function updateModuleOrder(prisma: PrismaClient, id: string, input:
 
   // Calculo afuera de la transaccion, como el alta: el optimizador puede tardar mas de lo que dura una transaccion.
   const detalles = await normalizeDetails(nuevas, input.cliente, input.numeroContacto);
-  const { costoHerrajes, presupuestoConHerrajes: _total, ...snapshot } = await buildModuleOrderEstimate(prisma, detalles);
+  // Los herrajes guardados no cambian al editar las piezas (DECISIONES 57): siguen sumando lo mismo.
+  const { costoHerrajes, presupuestoConHerrajes: _total, ...snapshot } = await buildModuleOrderEstimate(prisma, detalles, hardwareCost(existing.herrajes));
 
   await prisma.$transaction(async (tx) => {
     // Solo si sigue como se leyo: si otro la cambio mientras se calculaba, 409 y no se toca nada.
@@ -345,7 +366,7 @@ export async function createModuleOrder(prisma: PrismaClient, input: ModuleOrder
     order.lineas.map((linea, index) => ({ ...linea, version: input.modulos[index].version })),
     new Map(order.lineas.map((linea) => [linea.moduloId, linea.version]))
   );
-  const { costoHerrajes, presupuestoConHerrajes: _total, ...snapshot } = await buildModuleOrderEstimate(prisma, order.detalles);
+  const { costoHerrajes, presupuestoConHerrajes: _total, ...snapshot } = await buildModuleOrderEstimate(prisma, order.detalles, order.costoHerrajes);
 
   let id: string;
   try {
@@ -432,6 +453,8 @@ async function insertModuleOrder(
         }))
       )
     });
+    const herrajes = order.lineas.flatMap((linea) => linea.herrajes.map((herraje) => hardwareRow(herraje, pedido.id, pedidoModuloId.get(linea.posicion)!)));
+    if (herrajes.length) await tx.pedidoHerraje.createMany({ data: herrajes });
     await tx.historialPedido.create({ data: { pedidoId: pedido.id, usuarioId: userId, accion: "CREAR_PEDIDO_MODULOS" } });
     return pedido.id;
   });
@@ -501,7 +524,11 @@ export async function listModuleOrders(tx: Tx, filters: ModuleOrderFilters) {
 export async function recalculateModule(prisma: PrismaClient, id: string, pedidoModuloId: string, input: ModuleRecalcInput, options: { apply: boolean; userId: string }) {
   const existing = await prisma.pedido.findFirst({
     where: { id, tipo: TipoPedido.MODULOS },
-    include: { detalles: DETALLES_ORDENADOS, modulos: { select: { id: true, posicion: true, moduloId: true, nombreModulo: true, valores: true, definicionSnapshot: true } } }
+    include: {
+      detalles: DETALLES_ORDENADOS,
+      modulos: { select: { id: true, posicion: true, moduloId: true, nombreModulo: true, valores: true, definicionSnapshot: true } },
+      herrajes: { select: { pedidoModuloId: true, cantidad: true, valorUnitario: true } }
+    }
   });
   if (!existing) throw new AppError(404, "Solicitud de módulos no encontrada.");
   const pm = existing.modulos.find((modulo) => modulo.id === pedidoModuloId);
@@ -543,7 +570,13 @@ export async function recalculateModule(prisma: PrismaClient, id: string, pedido
   }));
   const guardadas = existing.detalles.map(({ id: _id, pedidoId: _pedidoId, ...detalle }) => detalle);
   const filas = composeRows(guardadas, pm.id, nuevas as unknown as (typeof guardadas)[number][], new Map(existing.modulos.map((modulo) => [modulo.id, modulo.posicion])));
-  const { costoHerrajes, presupuestoConHerrajes, ...snapshot } = await buildModuleOrderEstimate(prisma, filas as unknown as NormalizedDetail[]);
+  // Los herrajes de ese modulo se regeneran con el catalogo de hoy; los de los otros quedan como estaban.
+  const otrosHerrajes = existing.herrajes.filter((herraje) => herraje.pedidoModuloId !== pm.id);
+  const { costoHerrajes, presupuestoConHerrajes, ...snapshot } = await buildModuleOrderEstimate(
+    prisma,
+    filas as unknown as NormalizedDetail[],
+    hardwareCost([...otrosHerrajes, ...linea.herrajes])
+  );
   const anteriores = existing.detalles.filter((detalle) => detalle.pedidoModuloId === pm.id);
 
   if (!options.apply) {
@@ -557,6 +590,7 @@ export async function recalculateModule(prisma: PrismaClient, id: string, pedido
       piezasAntes: anteriores.length,
       cambiosManuales: anteriores.filter((detalle) => detalle.origen === OrigenDetalle.EDITADO || detalle.origen === OrigenDetalle.MANUAL).length,
       detalles: nuevas,
+      herrajes: linea.herrajes,
       antes: { placasEstimadas: existing.placasEstimadas, presupuestoEstimado: existing.presupuestoEstimado, presupuestoConHerrajes: withHardwareTotal(existing.presupuestoEstimado, existing.costoHerrajes) },
       despues: { ...snapshot, costoHerrajes, presupuestoConHerrajes }
     };
@@ -586,6 +620,8 @@ export async function recalculateModule(prisma: PrismaClient, id: string, pedido
     });
     await tx.detallePedido.deleteMany({ where: { pedidoId: id } });
     await tx.detallePedido.createMany({ data: filas.map((fila) => ({ ...fila, pedidoId: id })) as Prisma.DetallePedidoCreateManyInput[] });
+    await tx.pedidoHerraje.deleteMany({ where: { pedidoModuloId: pm.id } });
+    if (linea.herrajes.length) await tx.pedidoHerraje.createMany({ data: linea.herrajes.map((herraje) => hardwareRow(herraje, id, pm.id)) });
     await tx.historialPedido.create({
       data: {
         pedidoId: id,
@@ -615,4 +651,22 @@ export async function searchModuleOrderClients(tx: Tx, q: string) {
     take: 100
   });
   return uniqueClients(rows.map((row) => ({ ...row, numeroContacto: row.numeroContacto ?? "" })));
+}
+
+/** Un herraje del armado como fila de PedidoHerraje: copia del nombre, la unidad, el tipo, la medida y el precio de hoy. */
+function hardwareRow(herraje: PlannedHardware, pedidoId: string, pedidoModuloId: string) {
+  return {
+    pedidoId,
+    pedidoModuloId,
+    herrajeId: herraje.herrajeId,
+    nombre: herraje.nombre,
+    unidad: herraje.unidad,
+    tipo: herraje.tipo,
+    linea: herraje.linea,
+    medidaMm: herraje.medidaMm,
+    cantidad: herraje.cantidad,
+    valorUnitario: herraje.valorUnitario,
+    orden: herraje.orden,
+    origen: herraje.origen === "EDITADO" ? OrigenDetalle.EDITADO : OrigenDetalle.CALCULADO
+  };
 }
