@@ -27,6 +27,32 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-08 (34) · equipo Pinformatico15 · rama main
+
+**Pasos:** F6.2 terminado.
+
+**Hecho:**
+- Push de los 6 commits de F7.4, P14 y F6.1, con el OK de Gonzalo.
+- Herrajes en el módulo del catálogo (DECISIONES 57):
+  - cantidad y elección por medida en el código compartido (`resolveModuleHardware` y `pickHardwareModel`), sincronizado al backend;
+  - el catálogo guarda y evalúa la fórmula de medida, y valida modelos inactivos, repetidos y fórmulas con error;
+  - pestaña Herrajes en el editor, con el resultado de cada línea con las medidas de prueba.
+- Sin fórmula de medida queda el modelo que eligió quien armó el módulo; se aclaró en DECISIONES 57.
+
+**Decisiones nuevas:** se completó la 57.
+
+**Verificaciones:**
+- frontend `npm test` (11 suites en verde: fórmulas 19, herrajes 3), backend `npm test` (37), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f62-navegador 15/15; sin fallas f31, f42, f43 y f44-navegador. La copia quedó como estaba.
+
+**Commits:** dos commits locales (código y pruebas, y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F6.3, herrajes en la solicitud. Leer "Tener en cuenta para F6.3" en PLAN.
+
+**Esperando a Gonzalo o a ROMA:** P5 y P6; el listado de herrajes de ROMA; la aceptación con ROMA.
+
+---
+
 ## 2026-10-08 (33) · equipo Pinformatico15 · rama main
 
 **Pasos:** Fase 6 en curso; F6.1 terminado.

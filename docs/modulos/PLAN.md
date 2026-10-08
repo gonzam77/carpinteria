@@ -12,9 +12,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-07
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F7.2 está commiteado y subido (con el OK de Gonzalo). F7.4, P14 y F6.1 están commiteados en local; su push espera el OK. Cada push espera su OK.
-- **Último paso terminado:** F6.1 (modelo de datos y Configuración › Herrajes). Las Fases 0 a 5 están completas; la 6 (herrajes) espera que se definan las reglas.
-- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.2 (herrajes en el módulo del catálogo). Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.1 está commiteado y subido (con el OK de Gonzalo). F6.2 está commiteado en local; su push espera el OK. Cada push espera su OK.
+- **Último paso terminado:** F6.2 (herrajes en el módulo del catálogo). Las Fases 0 a 5 están completas; la 6 (herrajes) espera que se definan las reglas.
+- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.3 (herrajes en la solicitud). Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -605,7 +605,9 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - **F6.1** · [x] Modelo de datos y Configuración › Herrajes: tipos, modelos (precio, unidad, línea y medida), ABM y ajuste de precios por porcentaje (spec §12 y §13.4). Migración nueva.
     - **Hecho (2026-10-08):** migración `20261008120000_herrajes_tipos_y_medidas` (solo agrega; probada en la copia); `/api/herrajes` y `/api/herrajes/tipos` (`hardware.routes.ts`, con sus esquemas y tests); pantalla `/configuracion-herrajes` (`HardwarePage`, en el menú Configuración) con el interruptor "Herrajes habilitados". Pruebas: tests (backend 37, `hardware.test.ts` 2) y e2e-f61-navegador 28/28 (nueva); sin fallas f31, f23, f43 y f44-navegador.
     - **Tener en cuenta para F6.2:** el catálogo ya evalúa `formulaCantidad` (`evaluateDefinition` en `catalog.service.ts`) y `ModuleInput.herrajes` ya existe en el editor (sin pantalla). Falta `formulaMedida` en el esquema de la API, la evaluación de la medida y la elección del modelo por línea (compartida, para que el asistente y el servidor elijan lo mismo).
-  - **F6.2** · [ ] Herrajes en el módulo (editor del catálogo): modelo por defecto, fórmula de cantidad y fórmula de medida, con el resultado en vivo.
+  - **F6.2** · [x] Herrajes en el módulo (editor del catálogo): modelo por defecto, fórmula de cantidad y fórmula de medida, con el resultado en vivo.
+    - **Hecho (2026-10-08):** `resolveModuleHardware` y `pickHardwareModel` en el código compartido; el catálogo guarda y evalúa `formulaMedida` y valida modelos inactivos, repetidos y fórmulas; pestaña Herrajes en el editor (`HardwareTab`). Pruebas: tests (fórmulas 19, herrajes 3, backend 37) y e2e-f62-navegador 15/15 (nueva, sobre una copia del módulo); sin fallas f31, f42, f43 y f44-navegador.
+    - **Tener en cuenta para F6.3:** el armado de la solicitud tiene la definición (`definition.herrajes`, con la fórmula de medida) y `evaluarExpresion` de cada módulo: los herrajes salen de `resolveModuleHardware` con los modelos de la base. En el catálogo importado la pieza de las puertas del bajo mesada se llama `PUESTAS` (viene así del Excel).
   - **F6.3** · [ ] En la solicitud: herrajes calculados por módulo en el asistente, con selector de modelo; se guardan con la solicitud, suman `costoHerrajes` y salen en el detalle y la constancia.
   - **F6.4** · [ ] Edición y salidas: ajustar herrajes a mano y "Recalcular herrajes"; recalcular un módulo regenera sus herrajes; hoja de taller con la sección de herrajes.
   - **F6.5** · [ ] Pruebas de punta a punta y no regresión.
