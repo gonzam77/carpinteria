@@ -147,7 +147,7 @@ const llenar = async (fila, largo, ancho, cantidad, nombre) => {
 };
 const placaDe = (fila) => fila.getByPlaceholder("Buscar material").inputValue();
 const encabezados = () => page.locator("tbody td[colspan] .MuiTypography-subtitle2").allInnerTexts();
-/** Lleva al Resumen. Hoy el clic en Siguiente del paso Cantos ya abre el comprobante (como en corte): se acepta las dos cosas. */
+/** Lleva al Resumen. Desde P14, Siguiente muestra el Resumen sin abrir el comprobante; si lo abriera, devuelve "comprobante". */
 async function irAlResumen() {
   await siguiente().click();
   await page.getByText("Cambios detectados", { exact: true }).waitFor({ timeout: 30000 });
@@ -279,8 +279,8 @@ try {
   const llegada = await irAlResumen();
   const cambios = await cambiosListados();
   check(
-    "Resumen: Cambios detectados",
-    JSON.stringify(cambios) === JSON.stringify(["2 piezas modificadas", "3 piezas agregadas", "1 pieza eliminada", "Cambió el teléfono y la fecha de entrega"]),
+    "Resumen: se ve, sin abrir el comprobante solo (P14), con Cambios detectados",
+    llegada === "resumen" && JSON.stringify(cambios) === JSON.stringify(["2 piezas modificadas", "3 piezas agregadas", "1 pieza eliminada", "Cambió el teléfono y la fecha de entrega"]),
     `${llegada}: ${cambios.join(" | ")}`
   );
   if (llegada !== "comprobante") await page.getByRole("button", { name: "Revisar y guardar" }).click();

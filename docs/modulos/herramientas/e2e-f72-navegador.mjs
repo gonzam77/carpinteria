@@ -7,6 +7,8 @@
 // - El foco del teclado se ve en las grillas (también en la de Solicitudes de corte, la de los carpinteros), y con el
 //   mouse no aparece el contorno.
 // - Chips de plazo con contraste de 4,5:1 o más.
+// - P14: en el formulario de corte (alta y edición), Siguiente en Cantos lleva al Resumen sin abrir el comprobante ni
+//   pedirlo al servidor; "Revisar y enviar" ("Revisar y guardar" al editar) lo abre. No se guarda nada.
 // Crea solicitudes "Prueba F7.2 ..." por la API y las borra al final. No imprime datos de clientes reales.
 //
 // No es dependencia del proyecto: necesita Microsoft Edge y playwright-core en una carpeta aparte
@@ -157,6 +159,60 @@ try {
   check("Solicitudes: con el mouse, sin contorno (como antes)", conMouse === "none", conMouse);
   check("Solicitudes: con el teclado, contorno grafito de 2 px", conTeclado.style === "solid" && conTeclado.color === "rgb(35, 32, 29)" && conTeclado.width === "2px", JSON.stringify(conTeclado));
   await page.screenshot({ path: join(shotsDir, "d1-foco.png") });
+
+  // ---------------------------------------------------------------- F. P14: Siguiente lleva al Resumen
+  let comprobantesPedidos = 0;
+  page.on("request", (request) => request.url().includes("/orders/preview") && (comprobantesPedidos += 1));
+  const alResumen = async (boton) => {
+    for (let paso = 0; paso < 3; paso++) {
+      await page.getByRole("button", { name: "Siguiente" }).click();
+      await page.waitForTimeout(400);
+    }
+    await page.getByRole("heading", { name: "Datos de contacto" }).waitFor({ timeout: 15000 });
+    await page.waitForTimeout(1500);
+    const sinComprobante = (await page.getByRole("dialog").count()) === 0 && comprobantesPedidos === 0;
+    await page.getByRole("button", { name: boton }).click();
+    const abre = await page.getByRole("dialog").getByText("Constancia de solicitud").first().waitFor({ timeout: 60000 }).then(() => true, () => false);
+    await page.getByRole("dialog").getByRole("button", { name: "Cerrar" }).click();
+    return { sinComprobante, abre };
+  };
+  // Alta de corte: el cliente, una pieza y los tres pasos.
+  comprobantesPedidos = 0;
+  await page.goto(`${APP}/pedidos/nuevo`);
+  await page.getByLabel("Cliente").waitFor({ timeout: 30000 });
+  await page.getByLabel("Cliente").fill(`${PREFIJO} corte`);
+  await page.getByLabel("Teléfono de contacto").fill("2664000000");
+  await page.getByRole("button", { name: "Siguiente" }).click();
+  const placa = page.getByPlaceholder("Buscar material");
+  await placa.click();
+  await placa.fill("Blanco");
+  await page.getByRole("option").first().click();
+  const numeros = page.locator("tbody tr").first().locator('input[type="number"]');
+  await numeros.nth(0).fill("700");
+  await numeros.nth(1).fill("400");
+  await numeros.nth(2).fill("2");
+  // Ya esta en Cortes: los dos Siguiente que faltan y el Resumen.
+  await page.getByRole("button", { name: "Siguiente" }).click();
+  await page.waitForTimeout(400);
+  await page.getByRole("button", { name: "Siguiente" }).click();
+  await page.getByRole("heading", { name: "Datos de contacto" }).waitFor({ timeout: 15000 });
+  await page.waitForTimeout(1500);
+  const altaSinComprobante = (await page.getByRole("dialog").count()) === 0 && comprobantesPedidos === 0;
+  await page.screenshot({ path: join(shotsDir, "f1-resumen-corte.png") });
+  await page.getByRole("button", { name: "Revisar y enviar" }).click();
+  const altaAbre = await page.getByRole("dialog").getByText("Constancia de solicitud").first().waitFor({ timeout: 60000 }).then(() => true, () => false);
+  await page.getByRole("dialog").getByRole("button", { name: "Cerrar" }).click();
+  check("P14 alta de corte: Siguiente muestra el Resumen sin abrir el comprobante", altaSinComprobante, `pedidos de comprobante: ${comprobantesPedidos}`);
+  check("P14 alta de corte: Revisar y enviar abre el comprobante", altaAbre);
+  // Edicion de una de corte pendiente (no se guarda).
+  const corte = psql(`select id from pedidos where tipo = 'CORTE' and estado = 'PENDIENTE' order by "fechaCreacion" desc limit 1`);
+  comprobantesPedidos = 0;
+  await page.goto(`${APP}/pedidos/${corte}/editar`);
+  await page.getByRole("button", { name: "Siguiente" }).waitFor({ timeout: 30000 });
+  await page.waitForTimeout(1500);
+  const edicion = await alResumen("Revisar y guardar");
+  check("P14 edición de corte: Siguiente muestra el Resumen sin abrir el comprobante", edicion.sinComprobante);
+  check("P14 edición de corte: Revisar y guardar abre el comprobante", edicion.abre);
 
   // ---------------------------------------------------------------- E. contraste de los chips de plazo
   await page.goto(`${APP}/modulos?q=${encodeURIComponent(PREFIJO)}`);

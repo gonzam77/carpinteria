@@ -670,12 +670,14 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
               Volver
             </Button>
           )}
+          {/* Cada boton con su key: si React reusara el mismo, el clic en Siguiente del paso Cantos tambien contaria como
+              el submit del boton de enviar que lo reemplaza, y se abria el comprobante sin ver el Resumen (P14). */}
           {step < 3 ? (
-            <Button type="button" variant="contained" endIcon={<ArrowForwardIcon />} onClick={nextStep} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            <Button key="siguiente" type="button" variant="contained" endIcon={<ArrowForwardIcon />} onClick={nextStep} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Siguiente
             </Button>
           ) : (
-            <Button type="submit" variant="contained" startIcon={<SaveIcon />} disabled={previewLoading || Boolean(changes && !hasChanges(changes))} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            <Button key="revisar" type="submit" variant="contained" startIcon={<SaveIcon />} disabled={previewLoading || Boolean(changes && !hasChanges(changes))} sx={{ width: { xs: "100%", sm: "auto" } }}>
               {previewLoading ? "Generando comprobante..." : id ? "Revisar y guardar" : "Revisar y enviar"}
             </Button>
           )}
