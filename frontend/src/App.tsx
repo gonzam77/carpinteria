@@ -13,6 +13,7 @@ import { ModuleOrderWizardPage } from "./pages/ModuleOrderWizardPage";
 import { ModuleOrdersPage } from "./pages/ModuleOrdersPage";
 import { OrderDetailPage } from "./pages/OrderDetailPage";
 import { OrderFormPage } from "./pages/OrderFormPage";
+import { ModuleOrderWorkshopPage } from "./pages/ModuleOrderWorkshopPage";
 import { OptimizerSettingsPage } from "./pages/OptimizerSettingsPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { UsersPage } from "./pages/UsersPage";
@@ -28,6 +29,10 @@ function ModuleOrderDetailRoute() {
   const { id } = useParams();
   return <ModuleOrderDetailPage key={id} />;
 }
+function ModuleOrderWorkshopRoute() {
+  const { id } = useParams();
+  return <ModuleOrderWorkshopPage key={id} />;
+}
 // La edicion de una solicitud de modulos usa el mismo formulario que corte (spec §10.2).
 function ModuleOrderEditRoute() {
   const { id } = useParams();
@@ -39,6 +44,15 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage mode="google" />} />
       <Route path="/admin" element={<LoginPage mode="admin" />} />
+      {/* Hojas de taller (spec §11.2): pagina para imprimir, sin el menu de la aplicacion. */}
+      <Route
+        path="/modulos/:id/taller"
+        element={
+          <ProtectedRoute roles={["ADMIN"]}>
+            <ModuleOrderWorkshopRoute />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/"
         element={

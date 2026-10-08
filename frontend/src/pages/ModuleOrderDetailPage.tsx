@@ -4,6 +4,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import InventoryIcon from "@mui/icons-material/Inventory2";
+import PrintIcon from "@mui/icons-material/Print";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   Alert,
@@ -448,6 +449,9 @@ export function ModuleOrderDetailPage() {
               Editar
             </Button>
           )}
+          <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => navigate(`/modulos/${order.id}/taller`, { state: { returnTo: backTo } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            Hoja de taller
+          </Button>
           <Button variant="outlined" startIcon={<InventoryIcon />} onClick={() => setMaterialsOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Materiales
           </Button>
