@@ -9,6 +9,7 @@ import {
   moduleMeasuresText,
   sortRowsByModule,
   STATUS_STEPS,
+  unitFromOrderModule,
   validateEditClient
 } from "./moduleOrderDetail.ts";
 
@@ -68,4 +69,30 @@ test("edición: la fecha guardada puede haber pasado, una nueva no", () => {
     "Completá el cliente (al menos 2 caracteres).",
     "El email no es válido."
   ]);
+});
+
+test("recalcular: la tarjeta sale de lo guardado; el historial dice qué módulo y las medidas de antes", () => {
+  const definition = {
+    id: "def",
+    perfiles: [{ orden: 1 }, { orden: 2 }],
+    parametros: [
+      { clave: "ancho", tipo: "MEDIDA", valorDefecto: 1200 },
+      { clave: "puertas", tipo: "OPCION", valorDefecto: 2 },
+      { clave: "nuevo", tipo: "MEDIDA", valorDefecto: 50 },
+      { clave: "interior", tipo: "CALCULADO", valorDefecto: null }
+    ]
+  } as never;
+  const unit = unitFromOrderModule(
+    { id: "pm1", valores: { ANCHO: 900, PUERTAS: 3, INTERIOR: 864 }, colorEsqueletoId: "a", colorFrentesId: "b", perfilCantoOrden: 2, materialFondoId: "f", observaciones: null },
+    definition
+  );
+  assert.deepEqual(unit.valores, { ANCHO: "900", PUERTAS: "3", NUEVO: "50" }, "lo guardado y, si el catálogo pide una medida nueva, su valor por defecto");
+  assert.equal(unit.perfilCantoOrden, 2);
+  assert.equal(unit.materialFondoId, "f", "el fondo guardado");
+  assert.deepEqual(unit.cantosOverride, {});
+  assert.equal(
+    historyText({ accion: "RECALCULAR_MODULO", valorAnterior: "Módulo 2 · Bajo mesada · 1.200 × 780 mm", valorNuevo: "Módulo 2 · Bajo mesada · 900 × 780 mm" }),
+    "Recalculó el módulo 2 · Bajo mesada · 900 × 780 mm (antes 1.200 × 780 mm)"
+  );
+  assert.equal(historyText({ accion: "RECALCULAR_MODULO", valorAnterior: "Módulo 1 · Alacena · 780 mm", valorNuevo: "Módulo 1 · Alacena · 780 mm" }), "Recalculó el módulo 1 · Alacena · 780 mm");
 });

@@ -79,7 +79,8 @@ function DefaultColorsBar({
   );
 }
 
-function UnitCard({
+/** La tarjeta de un modulo: la usan el paso 3 del asistente y el dialogo de recalcular (spec §10.6). */
+export function UnitCard({
   index,
   unit,
   definition,

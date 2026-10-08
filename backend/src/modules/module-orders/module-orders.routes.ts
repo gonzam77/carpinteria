@@ -6,7 +6,7 @@ import { EstadoPedido, Rol, TipoPedido } from "../../generated/prisma/client.js"
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
 import { asyncHandler } from "../../utils/http.js";
-import { moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema, moduleOrderUpdateSchema } from "./module-orders.schemas.js";
+import { moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema, moduleOrderUpdateSchema, moduleRecalcPreviewSchema, moduleRecalcSchema } from "./module-orders.schemas.js";
 import {
   buildModuleOrder,
   buildModuleOrderEstimate,
@@ -15,6 +15,7 @@ import {
   findModuleOrderByAltaKey,
   getModuleOrder,
   listModuleOrders,
+  recalculateModule,
   updateModuleOrder
 } from "./module-orders.service.js";
 
@@ -103,5 +104,26 @@ moduleOrdersRouter.put(
   asyncHandler(async (req: any, res: any) => {
     const data = moduleOrderUpdateSchema.parse(req.body);
     res.json(await updateModuleOrder(prisma, req.params.id, data, req.user.id));
+  })
+);
+
+/**
+ * Recalcular un modulo desde el catalogo (spec §10.6): la vista previa (sin guardar) muestra las piezas nuevas, cuantas
+ * se reemplazan y cuantas tenian cambios a mano, y el presupuesto del pedido entero antes y despues.
+ */
+moduleOrdersRouter.post(
+  "/:id/modulos/:moduloPedidoId/recalcular/vista-previa",
+  asyncHandler(async (req: any, res: any) => {
+    const data = moduleRecalcPreviewSchema.parse(req.body);
+    res.json(await recalculateModule(prisma, req.params.id, req.params.moduloPedidoId, data, { apply: false, userId: req.user.id }));
+  })
+);
+
+/** Aplica el recalculo (spec §10.6, DECISIONES R4): responde la solicitud como GET /:id. */
+moduleOrdersRouter.post(
+  "/:id/modulos/:moduloPedidoId/recalcular",
+  asyncHandler(async (req: any, res: any) => {
+    const data = moduleRecalcSchema.parse(req.body);
+    res.json(await recalculateModule(prisma, req.params.id, req.params.moduloPedidoId, data, { apply: true, userId: req.user.id }));
   })
 );

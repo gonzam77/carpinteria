@@ -390,6 +390,23 @@ export type ModuleOrder = Omit<Order, "detalles"> &
     detalles: ModuleOrderDetail[];
   };
 
+/** Respuesta de la vista previa de recalcular un modulo (spec §10.6). */
+export type ModuleRecalcPreview = {
+  posicion: number;
+  nombreModulo: string;
+  version: number;
+  valores: Record<string, number>;
+  materialFondoId: string | null;
+  cantosSinElegir: MissingDefaultEdge[];
+  /** Piezas que tiene hoy el modulo (se reemplazan todas). */
+  piezasAntes: number;
+  /** De esas, las editadas o agregadas a mano (se pierden). */
+  cambiosManuales: number;
+  detalles: ModuleOrderDetail[];
+  antes: { placasEstimadas: number; presupuestoEstimado: number; presupuestoConHerrajes: number };
+  despues: ModuleOrderEstimate;
+};
+
 export type ModuleOrderListItem = {
   id: string;
   numero: number;

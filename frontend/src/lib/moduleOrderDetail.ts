@@ -1,8 +1,8 @@
 // Logica del detalle de una solicitud de modulos (spec §9.3) que no depende de React: el historial legible, el
 // stepper de estados y la fecha de entrega editable.
-import { isValidDay, validateClient } from "./moduleOrderWizard.ts";
+import { isValidDay, validateClient, type WizardUnit } from "./moduleOrderWizard.ts";
 import { formatDay } from "./moduleOrdersList.ts";
-import type { EstadoSolicitud, ModuleOrder, ModuleOrderDetail, Order } from "../types/index.ts";
+import type { EstadoSolicitud, ModuleDefinition, ModuleOrder, ModuleOrderDetail, Order } from "../types/index.ts";
 
 const ESTADO_LABEL: Record<EstadoSolicitud, string> = {
   PENDIENTE: "Pendiente",
@@ -33,8 +33,13 @@ export function historyText(item: Pick<HistoryItem, "accion" | "valorAnterior" |
       return `Cambió la fecha de entrega del ${formatDay(item.valorAnterior) || "(sin fecha)"} al ${formatDay(item.valorNuevo)}`;
     case "EDITAR_PEDIDO":
       return item.valorNuevo ? `Editó la solicitud: ${item.valorNuevo}` : "Editó la solicitud";
-    case "RECALCULAR_MODULO":
-      return item.valorNuevo ? `Recalculó un módulo: ${item.valorNuevo}` : "Recalculó un módulo";
+    case "RECALCULAR_MODULO": {
+      if (!item.valorNuevo) return "Recalculó un módulo";
+      // "Módulo 2 · Bajo mesada · 900 × 780 × 580 mm": si cambiaron las medidas, se dicen las de antes.
+      const medidas = (text: string | undefined) => (text && / mm$/.test(text) ? text.split(" · ").pop() : "");
+      const antes = medidas(item.valorAnterior);
+      return `Recalculó el ${item.valorNuevo.replace(/^Módulo/, "módulo")}${antes && antes !== medidas(item.valorNuevo) ? ` (antes ${antes})` : ""}`;
+    }
     default:
       return [item.accion, item.valorAnterior && item.valorNuevo ? `${item.valorAnterior} → ${item.valorNuevo}` : ""].filter(Boolean).join(": ");
   }
@@ -86,4 +91,38 @@ export function sortRowsByModule<T extends Pick<ModuleOrderDetail, "pedidoModulo
  */
 export function validateEditClient(data: Parameters<typeof validateClient>[0], today: string, fechaGuardada: string | null) {
   return validateClient(data, data.fechaEntrega === fechaGuardada ? "" : today);
+}
+
+// ---------------------------------------------------------------- recalcular un modulo (F7.1, spec §10.6)
+
+/**
+ * La tarjeta del asistente con lo guardado de un modulo de la solicitud, para recalcularlo: sus medidas (las que el
+ * modulo de hoy pide), colores, perfil, fondo (el guardado, DECISIONES 32) y observaciones. Sin cambios de canto: el
+ * recalculo vuelve a los cantos por defecto.
+ */
+export function unitFromOrderModule(
+  modulo: Pick<ModuleOrder["modulos"][number], "id" | "valores" | "colorEsqueletoId" | "colorFrentesId" | "perfilCantoOrden" | "materialFondoId" | "observaciones">,
+  definition: Pick<ModuleDefinition, "id" | "parametros" | "perfiles">
+): WizardUnit {
+  const valores = Object.fromEntries(
+    definition.parametros
+      .filter((param) => param.tipo !== "CALCULADO")
+      .map((param) => {
+        const clave = param.clave.toUpperCase();
+        const saved = modulo.valores[clave] ?? modulo.valores[param.clave];
+        return [clave, typeof saved === "number" && Number.isFinite(saved) ? String(saved) : param.valorDefecto !== null ? String(param.valorDefecto) : ""];
+      })
+  );
+  const perfil = definition.perfiles.some((item) => item.orden === modulo.perfilCantoOrden) ? modulo.perfilCantoOrden : (definition.perfiles[0]?.orden ?? 1);
+  return {
+    uid: `recalcular-${modulo.id}`,
+    moduloId: definition.id,
+    valores,
+    colorEsqueletoId: modulo.colorEsqueletoId,
+    colorFrentesId: modulo.colorFrentesId,
+    perfilCantoOrden: perfil as 1 | 2,
+    materialFondoId: modulo.materialFondoId,
+    observaciones: modulo.observaciones ?? "",
+    cantosOverride: {}
+  };
 }

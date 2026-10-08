@@ -1,7 +1,7 @@
 // Llamadas a la API de solicitudes de modulos (/api/pedidos-modulos, spec §13.2).
 import axios from "axios";
 import { api } from "./client";
-import type { EstadoSolicitud, ModuleOrder, ModuleOrderClient, ModuleOrderLineInput, ModuleOrderListItem, ModuleOrderPreview } from "../types";
+import type { EstadoSolicitud, ModuleOrder, ModuleOrderClient, ModuleOrderLineInput, ModuleOrderListItem, ModuleOrderPreview, ModuleRecalcPreview } from "../types";
 
 /** Vista previa (spec §8.5). La senal corta la espera en el navegador (el servidor la calcula igual, PLAN P12). */
 export const previewModuleOrder = async (data: Partial<ModuleOrderClient> & { modulos: ModuleOrderLineInput[] }, options: { signal?: AbortSignal } = {}) =>
@@ -19,6 +19,14 @@ export const getModuleOrder = async (id: string) => (await api.get<ModuleOrder>(
 /** Cambia la fecha de entrega (AAAA-MM-DD, spec §9.3). Responde la solicitud como GET /:id, con el historial. */
 export const changeModuleOrderDeliveryDate = async (id: string, fechaEntrega: string) =>
   (await api.patch<ModuleOrder>(`/pedidos-modulos/${id}/fecha-entrega`, { fechaEntrega })).data;
+
+/** Recalcular un modulo desde el catalogo (spec §10.6): como queda, sin guardar. */
+export const previewModuleRecalc = async (id: string, moduloPedidoId: string, line: ModuleOrderLineInput, options: { signal?: AbortSignal } = {}) =>
+  (await api.post<ModuleRecalcPreview>(`/pedidos-modulos/${id}/modulos/${moduloPedidoId}/recalcular/vista-previa`, line, { signal: options.signal })).data;
+
+/** Aplica el recalculo: con la version que mostro la vista previa y la fecha de la solicitud que se leyo. */
+export const applyModuleRecalc = async (id: string, moduloPedidoId: string, line: ModuleOrderLineInput & { fechaActualizacion: string }) =>
+  (await api.post<ModuleOrder>(`/pedidos-modulos/${id}/modulos/${moduloPedidoId}/recalcular`, line)).data;
 
 /** Listado (spec §9.1). La senal corta una busqueda vieja cuando se pide otra. */
 export async function listModuleOrders(

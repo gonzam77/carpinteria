@@ -5,6 +5,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import InventoryIcon from "@mui/icons-material/Inventory2";
 import PrintIcon from "@mui/icons-material/Print";
+import TuneIcon from "@mui/icons-material/Tune";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   Alert,
@@ -43,6 +44,7 @@ import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
 import { DeliveryChip } from "../components/DeliveryChip";
 import { SummaryPanel } from "../components/moduleOrderWizard/ReviewStep";
 import { OrderMaterialsDialog } from "../components/OrderMaterialsDialog";
+import { RecalcModuleDialog } from "../components/RecalcModuleDialog";
 import { ActionSnackbar, OrderCompletedDialog, StockShortageDialog, type StockShortage } from "../components/OrderStatusDialogs";
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { EDITED_BLUE } from "../components/PieceEdgesToggles";
@@ -159,7 +161,7 @@ function PiecesTable({ titleId, rows }: { titleId: string; rows: ModuleOrderDeta
   );
 }
 
-function ModuleBlock({ modulo, rows }: { modulo: ModuleOrder["modulos"][number]; rows: ModuleOrderDetail[] }) {
+function ModuleBlock({ modulo, rows, onRecalc }: { modulo: ModuleOrder["modulos"][number]; rows: ModuleOrderDetail[]; onRecalc?: () => void }) {
   const titleId = useId();
   const perfil = modulo.definicionSnapshot?.perfiles?.find((item) => item.orden === modulo.perfilCantoOrden);
   const colores = [
@@ -175,9 +177,16 @@ function ModuleBlock({ modulo, rows }: { modulo: ModuleOrder["modulos"][number];
           <Typography id={titleId} component="h3" fontWeight={900} fontSize="1rem">
             Módulo {modulo.posicion} · {modulo.nombreModulo}
           </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            {rows.length} {rows.length === 1 ? "pieza" : "piezas"}
-          </Typography>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              {rows.length} {rows.length === 1 ? "pieza" : "piezas"}
+            </Typography>
+            {onRecalc && (
+              <Button size="small" variant="outlined" color="inherit" startIcon={<TuneIcon />} onClick={onRecalc} sx={{ whiteSpace: "nowrap" }}>
+                Cambiar medidas o colores
+              </Button>
+            )}
+          </Stack>
         </Stack>
         <Typography variant="body2" sx={{ opacity: 0.9 }}>
           {colores.join(" · ")}
@@ -218,6 +227,7 @@ export function ModuleOrderDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [materialsOpen, setMaterialsOpen] = useState(false);
+  const [recalcModulo, setRecalcModulo] = useState<ModuleOrder["modulos"][number] | null>(null);
   const [exporting, setExporting] = useState(false);
   const [editingDate, setEditingDate] = useState(false);
   const [dateDraft, setDateDraft] = useState("");
@@ -568,7 +578,13 @@ export function ModuleOrderDetailPage() {
         <Box role="tabpanel" id="panel-despiece" aria-labelledby="tab-despiece" sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 340px" }, alignItems: "start" }}>
           <Stack spacing={2} sx={{ minWidth: 0 }}>
             {order.modulos.map((modulo) => (
-              <ModuleBlock key={modulo.id} modulo={modulo} rows={rowsByModule.get(modulo.id) ?? []} />
+              <ModuleBlock
+                key={modulo.id}
+                modulo={modulo}
+                rows={rowsByModule.get(modulo.id) ?? []}
+                // Recalcular desde el catalogo (spec §10.6): en los estados editables y si el modulo sigue en el catalogo.
+                onRecalc={canEditModuleOrder(order.estado) && modulo.moduloId ? () => setRecalcModulo(modulo) : undefined}
+              />
             ))}
             {adicionales.length > 0 && (
               <Paper component="section" aria-labelledby="piezas-adicionales" sx={{ borderRadius: "10px", overflow: "hidden" }}>
@@ -617,6 +633,19 @@ export function ModuleOrderDetailPage() {
       />
       <OrderCompletedDialog open={completionOpen} whatsappLink={whatsappLink} onClose={() => setCompletionOpen(false)} />
       <OrderMaterialsDialog order={materialsOpen ? order : null} open={materialsOpen} onClose={() => setMaterialsOpen(false)} />
+      <RecalcModuleDialog
+        order={order}
+        modulo={recalcModulo}
+        materials={materials}
+        config={config}
+        onClose={() => setRecalcModulo(null)}
+        onDone={(updated) => {
+          const posicion = recalcModulo?.posicion;
+          setRecalcModulo(null);
+          setOrder(updated);
+          notify(`Módulo ${posicion} recalculado.`);
+        }}
+      />
       <DeleteOrderDialog order={order} open={deleteOpen} loading={deleting} onCancel={() => setDeleteOpen(false)} onConfirm={() => void deleteOrder()} />
       <ActionSnackbar message={notification} severity={severity} onClose={() => setNotification("")} />
     </Stack>

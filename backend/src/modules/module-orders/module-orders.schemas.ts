@@ -133,6 +133,18 @@ export const moduleOrderUpdateSchema = z
 
 export type ModuleOrderUpdateInput = z.infer<typeof moduleOrderUpdateSchema>;
 
+/**
+ * Recalcular un modulo de la solicitud desde el catalogo (spec §10.6): el modulo con sus medidas, colores, perfil y
+ * fondo (los guardados, o los que se cambien), como en el alta. Al aplicar, la version del modulo que mostro la vista
+ * previa y la fechaActualizacion de la solicitud que se leyo (409 si alguna cambio).
+ */
+export const moduleRecalcPreviewSchema = moduleLineSchema;
+export const moduleRecalcSchema = moduleLineSchema.extend({
+  fechaActualizacion: z.string({ invalid_type_error: "La fecha de la versión editada no es válida" }).datetime({ offset: true, message: "La fecha de la versión editada no es válida" }).optional()
+});
+
+export type ModuleRecalcInput = z.infer<typeof moduleRecalcSchema>;
+
 /** Filtros del listado (spec §13.2 y §9.1). */
 export const moduleOrderFiltersSchema = z.object({
   estado: z.nativeEnum(EstadoPedido, { errorMap: () => ({ message: "Estado desconocido" }) }).optional(),

@@ -17,7 +17,8 @@ import { DETALLES_ORDENADOS } from "../orders/order-queries.js";
 import { hasStockCommitment } from "../orders/order-stock.service.js";
 import { compareForList } from "./module-order-list.js";
 import { moduleBarcode, planModuleOrder, type MissingDefaultEdge, type PlanModule } from "./module-order-plan.js";
-import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderLine, ModuleOrderUpdateInput } from "./module-orders.schemas.js";
+import { composeRows, moduleLabel, renumberProblem } from "./module-recalc.js";
+import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderLine, ModuleOrderUpdateInput, ModuleRecalcInput } from "./module-orders.schemas.js";
 
 export { moduleBarcode } from "./module-order-plan.js";
 
@@ -485,4 +486,114 @@ export async function listModuleOrders(tx: Tx, filters: ModuleOrderFilters) {
       cantidadModulos: _count.modulos,
       presupuestoConHerrajes: withHardwareTotal(order.presupuestoEstimado, order.costoHerrajes)
     }));
+}
+
+// ---------------------------------------------------------------- recalcular un modulo (F7.1, spec §10.6)
+
+/**
+ * Recalcula un modulo de la solicitud con la definicion actual del catalogo (spec §10.6). Con `apply` en false solo
+ * calcula (la vista previa del dialogo); con true reemplaza las filas de ese modulo, actualiza su copia de la
+ * definicion, sus medidas, colores, perfil, fondo y observaciones, y recalcula el pedido entero, porque las placas no
+ * se suman por modulo (DECISIONES R4). Las filas de los otros modulos y las adicionales quedan como estaban. Solo en
+ * estados editables; al aplicar, 409 si la solicitud o la version del modulo cambiaron (como el alta y la edicion).
+ */
+export async function recalculateModule(prisma: PrismaClient, id: string, pedidoModuloId: string, input: ModuleRecalcInput, options: { apply: boolean; userId: string }) {
+  const existing = await prisma.pedido.findFirst({
+    where: { id, tipo: TipoPedido.MODULOS },
+    include: { detalles: DETALLES_ORDENADOS, modulos: { select: { id: true, posicion: true, moduloId: true, nombreModulo: true, valores: true, definicionSnapshot: true } } }
+  });
+  if (!existing) throw new AppError(404, "Solicitud de módulos no encontrada.");
+  const pm = existing.modulos.find((modulo) => modulo.id === pedidoModuloId);
+  if (!pm) throw new AppError(404, "Ese módulo no está en esta solicitud. Recargá la página.");
+  if (!canEditModuleOrder(existing.estado)) throw new AppError(403, "No se pueden editar pedidos en proceso, terminados o entregados.");
+  if (options.apply && hasStockCommitment(existing)) throw new AppError(409, "La solicitud tiene stock descontado. Pasala a pendiente antes de editarla.");
+  if (options.apply && input.fechaActualizacion && new Date(input.fechaActualizacion).getTime() !== existing.fechaActualizacion.getTime()) {
+    throw new AppError(409, "La solicitud cambió mientras la editabas. Recargá la página y volvé a hacer los cambios.", { code: "ORDER_CHANGED" });
+  }
+  if (!pm.moduloId) {
+    throw new AppError(409, `El módulo ${pm.posicion} (${pm.nombreModulo}) ya no está en el catálogo: no se puede recalcular. Cambiá sus piezas desde Editar.`, { code: "MODULE_DELETED" });
+  }
+  if (input.moduloId !== pm.moduloId) throw new AppError(400, `El módulo ${pm.posicion} es "${pm.nombreModulo}": no se puede recalcular como otro módulo del catálogo.`, { code: "MODULE_MISMATCH" });
+
+  const { fechaActualizacion: _fecha, version, ...line } = input;
+  let built: Awaited<ReturnType<typeof buildModuleOrder>>;
+  try {
+    built = await buildModuleOrder(prisma, [line], { cliente: existing.cliente, numeroContacto: existing.numeroContacto ?? "" });
+  } catch (error) {
+    // El armado de un solo modulo lo numera 1: los mensajes van con la posicion que tiene en la solicitud.
+    if (error instanceof AppError) {
+      const details = error.details as { errores?: string[] } | undefined;
+      throw new AppError(error.statusCode, renumberProblem(error.message, pm.posicion), {
+        code: error.code,
+        details: { ...details, ...(details?.errores ? { errores: details.errores.map((item) => renumberProblem(item, pm.posicion)) } : {}) }
+      });
+    }
+    throw error;
+  }
+  const linea = built.lineas[0];
+  if (options.apply) assertSameVersions([{ posicion: pm.posicion, moduloId: linea.moduloId, nombreModulo: linea.nombreModulo, version }], new Map([[linea.moduloId, linea.version]]));
+
+  const nuevas = linea.detalles.map((detalle) => ({
+    ...detalle,
+    pedidoModuloId: pm.id,
+    codigoBarra: moduleBarcode(existing.numero, pm.posicion, detalle.orden ?? 0),
+    orden: detalle.orden ?? 0,
+    indice: 0
+  }));
+  const guardadas = existing.detalles.map(({ id: _id, pedidoId: _pedidoId, ...detalle }) => detalle);
+  const filas = composeRows(guardadas, pm.id, nuevas as unknown as (typeof guardadas)[number][], new Map(existing.modulos.map((modulo) => [modulo.id, modulo.posicion])));
+  const { costoHerrajes, presupuestoConHerrajes, ...snapshot } = await buildModuleOrderEstimate(prisma, filas as unknown as NormalizedDetail[]);
+  const anteriores = existing.detalles.filter((detalle) => detalle.pedidoModuloId === pm.id);
+
+  if (!options.apply) {
+    return {
+      posicion: pm.posicion,
+      nombreModulo: linea.nombreModulo,
+      version: linea.version,
+      valores: linea.valores,
+      materialFondoId: linea.materialFondoId,
+      cantosSinElegir: linea.cantosSinElegir,
+      piezasAntes: anteriores.length,
+      cambiosManuales: anteriores.filter((detalle) => detalle.origen === OrigenDetalle.EDITADO || detalle.origen === OrigenDetalle.MANUAL).length,
+      detalles: nuevas,
+      antes: { placasEstimadas: existing.placasEstimadas, presupuestoEstimado: existing.presupuestoEstimado, presupuestoConHerrajes: withHardwareTotal(existing.presupuestoEstimado, existing.costoHerrajes) },
+      despues: { ...snapshot, costoHerrajes, presupuestoConHerrajes }
+    };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Y la version contra el catalogo de este momento, como el alta.
+    const current = await tx.modulo.findUnique({ where: { id: linea.moduloId }, select: { version: true } });
+    assertSameVersions([{ posicion: pm.posicion, moduloId: linea.moduloId, nombreModulo: linea.nombreModulo, version: linea.version }], new Map(current ? [[linea.moduloId, current.version]] : []));
+    const claimed = await tx.pedido.updateMany({
+      where: { id, estado: existing.estado, fechaActualizacion: existing.fechaActualizacion },
+      data: { costoHerrajes, ...snapshot }
+    });
+    if (claimed.count !== 1) throw new AppError(409, "La solicitud cambió mientras la editabas. Recargá la página y volvé a hacer los cambios.", { code: "ORDER_CHANGED" });
+    await tx.pedidoModulo.update({
+      where: { id: pm.id },
+      data: {
+        nombreModulo: linea.nombreModulo,
+        valores: linea.valores,
+        colorEsqueletoId: linea.colorEsqueletoId,
+        colorFrentesId: linea.colorFrentesId,
+        perfilCantoOrden: linea.perfilCantoOrden,
+        materialFondoId: linea.materialFondoId,
+        observaciones: linea.observaciones,
+        definicionSnapshot: linea.definicionSnapshot as unknown as Prisma.InputJsonValue
+      }
+    });
+    await tx.detallePedido.deleteMany({ where: { pedidoId: id } });
+    await tx.detallePedido.createMany({ data: filas.map((fila) => ({ ...fila, pedidoId: id })) as Prisma.DetallePedidoCreateManyInput[] });
+    await tx.historialPedido.create({
+      data: {
+        pedidoId: id,
+        usuarioId: options.userId,
+        accion: "RECALCULAR_MODULO",
+        valorAnterior: moduleLabel(pm.posicion, pm.nombreModulo, pm.definicionSnapshot as never, pm.valores as Record<string, unknown>),
+        valorNuevo: moduleLabel(pm.posicion, linea.nombreModulo, linea.definicionSnapshot as never, linea.valores)
+      }
+    });
+  });
+  return getModuleOrder(prisma, id);
 }
