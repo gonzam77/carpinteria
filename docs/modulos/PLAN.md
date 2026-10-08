@@ -10,11 +10,11 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 ## 1. Estado actual
 
-**Actualizado:** 2026-10-07
+**Actualizado:** 2026-10-08
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.1 está commiteado y subido (con el OK de Gonzalo). F6.2 está commiteado en local; su push espera el OK. Cada push espera su OK.
-- **Último paso terminado:** F6.2 (herrajes en el módulo del catálogo). Las Fases 0 a 5 están completas; la 6 (herrajes) espera que se definan las reglas.
-- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.3 (herrajes en la solicitud). Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.2 está commiteado y subido (con el OK de Gonzalo). F6.3 está commiteado en local; su push espera el OK. Cada push espera su OK.
+- **Último paso terminado:** F6.3 (herrajes en la solicitud). Las Fases 0 a 5 están completas; la 6 (herrajes) sigue con datos de ejemplo hasta que llegue el listado de ROMA.
+- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.4 (herrajes en la edición, "Recalcular herrajes" y la hoja de taller). Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -608,7 +608,9 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - **F6.2** · [x] Herrajes en el módulo (editor del catálogo): modelo por defecto, fórmula de cantidad y fórmula de medida, con el resultado en vivo.
     - **Hecho (2026-10-08):** `resolveModuleHardware` y `pickHardwareModel` en el código compartido; el catálogo guarda y evalúa `formulaMedida` y valida modelos inactivos, repetidos y fórmulas; pestaña Herrajes en el editor (`HardwareTab`). Pruebas: tests (fórmulas 19, herrajes 3, backend 37) y e2e-f62-navegador 15/15 (nueva, sobre una copia del módulo); sin fallas f31, f42, f43 y f44-navegador.
     - **Tener en cuenta para F6.3:** el armado de la solicitud tiene la definición (`definition.herrajes`, con la fórmula de medida) y `evaluarExpresion` de cada módulo: los herrajes salen de `resolveModuleHardware` con los modelos de la base. En el catálogo importado la pieza de las puertas del bajo mesada se llama `PUESTAS` (viene así del Excel).
-  - **F6.3** · [ ] En la solicitud: herrajes calculados por módulo en el asistente, con selector de modelo; se guardan con la solicitud, suman `costoHerrajes` y salen en el detalle y la constancia.
+  - **F6.3** · [x] En la solicitud: herrajes calculados por módulo en el asistente, con selector de modelo; se guardan con la solicitud, suman `costoHerrajes` y salen en el detalle y la constancia.
+    - **Hecho (2026-10-08):** el armado de la solicitud (`module-order-plan.ts`) calcula los herrajes de cada módulo y valida `herrajesOverride` (`MODULE_HARDWARE_INVALID`); la vista previa los devuelve, el alta los guarda en `PedidoHerraje` con su copia y `costoHerrajes`, editar las piezas los conserva y recalcular un módulo regenera los suyos. En el asistente, `ModuleHardwareCard` debajo de cada despiece (paso 4) y `withHardwareChoice`; en el detalle, `OrderHardwareList`; el comprobante (`OrderReceiptDialog`) suma la línea Herrajes cuando hay. Pruebas: tests (backend 39, asistente 23) y e2e-f63-navegador 21/21 (nueva); sin fallas f42, f43, f52, f53, f55, f71 y los de navegador f44, f45, f51, f52, f54, f61, f62, f71, f72 y f74 (DECISIONES 57).
+    - **Tener en cuenta para F6.4:** la edición (`OrderFormPage` con `kind="MODULOS"`) todavía no muestra los herrajes: el `PUT` conserva los guardados y su costo, y el comprobante los suma desde la solicitud cargada. Recalcular un módulo vuelve sus herrajes a lo del catálogo (pierde lo elegido a mano en ese módulo); el diálogo manda `herrajesOverride: {}` (`unitFromOrderModule`). Lo guardado está en `order.herrajes` (con `pedidoModuloId`, `origen` y la copia del precio).
   - **F6.4** · [ ] Edición y salidas: ajustar herrajes a mano y "Recalcular herrajes"; recalcular un módulo regenera sus herrajes; hoja de taller con la sección de herrajes.
   - **F6.5** · [ ] Pruebas de punta a punta y no regresión.
 - **Contratada** (Gonzalo, 2026-10-07, DECISIONES 10). Las reglas reales de cada herraje las pasa ROMA.

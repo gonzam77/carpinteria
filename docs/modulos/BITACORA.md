@@ -27,6 +27,33 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-08 (35) · equipo Pinformatico15 · rama main
+
+**Pasos:** F6.3 terminado.
+
+**Hecho:**
+- Push de los 2 commits de F6.2, con el OK de Gonzalo.
+- Herrajes en la solicitud de módulos (DECISIONES 57):
+  - el armado calcula los herrajes de cada módulo con el código compartido y valida el modelo elegido a mano (mismo tipo, activo y de una línea del módulo);
+  - la vista previa los devuelve con el motivo de cada modelo; el alta los guarda con la copia del precio y suma `costoHerrajes`; editar las piezas los conserva; recalcular un módulo regenera los suyos;
+  - paso 4 del asistente: "Herrajes del módulo N" con el selector y "Volver al que corresponde"; el resumen suma la línea Herrajes;
+  - el detalle muestra los herrajes guardados de cada módulo, y el comprobante de la edición suma la línea Herrajes al total.
+- El presupuesto de placas sigue igual al de corte (la e2e lo compara).
+
+**Decisiones nuevas:** se completó la 57 (F6.3).
+
+**Verificaciones:**
+- frontend `npm test` (11 suites en verde; asistente 23), backend `npm test` (39), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f63-navegador 21/21 (nueva); sin fallas f42, f43, f52 43/43, f53 21/21, f55 26/26, f71 25/25, y de navegador f44, f45 139/139, f51 63/63, f52 40/40, f54 23/23, f61 28/28, f62 15/15, f71 17/17, f72 18/18 y f74 5/5. La copia quedó como estaba.
+
+**Commits:** dos commits locales (código y pruebas, y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F6.4, herrajes en la edición, "Recalcular herrajes" y la hoja de taller. Leer "Tener en cuenta para F6.4" en PLAN.
+
+**Esperando a Gonzalo o a ROMA:** P5 y P6; el listado de herrajes de ROMA; la aceptación con ROMA.
+
+---
+
 ## 2026-10-08 (34) · equipo Pinformatico15 · rama main
 
 **Pasos:** F6.2 terminado.
