@@ -12,9 +12,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-07
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F5.4 está commiteado y subido (con el OK de Gonzalo). F5.5 está commiteado en local; su push espera el OK. Cada push espera su OK.
-- **Último paso terminado:** F5.5 (no regresión e integración). Las Fases 0 a 5 están completas.
-- **Próximo paso:** **Fase 6**, herrajes (spec §12 y §13.4; contratados, DECISIONES 10). Las reglas de cada herraje las pasa ROMA: sin ellas se puede armar todo detrás de `herrajesHabilitados`, con reglas de ejemplo.
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F5.5 está commiteado y subido (con el OK de Gonzalo). F7.1 está commiteado en local; su push espera el OK. Cada push espera su OK.
+- **Último paso terminado:** F7.1 (recalcular un módulo). Las Fases 0 a 5 están completas; la 6 (herrajes) espera que se definan las reglas.
+- **Próximo paso:** **F7.2**, pulido (spec §14.5). La **Fase 6** (herrajes) queda para después: Gonzalo pidió seguir y definir los herrajes más adelante (2026-10-08).
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -37,8 +37,8 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F4.1–F4.5 | API, asistente y listado de solicitudes de módulos | [x] |
 | F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [x] |
-| F6 | Herrajes (contratados, DECISIONES 10) | [ ] |
-| F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [ ] |
+| F6 | Herrajes (contratados, DECISIONES 10) | [ ] se definen más adelante |
+| F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [~] F7.1 hecho |
 | F8 | Pase a producción (VPS), al final | [ ] |
 
 ---
@@ -599,15 +599,17 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
 - **Terminado cuando:** todos los puntos de §15 están tildados, con su evidencia en la bitácora.
 - **Hecho (2026-10-08):** `/api/stats` suma `byTipo` y `byStatus[].modulos`, y el dashboard dice "de los cuales N son módulos a medida" y cuántas de cada estado son de módulos (DECISIONES 52). Los 10 puntos de spec §15 quedaron tildados, con la evidencia en la bitácora (entrada 28). e2e-f55 (nueva) cubre spec §17.2 y lo de §15 que faltaba probar, incluido el Excel de corte comparado archivo por archivo con el backend de antes de F5.3. Pruebas: tests del backend (32) y de punta a punta: e2e-f55 27/27, f53 21/21, f05 22/22 y f04 12/12.
 
-### Fase 6: Herrajes · [ ]
+### Fase 6: Herrajes · [ ] se definen más adelante
+- **Gonzalo, 2026-10-08:** seguir con el resto y definir los herrajes más adelante.
 - **Contratada** (Gonzalo, 2026-10-07, DECISIONES 10). Las reglas reales de cada herraje las pasa ROMA.
 - **Tener en cuenta (de F5.4):** la hoja de taller todavía no tiene la sección de herrajes (casilla, herraje y cantidad, spec §11.2): sumarla en `ModuleOrderWorkshopPage` cuando estén habilitados.
 - **Hacer:** lo de spec §12 y §13.4, detrás de `herrajesHabilitados`. Las cantidades se redondean con la misma tolerancia que `roundMm` (DECISIONES R7). Las reglas reales las tiene que pasar ROMA.
 
 ### Fase 7: Cierre (spec §10.6 y §17.3)
 
-#### F7.1 Recalcular un módulo · [ ]
+#### F7.1 Recalcular un módulo · [x]
 Regenera las piezas de ese módulo y **recalcula el pedido entero** en la misma transacción: las placas no se suman por módulo (DECISIONES R4). Mantiene los colores y el fondo guardados del módulo (DECISIONES 32). Lo registra en el historial (`RECALCULAR_MODULO`).
+- **Hecho (2026-10-08):** "Cambiar medidas o colores" en cada módulo del Despiece (`RecalcModuleDialog`, con la tarjeta del asistente) y `POST /api/pedidos-modulos/:id/modulos/:moduloPedidoId/recalcular` (más `/vista-previa`), que reemplaza solo las filas de ese módulo, guarda sus medidas, colores, fondo y copia de la definición, recalcula el pedido entero y deja `RECALCULAR_MODULO` (DECISIONES 53). Pruebas: tests unitarios (`module-recalc.test.ts`, detalle 6) y de punta a punta: e2e-f71 25/25 y e2e-f71-navegador 17/17 (nuevas), y sin fallas f52 43/43, f43, f42, f51-navegador 63/63, f52-navegador 40/40, f54-navegador 23/23, f45-navegador 139/139 y f44-navegador.
 
 #### F7.2 Pulido · [ ]
 Autocompletar clientes, estados vacíos y de carga, y accesibilidad (spec §14.5).

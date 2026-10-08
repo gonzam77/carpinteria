@@ -27,6 +27,29 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-08 (29) · equipo Pinformatico15 · rama main
+
+**Pasos:** F7.1 terminado. La Fase 6 (herrajes) queda para más adelante.
+
+**Hecho:**
+- Push de los 2 commits de F5.5, con el OK de Gonzalo. Gonzalo pidió seguir y definir los herrajes más adelante.
+- Recalcular un módulo desde el catálogo (DECISIONES 53): botón "Cambiar medidas o colores" en cada módulo del Despiece. Abre `RecalcModuleDialog`, que reusa la tarjeta del asistente (`UnitCard`, ahora exportada), y la API tiene vista previa y aplicar. Solo cambia ese módulo y el pedido entero se recalcula (R4).
+- Lógica sin base en `module-recalc.ts` (filas en su lugar, rótulo del historial, número de módulo en los errores) y `unitFromOrderModule` en el frontend, con sus tests.
+
+**Decisiones nuevas:** DECISIONES 53.
+
+**Verificaciones:**
+- frontend `npm test` (en verde, detalle 6), backend `npm test` (34), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f71 25/25, f71-navegador 17/17, y sin fallas f52 43/43, f43, f42, f51-navegador 63/63, f52-navegador 40/40, f54-navegador 23/23, f45-navegador 139/139 y f44-navegador. La copia quedó como estaba.
+
+**Commits:** dos commits locales (código y pruebas, y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F7.2, pulido (spec §14.5 y los pendientes de F4.5 en PLAN F7.2).
+
+**Esperando a Gonzalo o a ROMA:** P5, P6 y P14; las reglas de los herrajes (Fase 6).
+
+---
+
 ## 2026-10-08 (28) · equipo Pinformatico15 · rama main
 
 **Pasos:** F5.5 terminado. La Fase 5 está completa.
