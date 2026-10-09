@@ -27,6 +27,35 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-09 (36) · equipo Pinformatico15 · rama main
+
+**Pasos:** F6.4 terminado.
+
+**Hecho:**
+- Push de los 2 commits de F6.3, con el OK de Gonzalo.
+- Herrajes en la edición (DECISIONES 57):
+  - el Resumen de la edición tiene la sección Herrajes por módulo: cantidad, modelo del mismo tipo, quitar y agregar;
+  - "Recalcular herrajes" trae lo del catálogo (con la copia de la definición guardada y los precios de hoy) sin guardar; lo que no cambió conserva su precio;
+  - el `PUT` guarda los herrajes con el mismo cálculo compartido que muestra el formulario (`resolveHardwareEdit`); los cambios cuentan en "Cambios detectados" y en el historial;
+  - el comprobante de la edición suma los herrajes como quedan.
+- Recalcular un módulo avisa los herrajes ajustados a mano que se pierden y muestra los nuevos.
+- Hoja de taller: tabla de herrajes por módulo (casilla, herraje, cantidad).
+- La carga de la edición de módulos se cancela si llega tarde: en desarrollo (StrictMode) la segunda carga podía pisar un cambio recién hecho.
+
+**Decisiones nuevas:** se completó la 57 (F6.4).
+
+**Verificaciones:**
+- frontend `npm test` (12 suites en verde; nueva `moduleOrderHardwareEdit`), backend `npm test` (41), `tsc`, `check:optimizer` y build en verde.
+- e2e contra la copia: f64-navegador 30/30 (nueva); sin fallas f63-navegador 21/21, f04, f05, f42, f43, f52 43/43, f53 21/21, f55 26/26, f71 25/25, y de navegador f44, f45 139/139, f51 63/63, f52 40/40, f54 23/23, f61 28/28, f62 15/15, f71 17/17, f72 18/18 y f74 5/5. La copia quedó como estaba.
+
+**Commits:** dos commits locales (código y pruebas, y documentación). El push espera el OK de Gonzalo.
+
+**Próximo paso:** F6.5, pruebas de punta a punta y no regresión de la Fase 6. Leer "Tener en cuenta para F6.5" en PLAN.
+
+**Esperando a Gonzalo o a ROMA:** P5 y P6; el listado de herrajes de ROMA; la aceptación con ROMA.
+
+---
+
 ## 2026-10-08 (35) · equipo Pinformatico15 · rama main
 
 **Pasos:** F6.3 terminado.

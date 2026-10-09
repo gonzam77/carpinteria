@@ -10,11 +10,11 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 ## 1. Estado actual
 
-**Actualizado:** 2026-10-08
+**Actualizado:** 2026-10-09
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.2 está commiteado y subido (con el OK de Gonzalo). F6.3 está commiteado en local; su push espera el OK. Cada push espera su OK.
-- **Último paso terminado:** F6.3 (herrajes en la solicitud). Las Fases 0 a 5 están completas; la 6 (herrajes) sigue con datos de ejemplo hasta que llegue el listado de ROMA.
-- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.4 (herrajes en la edición, "Recalcular herrajes" y la hoja de taller). Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.3 está commiteado y subido (con el OK de Gonzalo). F6.4 está commiteado en local; su push espera el OK. Cada push espera su OK.
+- **Último paso terminado:** F6.4 (herrajes en la edición, "Recalcular herrajes" y la hoja de taller). Las Fases 0 a 5 están completas; la 6 (herrajes) sigue con datos de ejemplo hasta que llegue el listado de ROMA.
+- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.5 (pruebas de punta a punta y no regresión de la Fase 6). Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -611,10 +611,12 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
   - **F6.3** · [x] En la solicitud: herrajes calculados por módulo en el asistente, con selector de modelo; se guardan con la solicitud, suman `costoHerrajes` y salen en el detalle y la constancia.
     - **Hecho (2026-10-08):** el armado de la solicitud (`module-order-plan.ts`) calcula los herrajes de cada módulo y valida `herrajesOverride` (`MODULE_HARDWARE_INVALID`); la vista previa los devuelve, el alta los guarda en `PedidoHerraje` con su copia y `costoHerrajes`, editar las piezas los conserva y recalcular un módulo regenera los suyos. En el asistente, `ModuleHardwareCard` debajo de cada despiece (paso 4) y `withHardwareChoice`; en el detalle, `OrderHardwareList`; el comprobante (`OrderReceiptDialog`) suma la línea Herrajes cuando hay. Pruebas: tests (backend 39, asistente 23) y e2e-f63-navegador 21/21 (nueva); sin fallas f42, f43, f52, f53, f55, f71 y los de navegador f44, f45, f51, f52, f54, f61, f62, f71, f72 y f74 (DECISIONES 57).
     - **Tener en cuenta para F6.4:** la edición (`OrderFormPage` con `kind="MODULOS"`) todavía no muestra los herrajes: el `PUT` conserva los guardados y su costo, y el comprobante los suma desde la solicitud cargada. Recalcular un módulo vuelve sus herrajes a lo del catálogo (pierde lo elegido a mano en ese módulo); el diálogo manda `herrajesOverride: {}` (`unitFromOrderModule`). Lo guardado está en `order.herrajes` (con `pedidoModuloId`, `origen` y la copia del precio).
-  - **F6.4** · [ ] Edición y salidas: ajustar herrajes a mano y "Recalcular herrajes"; recalcular un módulo regenera sus herrajes; hoja de taller con la sección de herrajes.
+  - **F6.4** · [x] Edición y salidas: ajustar herrajes a mano y "Recalcular herrajes"; recalcular un módulo regenera sus herrajes; hoja de taller con la sección de herrajes.
+    - **Hecho (2026-10-09):** `OrderHardwareEditor` en el Resumen de la edición (`OrderFormPage`, con su borrador) y `lib/moduleOrderHardwareEdit.ts`; el `PUT` recibe `herrajes` y los resuelve con `resolveHardwareEdit` (compartido); `POST /api/pedidos-modulos/:id/herrajes/recalcular` con `catalogModuleHardware`; el comprobante suma los herrajes editados; el diálogo de recalcular un módulo avisa los herrajes ajustados que se pierden; la hoja de taller tiene la tabla de herrajes. `hardwareCost` pasó a `orderEstimate.ts`. La carga de la edición se cancela si llega tarde (no pisa lo que se está editando). Pruebas: tests (frontend 12 suites, backend 41) y e2e-f64-navegador 30/30 (nueva); sin fallas f63-navegador 21/21, f04, f05, f42, f43, f52 43/43, f53 21/21, f55 26/26, f71 25/25 y los de navegador f44, f45 139/139, f51 63/63, f52 40/40, f54 23/23, f61 28/28, f62 15/15, f71 17/17, f72 18/18 y f74 5/5 (DECISIONES 57).
+    - **Tener en cuenta para F6.5:** los datos de herrajes son de ejemplo (DECISIONES 57): cuando llegue el listado de ROMA, cargarlo en Configuración › Herrajes y armar las líneas de los módulos reales. Las e2e de la fase son f61, f62, f63 y f64; F6.5 puede sumar una de punta a punta con el flujo completo (catálogo, alta, edición, recalcular y taller) y la no regresión con los herrajes apagados.
   - **F6.5** · [ ] Pruebas de punta a punta y no regresión.
 - **Contratada** (Gonzalo, 2026-10-07, DECISIONES 10). Las reglas reales de cada herraje las pasa ROMA.
-- **Tener en cuenta (de F5.4):** la hoja de taller todavía no tiene la sección de herrajes (casilla, herraje y cantidad, spec §11.2): sumarla en `ModuleOrderWorkshopPage` cuando estén habilitados.
+- **Tener en cuenta (de F5.4):** ~~la hoja de taller todavía no tiene la sección de herrajes~~ Hecho en F6.4.
 - **Hacer:** lo de spec §12 y §13.4, detrás de `herrajesHabilitados`. Las cantidades se redondean con la misma tolerancia que `roundMm` (DECISIONES R7). Las reglas reales las tiene que pasar ROMA.
 
 ### Fase 7: Cierre (spec §10.6 y §17.3)
