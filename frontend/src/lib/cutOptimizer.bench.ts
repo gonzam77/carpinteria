@@ -10,7 +10,11 @@ import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import * as CURRENT from "./cutOptimizer.ts";
 import { evaluateModule } from "./moduleFormula.ts";
-import { isGuillotine } from "../../../docs/modulos/herramientas/guillotina.mjs";
+
+// La prueba de guillotina esta en docs/, fuera de frontend/. Se carga al correr el banco (y no con un import) para que
+// el build del frontend no la necesite: en Docker solo se copia frontend/.
+const GUILLOTINE_TOOL = new URL("../../../docs/modulos/herramientas/guillotina.mjs", import.meta.url).href;
+const { isGuillotine } = (await import(GUILLOTINE_TOOL)) as { isGuillotine: (pieces: unknown[], kerfMm: number) => boolean };
 
 type Optimizer = typeof CURRENT;
 type Row = CURRENT.OptimizerRow;
