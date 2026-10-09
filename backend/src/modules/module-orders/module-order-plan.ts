@@ -281,7 +281,7 @@ export function planModuleOrder(input: PlanInput): Plan {
       materialFondoId: piezas.some((pieza) => pieza.rol === "FONDO") ? fondoIdFor(line, module, config) : null,
       rows,
       sinCanto,
-      herrajes: plannedHardware(resolved, line, input.hardware?.models ?? new Map())
+      herrajes: plannedHardware(resolved, line.herrajesOverride ?? {}, input.hardware?.models ?? new Map())
     };
   });
 
@@ -331,10 +331,10 @@ export function planModuleOrder(input: PlanInput): Plan {
  * Los herrajes de un modulo de la solicitud: por cada linea con cantidad, el modelo elegido a mano (si hay) o el que
  * corresponde, con su precio de hoy. Origen EDITADO si se eligio a mano un modelo distinto del que correspondia.
  */
-function plannedHardware(resolved: ReturnType<typeof resolveModuleHardware>, line: ModuleOrderLine, models: Map<string, PlanHardware>): PlannedHardware[] {
+function plannedHardware(resolved: ReturnType<typeof resolveModuleHardware>, overrides: Record<string, string>, models: Map<string, PlanHardware>): PlannedHardware[] {
   return resolved.flatMap((item, index): PlannedHardware[] => {
     if (!item.cantidad) return [];
-    const manual = line.herrajesOverride?.[item.herrajeId];
+    const manual = overrides[item.herrajeId];
     const herrajeId = manual ?? item.elegidoId ?? item.herrajeId;
     const model = models.get(herrajeId);
     return [
@@ -355,4 +355,22 @@ function plannedHardware(resolved: ReturnType<typeof resolveModuleHardware>, lin
       }
     ];
   });
+}
+
+/**
+ * Los herrajes que da el catalogo para un modulo ya pedido (F6.4, "Recalcular herrajes"): con la copia de la definicion
+ * guardada en la solicitud, sus medidas y su perfil, y los modelos y precios de hoy, sin nada elegido a mano. Es el
+ * mismo calculo que el alta. Si una formula no se puede evaluar, la devuelve en errores (y no hay herrajes).
+ */
+export function catalogModuleHardware(
+  definition: PlanModule,
+  valores: Record<string, number>,
+  opts: { redondeo: RoundingMode; perfilOrden: number },
+  models: Map<string, PlanHardware>
+): { herrajes: PlannedHardware[]; errores: ModuleError[] } {
+  const result = buildModulePieces(definition, valores, { redondeo: opts.redondeo, perfilOrden: opts.perfilOrden });
+  const resolved = resolveModuleHardware(definition.herrajes ?? [], result.evaluarExpresion, models);
+  const errores = [...result.errores, ...resolved.flatMap((item, position) => (item.error ? [{ ref: `herraje ${position + 1}`, mensaje: item.error }] : []))];
+  if (errores.length) return { herrajes: [], errores };
+  return { herrajes: plannedHardware(resolved, {}, models), errores };
 }

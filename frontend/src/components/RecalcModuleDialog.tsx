@@ -2,6 +2,7 @@ import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogCont
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getModule } from "../api/catalog";
 import { applyModuleRecalc, moduleOrderError, previewModuleRecalc } from "../api/moduleOrders";
+import { hardwareQuantityText } from "./moduleOrderWizard/ModuleHardware";
 import { UnitCard } from "./moduleOrderWizard/UnitsStep";
 import type { RoundingMode } from "../lib/moduleFormula";
 import { unitFromOrderModule } from "../lib/moduleOrderDetail";
@@ -157,6 +158,8 @@ export function RecalcModuleDialog({
                 {preview.cambiosManuales > 0
                   ? ` Se pierden los cambios manuales de este módulo (${preview.cambiosManuales} ${preview.cambiosManuales === 1 ? "pieza editada o agregada" : "piezas editadas o agregadas"}).`
                   : " Este módulo no tiene cambios manuales."}
+                {preview.herrajesManuales > 0 &&
+                  ` Sus herrajes vuelven a lo del catálogo: se pierde${preview.herrajesManuales === 1 ? " 1 herraje ajustado" : `n ${preview.herrajesManuales} herrajes ajustados`} a mano.`}
               </Alert>
               {preview.cantosSinElegir.length > 0 && (
                 <Alert severity="info">
@@ -187,6 +190,11 @@ export function RecalcModuleDialog({
                   </TableBody>
                 </Table>
               </Box>
+              {preview.herrajes.length > 0 && (
+                <Typography variant="body2" aria-label="Herrajes nuevos">
+                  Herrajes: {preview.herrajes.map((item) => `${hardwareQuantityText(item.cantidad, item.unidad)} × ${item.nombre}`).join(" · ")}
+                </Typography>
+              )}
               <Typography variant="body2" aria-label="Pedido entero, antes y después">
                 Pedido entero: {preview.antes.placasEstimadas} → {preview.despues.placasEstimadas} placas · {money(preview.antes.presupuestoConHerrajes)} → {money(preview.despues.presupuestoConHerrajes)}
               </Typography>

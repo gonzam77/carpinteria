@@ -2,7 +2,7 @@
 // remark, orden, origen y encaje en la placa. Datos armados a mano, sin base de datos.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { moduleBarcode, planModuleOrder, type PlanCanto, type PlanHardware, type PlanInput, type PlanMaterial, type PlanModule } from "./module-order-plan.js";
+import { catalogModuleHardware, moduleBarcode, planModuleOrder, type PlanCanto, type PlanHardware, type PlanInput, type PlanMaterial, type PlanModule } from "./module-order-plan.js";
 import type { ModuleOrderLine } from "./module-orders.schemas.js";
 
 const placa = (id: string, nombre: string, espesorMm: number, extra: Partial<PlanMaterial> = {}): PlanMaterial => ({
@@ -450,4 +450,27 @@ test("herrajes: elegir otro modelo del mismo tipo; otro tipo, uno inactivo o una
   const mala = errorOf(planModuleOrder(input([line()], hardwareOn, conHerrajes([{ herrajeId: "bisagra-comun", formulaCantidad: "PUERTAZ.cant" }]))));
   assert.equal(mala.code, "MODULE_FORMULA_ERRORS");
   assert.match(mala.problems.join(" "), /herraje 1: Cantidad: No existe la pieza PUERTAZ/);
+});
+
+test("herrajes de catálogo de un módulo pedido (Recalcular herrajes): lo mismo que el alta sin nada elegido a mano", () => {
+  const [module] = conHerrajes([
+    { herrajeId: "bisagra-comun", formulaCantidad: "PUERTA.cant * 2" },
+    { herrajeId: "t350", formulaCantidad: "ESTANTES", formulaMedida: "ALTO - 220" }
+  ]);
+  const [planned] = okPlan(planModuleOrder(input([line({ herrajesOverride: { "bisagra-comun": "bisagra-suave" } })], hardwareOn, [module]))).lines;
+  const catalogo = catalogModuleHardware(module, planned.valores, { redondeo: "REDONDEAR", perfilOrden: 1 }, HARDWARE);
+  assert.deepEqual(catalogo.errores, []);
+  assert.deepEqual(
+    catalogo.herrajes.map((item) => [item.herrajeId, item.cantidad, item.eleccion, item.origen]),
+    [
+      ["bisagra-comun", 4, "POR_DEFECTO", "CALCULADO"],
+      ["t450", 1, "POR_MEDIDA", "CALCULADO"]
+    ],
+    "la bisagra elegida a mano en el alta vuelve a la de por defecto"
+  );
+  const otraMedida = catalogModuleHardware(module, { ...planned.valores, ALTO: 500 }, { redondeo: "REDONDEAR", perfilOrden: 1 }, HARDWARE);
+  assert.equal(otraMedida.herrajes[1].herrajeId, "t350", "con otras medidas, otro modelo de la línea");
+  const mala = catalogModuleHardware({ ...module, herrajes: [{ herrajeId: "bisagra-comun", formulaCantidad: "PUERTAZ.cant" }] }, planned.valores, { redondeo: "REDONDEAR", perfilOrden: 1 }, HARDWARE);
+  assert.deepEqual(mala.herrajes, []);
+  assert.match(mala.errores.map((error) => `${error.ref}: ${error.mensaje}`).join(" "), /herraje 1: Cantidad: No existe la pieza PUERTAZ/);
 });

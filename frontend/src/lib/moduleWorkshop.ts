@@ -1,7 +1,7 @@
 // Hoja de taller de una solicitud de modulos (spec §11.2): que va en cada hoja, en que orden y como se leen los cantos.
 // No depende de React. Las piezas van en el mismo orden que el Excel de la maquina (orden de la pieza, DECISIONES 50),
 // asi la hoja y el Excel coinciden pieza por pieza.
-import type { ModuleOrder, ModuleOrderDetail, OrigenDetalle } from "../types/index.ts";
+import type { ModuleOrder, ModuleOrderDetail, OrderHardware, OrigenDetalle } from "../types/index.ts";
 
 type Modulo = ModuleOrder["modulos"][number];
 
@@ -12,23 +12,26 @@ export type WorkshopSheet = {
   /** null en la hoja de piezas adicionales. */
   modulo: Modulo | null;
   rows: ModuleOrderDetail[];
+  /** Los herrajes guardados del modulo, en su orden (spec §11.2); vacio en la hoja de piezas adicionales. */
+  herrajes: OrderHardware[];
 };
 
 /** Las piezas en el orden del Excel: por orden de la pieza y, si empataran, por el de carga. */
 export const workshopRows = (rows: ModuleOrderDetail[]) => [...rows].sort((a, b) => a.orden - b.orden || a.indice - b.indice);
 
 /** Una hoja por modulo (por posicion) y, si hay piezas sin modulo, una mas al final. */
-export function workshopSheets(order: Pick<ModuleOrder, "modulos" | "detalles">): WorkshopSheet[] {
+export function workshopSheets(order: Pick<ModuleOrder, "modulos" | "detalles"> & { herrajes?: OrderHardware[] }): WorkshopSheet[] {
   const modulos = [...order.modulos].sort((a, b) => a.posicion - b.posicion);
   const ids = new Set(modulos.map((modulo) => modulo.id));
   const sheets: WorkshopSheet[] = modulos.map((modulo) => ({
     key: modulo.id,
     titulo: `Módulo ${modulo.posicion} de ${modulos.length}`,
     modulo,
-    rows: workshopRows(order.detalles.filter((row) => row.pedidoModuloId === modulo.id))
+    rows: workshopRows(order.detalles.filter((row) => row.pedidoModuloId === modulo.id)),
+    herrajes: (order.herrajes ?? []).filter((herraje) => herraje.pedidoModuloId === modulo.id).sort((a, b) => a.orden - b.orden)
   }));
   const adicionales = order.detalles.filter((row) => !row.pedidoModuloId || !ids.has(row.pedidoModuloId));
-  if (adicionales.length) sheets.push({ key: "adicionales", titulo: "Piezas adicionales", modulo: null, rows: workshopRows(adicionales) });
+  if (adicionales.length) sheets.push({ key: "adicionales", titulo: "Piezas adicionales", modulo: null, rows: workshopRows(adicionales), herrajes: [] });
   return sheets;
 }
 

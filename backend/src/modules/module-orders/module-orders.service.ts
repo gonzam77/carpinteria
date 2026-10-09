@@ -8,18 +8,18 @@ import { EstadoPedido, OrigenDetalle, Prisma, TipoMaterial, TipoPedido, type Pri
 import { fromDateOnly, toDateOnly, todayInBusinessZone } from "../../utils/dates.js";
 import { AppError } from "../../utils/http.js";
 import type { OrderedModulePiece, RoundingMode } from "../../shared/moduleFormula.js";
-import { describeChanges, hasChanges, matchRows, summarizeChanges } from "../../shared/moduleOrderChanges.js";
-import { toCentavos } from "../../shared/orderEstimate.js";
+import { describeChanges, hasChanges, matchRows, resolveHardwareEdit, summarizeChanges, type SavedHardware } from "../../shared/moduleOrderChanges.js";
+import { hardwareCost, toCentavos } from "../../shared/orderEstimate.js";
 import { getModulesConfig, MODULE_INCLUDE, toDefinition } from "../catalog/catalog.service.js";
 import { normalizeDetails, type NormalizedDetail } from "../orders/order-details.service.js";
 import { buildOrderEstimateSnapshot, getOptimizerSettings } from "../orders/order-estimate.service.js";
 import { DETALLES_ORDENADOS } from "../orders/order-queries.js";
 import { hasStockCommitment } from "../orders/order-stock.service.js";
 import { compareForList } from "./module-order-list.js";
-import { moduleBarcode, planModuleOrder, type MissingDefaultEdge, type PlanHardware, type PlanModule, type PlannedHardware } from "./module-order-plan.js";
+import { catalogModuleHardware, moduleBarcode, planModuleOrder, type MissingDefaultEdge, type PlanHardware, type PlanModule, type PlannedHardware } from "./module-order-plan.js";
 import { composeRows, moduleLabel, renumberProblem } from "./module-recalc.js";
 import { uniqueClients } from "./module-order-clients.js";
-import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderLine, ModuleOrderUpdateInput, ModuleRecalcInput } from "./module-orders.schemas.js";
+import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderHardwareEdit, ModuleOrderLine, ModuleOrderUpdateInput, ModuleRecalcInput } from "./module-orders.schemas.js";
 
 export { moduleBarcode } from "./module-order-plan.js";
 
@@ -65,9 +65,69 @@ async function loadHardwareModels(tx: Tx) {
   );
 }
 
-/** Lo que cuestan los herrajes, sumado en centavos (DECISIONES R1): cantidad por precio unitario. */
-export const hardwareCost = (herrajes: Array<{ cantidad: number; valorUnitario: number }>) =>
-  herrajes.reduce((total, herraje) => total + Math.round(toCentavos(herraje.valorUnitario) * herraje.cantidad), 0) / 100;
+/** Un modulo de la solicitud, con lo que hace falta para calcular sus herrajes de catalogo (F6.4). */
+type OrderModuleForHardware = {
+  id: string;
+  posicion: number;
+  nombreModulo: string;
+  valores: Prisma.JsonValue;
+  perfilCantoOrden: number;
+  definicionSnapshot: Prisma.JsonValue;
+};
+
+/**
+ * Los herrajes que da el catalogo para cada modulo de una solicitud (F6.4): con la copia de la definicion guardada, sus
+ * medidas y su perfil, y los modelos y precios de hoy (catalogModuleHardware, el mismo calculo que el alta).
+ */
+async function orderCatalogHardware(tx: Tx, modulos: OrderModuleForHardware[], models: Map<string, PlanHardware>) {
+  const config = await getModulesConfig(tx);
+  return modulos.map((modulo) => ({
+    modulo,
+    ...catalogModuleHardware(
+      modulo.definicionSnapshot as unknown as PlanModule,
+      (modulo.valores ?? {}) as Record<string, number>,
+      { redondeo: config.redondeo as RoundingMode, perfilOrden: modulo.perfilCantoOrden },
+      models
+    )
+  }));
+}
+
+/** 409 si los herrajes estan apagados: no se pueden cambiar ni recalcular (DECISIONES 57). */
+async function assertHardwareEnabled(tx: Tx, message: string) {
+  const config = await getModulesConfig(tx);
+  if (!config.herrajesHabilitados) throw new AppError(409, message, { code: "HARDWARE_DISABLED" });
+}
+
+/**
+ * Los herrajes como quedan al editar (F6.4, DECISIONES 57), con resolveHardwareEdit (el mismo calculo que muestra el
+ * formulario): cada uno de un modulo de esta solicitud, con un modelo activo si es nuevo o cambio de modelo. Los nuevos
+ * que son lo que da el catalogo quedan CALCULADO (Recalcular herrajes) y los demas, MANUAL.
+ */
+async function resolveEditedHardware(tx: Tx, existing: { herrajes: SavedHardware[]; modulos: OrderModuleForHardware[] }, lines: ModuleOrderHardwareEdit[]) {
+  const posicionDe = new Map(existing.modulos.map((modulo) => [modulo.id, modulo.posicion]));
+  const ajeno = lines.findIndex((line) => !posicionDe.has(line.pedidoModuloId));
+  if (ajeno >= 0) {
+    throw new AppError(400, `El herraje ${ajeno + 1} es de un módulo que no está en esta solicitud. Recargá la página y volvé a intentar.`, { code: "MODULE_NOT_IN_ORDER" });
+  }
+  const models = await loadHardwareModels(tx);
+  // El catalogo solo hace falta para el origen de los nuevos.
+  const savedIds = new Set(existing.herrajes.map((herraje) => herraje.id));
+  const catalog = lines.some((line) => !line.id || !savedIds.has(line.id))
+    ? (await orderCatalogHardware(tx, existing.modulos, models)).flatMap(({ modulo, herrajes }) =>
+        herrajes.map((herraje) => ({ pedidoModuloId: modulo.id, herrajeId: herraje.herrajeId, cantidad: herraje.cantidad }))
+      )
+    : [];
+  const { rows, problems } = resolveHardwareEdit(existing.herrajes, lines, models, catalog);
+  if (problems.length) {
+    // "Herraje 2 del módulo 1": el numero dentro de su modulo, como se ve en el formulario.
+    const numero = (index: number) => lines.slice(0, index + 1).filter((line) => line.pedidoModuloId === lines[index].pedidoModuloId).length;
+    throw new AppError(400, "Hay herrajes que no se pueden usar.", {
+      code: "MODULE_HARDWARE_INVALID",
+      details: { errores: problems.map(({ index, mensaje }) => `Herraje ${numero(index)} del módulo ${posicionDe.get(lines[index].pedidoModuloId)}: ${mensaje}`) }
+    });
+  }
+  return rows;
+}
 
 /**
  * Arma las filas de corte de los modulos de una solicitud (spec §8.2 y §8.3): trae de la base los modulos, las
@@ -236,7 +296,11 @@ export const canEditModuleOrder = (estado: EstadoPedido) =>
 export async function updateModuleOrder(prisma: PrismaClient, id: string, input: ModuleOrderUpdateInput, userId: string) {
   const existing = await prisma.pedido.findFirst({
     where: { id, tipo: TipoPedido.MODULOS },
-    include: { detalles: DETALLES_ORDENADOS, modulos: { select: { id: true, posicion: true } }, herrajes: { select: { cantidad: true, valorUnitario: true } } }
+    include: {
+      detalles: DETALLES_ORDENADOS,
+      modulos: { select: { id: true, posicion: true, nombreModulo: true, valores: true, perfilCantoOrden: true, definicionSnapshot: true } },
+      herrajes: { orderBy: [{ pedidoModulo: { posicion: "asc" } }, { orden: "asc" }] }
+    }
   });
   if (!existing) throw new AppError(404, "Solicitud de módulos no encontrada.");
   if (!canEditModuleOrder(existing.estado)) throw new AppError(403, "No se pueden editar pedidos en proceso, terminados o entregados.");
@@ -299,16 +363,24 @@ export async function updateModuleOrder(prisma: PrismaClient, id: string, input:
         fechaEntrega: fechaAnterior,
         observaciones: existing.observaciones
       },
-      rows: guardadas
+      rows: guardadas,
+      herrajes: existing.herrajes
     },
-    { data: input, rows: filas.map(({ detalle }) => detalle) }
+    { data: input, rows: filas.map(({ detalle }) => detalle), herrajes: input.herrajes }
   );
   if (!hasChanges(changes)) return getModuleOrder(prisma, id);
 
+  // Herrajes (F6.4): editar las piezas no los recalcula (DECISIONES 57). Si vienen, quedan como se ajustaron; si no
+  // vienen (apagados), siguen los guardados.
+  let herrajes: Awaited<ReturnType<typeof resolveEditedHardware>> | null = null;
+  if (input.herrajes && changes.herrajes && changes.herrajes.modificados + changes.herrajes.agregados + changes.herrajes.quitados > 0) {
+    await assertHardwareEnabled(prisma, "Los herrajes se apagaron mientras editabas (Configuración › Herrajes). Recargá la página y volvé a hacer los cambios.");
+    herrajes = await resolveEditedHardware(prisma, existing, input.herrajes);
+  }
+
   // Calculo afuera de la transaccion, como el alta: el optimizador puede tardar mas de lo que dura una transaccion.
   const detalles = await normalizeDetails(nuevas, input.cliente, input.numeroContacto);
-  // Los herrajes guardados no cambian al editar las piezas (DECISIONES 57): siguen sumando lo mismo.
-  const { costoHerrajes, presupuestoConHerrajes: _total, ...snapshot } = await buildModuleOrderEstimate(prisma, detalles, hardwareCost(existing.herrajes));
+  const { costoHerrajes, presupuestoConHerrajes: _total, ...snapshot } = await buildModuleOrderEstimate(prisma, detalles, hardwareCost(herrajes ?? existing.herrajes));
 
   await prisma.$transaction(async (tx) => {
     // Solo si sigue como se leyo: si otro la cambio mientras se calculaba, 409 y no se toca nada.
@@ -328,6 +400,10 @@ export async function updateModuleOrder(prisma: PrismaClient, id: string, input:
     if (claimed.count !== 1) throw new AppError(409, "La solicitud cambió mientras la editabas. Recargá la página y volvé a hacer los cambios.", { code: "ORDER_CHANGED" });
     await tx.detallePedido.deleteMany({ where: { pedidoId: id } });
     await tx.detallePedido.createMany({ data: detalles.map((detalle) => ({ ...detalle, pedidoId: id })) });
+    if (herrajes) {
+      await tx.pedidoHerraje.deleteMany({ where: { pedidoId: id } });
+      if (herrajes.length) await tx.pedidoHerraje.createMany({ data: herrajes.map((herraje) => ({ ...herraje, pedidoId: id })) });
+    }
     await tx.historialPedido.create({ data: { pedidoId: id, usuarioId: userId, accion: "EDITAR_PEDIDO", valorNuevo: describeChanges(changes) } });
   });
   return getModuleOrder(prisma, id);
@@ -527,7 +603,7 @@ export async function recalculateModule(prisma: PrismaClient, id: string, pedido
     include: {
       detalles: DETALLES_ORDENADOS,
       modulos: { select: { id: true, posicion: true, moduloId: true, nombreModulo: true, valores: true, definicionSnapshot: true } },
-      herrajes: { select: { pedidoModuloId: true, cantidad: true, valorUnitario: true } }
+      herrajes: { select: { pedidoModuloId: true, cantidad: true, valorUnitario: true, origen: true } }
     }
   });
   if (!existing) throw new AppError(404, "Solicitud de módulos no encontrada.");
@@ -591,6 +667,10 @@ export async function recalculateModule(prisma: PrismaClient, id: string, pedido
       cambiosManuales: anteriores.filter((detalle) => detalle.origen === OrigenDetalle.EDITADO || detalle.origen === OrigenDetalle.MANUAL).length,
       detalles: nuevas,
       herrajes: linea.herrajes,
+      // Los herrajes de este modulo ajustados a mano se pierden: vuelven a lo del catalogo (DECISIONES 57).
+      herrajesManuales: existing.herrajes.filter(
+        (herraje) => herraje.pedidoModuloId === pm.id && (herraje.origen === OrigenDetalle.EDITADO || herraje.origen === OrigenDetalle.MANUAL)
+      ).length,
       antes: { placasEstimadas: existing.placasEstimadas, presupuestoEstimado: existing.presupuestoEstimado, presupuestoConHerrajes: withHardwareTotal(existing.presupuestoEstimado, existing.costoHerrajes) },
       despues: { ...snapshot, costoHerrajes, presupuestoConHerrajes }
     };
@@ -633,6 +713,48 @@ export async function recalculateModule(prisma: PrismaClient, id: string, pedido
     });
   });
   return getModuleOrder(prisma, id);
+}
+
+/**
+ * "Recalcular herrajes" de la edicion (F6.4, DECISIONES 57): lo que da el catalogo para cada modulo, con la copia de la
+ * definicion guardada, sus medidas y los modelos de hoy. No guarda: el formulario los reemplaza y se guardan con el PUT.
+ * Un herraje que queda igual a uno guardado (mismo modulo, modelo y cantidad) lleva su id, asi conserva su precio y no
+ * cuenta como cambio. Responde tambien el costo como quedaria.
+ */
+export async function recalculateOrderHardware(prisma: PrismaClient, id: string) {
+  const existing = await prisma.pedido.findFirst({
+    where: { id, tipo: TipoPedido.MODULOS },
+    include: {
+      modulos: { orderBy: { posicion: "asc" }, select: { id: true, posicion: true, nombreModulo: true, valores: true, perfilCantoOrden: true, definicionSnapshot: true } },
+      herrajes: { orderBy: [{ pedidoModulo: { posicion: "asc" } }, { orden: "asc" }] }
+    }
+  });
+  if (!existing) throw new AppError(404, "Solicitud de módulos no encontrada.");
+  if (!canEditModuleOrder(existing.estado)) throw new AppError(403, "No se pueden editar pedidos en proceso, terminados o entregados.");
+  await assertHardwareEnabled(prisma, "Los herrajes están apagados (Configuración › Herrajes): prendelos para recalcularlos.");
+  const models = await loadHardwareModels(prisma);
+  const porModulo = await orderCatalogHardware(prisma, existing.modulos, models);
+  const problems = porModulo.flatMap(({ modulo, errores }) => errores.map((error) => `Módulo ${modulo.posicion} (${modulo.nombreModulo}), ${error.ref}: ${error.mensaje}`));
+  if (problems.length) {
+    throw new AppError(400, "No se pudieron calcular los herrajes de algún módulo.", { code: "MODULE_FORMULA_ERRORS", details: { errores: problems } });
+  }
+  const used = new Set<string>();
+  const lines = porModulo.flatMap(({ modulo, herrajes }) =>
+    herrajes.map((herraje) => {
+      const igual = existing.herrajes.find(
+        (saved) => !used.has(saved.id) && saved.pedidoModuloId === modulo.id && saved.herrajeId === herraje.herrajeId && saved.cantidad === herraje.cantidad
+      );
+      if (igual) used.add(igual.id);
+      return { ...herraje, id: igual?.id ?? null, pedidoModuloId: modulo.id, posicionModulo: modulo.posicion };
+    })
+  );
+  const catalog = lines.map((line) => ({ pedidoModuloId: line.pedidoModuloId, herrajeId: line.herrajeId, cantidad: line.cantidad }));
+  const { rows } = resolveHardwareEdit(existing.herrajes, lines, models, catalog);
+  // El precio de cada uno como quedaria: el guardado si sigue igual, el de hoy si no.
+  return {
+    herrajes: lines.map((line, index) => ({ ...line, valorUnitario: rows[index]?.valorUnitario ?? line.valorUnitario })),
+    costoHerrajes: hardwareCost(rows)
+  };
 }
 
 /**

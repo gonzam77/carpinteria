@@ -16,6 +16,7 @@ import {
   getModuleOrder,
   listModuleOrders,
   recalculateModule,
+  recalculateOrderHardware,
   searchModuleOrderClients,
   updateModuleOrder
 } from "./module-orders.service.js";
@@ -126,6 +127,17 @@ moduleOrdersRouter.post(
   asyncHandler(async (req: any, res: any) => {
     const data = moduleRecalcPreviewSchema.parse(req.body);
     res.json(await recalculateModule(prisma, req.params.id, req.params.moduloPedidoId, data, { apply: false, userId: req.user.id }));
+  })
+);
+
+/**
+ * "Recalcular herrajes" de la edicion (F6.4, DECISIONES 57): los herrajes que da el catalogo para cada modulo, sin
+ * guardar. El formulario los toma y se guardan con el PUT.
+ */
+moduleOrdersRouter.post(
+  "/:id/herrajes/recalcular",
+  asyncHandler(async (req: any, res: any) => {
+    res.json(await recalculateOrderHardware(prisma, req.params.id));
   })
 );
 

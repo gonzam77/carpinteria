@@ -8,16 +8,20 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { ensureSession } from "../api/session";
-import { getModuleOrder, moduleOrderError } from "../api/moduleOrders";
+import { getModulesConfig } from "../api/catalog";
+import { listHardware } from "../api/hardware";
+import { getModuleOrder, moduleOrderError, recalculateOrderHardware } from "../api/moduleOrders";
 import { createEmptyDetail, OrderItemsGroup, OrderItemsTable } from "../components/OrderItemsTable";
+import { OrderHardwareEditor } from "../components/OrderHardwareEditor";
 import { OrderReceiptDialog } from "../components/OrderReceiptDialog";
 import { useAuth } from "../context/AuthContext";
 import { draftScope, useFormDraft } from "../hooks/useFormDraft";
 import { useTodayInArgentina } from "../hooks/useTodayInArgentina";
 import { canEditModuleOrder, moduleMeasuresText, sortRowsByModule, validateEditClient } from "../lib/moduleOrderDetail";
-import { describeChanges, hasChanges, summarizeChanges } from "../lib/moduleOrderChanges";
+import { describeChanges, describeHardwareChanges, hasChanges, summarizeChanges, type ComparableHardware } from "../lib/moduleOrderChanges";
+import { hardwareLinesError, hardwareLinesFromOrder, hardwareLinesPayload, newHardwareKey, resolveEditLines, type EditHardwareLine } from "../lib/moduleOrderHardwareEdit";
 import { MAX_DIRECCION, MAX_REFERENCIA } from "../lib/moduleOrderWizard";
-import { Material, ModuleOrder, Order, OrderDetail } from "../types";
+import { Hardware, Material, ModuleOrder, Order, OrderDetail } from "../types";
 import { CutOptimizer } from "../components/CutOptimizer";
 import { getStatusStyle } from "../components/StatusChip";
 
@@ -44,6 +48,8 @@ type OrderDraft = {
   email?: string;
   direccion?: string;
   fechaEntrega?: string;
+  /** Solo con los herrajes habilitados (F6.4). */
+  herrajes?: EditHardwareLine[];
 };
 
 /** CORTE: alta y edicion de una solicitud de corte. MODULOS: edicion de una solicitud de modulos (spec §10). */
@@ -104,6 +110,13 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
   const [direccion, setDireccion] = useState("");
   const [fechaEntrega, setFechaEntrega] = useState("");
   const [savedModuleOrder, setSavedModuleOrder] = useState<ModuleOrder | null>(null);
+  // Herrajes (F6.4, DECISIONES 57): null si estan apagados (los guardados no se tocan). El catalogo es lo que trajo
+  // "Recalcular herrajes", para mostrar el origen como lo va a guardar el servidor.
+  const [herrajes, setHerrajes] = useState<EditHardwareLine[] | null>(null);
+  const [hardwareModels, setHardwareModels] = useState<Hardware[]>([]);
+  const [hardwareCatalog, setHardwareCatalog] = useState<ComparableHardware[]>([]);
+  const [recalculatingHardware, setRecalculatingHardware] = useState(false);
+  const [hardwareMessage, setHardwareMessage] = useState<{ severity: "success" | "error"; text: string } | null>(null);
   const [loadError, setLoadError] = useState("");
   const today = useTodayInArgentina();
   const [moduleListReturnTo] = useState(() => moduleListReturn(location.state));
@@ -114,7 +127,10 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
   const [formReady, setFormReady] = useState(!id);
 
   // En corte, sin los datos de modulos: el borrador y la comparacion quedan como siempre.
-  const moduleData = useMemo(() => (modules ? { email, direccion, fechaEntrega } : {}), [direccion, email, fechaEntrega, modules]);
+  const moduleData = useMemo(
+    () => (modules ? { email, direccion, fechaEntrega, ...(herrajes ? { herrajes } : {}) } : {}),
+    [direccion, email, fechaEntrega, herrajes, modules]
+  );
 
   const snapshot = useMemo<OrderDraft>(
     () => ({ cliente, telefono, observaciones, rows, step, ...moduleData }),
@@ -160,11 +176,22 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
           fechaEntrega: savedModuleOrder.fechaEntrega,
           observaciones: savedModuleOrder.observaciones
         },
-        rows: savedModuleOrder.detalles.flatMap((detalle) => (detalle.id ? [{ ...detalle, id: detalle.id }] : []))
+        rows: savedModuleOrder.detalles.flatMap((detalle) => (detalle.id ? [{ ...detalle, id: detalle.id }] : [])),
+        herrajes: savedModuleOrder.herrajes
       },
-      { data: { cliente, numeroContacto: telefono, emailContacto: email, direccionEntrega: direccion, fechaEntrega, observaciones }, rows }
+      {
+        data: { cliente, numeroContacto: telefono, emailContacto: email, direccionEntrega: direccion, fechaEntrega, observaciones },
+        rows,
+        herrajes: herrajes ?? undefined
+      }
     );
-  }, [cliente, direccion, email, fechaEntrega, modules, observaciones, rows, savedModuleOrder, telefono]);
+  }, [cliente, direccion, email, fechaEntrega, herrajes, modules, observaciones, rows, savedModuleOrder, telefono]);
+
+  // Los herrajes como quedan al guardar (el mismo calculo que el PUT): su costo va al comprobante.
+  const editedHardware = useMemo(
+    () => (savedModuleOrder && herrajes ? resolveEditLines(savedModuleOrder.herrajes, herrajes, hardwareModels, hardwareCatalog) : null),
+    [hardwareCatalog, hardwareModels, herrajes, savedModuleOrder]
+  );
 
   // Modulos: una solicitud que ya no se puede editar (o que no cargo) no muestra el formulario.
   const blockedMessage =
@@ -197,6 +224,8 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
       setEmail(draft.email ?? "");
       setDireccion(draft.direccion ?? "");
       setFechaEntrega(draft.fechaEntrega ?? "");
+      // Solo si los herrajes siguen habilitados: si no, quedan los guardados.
+      if (draft.herrajes) setHerrajes((current) => (current ? draft.herrajes! : current));
     }
   }
 
@@ -217,8 +246,16 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
 
   useEffect(() => {
     if (!id || !modules) return;
-    getModuleOrder(id)
-      .then((order) => {
+    // Una carga que llega tarde (otra solicitud, o la primera de las dos de StrictMode) no pisa lo que se esta editando.
+    let cancelled = false;
+    // Con los herrajes habilitados, tambien los modelos (todos: un guardado puede ser de uno inactivo), a la vez.
+    const hardware = getModulesConfig()
+      .catch(() => null)
+      .then((config) => (config?.herrajesHabilitados ? listHardware(true) : null));
+    Promise.all([getModuleOrder(id), hardware])
+      .then(([order, models]) => {
+        if (cancelled) return;
+        const lines = models ? hardwareLinesFromOrder(order.herrajes ?? []) : null;
         const loaded = {
           cliente: order.cliente,
           telefono: order.numeroContacto ?? "",
@@ -226,8 +263,11 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
           rows: sortRowsByModule(order.detalles, order.modulos),
           email: order.emailContacto ?? "",
           direccion: order.direccionEntrega ?? "",
-          fechaEntrega: order.fechaEntrega ?? ""
+          fechaEntrega: order.fechaEntrega ?? "",
+          ...(lines ? { herrajes: lines } : {})
         };
+        setHerrajes(lines);
+        setHardwareModels(models ?? []);
         setCliente(loaded.cliente);
         setTelefono(loaded.telefono);
         setObservaciones(loaded.observaciones);
@@ -240,6 +280,7 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
         setFormReady(true);
       })
       .catch((loadFailure) => {
+        if (cancelled) return;
         // Una solicitud de corte abierta con la URL de modulos: se edita en su formulario.
         if (axios.isAxiosError(loadFailure) && loadFailure.response?.status === 404) {
           navigate(`/pedidos/${id}/editar`, { replace: true, state: location.state });
@@ -247,6 +288,9 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
         }
         setLoadError(moduleOrderError(loadFailure, "No se pudo cargar la solicitud.").message);
       });
+    return () => {
+      cancelled = true;
+    };
     // Solo al cambiar de solicitud, como en corte.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -348,8 +392,33 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
       direccionEntrega: direccion,
       fechaEntrega,
       fechaActualizacion: savedModuleOrder?.fechaActualizacion,
-      detalles: detalles.map((detalle) => ({ ...detalle, id: detalle.id ?? null, pedidoModuloId: detalle.pedidoModuloId ?? null }))
+      detalles: detalles.map((detalle) => ({ ...detalle, id: detalle.id ?? null, pedidoModuloId: detalle.pedidoModuloId ?? null })),
+      // Sin herrajes (apagados), los guardados no cambian.
+      ...(herrajes ? { herrajes: hardwareLinesPayload(herrajes) } : {})
     };
+  }
+
+  /** "Recalcular herrajes" (F6.4): trae lo del catalogo para cada modulo, sin guardar; se guarda con los cambios. */
+  async function recalculateHardware() {
+    if (!id) return;
+    setRecalculatingHardware(true);
+    setHardwareMessage(null);
+    try {
+      const result = await recalculateOrderHardware(id);
+      setHerrajes(result.herrajes.map((item) => ({ key: item.id ?? newHardwareKey(), id: item.id, pedidoModuloId: item.pedidoModuloId, herrajeId: item.herrajeId, cantidad: item.cantidad })));
+      setHardwareCatalog(result.herrajes.map((item) => ({ pedidoModuloId: item.pedidoModuloId, herrajeId: item.herrajeId, cantidad: item.cantidad })));
+      setHardwareMessage({
+        severity: "success",
+        text: result.herrajes.length
+          ? "Herrajes recalculados con lo del catálogo. Revisalos y guardá los cambios."
+          : "Con lo del catálogo, los módulos no llevan herrajes. Guardá los cambios para quitarlos."
+      });
+    } catch (recalcError) {
+      const apiError = moduleOrderError(recalcError, "No se pudieron recalcular los herrajes.");
+      setHardwareMessage({ severity: "error", text: [apiError.message, ...apiError.items].join(" ") });
+    } finally {
+      setRecalculatingHardware(false);
+    }
   }
 
   function resolveApiError(submitError: unknown, fallback: string, writes = false) {
@@ -379,6 +448,13 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
       setError(rowError);
       return;
     }
+    if (herrajes && editedHardware && savedModuleOrder) {
+      const hardwareError = hardwareLinesError(herrajes, new Map(savedModuleOrder.modulos.map((modulo) => [modulo.id, modulo.posicion])), editedHardware.problems);
+      if (hardwareError) {
+        setError(hardwareError);
+        return;
+      }
+    }
 
     // Validamos la sesion antes de mandar: renueva en silencio y, si ya no
     // alcanza, pide reingreso sin haber perdido nada de lo cargado.
@@ -393,8 +469,8 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
 
     try {
       const response = await api.post<Order>("/orders/preview", buildPayload(), { signal: controller.signal });
-      // Editar las piezas de una de modulos no cambia sus herrajes (DECISIONES 57): el comprobante suma los guardados.
-      setPreviewOrder(modules && savedModuleOrder ? { ...response.data, costoHerrajes: savedModuleOrder.costoHerrajes } : response.data);
+      // Herrajes (DECISIONES 57): editar las piezas no los cambia. El comprobante suma los que se ajustaron, o los guardados.
+      setPreviewOrder(modules && savedModuleOrder ? { ...response.data, costoHerrajes: editedHardware ? editedHardware.costo : savedModuleOrder.costoHerrajes } : response.data);
     } catch (previewError) {
       // Si lo cancelamos nosotros (el usuario se fue del paso) no es un error
       // que haya que mostrar, y el comprobante no se tiene que abrir.
@@ -623,12 +699,28 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
                       {changes.modificadas > 0 && <li>{changes.modificadas === 1 ? "1 pieza modificada" : `${changes.modificadas} piezas modificadas`}</li>}
                       {changes.agregadas > 0 && <li>{changes.agregadas === 1 ? "1 pieza agregada" : `${changes.agregadas} piezas agregadas`}</li>}
                       {changes.eliminadas > 0 && <li>{changes.eliminadas === 1 ? "1 pieza eliminada" : `${changes.eliminadas} piezas eliminadas`}</li>}
+                      {describeHardwareChanges(changes.herrajes).map((text) => (
+                        <li key={text}>{text}</li>
+                      ))}
                       {changes.datos.length > 0 && <li>{describeChanges({ modificadas: 0, agregadas: 0, eliminadas: 0, datos: changes.datos }).replace(/^c/, "C")}</li>}
                     </Stack>
                   ) : (
                     <Typography color="text.secondary">No hay cambios para guardar.</Typography>
                   )}
                 </Box>
+              )}
+              {modules && savedModuleOrder && herrajes && (
+                <OrderHardwareEditor
+                  modulos={savedModuleOrder.modulos}
+                  saved={savedModuleOrder.herrajes}
+                  lines={herrajes}
+                  models={hardwareModels}
+                  catalog={hardwareCatalog}
+                  recalculating={recalculatingHardware}
+                  recalcMessage={hardwareMessage}
+                  onChange={setHerrajes}
+                  onRecalculate={recalculateHardware}
+                />
               )}
               <Box>
                 <Typography variant="h6">Cortes solicitados</Typography>

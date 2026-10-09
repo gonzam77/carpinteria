@@ -68,3 +68,15 @@ test("medidas con su nombre", () => {
   assert.equal(labeledMeasures(modulo), "Ancho 2.600 · Alto 2.400 · Profundidad 600 · Alto baulera 432 mm");
   assert.equal(labeledMeasures({ valores: {}, definicionSnapshot: { parametros: [] } } as never), "");
 });
+
+test("hojas: los herrajes de cada módulo en su orden; la de piezas adicionales no lleva", () => {
+  const modulos = [{ id: "m1", posicion: 1 }, { id: "m2", posicion: 2 }] as never;
+  const detalles = [row({ pedidoModuloId: null }), row({ pedidoModuloId: "m1" })];
+  const herraje = (id: string, pedidoModuloId: string, orden: number) => ({ id, pedidoModuloId, orden }) as never;
+  const sheets = workshopSheets({ modulos, detalles, herrajes: [herraje("b", "m1", 2), herraje("c", "m2", 1), herraje("a", "m1", 1)] });
+  assert.deepEqual(
+    sheets.map((sheet) => sheet.herrajes.map((item) => item.id)),
+    [["a", "b"], ["c"], []]
+  );
+  assert.deepEqual(workshopSheets({ modulos, detalles }).map((sheet) => sheet.herrajes.length), [0, 0, 0], "sin herrajes guardados");
+});

@@ -11,6 +11,7 @@ import { useCompanySettings } from "../context/CompanySettingsContext";
 import { useModuleImage } from "../hooks/useModuleImage";
 import { formatDay } from "../lib/moduleOrdersList";
 import { compactTable, edgeSummary, labeledMeasures, pieceMark, workshopSheets, type WorkshopEdge, type WorkshopSheet } from "../lib/moduleWorkshop";
+import { hardwareQuantityText } from "../components/moduleOrderWizard/ModuleHardware";
 import type { Material, ModuleOrder } from "../types";
 
 const logoUrl = new URL("../../assets/roma_logo.png", import.meta.url).href;
@@ -72,8 +73,9 @@ function Sheet({
   imageVersions: Map<string, string | null>;
   companyName: string;
 }) {
-  const { modulo, rows } = sheet;
-  const compact = compactTable(rows.length);
+  const { modulo, rows, herrajes } = sheet;
+  // Los herrajes cuentan para achicar la tabla: la hoja tiene que entrar en una pagina.
+  const compact = compactTable(rows.length + herrajes.length);
   const perfil = modulo?.definicionSnapshot?.perfiles?.find((item) => item.orden === modulo.perfilCantoOrden);
   const rowCell = { ...cell, padding: compact ? "1px 4px" : cell.padding, lineHeight: compact ? 1.15 : 1.35 };
   return (
@@ -168,6 +170,46 @@ function Sheet({
           )}
         </tbody>
       </Box>
+
+      {/* Herrajes (spec §11.2): casilla, herraje y cantidad */}
+      {herrajes.length > 0 && (
+        <Box component="table" aria-label="Herrajes" sx={{ width: "100%", borderCollapse: "collapse", mb: "4mm" }}>
+          <thead>
+            <tr>
+              {["✓", "Herraje", "Cant."].map((label) => (
+                <Box component="th" key={label} sx={{ ...cell, fontWeight: 900, bgcolor: "#eee", textAlign: label === "Cant." ? "right" : "left" }}>
+                  {label}
+                </Box>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {herrajes.map((herraje) => {
+              const mark = herraje.origen === "EDITADO" ? "Modificado" : herraje.origen === "MANUAL" ? "Agregado" : "";
+              return (
+                <tr key={herraje.id}>
+                  <Box component="td" sx={{ ...rowCell, width: "7mm" }}>
+                    <Box sx={{ width: "3.5mm", height: "3.5mm", border: "1px solid #000" }} />
+                  </Box>
+                  <Box component="td" sx={rowCell}>
+                    {herraje.tipo ? `${herraje.tipo}: ` : ""}
+                    {herraje.nombre}
+                    {mark && " "}
+                    {mark && (
+                      <Box component="span" sx={{ ml: 0.75, px: 0.5, border: "1px solid #000", fontSize: "8.5pt", fontWeight: 700, textTransform: "uppercase" }}>
+                        {mark}
+                      </Box>
+                    )}
+                  </Box>
+                  <Box component="td" sx={{ ...rowCell, width: "28mm", textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>
+                    {hardwareQuantityText(herraje.cantidad, herraje.unidad)}
+                  </Box>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Box>
+      )}
 
       {/* Pie */}
       <Box sx={{ border: "1px solid #000", minHeight: "22mm", p: "2mm", mb: "5mm" }}>

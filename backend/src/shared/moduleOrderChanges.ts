@@ -88,23 +88,32 @@ export type ModuleOrderChanges = {
   eliminadas: number;
   /** Los datos que cambiaron, como se leen. */
   datos: string[];
+  /** Los herrajes que cambiaron (F6.4); sin herrajes en la edicion, no hay. */
+  herrajes?: HardwareChanges;
 };
 
+export type HardwareChanges = { modificados: number; agregados: number; quitados: number };
+
 /** Todos los cambios de la edicion, contra lo guardado. */
-export function summarizeChanges<S extends ComparablePiece & { id: string }>(
-  saved: { data: EditableOrderData; rows: S[] },
-  next: { data: EditableOrderData; rows: ComparablePiece[] }
+export function summarizeChanges<S extends ComparablePiece & { id: string }, H extends ComparableHardware & { id: string }>(
+  saved: { data: EditableOrderData; rows: S[]; herrajes?: H[] },
+  next: { data: EditableOrderData; rows: ComparablePiece[]; herrajes?: HardwareEditLine[] }
 ): ModuleOrderChanges {
   const { matches, removed } = matchRows(saved.rows, next.rows);
   return {
     modificadas: matches.filter((match) => match.kind === "kept" && match.changed).length,
     agregadas: matches.filter((match) => match.kind === "added").length,
     eliminadas: removed.length,
-    datos: changedOrderData(saved.data, next.data)
+    datos: changedOrderData(saved.data, next.data),
+    // Sin herrajes en la edicion (apagados), los guardados quedan como estan: no es un cambio.
+    ...(next.herrajes ? { herrajes: summarizeHardwareChanges(saved.herrajes ?? [], next.herrajes) } : {})
   };
 }
 
-export const hasChanges = (changes: ModuleOrderChanges) => changes.modificadas + changes.agregadas + changes.eliminadas + changes.datos.length > 0;
+const hardwareCount = (changes: ModuleOrderChanges) => (changes.herrajes ? changes.herrajes.modificados + changes.herrajes.agregados + changes.herrajes.quitados : 0);
+
+export const hasChanges = (changes: ModuleOrderChanges) =>
+  changes.modificadas + changes.agregadas + changes.eliminadas + changes.datos.length + hardwareCount(changes) > 0;
 
 /** "a", "a y b", "a, b y c". */
 function joinList(items: string[]) {
@@ -112,18 +121,189 @@ function joinList(items: string[]) {
 }
 
 const pieces = (count: number, singular: string, plural: string) => `${count} ${count === 1 ? `pieza ${singular}` : `piezas ${plural}`}`;
+const hardware = (count: number, singular: string, plural: string) => `${count} ${count === 1 ? `herraje ${singular}` : `herrajes ${plural}`}`;
+
+/** Los herrajes que cambiaron, como se leen: "1 herraje modificado", "2 herrajes agregados", "1 herraje quitado". */
+export function describeHardwareChanges(changes: HardwareChanges | undefined) {
+  if (!changes) return [];
+  return [
+    changes.modificados ? hardware(changes.modificados, "modificado", "modificados") : "",
+    changes.agregados ? hardware(changes.agregados, "agregado", "agregados") : "",
+    changes.quitados ? hardware(changes.quitados, "quitado", "quitados") : ""
+  ].filter(Boolean);
+}
 
 /**
  * Los cambios en una linea, para el historial ("Editó la solicitud: ...", EDITAR_PEDIDO): "2 piezas modificadas y
- * 1 pieza agregada; cambió el teléfono y la fecha de entrega". Sin cambios, "".
+ * 1 pieza agregada; cambió el teléfono y la fecha de entrega". Los herrajes van con las piezas ("1 pieza agregada y
+ * 1 herraje modificado"). Sin cambios, "".
  */
 export function describeChanges(changes: ModuleOrderChanges) {
   const parts = [
     changes.modificadas ? pieces(changes.modificadas, "modificada", "modificadas") : "",
     changes.agregadas ? pieces(changes.agregadas, "agregada", "agregadas") : "",
-    changes.eliminadas ? pieces(changes.eliminadas, "eliminada", "eliminadas") : ""
+    changes.eliminadas ? pieces(changes.eliminadas, "eliminada", "eliminadas") : "",
+    ...describeHardwareChanges(changes.herrajes)
   ].filter(Boolean);
   const piecesText = joinList(parts);
   const dataText = changes.datos.length ? `cambió ${joinList(changes.datos)}` : "";
   return [piecesText, dataText].filter(Boolean).join("; ");
+}
+
+// ---------------------------------------------------------------- herrajes de la edicion (F6.4, DECISIONES 57)
+
+export type OrigenHerraje = "CALCULADO" | "EDITADO" | "MANUAL";
+
+/** Lo que se compara de un herraje de la solicitud: el modelo y la cantidad. */
+export type ComparableHardware = { id?: string | null; pedidoModuloId: string | null; herrajeId: string | null; cantidad: number };
+
+/** Una linea de herraje de la edicion: una guardada (con su id) o una nueva (sin id). */
+export type HardwareEditLine = ComparableHardware;
+
+/** Un herraje guardado (PedidoHerraje): su copia del modelo y del precio del dia en que se cargo. */
+export type SavedHardware = ComparableHardware & {
+  id: string;
+  nombre: string;
+  unidad: string;
+  tipo: string | null;
+  linea: string | null;
+  medidaMm: number | null;
+  valorUnitario: number;
+  origen: OrigenHerraje | null;
+};
+
+/** Lo que hace falta de un modelo de herraje para copiarlo en la solicitud. */
+export type HardwareEditModel = {
+  id: string;
+  nombre: string;
+  unidad: string;
+  tipo: string | null;
+  linea: string | null;
+  medidaMm: number | null;
+  valor: number;
+  activo: boolean;
+};
+
+/** Un herraje como queda guardado despues de la edicion. */
+export type ResolvedHardwareRow = {
+  pedidoModuloId: string | null;
+  herrajeId: string | null;
+  nombre: string;
+  unidad: string;
+  tipo: string | null;
+  linea: string | null;
+  medidaMm: number | null;
+  cantidad: number;
+  valorUnitario: number;
+  orden: number;
+  origen: OrigenHerraje;
+};
+
+export type HardwareMatch<S> =
+  /** Un herraje guardado que sigue; changed si cambio el modelo o la cantidad. */
+  | { kind: "kept"; saved: S; changed: boolean }
+  | { kind: "added" };
+
+/**
+ * Empareja los herrajes de la edicion con los guardados por id, como las piezas: la primera linea con un id guardado
+ * (y del mismo modulo) es ese herraje; otra con el mismo id, o pasada a otro modulo, es nueva.
+ */
+export function matchHardware<S extends ComparableHardware & { id: string }>(saved: S[], lines: HardwareEditLine[]) {
+  const savedById = new Map(saved.map((item) => [item.id, item]));
+  const used = new Set<string>();
+  const matches: HardwareMatch<S>[] = lines.map((line) => {
+    const previous = line.id ? savedById.get(line.id) : undefined;
+    if (!previous || used.has(previous.id) || text(previous.pedidoModuloId) !== text(line.pedidoModuloId)) return { kind: "added" };
+    used.add(previous.id);
+    return { kind: "kept", saved: previous, changed: text(previous.herrajeId) !== text(line.herrajeId) || Number(previous.cantidad) !== Number(line.cantidad) };
+  });
+  return { matches, removed: saved.filter((item) => !used.has(item.id)) };
+}
+
+export function summarizeHardwareChanges<S extends ComparableHardware & { id: string }>(saved: S[], lines: HardwareEditLine[]): HardwareChanges {
+  const { matches, removed } = matchHardware(saved, lines);
+  return {
+    modificados: matches.filter((match) => match.kind === "kept" && match.changed).length,
+    agregados: matches.filter((match) => match.kind === "added").length,
+    quitados: removed.length
+  };
+}
+
+/**
+ * Los herrajes como quedan al guardar la edicion (DECISIONES 57). Lo usan el PUT y el formulario (para el comprobante),
+ * asi los dos suman lo mismo:
+ * - uno guardado con el mismo modelo conserva su copia (nombre y precio del dia en que se cargo); si cambio la cantidad
+ *   pasa a EDITADO (uno MANUAL sigue MANUAL);
+ * - uno guardado con otro modelo, o uno nuevo, copia el modelo de hoy, que tiene que existir y estar activo. El que
+ *   cambio de modelo pasa a EDITADO (o sigue MANUAL); uno nuevo es CALCULADO si es lo que da el catalogo para ese modulo
+ *   (Recalcular herrajes) y MANUAL si no.
+ * El orden es el de las lineas dentro de cada modulo. Los problemas van con el indice de la linea.
+ */
+export function resolveHardwareEdit<S extends SavedHardware>(
+  saved: S[],
+  lines: HardwareEditLine[],
+  models: Map<string, HardwareEditModel>,
+  catalog: ComparableHardware[] = []
+): { rows: ResolvedHardwareRow[]; problems: Array<{ index: number; mensaje: string }> } {
+  const { matches } = matchHardware(saved, lines);
+  const pendingCatalog = catalog.map((item) => ({ ...item }));
+  const ordenes = new Map<string, number>();
+  const problems: Array<{ index: number; mensaje: string }> = [];
+  const rows = lines.flatMap((line, index): ResolvedHardwareRow[] => {
+    const key = text(line.pedidoModuloId);
+    const orden = (ordenes.get(key) ?? 0) + 1;
+    ordenes.set(key, orden);
+    const match = matches[index];
+    if (match.kind === "kept" && text(match.saved.herrajeId) === text(line.herrajeId)) {
+      const { saved: previous, changed } = match;
+      const origen: OrigenHerraje = previous.origen === "MANUAL" ? "MANUAL" : changed ? "EDITADO" : (previous.origen ?? "CALCULADO");
+      return [
+        {
+          pedidoModuloId: line.pedidoModuloId,
+          herrajeId: previous.herrajeId,
+          nombre: previous.nombre,
+          unidad: previous.unidad,
+          tipo: previous.tipo,
+          linea: previous.linea,
+          medidaMm: previous.medidaMm,
+          cantidad: line.cantidad,
+          valorUnitario: previous.valorUnitario,
+          orden,
+          origen
+        }
+      ];
+    }
+    const model = line.herrajeId ? models.get(line.herrajeId) : undefined;
+    if (!model) {
+      problems.push({ index, mensaje: "ese herraje ya no existe. Elegí otro modelo." });
+      return [];
+    }
+    if (!model.activo) {
+      problems.push({ index, mensaje: `el herraje "${model.nombre}" está inactivo. Elegí otro modelo.` });
+      return [];
+    }
+    let origen: OrigenHerraje;
+    if (match.kind === "kept") origen = match.saved.origen === "MANUAL" ? "MANUAL" : "EDITADO";
+    else {
+      const fromCatalog = pendingCatalog.findIndex((item) => text(item.pedidoModuloId) === key && item.herrajeId === model.id && Number(item.cantidad) === Number(line.cantidad));
+      if (fromCatalog >= 0) pendingCatalog.splice(fromCatalog, 1);
+      origen = fromCatalog >= 0 ? "CALCULADO" : "MANUAL";
+    }
+    return [
+      {
+        pedidoModuloId: line.pedidoModuloId,
+        herrajeId: model.id,
+        nombre: model.nombre,
+        unidad: model.unidad,
+        tipo: model.tipo,
+        linea: model.linea,
+        medidaMm: model.medidaMm,
+        cantidad: line.cantidad,
+        valorUnitario: model.valor,
+        orden,
+        origen
+      }
+    ];
+  });
+  return { rows, problems };
 }

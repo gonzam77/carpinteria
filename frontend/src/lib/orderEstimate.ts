@@ -102,6 +102,14 @@ export function toCentavos(value: number) {
   return Math.round(Number(value || 0) * 100);
 }
 
+/**
+ * Lo que cuestan los herrajes de una solicitud de modulos (DECISIONES R1 y 57): cantidad por precio unitario, sumado en
+ * centavos. Aparte del presupuesto de placas. Lo usan el servidor (al guardar), el asistente y el comprobante.
+ */
+export function hardwareCost(herrajes: Array<{ cantidad: number; valorUnitario: number }>) {
+  return herrajes.reduce((total, herraje) => total + Math.round(toCentavos(herraje.valorUnitario) * herraje.cantidad), 0) / 100;
+}
+
 /** Division entera con redondeo de la mitad hacia arriba, exacta mientras el numerador sea un entero seguro. */
 function divRoundHalfUp(numerator: number, divisor: number) {
   let quotient = Math.floor(numerator / divisor);

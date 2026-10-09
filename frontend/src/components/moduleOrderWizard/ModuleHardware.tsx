@@ -1,10 +1,11 @@
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import { Box, Button, MenuItem, Paper, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import { formatHardwarePrice, hardwareLabel } from "../../lib/hardware";
-import { toCentavos } from "../../lib/orderEstimate";
+import { hardwareCost, toCentavos } from "../../lib/orderEstimate";
 import type { Hardware, OrderHardware, PlannedHardware } from "../../types";
 
-const unidad = (cantidad: number, unidad: string) => (unidad === "unidad" ? `${cantidad}` : `${cantidad} ${unidad === "par" ? (cantidad === 1 ? "par" : "pares") : unidad === "juego" ? (cantidad === 1 ? "juego" : "juegos") : "m"}`);
+/** La cantidad con su unidad: "4", "1 par", "3 pares", "2 juegos", "2 m". */
+export const hardwareQuantityText = (cantidad: number, unidad: string) => (unidad === "unidad" ? `${cantidad}` : `${cantidad} ${unidad === "par" ? (cantidad === 1 ? "par" : "pares") : unidad === "juego" ? (cantidad === 1 ? "juego" : "juegos") : "m"}`);
 const subtotal = (item: { cantidad: number; valorUnitario: number }) => (toCentavos(item.valorUnitario) * item.cantidad) / 100;
 const mm = (value: number) => `${Number(value.toFixed(2)).toLocaleString("es-AR")} mm`;
 
@@ -36,7 +37,7 @@ export function ModuleHardwareCard({
 }) {
   if (!herrajes.length) return null;
   const byId = new Map(models.map((model) => [model.id, model]));
-  const total = herrajes.reduce((sum, item) => sum + toCentavos(item.valorUnitario) * item.cantidad, 0) / 100;
+  const total = hardwareCost(herrajes);
   return (
     <Paper variant="outlined" component="section" aria-label={`Herrajes del módulo ${posicion}`} sx={{ borderRadius: "10px", overflow: "hidden" }}>
       <Box sx={{ px: 2, py: 1.25, display: "flex", justifyContent: "space-between", gap: 1, bgcolor: "background.default" }}>
@@ -67,7 +68,7 @@ export function ModuleHardwareCard({
                 <TableRow key={item.herrajeDefectoId}>
                   <TableCell>{item.tipo ?? "-"}</TableCell>
                   <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
-                    {unidad(item.cantidad, item.unidad)}
+                    {hardwareQuantityText(item.cantidad, item.unidad)}
                   </TableCell>
                   <TableCell sx={{ minWidth: 260 }}>
                     <TextField
@@ -113,7 +114,7 @@ export function ModuleHardwareCard({
 /** Herrajes guardados de un modulo de la solicitud, para leer (detalle). */
 export function OrderHardwareList({ titulo, herrajes }: { titulo: string; herrajes: OrderHardware[] }) {
   if (!herrajes.length) return null;
-  const total = herrajes.reduce((sum, item) => sum + toCentavos(item.valorUnitario) * item.cantidad, 0) / 100;
+  const total = hardwareCost(herrajes);
   return (
     <Box component="section" aria-label={titulo} sx={{ px: 2, pb: 2 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, py: 1 }}>
@@ -139,7 +140,7 @@ export function OrderHardwareList({ titulo, herrajes }: { titulo: string; herraj
             <TableRow key={item.id}>
               <TableCell>{item.tipo ?? "-"}</TableCell>
               <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
-                {unidad(item.cantidad, item.unidad)}
+                {hardwareQuantityText(item.cantidad, item.unidad)}
               </TableCell>
               <TableCell>
                 {item.nombre}

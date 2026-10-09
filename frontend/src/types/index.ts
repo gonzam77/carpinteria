@@ -397,6 +397,13 @@ export type OrderHardware = {
   origen: OrigenDetalle | null;
 };
 
+/** Respuesta de "Recalcular herrajes" (POST /api/pedidos-modulos/:id/herrajes/recalcular, F6.4): lo del catalogo, sin guardar. */
+export type OrderHardwareRecalc = {
+  /** Con id, uno guardado que queda igual (conserva su precio). */
+  herrajes: Array<PlannedHardware & { id: string | null; pedidoModuloId: string; posicionModulo: number }>;
+  costoHerrajes: number;
+};
+
 /** Respuesta de POST /api/pedidos-modulos/preview (DECISIONES 17): el paso 4 muestra solo esto (R3). */
 export type ModuleOrderPreview = ModuleOrderEstimate & {
   id: "preview";
@@ -453,6 +460,10 @@ export type ModuleRecalcPreview = {
   /** De esas, las editadas o agregadas a mano (se pierden). */
   cambiosManuales: number;
   detalles: ModuleOrderDetail[];
+  /** Los herrajes del modulo como quedan (vuelven a lo del catalogo, DECISIONES 57). */
+  herrajes: PlannedHardware[];
+  /** Herrajes de este modulo ajustados a mano, que se pierden. */
+  herrajesManuales: number;
   antes: { placasEstimadas: number; presupuestoEstimado: number; presupuestoConHerrajes: number };
   despues: ModuleOrderEstimate;
 };

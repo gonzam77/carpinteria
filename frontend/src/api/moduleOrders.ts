@@ -1,7 +1,7 @@
 // Llamadas a la API de solicitudes de modulos (/api/pedidos-modulos, spec §13.2).
 import axios from "axios";
 import { api } from "./client";
-import type { EstadoSolicitud, ModuleOrder, ModuleOrderClient, ModuleOrderLineInput, ModuleOrderClientSuggestion, ModuleOrderListItem, ModuleOrderPreview, ModuleRecalcPreview } from "../types";
+import type { EstadoSolicitud, ModuleOrder, ModuleOrderClient, ModuleOrderLineInput, ModuleOrderClientSuggestion, ModuleOrderListItem, ModuleOrderPreview, ModuleRecalcPreview, OrderHardwareRecalc } from "../types";
 
 /** Vista previa (spec §8.5). La senal corta la espera en el navegador (el servidor la calcula igual, PLAN P12). */
 export const previewModuleOrder = async (data: Partial<ModuleOrderClient> & { modulos: ModuleOrderLineInput[] }, options: { signal?: AbortSignal } = {}) =>
@@ -31,6 +31,9 @@ export const previewModuleRecalc = async (id: string, moduloPedidoId: string, li
 /** Aplica el recalculo: con la version que mostro la vista previa y la fecha de la solicitud que se leyo. */
 export const applyModuleRecalc = async (id: string, moduloPedidoId: string, line: ModuleOrderLineInput & { fechaActualizacion: string }) =>
   (await api.post<ModuleOrder>(`/pedidos-modulos/${id}/modulos/${moduloPedidoId}/recalcular`, line)).data;
+
+/** "Recalcular herrajes" de la edicion (F6.4): lo que da el catalogo para cada modulo, sin guardar. */
+export const recalculateOrderHardware = async (id: string) => (await api.post<OrderHardwareRecalc>(`/pedidos-modulos/${id}/herrajes/recalcular`)).data;
 
 /** Listado (spec §9.1). La senal corta una busqueda vieja cuando se pide otra. */
 export async function listModuleOrders(

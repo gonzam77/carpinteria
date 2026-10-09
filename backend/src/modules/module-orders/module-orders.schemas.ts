@@ -120,6 +120,26 @@ const moduleOrderDetailEditSchema = detailSchema.extend({
 });
 
 /**
+ * Un herraje de la edicion (F6.4, DECISIONES 57): el guardado (con su id) o uno nuevo, de un modulo de la solicitud,
+ * con su modelo y su cantidad. El nombre, el precio y el origen los pone el servidor. Un guardado cuyo modelo se borro
+ * del catalogo viene sin modelo (null) y sigue como esta.
+ */
+const moduleOrderHardwareEditSchema = z
+  .object({
+    id: z.string({ invalid_type_error: "El id del herraje no es válido" }).uuid("El id del herraje no es válido").nullable().optional().default(null),
+    pedidoModuloId: requiredId("Cada herraje va con un módulo de la solicitud"),
+    herrajeId: z.string({ invalid_type_error: "Elegí el modelo de cada herraje" }).uuid("Elegí el modelo de cada herraje").nullable(),
+    cantidad: z
+      .number({ required_error: "Completá la cantidad de cada herraje", invalid_type_error: "La cantidad de cada herraje tiene que ser un número entero" })
+      .int("La cantidad de cada herraje tiene que ser un número entero")
+      .min(1, "La cantidad de cada herraje tiene que ser al menos 1 (para sacarlo, quitalo)")
+      .max(9999, "La cantidad de cada herraje tiene como máximo 9999")
+  })
+  .strict("Hay datos de un herraje que no se reconocen: revisá los nombres de los campos");
+
+export type ModuleOrderHardwareEdit = z.infer<typeof moduleOrderHardwareEditSchema>;
+
+/**
  * Edicion de una solicitud de modulos (spec §10.3): los datos del cliente y de la entrega y todas las filas. La fecha
  * de entrega puede seguir siendo la guardada aunque ya haya pasado; una nueva tiene que ser desde hoy (lo mira el
  * servicio). `fechaActualizacion` es la de la solicitud que se edito: si cambio mientras tanto, 409.
@@ -136,7 +156,12 @@ export const moduleOrderUpdateSchema = z
     detalles: z
       .array(moduleOrderDetailEditSchema, { required_error: "La solicitud tiene que tener al menos una pieza", invalid_type_error: "La solicitud tiene que tener al menos una pieza" })
       .min(1, "La solicitud tiene que tener al menos una pieza")
-      .max(2000, "Una solicitud tiene como máximo 2000 piezas")
+      .max(2000, "Una solicitud tiene como máximo 2000 piezas"),
+    // Los herrajes como quedan (F6.4). Sin este campo, los guardados no cambian (asi edita quien los tiene apagados).
+    herrajes: z
+      .array(moduleOrderHardwareEditSchema, { invalid_type_error: "Los herrajes van en una lista" })
+      .max(500, "Una solicitud tiene como máximo 500 herrajes")
+      .optional()
   })
   .strict("Hay datos de la solicitud que no se reconocen: revisá los nombres de los campos");
 

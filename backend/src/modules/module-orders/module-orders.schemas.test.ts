@@ -67,3 +67,19 @@ test("edición (spec §10.3): la fecha guardada puede haber pasado, las filas tr
   assert.equal(moduleOrderUpdateSchema.safeParse({ ...base, fechaActualizacion: "ayer" }).success, false);
   assert.equal(moduleOrderUpdateSchema.safeParse({ ...base, detalles: [{ ...fila, pedidoModuloId: "x" }] }).success, false);
 });
+
+test("edición con herrajes (F6.4): opcionales; cada uno con su módulo, su modelo y una cantidad entera desde 1", () => {
+  const fila = { materialId: "3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b", largo: 720, ancho: 560, cantidad: 2 };
+  const base = { cliente: "Prueba", numeroContacto: "2664000000", fechaEntrega: "2026-12-01", detalles: [fila] };
+  const herraje = { pedidoModuloId: "3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b", herrajeId: "9b1d2c3e-4f5a-4b6c-8d7e-0f1a2b3c4d5e", cantidad: 4 };
+  assert.equal(moduleOrderUpdateSchema.safeParse(base).data?.herrajes, undefined, "sin herrajes, los guardados no cambian");
+  const parsed = moduleOrderUpdateSchema.safeParse({ ...base, herrajes: [herraje, { ...herraje, id: "0f1a2b3c-4d5e-4f6a-8b7c-9d0e1f2a3b4c", herrajeId: null }] });
+  assert.equal(parsed.success, true);
+  assert.equal(parsed.data?.herrajes?.[0].id, null, "sin id es uno nuevo");
+  assert.equal(moduleOrderUpdateSchema.safeParse({ ...base, herrajes: [] }).success, true, "se pueden quitar todos");
+  const mal = (patch: Record<string, unknown>) => moduleOrderUpdateSchema.safeParse({ ...base, herrajes: [{ ...herraje, ...patch }] });
+  assert.match(mal({ cantidad: 0 }).error?.issues[0].message ?? "", /al menos 1/);
+  assert.match(mal({ cantidad: 1.5 }).error?.issues[0].message ?? "", /entero/);
+  assert.equal(mal({ pedidoModuloId: undefined }).success, false, "sin módulo");
+  assert.equal(mal({ valorUnitario: 1 }).success, false, "el precio lo pone el servidor");
+});
