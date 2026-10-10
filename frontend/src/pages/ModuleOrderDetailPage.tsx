@@ -1,19 +1,31 @@
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import DeleteIcon from "@mui/icons-material/Delete";
-import DownloadIcon from "@mui/icons-material/Download";
+import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import EditIcon from "@mui/icons-material/Edit";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
-import InventoryIcon from "@mui/icons-material/Inventory2";
-import PrintIcon from "@mui/icons-material/Print";
-import TuneIcon from "@mui/icons-material/Tune";
+import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
+import HistoryIcon from "@mui/icons-material/History";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import MailOutlineIcon from "@mui/icons-material/MailOutline";
+import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
+import OpenInFullIcon from "@mui/icons-material/OpenInFull";
+import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import TableChartOutlinedIcon from "@mui/icons-material/TableChartOutlined";
+import TuneIcon from "@mui/icons-material/Tune";
+import ViewModuleOutlinedIcon from "@mui/icons-material/ViewModuleOutlined";
+import WidgetsOutlinedIcon from "@mui/icons-material/WidgetsOutlined";
 import {
   Alert,
   type AlertColor,
   Box,
   Button,
   Chip,
-  CircularProgress,
+  Divider,
+  Link,
   MenuItem,
   Paper,
   Skeleton,
@@ -33,27 +45,27 @@ import {
   Typography
 } from "@mui/material";
 import axios from "axios";
-import { saveAs } from "file-saver";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { getModulesConfig } from "../api/catalog";
 import { changeModuleOrderDeliveryDate, getModuleOrder, moduleOrderError } from "../api/moduleOrders";
-import { CutOptimizer } from "../components/CutOptimizer";
-import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
 import { DeliveryChip } from "../components/DeliveryChip";
 import { SummaryPanel } from "../components/moduleOrderWizard/ReviewStep";
-import { OrderMaterialsDialog } from "../components/OrderMaterialsDialog";
 import { RecalcModuleDialog } from "../components/RecalcModuleDialog";
 import { OrderHardwareList } from "../components/moduleOrderWizard/ModuleHardware";
+import { MachineExcelTab } from "../components/moduleOrderDetail/MachineExcelTab";
+import { MaterialsTab } from "../components/moduleOrderDetail/MaterialsTab";
+import { detailPrintStyles, PRINT_TARGET, SectionActions } from "../components/moduleOrderDetail/SectionActions";
 import { ActionSnackbar, OrderCompletedDialog, StockShortageDialog, type StockShortage } from "../components/OrderStatusDialogs";
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { EDITED_BLUE } from "../components/PieceEdgesToggles";
 import { useTodayInArgentina } from "../hooks/useTodayInArgentina";
 import { activeStep, canChangeDeliveryDate, canEditModuleOrder, deliveryDateProblem, historyText, STATUS_STEPS } from "../lib/moduleOrderDetail";
-import { deliveryStatus, exportErrorMessage, formatCreatedDay, formatDay, STATUS_ORDER } from "../lib/moduleOrdersList";
+import { deliveryStatus, formatCreatedDay, formatDay, STATUS_ORDER } from "../lib/moduleOrdersList";
 import { buildWhatsappLink } from "../lib/whatsapp";
 import type { EstadoSolicitud, Material, ModuleOrder, ModuleOrderDetail, ModulesConfig } from "../types";
+import { WorkshopSheetsView } from "./ModuleOrderWorkshopPage";
 
 type ApiErrorBody = { message?: string; code?: string; details?: { stockShortages?: StockShortage[] } };
 
@@ -71,16 +83,43 @@ function backTarget(state: unknown) {
 }
 
 /** Un dato de la tarjeta: rotulo arriba y valor abajo. */
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+/** Un dato de la solicitud con su icono (punto 6). */
+function Field({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <Box sx={{ minWidth: 0 }}>
-      <Typography variant="caption" color="text.secondary" fontWeight={700}>
-        {label}
-      </Typography>
-      <Box sx={{ overflowWrap: "anywhere" }}>{children}</Box>
-    </Box>
+    <Stack direction="row" spacing={1.25} sx={{ minWidth: 0 }}>
+      <Box sx={{ color: "primary.main", pt: 0.25, display: "flex", "& svg": { fontSize: 20 } }} aria-hidden>
+        {icon}
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 0.4, fontSize: "0.68rem" }}>
+          {label}
+        </Typography>
+        <Box sx={{ overflowWrap: "anywhere" }}>{children}</Box>
+      </Box>
+    </Stack>
   );
 }
+
+/** Un indicador del encabezado: compacto, para leer de un vistazo (punto 10). */
+function Kpi({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <Stack direction="row" spacing={1.25} alignItems="center" sx={{ p: 1.25, borderRadius: "12px", bgcolor: "background.default", border: 1, borderColor: "divider", minWidth: 0 }}>
+      <Box sx={{ width: 36, height: 36, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "primary.main", color: "primary.contrastText", flexShrink: 0, "& svg": { fontSize: 20 } }} aria-hidden>
+        {icon}
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography fontWeight={800} fontSize="1.05rem" lineHeight={1.2} sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+          {value}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" noWrap component="p">
+          {label}
+        </Typography>
+      </Box>
+    </Stack>
+  );
+}
+
+const money = (value: number) => value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
 /** Los cantos de una fila: el nombre de cada lado que lleva canto. */
 function EdgesCell({ row }: { row: ModuleOrderDetail }) {
@@ -182,27 +221,37 @@ function ModuleBlock({
     ...(perfil ? [`Perfil ${perfil.nombre}`] : [])
   ];
   return (
-    <Paper component="section" aria-labelledby={titleId} sx={{ borderRadius: "10px", overflow: "hidden" }}>
-      <Box sx={{ px: 2, py: 1.25, bgcolor: "primary.main", color: "primary.contrastText" }}>
-        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1}>
-          <Typography id={titleId} component="h3" fontWeight={900} fontSize="1rem">
-            Módulo {modulo.posicion} · {modulo.nombreModulo}
-          </Typography>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Typography variant="body2" sx={{ opacity: 0.9 }}>
-              {rows.length} {rows.length === 1 ? "pieza" : "piezas"}
+    <Paper component="section" aria-labelledby={titleId} variant="outlined" sx={{ borderRadius: "14px", overflow: "hidden" }}>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ px: 2, py: 1.5, bgcolor: "background.default", borderBottom: 1, borderColor: "divider" }}>
+        <Stack direction="row" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+          <Box
+            aria-hidden
+            sx={{ width: 38, height: 38, borderRadius: "11px", flexShrink: 0, display: "grid", placeItems: "center", bgcolor: "primary.main", color: "primary.contrastText", fontWeight: 900 }}
+          >
+            {modulo.posicion}
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography id={titleId} component="h3" fontWeight={800} fontSize="1rem">
+              Módulo {modulo.posicion} · {modulo.nombreModulo}
             </Typography>
-            {onRecalc && (
-              <Button size="small" variant="outlined" color="inherit" startIcon={<TuneIcon />} onClick={onRecalc} sx={{ whiteSpace: "nowrap" }}>
-                Cambiar medidas o colores
-              </Button>
-            )}
-          </Stack>
+            <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" sx={{ mt: 0.5 }}>
+              {colores.map((color) => (
+                <Chip key={color} size="small" variant="outlined" label={color} sx={{ bgcolor: "background.paper" }} />
+              ))}
+            </Stack>
+          </Box>
         </Stack>
-        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-          {colores.join(" · ")}
-        </Typography>
-      </Box>
+        <Stack direction={{ xs: "row", sm: "column" }} spacing={1} alignItems={{ xs: "center", sm: "flex-end" }} justifyContent="space-between">
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+            {rows.length} {rows.length === 1 ? "pieza" : "piezas"}
+          </Typography>
+          {onRecalc && (
+            <Button size="small" variant="outlined" startIcon={<TuneIcon />} onClick={onRecalc} sx={{ whiteSpace: "nowrap" }}>
+              Cambiar medidas o colores
+            </Button>
+          )}
+        </Stack>
+      </Stack>
       {modulo.observaciones && (
         <Typography variant="body2" sx={{ px: 2, pt: 1.25 }}>
           <Box component="span" fontWeight={700}>
@@ -228,7 +277,7 @@ export function ModuleOrderDetailPage() {
   const [reload, setReload] = useState(0);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [config, setConfig] = useState<ModulesConfig | null>(null);
-  const [tab, setTab] = useState<"despiece" | "plano" | "historial">("despiece");
+  const [tab, setTab] = useState<"despiece" | "taller" | "materiales" | "excel" | "historial">("despiece");
   const [notification, setNotification] = useState("");
   const [severity, setSeverity] = useState<AlertColor>("success");
   const [changingStatus, setChangingStatus] = useState(false);
@@ -236,11 +285,7 @@ export function ModuleOrderDetailPage() {
   const [pendingStatus, setPendingStatus] = useState<EstadoSolicitud | null>(null);
   const [stockShortages, setStockShortages] = useState<StockShortage[]>([]);
   const [completionOpen, setCompletionOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [materialsOpen, setMaterialsOpen] = useState(false);
   const [recalcModulo, setRecalcModulo] = useState<ModuleOrder["modulos"][number] | null>(null);
-  const [exporting, setExporting] = useState(false);
   const [editingDate, setEditingDate] = useState(false);
   const [dateDraft, setDateDraft] = useState("");
   const [savingDate, setSavingDate] = useState(false);
@@ -328,34 +373,6 @@ export function ModuleOrderDetailPage() {
     }
   }
 
-  async function exportExcel() {
-    if (!order) return;
-    setExporting(true);
-    try {
-      const response = await api.get<Blob>("/orders/export", { params: { ids: order.id }, responseType: "blob" });
-      saveAs(response.data, `pedido-M${order.numero}.xlsx`);
-    } catch (error) {
-      notify(await exportErrorMessage(error), "error");
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function deleteOrder() {
-    if (!order) return;
-    setDeleting(true);
-    try {
-      await api.delete(`/orders/${order.id}`);
-      navigate(backTo, { state: { notification: `Solicitud M-${order.numero} eliminada.` } });
-    } catch (error) {
-      setDeleteOpen(false);
-      notify(moduleOrderError(error, "No se pudo eliminar la solicitud.", true).message, "error");
-      if (axios.isAxiosError(error) && error.response?.status === 409) await refresh().catch(() => undefined);
-    } finally {
-      setDeleting(false);
-    }
-  }
-
   function startDateEdit() {
     if (!order) return;
     setDateDraft(order.fechaEntrega ?? "");
@@ -424,29 +441,24 @@ export function ModuleOrderDetailPage() {
   const step = activeStep(order.estado);
   const whatsappLink = buildWhatsappLink(order.numeroContacto, order.cliente, `M-${order.numero}`);
   const adicionales = rowsByModule.get("") ?? [];
+  const piezas = order.detalles.reduce((sum, row) => sum + Number(row.cantidad), 0);
+  const tabs = [
+    { value: "despiece", label: "Despiece", icon: <ViewModuleOutlinedIcon fontSize="small" /> },
+    { value: "taller", label: "Hoja de taller", icon: <AssignmentOutlinedIcon fontSize="small" /> },
+    { value: "materiales", label: "Materiales", icon: <Inventory2OutlinedIcon fontSize="small" /> },
+    { value: "excel", label: "Excel de corte", icon: <TableChartOutlinedIcon fontSize="small" /> },
+    { value: "historial", label: "Historial", icon: <HistoryIcon fontSize="small" /> }
+  ] as const;
 
   return (
     <Stack spacing={2.5}>
-      {/* Con las seis acciones al lado, desde 1200 px; mas angosto, van en una fila abajo del titulo. */}
-      <Stack direction={{ xs: "column", lg: "row" }} alignItems={{ lg: "flex-end" }} justifyContent="space-between" gap={2}>
-        <Box sx={{ minWidth: 0, flexShrink: { lg: 0 } }}>
-          <Stack direction="row" spacing={1.25} alignItems="center" useFlexGap flexWrap="wrap">
-            {/* En una linea: con todas las acciones al lado, se cortaba en "M-" y el numero abajo. */}
-            <Typography variant="h4" component="h1" sx={{ whiteSpace: "nowrap" }}>
-              Solicitud M-{order.numero}
-            </Typography>
-            <StatusChip size="small" status={order.estado} />
-            <DeliveryChip size="small" status={plazo} />
-          </Stack>
-          <Typography color="text.secondary">
-            {order.cliente}
-            {order.observaciones ? ` · ${order.observaciones}` : ""}
-          </Typography>
-        </Box>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap sx={{ flexWrap: "wrap", flexShrink: { lg: 1 }, justifyContent: { lg: "flex-end" }, width: { xs: "100%", sm: "auto" } }}>
-          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(backTo)} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Volver
-          </Button>
+      {detailPrintStyles}
+      {/* Barra superior (punto 5): Volver a la izquierda; Estado y Editar a la derecha. Eliminar esta en Editar. */}
+      <Stack className="no-imprimir" direction="row" alignItems="center" justifyContent="space-between" gap={1} flexWrap="wrap">
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(backTo)} sx={{ ml: -1 }}>
+          Volver
+        </Button>
+        <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" justifyContent="flex-end" sx={{ flex: { xs: "1 1 100%", sm: "0 1 auto" } }}>
           <TextField
             select
             size="small"
@@ -457,7 +469,7 @@ export function ModuleOrderDetailPage() {
               const estado = event.target.value as EstadoSolicitud;
               if (estado !== order.estado) void submitStatusChange(estado);
             }}
-            sx={{ minWidth: { sm: 160 }, width: { xs: "100%", sm: "auto" } }}
+            sx={{ minWidth: 170, flex: { xs: 1, sm: "none" } }}
           >
             {STATUS_ORDER.map((estado) => (
               <MenuItem key={estado} value={estado}>
@@ -467,49 +479,70 @@ export function ModuleOrderDetailPage() {
           </TextField>
           {/* Como en corte (spec §10.1): no en proceso, terminada ni entregada. El formulario vuelve aca. */}
           {canEditModuleOrder(order.estado) && (
-            <Button variant="outlined" startIcon={<EditIcon />} onClick={() => navigate(`/modulos/${order.id}/editar`, { state: { returnTo: backTo } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/modulos/${order.id}/editar`, { state: { returnTo: backTo } })} sx={{ flex: { xs: 1, sm: "none" } }}>
               Editar
             </Button>
           )}
-          <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => navigate(`/modulos/${order.id}/taller`, { state: { returnTo: backTo } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Hoja de taller
-          </Button>
-          <Button variant="outlined" startIcon={<InventoryIcon />} onClick={() => setMaterialsOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Materiales
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={exporting ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />}
-            onClick={() => void exportExcel()}
-            disabled={exporting}
-            sx={{ width: { xs: "100%", sm: "auto" } }}
-          >
-            {exporting ? "Exportando..." : "Exportar Excel"}
-          </Button>
-          <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => setDeleteOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Eliminar
-          </Button>
         </Stack>
       </Stack>
 
-      <Paper component="section" aria-label="Datos de la solicitud" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "10px" }}>
-        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(4, minmax(0, 1fr))" } }}>
-          <Field label="Cliente">
-            <Typography fontWeight={700}>{order.cliente}</Typography>
+      {/* Encabezado (punto 6): quien, cuando y cuanto, de un vistazo. */}
+      <Paper component="section" aria-label="Datos de la solicitud" className="no-imprimir" sx={{ p: { xs: 2, sm: 3 }, borderRadius: "16px" }}>
+        <Stack direction={{ xs: "column", lg: "row" }} spacing={{ xs: 2, lg: 3 }} justifyContent="space-between">
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1, lineHeight: 1.6 }}>
+              Solicitud de módulos a medida
+            </Typography>
+            <Stack direction="row" spacing={1.25} alignItems="center" useFlexGap flexWrap="wrap">
+              <Typography variant="h4" component="h1" sx={{ whiteSpace: "nowrap" }}>
+                Solicitud M-{order.numero}
+              </Typography>
+              <StatusChip size="small" status={order.estado} />
+              <DeliveryChip size="small" status={plazo} />
+            </Stack>
+            <Typography fontWeight={700} fontSize="1.1rem" sx={{ mt: 0.5 }}>
+              {order.cliente}
+            </Typography>
+            {order.observaciones && <Typography color="text.secondary">{order.observaciones}</Typography>}
+          </Box>
+          <Box sx={{ display: "grid", gap: 1.25, gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" }, alignSelf: { lg: "center" }, minWidth: { lg: 560 } }}>
+            <Kpi icon={<WidgetsOutlinedIcon />} label={order.modulos.length === 1 ? "módulo" : "módulos"} value={String(order.modulos.length)} />
+            <Kpi icon={<ViewModuleOutlinedIcon />} label={piezas === 1 ? "pieza" : "piezas"} value={String(piezas)} />
+            <Kpi icon={<LayersOutlinedIcon />} label={order.placasEstimadas === 1 ? "placa" : "placas"} value={String(order.placasEstimadas)} />
+            <Kpi icon={<PaymentsOutlinedIcon />} label={order.costoHerrajes > 0 ? "total con herrajes" : "presupuesto"} value={money(order.presupuestoConHerrajes)} />
+          </Box>
+        </Stack>
+        <Divider sx={{ my: 2.5 }} />
+        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(3, minmax(0, 1fr))" } }}>
+          <Field label="Teléfono" icon={<PhoneOutlinedIcon />}>
+            {order.numeroContacto ? (
+              <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                <Link href={`tel:${order.numeroContacto}`} underline="hover" color="inherit" fontWeight={600}>
+                  {order.numeroContacto}
+                </Link>
+                {whatsappLink && (
+                  <Link href={whatsappLink} target="_blank" rel="noreferrer" underline="hover" variant="body2">
+                    WhatsApp
+                  </Link>
+                )}
+              </Stack>
+            ) : (
+              <Typography color="text.secondary">Sin teléfono</Typography>
+            )}
           </Field>
-          <Field label="Teléfono">
-            <Typography>{order.numeroContacto || "Sin teléfono"}</Typography>
+          <Field label="Email" icon={<MailOutlineIcon />}>
+            {order.emailContacto ? (
+              <Link href={`mailto:${order.emailContacto}`} underline="hover" color="inherit">
+                {order.emailContacto}
+              </Link>
+            ) : (
+              <Typography color="text.secondary">Sin email</Typography>
+            )}
           </Field>
-          <Field label="Email">
-            <Typography>{order.emailContacto || "Sin email"}</Typography>
+          <Field label="Dirección de entrega" icon={<PlaceOutlinedIcon />}>
+            <Typography color={order.direccionEntrega ? "text.primary" : "text.secondary"}>{order.direccionEntrega || "Sin dirección"}</Typography>
           </Field>
-          <Field label="Dirección de entrega">
-            <Typography>{order.direccionEntrega || "Sin dirección"}</Typography>
-          </Field>
-          <Field label="Referencia del trabajo">
-            <Typography>{order.observaciones || "Sin referencia"}</Typography>
-          </Field>
-          <Field label="Fecha de entrega">
+          <Field label="Fecha de entrega" icon={<EventOutlinedIcon />}>
             {editingDate ? (
               <Stack spacing={1} sx={{ mt: 0.5 }}>
                 <TextField
@@ -544,30 +577,30 @@ export function ModuleOrderDetailPage() {
               <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
                 <Typography fontWeight={700}>{formatDay(order.fechaEntrega) || "Sin fecha"}</Typography>
                 {canChangeDeliveryDate(order.estado) && (
-                  <Button size="small" startIcon={<EditCalendarIcon />} onClick={startDateEdit}>
+                  <Button size="small" startIcon={<EditCalendarIcon />} onClick={startDateEdit} sx={{ py: 0 }}>
                     Cambiar
                   </Button>
                 )}
               </Stack>
             )}
           </Field>
-          <Field label="Creada">
+          <Field label="Creada" icon={<PersonOutlineIcon />}>
             <Typography>
               {formatCreatedDay(order.fechaCreacion)}
               {order.usuario ? ` por ${order.usuario.nombre} ${order.usuario.apellido}` : ""}
             </Typography>
           </Field>
-          <Field label="Módulos">
-            <Typography>{order.modulos.length}</Typography>
+          <Field label="Referencia del trabajo" icon={<NotesOutlinedIcon />}>
+            <Typography color={order.observaciones ? "text.primary" : "text.secondary"}>{order.observaciones || "Sin referencia"}</Typography>
           </Field>
         </Box>
-        <Box sx={{ mt: 2.5 }}>
+        <Box sx={{ mt: 3 }}>
           {step === null ? (
             <Alert severity="error" variant="outlined">
               La solicitud está rechazada.
             </Alert>
           ) : (
-            <Stepper activeStep={step} alternativeLabel aria-label="Estado de la solicitud">
+            <Stepper activeStep={step} alternativeLabel aria-label="Estado de la solicitud" sx={{ "& .MuiStepLabel-label": { fontSize: { xs: 11, sm: 13 } } }}>
               {STATUS_STEPS.map((estado, index) => (
                 <Step key={estado} completed={index < step || order.estado === "ENTREGADA"}>
                   <StepLabel>{getStatusStyle(estado).label}</StepLabel>
@@ -578,13 +611,13 @@ export function ModuleOrderDetailPage() {
         </Box>
       </Paper>
 
-      <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+      <Paper className="no-imprimir" sx={{ borderRadius: "14px", px: 1 }}>
         <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable" allowScrollButtonsMobile aria-label="Secciones de la solicitud">
-          <Tab value="despiece" label="Despiece" id="tab-despiece" aria-controls="panel-despiece" />
-          <Tab value="plano" label="Plano de cortes" id="tab-plano" aria-controls="panel-plano" />
-          <Tab value="historial" label="Historial" id="tab-historial" aria-controls="panel-historial" />
+          {tabs.map((item) => (
+            <Tab key={item.value} value={item.value} label={item.label} icon={item.icon} iconPosition="start" id={`tab-${item.value}`} aria-controls={`panel-${item.value}`} sx={{ minHeight: 52 }} />
+          ))}
         </Tabs>
-      </Box>
+      </Paper>
 
       {tab === "despiece" && (
         <Box role="tabpanel" id="panel-despiece" aria-labelledby="tab-despiece" sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 340px" }, alignItems: "start" }}>
@@ -600,9 +633,9 @@ export function ModuleOrderDetailPage() {
               />
             ))}
             {adicionales.length > 0 && (
-              <Paper component="section" aria-labelledby="piezas-adicionales" sx={{ borderRadius: "10px", overflow: "hidden" }}>
-                <Box sx={{ px: 2, py: 1.25, bgcolor: "secondary.main", color: "secondary.contrastText" }}>
-                  <Typography id="piezas-adicionales" component="h3" fontWeight={900} fontSize="1rem">
+              <Paper component="section" aria-labelledby="piezas-adicionales" variant="outlined" sx={{ borderRadius: "14px", overflow: "hidden" }}>
+                <Box sx={{ px: 2, py: 1.5, bgcolor: "background.default", borderBottom: 1, borderColor: "divider" }}>
+                  <Typography id="piezas-adicionales" component="h3" fontWeight={800} fontSize="1rem">
                     Piezas adicionales
                   </Typography>
                 </Box>
@@ -613,24 +646,59 @@ export function ModuleOrderDetailPage() {
           <SummaryPanel preview={order} status="ready" units={order.modulos.length} materials={materials} herrajesHabilitados={Boolean(config?.herrajesHabilitados) || order.costoHerrajes > 0} />
         </Box>
       )}
-      {tab === "plano" && (
-        <Paper role="tabpanel" id="panel-plano" aria-labelledby="tab-plano" sx={{ p: 2, borderRadius: "10px" }}>
-          <CutOptimizer rows={order.detalles} materials={materials} autoCalculate />
-        </Paper>
+      {tab === "taller" && (
+        <Stack role="tabpanel" id="panel-taller" aria-labelledby="tab-taller" spacing={2}>
+          <SectionActions
+            title="Hoja de taller"
+            description="Una hoja A4 por módulo, con el despiece, los cantos y los herrajes, para armar y controlar."
+            extra={
+              <Button variant="outlined" startIcon={<OpenInFullIcon />} onClick={() => navigate(`/modulos/${order.id}/taller`, { state: { returnTo: backTo } })}>
+                Pantalla completa
+              </Button>
+            }
+          />
+          <Box className={`${PRINT_TARGET} taller-fondo`} sx={{ overflowX: "auto", bgcolor: "#e9e4dc", borderRadius: "14px", p: { xs: 1, sm: 2 } }}>
+            <WorkshopSheetsView order={order} />
+          </Box>
+        </Stack>
+      )}
+      {tab === "materiales" && (
+        <Box role="tabpanel" id="panel-materiales" aria-labelledby="tab-materiales">
+          <MaterialsTab order={order} onError={(message) => notify(message, "error")} />
+        </Box>
+      )}
+      {tab === "excel" && (
+        <Box role="tabpanel" id="panel-excel" aria-labelledby="tab-excel">
+          <MachineExcelTab
+            order={order}
+            materials={materials}
+            onSaved={(message) => {
+              notify(message);
+              void refresh().catch(() => undefined);
+            }}
+            onError={(message) => notify(message, "error")}
+          />
+        </Box>
       )}
       {tab === "historial" && (
-        <Paper role="tabpanel" id="panel-historial" aria-labelledby="tab-historial" sx={{ p: 2.5, borderRadius: "10px" }}>
-          <Stack component="ol" spacing={1.25} sx={{ m: 0, p: 0, listStyle: "none" }}>
-            {(order.historial ?? []).map((item) => (
-              <Box component="li" key={item.id}>
-                <Typography variant="body2" fontWeight={700}>
-                  {historyText(item)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {new Date(item.fechaCreacion).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "short", timeStyle: "short" })} ·{" "}
-                  {item.usuario.nombre} {item.usuario.apellido}
-                </Typography>
-              </Box>
+        <Paper role="tabpanel" id="panel-historial" aria-labelledby="tab-historial" sx={{ p: { xs: 2, sm: 3 }, borderRadius: "14px" }}>
+          <Stack component="ol" sx={{ m: 0, p: 0, listStyle: "none" }}>
+            {(order.historial ?? []).map((item, index, items) => (
+              <Stack component="li" key={item.id} direction="row" spacing={1.75}>
+                <Stack alignItems="center" aria-hidden>
+                  <Box sx={{ width: 12, height: 12, borderRadius: "50%", mt: 0.6, bgcolor: index === 0 ? "primary.main" : "divider", border: 2, borderColor: "primary.main" }} />
+                  {index < items.length - 1 && <Box sx={{ width: 2, flex: 1, bgcolor: "divider", my: 0.5 }} />}
+                </Stack>
+                <Box sx={{ pb: 2, minWidth: 0 }}>
+                  <Typography variant="body2" fontWeight={700}>
+                    {historyText(item)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {new Date(item.fechaCreacion).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "short", timeStyle: "short" })} ·{" "}
+                    {item.usuario.nombre} {item.usuario.apellido}
+                  </Typography>
+                </Box>
+              </Stack>
             ))}
           </Stack>
         </Paper>
@@ -645,7 +713,6 @@ export function ModuleOrderDetailPage() {
         onConfirm={() => pendingStatus && void submitStatusChange(pendingStatus, true)}
       />
       <OrderCompletedDialog open={completionOpen} whatsappLink={whatsappLink} onClose={() => setCompletionOpen(false)} />
-      <OrderMaterialsDialog order={materialsOpen ? order : null} open={materialsOpen} onClose={() => setMaterialsOpen(false)} />
       <RecalcModuleDialog
         order={order}
         modulo={recalcModulo}
@@ -659,7 +726,6 @@ export function ModuleOrderDetailPage() {
           notify(`Módulo ${posicion} recalculado.`);
         }}
       />
-      <DeleteOrderDialog order={order} open={deleteOpen} loading={deleting} onCancel={() => setDeleteOpen(false)} onConfirm={() => void deleteOrder()} />
       <ActionSnackbar message={notification} severity={severity} onClose={() => setNotification("")} />
     </Stack>
   );

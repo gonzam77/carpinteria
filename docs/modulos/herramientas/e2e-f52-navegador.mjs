@@ -389,8 +389,9 @@ try {
   await page.setViewportSize({ width: 1024, height: 800 });
   await page.waitForTimeout(300);
   const detalle1024 = await desborde();
-  const eliminar = await page.getByRole("button", { name: "Eliminar" }).boundingBox();
-  check("detalle 1024: las acciones entran", detalle1024.ok && eliminar && eliminar.x + eliminar.width <= 1024, `${detalle1024.ancho}`);
+  // Arriba solo Volver, Estado y Editar (punto 5): Editar es la ultima.
+  const editarBoton = await page.getByRole("button", { name: "Editar", exact: true }).boundingBox();
+  check("detalle 1024: las acciones entran", detalle1024.ok && editarBoton && editarBoton.x + editarBoton.width <= 1024, `${detalle1024.ancho}`);
   await shot("k2-detalle-1024");
 
   if (ymd(new Date()) !== hoy) check("la corrida cruzó la medianoche de Argentina: volvé a correrla", false);

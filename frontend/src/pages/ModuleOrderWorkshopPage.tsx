@@ -226,31 +226,17 @@ function Sheet({
   );
 }
 
-/** Hojas de taller de una solicitud de modulos (spec §11.2), en /modulos/:id/taller: una hoja A4 por modulo. Solo ADMIN. */
-export function ModuleOrderWorkshopPage() {
-  const { id = "" } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
+/**
+ * Las hojas de taller de una solicitud (spec §11.2): una A4 por modulo, con los estilos de impresion. Las usan esta
+ * pagina y la pestaña "Hoja de taller" del detalle. Trae los cantos (para leerlos por color) y las imagenes del catalogo.
+ */
+export function WorkshopSheetsView({ order }: { order: ModuleOrder }) {
   const { settings } = useCompanySettings();
-  const [order, setOrder] = useState<ModuleOrder | null>(null);
-  const [error, setError] = useState("");
   const [materials, setMaterials] = useState<Material[]>([]);
   const [imageVersions, setImageVersions] = useState<Map<string, string | null>>(new Map());
-  const [returnTo] = useState(() => listReturn(location.state));
 
   useEffect(() => {
     let current = true;
-    getModuleOrder(id)
-      .then((data) => current && setOrder(data))
-      .catch((loadError) => {
-        if (!current) return;
-        // Una solicitud de corte no tiene hoja de taller: se ve su detalle.
-        if (axios.isAxiosError(loadError) && loadError.response?.status === 404) {
-          navigate(`/pedidos/${id}`, { replace: true });
-          return;
-        }
-        setError(moduleOrderError(loadError, "No se pudo cargar la solicitud.").message);
-      });
     api
       .get<Material[]>("/materiales", { params: { incluirInactivos: true } })
       .then((response) => current && setMaterials(response.data))
@@ -262,8 +248,7 @@ export function ModuleOrderWorkshopPage() {
     return () => {
       current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, []);
 
   const edges = useMemo(() => {
     const plates = new Map(materials.filter((material) => material.tipo === "PLACA").map((material) => [material.id, material.nombre.trim()]));
@@ -281,12 +266,50 @@ export function ModuleOrderWorkshopPage() {
     );
   }, [materials]);
 
+  const sheets = useMemo(() => workshopSheets(order), [order]);
+  return (
+    <>
+      {printStyles}
+      {sheets.map((sheet) => (
+        <Sheet key={sheet.key} order={order} sheet={sheet} edges={edges} imageVersions={imageVersions} companyName={settings.nombre} />
+      ))}
+    </>
+  );
+}
+
+/** Hojas de taller de una solicitud de modulos (spec §11.2), en /modulos/:id/taller: una hoja A4 por modulo. Solo ADMIN. */
+export function ModuleOrderWorkshopPage() {
+  const { id = "" } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [order, setOrder] = useState<ModuleOrder | null>(null);
+  const [error, setError] = useState("");
+  const [returnTo] = useState(() => listReturn(location.state));
+
+  useEffect(() => {
+    let current = true;
+    getModuleOrder(id)
+      .then((data) => current && setOrder(data))
+      .catch((loadError) => {
+        if (!current) return;
+        // Una solicitud de corte no tiene hoja de taller: se ve su detalle.
+        if (axios.isAxiosError(loadError) && loadError.response?.status === 404) {
+          navigate(`/pedidos/${id}`, { replace: true });
+          return;
+        }
+        setError(moduleOrderError(loadError, "No se pudo cargar la solicitud.").message);
+      });
+    return () => {
+      current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   const sheets = useMemo(() => (order ? workshopSheets(order) : []), [order]);
   const back = () => navigate(`/modulos/${id}`, { state: { returnTo } });
 
   return (
     <Box className="taller-fondo" sx={{ minHeight: "100vh", bgcolor: "#e9e4dc", pb: 4 }}>
-      {printStyles}
       <Box className="taller-pantalla" sx={{ position: "sticky", top: 0, zIndex: 2, bgcolor: "background.paper", borderBottom: "1px solid", borderColor: "divider", mb: 3 }}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} justifyContent="space-between" sx={{ maxWidth: "210mm", mx: "auto", px: 2, py: 1.5 }}>
           <Box>
@@ -317,7 +340,7 @@ export function ModuleOrderWorkshopPage() {
           <CircularProgress aria-label="Cargando la solicitud" />
         </Stack>
       )}
-      {order && sheets.map((sheet) => <Sheet key={sheet.key} order={order} sheet={sheet} edges={edges} imageVersions={imageVersions} companyName={settings.nombre} />)}
+      {order && <WorkshopSheetsView order={order} />}
     </Box>
   );
 }

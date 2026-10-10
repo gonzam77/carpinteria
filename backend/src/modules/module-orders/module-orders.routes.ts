@@ -5,8 +5,11 @@ import { Router } from "express";
 import { EstadoPedido, Rol, TipoPedido } from "../../generated/prisma/client.js";
 import { prisma } from "../../config/prisma.js";
 import { authenticate, authorize } from "../../middlewares/auth.js";
-import { asyncHandler } from "../../utils/http.js";
-import { moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema, moduleOrderUpdateSchema, moduleRecalcPreviewSchema, moduleRecalcSchema, moduleOrderClientsSchema } from "./module-orders.schemas.js";
+import { AppError, asyncHandler } from "../../utils/http.js";
+import { buildMaterialsWorkbook } from "../orders/excel.service.js";
+import { buildOrderMaterialsSummary } from "../orders/order-estimate.service.js";
+import { DETALLES_ORDENADOS } from "../orders/order-queries.js";
+import { excelCorteSchema, moduleOrderCreateSchema, moduleOrderDeliveryDateSchema, moduleOrderFiltersSchema, moduleOrderPreviewSchema, moduleOrderUpdateSchema, moduleRecalcPreviewSchema, moduleRecalcSchema, moduleOrderClientsSchema } from "./module-orders.schemas.js";
 import {
   buildModuleOrder,
   buildModuleOrderEstimate,
@@ -17,6 +20,8 @@ import {
   listModuleOrders,
   recalculateModule,
   recalculateOrderHardware,
+  getMachineExcel,
+  saveMachineExcel,
   searchModuleOrderClients,
   updateModuleOrder
 } from "./module-orders.service.js";
@@ -127,6 +132,36 @@ moduleOrdersRouter.post(
   asyncHandler(async (req: any, res: any) => {
     const data = moduleRecalcPreviewSchema.parse(req.body);
     res.json(await recalculateModule(prisma, req.params.id, req.params.moduloPedidoId, data, { apply: false, userId: req.user.id }));
+  })
+);
+
+/** El Excel de corte con sus ajustes a mano (punto 5): lo mismo que sale en el archivo. */
+moduleOrdersRouter.get(
+  "/:id/excel-corte",
+  asyncHandler(async (req: any, res: any) => {
+    res.json(await getMachineExcel(prisma, req.params.id));
+  })
+);
+
+/** Guarda los ajustes a mano del Excel de corte (celdas y columnas agregadas). */
+moduleOrdersRouter.put(
+  "/:id/excel-corte",
+  asyncHandler(async (req: any, res: any) => {
+    res.json(await saveMachineExcel(prisma, req.params.id, excelCorteSchema.parse(req.body), req.user.id));
+  })
+);
+
+/** El listado de materiales en Excel (pestaña Materiales del detalle). */
+moduleOrdersRouter.get(
+  "/:id/materiales.xlsx",
+  asyncHandler(async (req: any, res: any) => {
+    const order = await prisma.pedido.findFirst({ where: { id: req.params.id, tipo: TipoPedido.MODULOS }, include: { detalles: DETALLES_ORDENADOS } });
+    if (!order) throw new AppError(404, "Solicitud de módulos no encontrada.");
+    const workbook = buildMaterialsWorkbook(order.numero, await buildOrderMaterialsSummary(prisma, order));
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="materiales-M${order.numero}.xlsx"`);
+    await workbook.xlsx.write(res);
+    res.end();
   })
 );
 

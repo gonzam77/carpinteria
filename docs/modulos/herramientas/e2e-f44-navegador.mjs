@@ -220,7 +220,7 @@ try {
     const { context, page } = await newPage(carpintero);
     await page.goto(`${APP}/`);
     await page.getByRole("link", { name: "Solicitar cortes" }).waitFor();
-    check("carpintero: el menu no tiene Modulos a medida", (await page.getByRole("link", { name: "Módulos a medida" }).count()) === 0);
+    check("carpintero: el menu no tiene Modulos a medida", (await page.getByRole("link", { name: "Solicitudes de módulos" }).count()) === 0);
     await page.goto(`${APP}/modulos/nueva`);
     await page.waitForTimeout(1500);
     check("carpintero: /modulos/nueva vuelve al inicio", new URL(page.url()).pathname === "/", new URL(page.url()).pathname);
@@ -285,10 +285,10 @@ try {
   };
 
   await page.goto(`${APP}/`);
-  const menu = page.getByRole("link", { name: "Módulos a medida" });
+  const menu = page.getByRole("link", { name: "Solicitudes de módulos" });
   await menu.waitFor();
   const menuItems = await page.locator("nav a, .MuiDrawer-root a").evaluateAll((links) => [...new Set(links.map((link) => link.textContent.trim()))]);
-  check("menu: Modulos a medida debajo de Solicitar cortes", menuItems.indexOf("Módulos a medida") === menuItems.indexOf("Solicitar cortes") + 1, menuItems.join(" / "));
+  check("menu: Modulos a medida debajo de Solicitar cortes", menuItems.indexOf("Solicitudes de módulos") === menuItems.indexOf("Solicitar cortes") + 1, menuItems.join(" / "));
   // El menu lleva al listado (F4.5); desde ahi se entra al asistente.
   await menu.click();
   await page.waitForURL(`${APP}/modulos`);
@@ -355,8 +355,10 @@ try {
   check("paso 2: espacio la marca", (await moduleButton("Especiero").getAttribute("aria-pressed")) === "true");
   await page.keyboard.press(" ");
   check("paso 2: espacio la desmarca", (await moduleButton("Especiero").getAttribute("aria-pressed")) === "false");
-  const contador = norm(await page.locator(".MuiChip-label", { hasText: /elegidos?$/ }).innerText());
-  check("paso 2: contador", contador === "3 módulos elegidos", contador);
+  // El panel de elegidos (punto 3): la lista y el total.
+  const elegidos = page.getByRole("complementary", { name: "Módulos elegidos" });
+  const contador = norm(await elegidos.getByText(/elegidos?$/).last().innerText());
+  check("paso 2: contador en el panel de elegidos", contador === "3 módulos elegidos" && (await elegidos.getByRole("listitem").count()) >= 2, contador);
   await page.getByRole("combobox", { name: /^Categoría/ }).click();
   const categorias = await page.getByRole("option").allInnerTexts();
   await page.keyboard.press("Escape");
@@ -814,14 +816,8 @@ try {
   );
   await despiece(1, "Bajo mesada 2 puertas").waitFor();
 
-  // Plano de cortes: mismas placas que la vista previa (paridad), con "Calculando..." mientras calcula.
-  await page.getByText("Plano de cortes", { exact: true }).click();
-  const plano = page.locator(".MuiAccordion-root");
-  await plano.getByRole("button", { name: "Optimizar cortes" }).click();
-  await plano.getByText(/^Placas necesarias: \d+/).waitFor({ timeout: 60000 });
-  const planoTexto = norm(await plano.getByText(/^Placas necesarias: \d+/).innerText());
-  check("plano: mismas placas que la vista previa y sin importes", planoTexto === `Placas necesarias: ${preview.placasEstimadas}` && !norm(await plano.innerText()).includes("Costo"), planoTexto);
-  await shot("w5-plano");
+  // Punto 16 (2026-10-09): el paso 4 ya no tiene el plano de cortes; esta solo en la pestaña Excel de corte del detalle.
+  check("paso 4 sin el plano de cortes ni el optimizador", (await page.getByText("Plano de cortes", { exact: true }).count()) === 0 && (await page.getByRole("button", { name: "Optimizar cortes" }).count()) === 0);
 
   for (const [width, height, label] of [
     [768, 1024, "tablet"],
@@ -981,7 +977,9 @@ try {
     `${guardada.placasEstimadas} placas guardadas, ${preview.placasEstimadas} en la vista previa`
   );
   check("detalle de la solicitud creada: con Editar (pendiente, F5.2)", (await page.getByRole("button", { name: "Editar", exact: true }).count()) === 1);
-  await page.getByRole("tab", { name: "Plano de cortes" }).click();
+  // El plano, al final de la pestaña Excel de corte (punto 7).
+  await page.getByRole("tab", { name: "Excel de corte" }).click();
+  await page.getByRole("region", { name: "Optimizar cortes" }).getByRole("button", { name: "Optimizar cortes" }).click({ timeout: 30000 });
   const planoDetalle = page.getByText(/^Placas necesarias: \d+ - Costo estimado: /);
   await planoDetalle.waitFor({ timeout: 60000 });
   const detalleTexto = norm(await planoDetalle.innerText());
@@ -1038,7 +1036,7 @@ try {
   await page.waitForTimeout(300);
   await page.getByRole("link", { name: "Dashboard" }).click();
   await page.waitForURL(`${APP}/`);
-  await page.getByRole("link", { name: "Módulos a medida" }).click();
+  await page.getByRole("link", { name: "Solicitudes de módulos" }).click();
   await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
   const esperando = await page
     .getByText("Se está terminando de crear la solicitud que mandaste antes de salir de la pantalla.")
@@ -1085,7 +1083,7 @@ try {
   await page.waitForTimeout(200);
   await page.getByRole("link", { name: "Dashboard" }).click();
   await page.waitForURL(`${APP}/`);
-  await page.getByRole("link", { name: "Módulos a medida" }).click();
+  await page.getByRole("link", { name: "Solicitudes de módulos" }).click();
   await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
   const bannerPerdida = page.locator(".MuiAlert-root", { hasText: "Tenés una solicitud sin terminar" });
   await bannerPerdida.waitFor({ timeout: 60000 });
@@ -1114,11 +1112,11 @@ try {
   // El detalle de modulos (F5.1) lleva la barra de la seccion, y "Volver" lleva al listado. Desde ahi se vuelve al
   // asistente, que arranca vacio.
   let barraDetalle = "";
-  for (let waited = 0; waited < 5000 && barraDetalle !== "Módulos a medida"; waited += 100) {
+  for (let waited = 0; waited < 5000 && barraDetalle !== "Solicitudes de módulos"; waited += 100) {
     barraDetalle = norm(await page.locator("header .MuiTypography-h6").innerText());
     await page.waitForTimeout(100);
   }
-  check("creada: el detalle en /modulos/:id lleva la barra de la seccion", new URL(page.url()).pathname === `/modulos/${creadaC.id}` && barraDetalle === "Módulos a medida", barraDetalle);
+  check("creada: el detalle en /modulos/:id lleva la barra de la seccion", new URL(page.url()).pathname === `/modulos/${creadaC.id}` && barraDetalle === "Solicitudes de módulos", barraDetalle);
   await page.getByRole("button", { name: "Volver", exact: true }).click();
   await page.waitForURL(`${APP}/modulos`, { timeout: 15000 }).catch(() => undefined);
   check("creada: Volver del detalle lleva al listado de modulos", new URL(page.url()).pathname === "/modulos");

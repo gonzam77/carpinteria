@@ -15,11 +15,13 @@ import { normalizeDetails, type NormalizedDetail } from "../orders/order-details
 import { buildOrderEstimateSnapshot, getOptimizerSettings } from "../orders/order-estimate.service.js";
 import { DETALLES_ORDENADOS } from "../orders/order-queries.js";
 import { hasStockCommitment } from "../orders/order-stock.service.js";
+import { machineRows } from "../orders/export-order.js";
+import { adjustedCells, applyAdjustments, CRITICAL_KEYS, describeAdjustments, MACHINE_COLUMNS, machineRow, normalizeAdjustments, readAdjustments } from "../orders/machine-excel.js";
 import { compareForList } from "./module-order-list.js";
 import { catalogModuleHardware, moduleBarcode, planModuleOrder, type MissingDefaultEdge, type PlanHardware, type PlanModule, type PlannedHardware } from "./module-order-plan.js";
 import { composeRows, moduleLabel, renumberProblem } from "./module-recalc.js";
 import { uniqueClients } from "./module-order-clients.js";
-import type { ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderHardwareEdit, ModuleOrderLine, ModuleOrderUpdateInput, ModuleRecalcInput } from "./module-orders.schemas.js";
+import type { ExcelCorteInput, ModuleOrderCreateInput, ModuleOrderFilters, ModuleOrderHardwareEdit, ModuleOrderLine, ModuleOrderUpdateInput, ModuleRecalcInput } from "./module-orders.schemas.js";
 
 export { moduleBarcode } from "./module-order-plan.js";
 
@@ -791,4 +793,65 @@ function hardwareRow(herraje: PlannedHardware, pedidoId: string, pedidoModuloId:
     orden: herraje.orden,
     origen: herraje.origen === "EDITADO" ? OrigenDetalle.EDITADO : OrigenDetalle.CALCULADO
   };
+}
+
+// ---------------------------------------------------------------- Excel de corte (punto 5)
+
+/** Las filas del Excel de una solicitud de modulos, en el orden de la maquina, como salen de las piezas (sin ajustes). */
+async function machineBase(tx: Tx, id: string) {
+  const order = await tx.pedido.findFirst({
+    where: { id, tipo: TipoPedido.MODULOS },
+    include: { detalles: { ...DETALLES_ORDENADOS, include: { pedidoModulo: { select: { posicion: true } } } } }
+  });
+  if (!order) throw new AppError(404, "Solicitud de módulos no encontrada.");
+  const detalles = machineRows(order);
+  return { order, detalles, rows: detalles.map(machineRow) };
+}
+
+/**
+ * La pestaña "Excel de corte": las columnas (las de la maquina y las agregadas), y cada fila con su valor (ajustado),
+ * el de la pieza y que celdas se cambiaron. Es lo mismo que sale en el archivo (excel.service.ts).
+ */
+export async function getMachineExcel(tx: Tx, id: string) {
+  const { order, detalles, rows } = await machineBase(tx, id);
+  const adjustments = readAdjustments(order.excelCorte);
+  const adjusted = applyAdjustments(rows, adjustments);
+  return {
+    numero: order.numero,
+    fechaActualizacion: order.fechaActualizacion,
+    columnas: [
+      ...MACHINE_COLUMNS.map((column) => ({ key: column.key, titulo: column.header, extra: false, critica: CRITICAL_KEYS.has(column.key) })),
+      ...adjustments.columnas.map((column) => ({ key: column.id, titulo: column.titulo, extra: true, critica: false }))
+    ],
+    columnasExtra: adjustments.columnas,
+    filas: adjusted.map((row, index) => {
+      const clave = String(rows[index]["codigo barra"]);
+      return {
+        clave,
+        posicionModulo: detalles[index].pedidoModulo?.posicion ?? null,
+        valores: row,
+        base: rows[index],
+        ajustadas: Object.keys(adjustments.celdas[clave] ?? {}).filter((key) => !adjustments.columnas.some((column) => column.id === key))
+      };
+    }),
+    ajustes: adjustedCells(adjustments)
+  };
+}
+
+/**
+ * Guarda los ajustes del Excel de corte (punto 5): solo lo que quedo distinto de las piezas y las columnas agregadas.
+ * Se puede en cualquier estado (es lo que va a la maquina). Deja AJUSTAR_EXCEL en el historial con lo que cambio.
+ */
+export async function saveMachineExcel(prisma: PrismaClient, id: string, input: ExcelCorteInput, userId: string) {
+  await prisma.$transaction(async (tx) => {
+    const { order, rows } = await machineBase(tx, id);
+    const previous = readAdjustments(order.excelCorte);
+    const next = normalizeAdjustments(input, rows);
+    const summary = describeAdjustments(previous, next);
+    if (!summary) return;
+    const empty = !next.columnas.length && !Object.keys(next.celdas).length;
+    await tx.pedido.update({ where: { id }, data: { excelCorte: empty ? Prisma.DbNull : (next as unknown as Prisma.InputJsonValue) } });
+    await tx.historialPedido.create({ data: { pedidoId: id, usuarioId: userId, accion: "AJUSTAR_EXCEL", valorNuevo: summary } });
+  });
+  return getMachineExcel(prisma, id);
 }

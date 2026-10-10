@@ -195,3 +195,43 @@ export const moduleOrderFiltersSchema = z.object({
 });
 
 export type ModuleOrderFilters = z.infer<typeof moduleOrderFiltersSchema>;
+
+/** Los titulos de las columnas de siempre: una columna agregada no puede llamarse igual. */
+const MACHINE_HEADERS = ["codigo barra", "material", "largo", "ancho", "cantidad", "canto largo 1", "canto largo 2", "canto ancho 1", "canto ancho 2", "permite rotar", "codigo barra centro p", "remark", "numero cliente", "nombre cliente", "nombre producto"];
+
+/**
+ * Los ajustes a mano del Excel de corte (punto 5): las columnas agregadas (con su titulo) y, por codigo de barra de la
+ * fila, el valor de cada celda cambiada o de cada columna agregada. El contenido va tal cual al Excel.
+ */
+export const excelCorteSchema = z
+  .object({
+    columnas: z
+      .array(
+        z
+          .object({
+            id: z.string({ invalid_type_error: "Una columna no es válida" }).regex(/^col-[a-z0-9-]{1,40}$/, "Una columna no es válida"),
+            titulo: z.string({ required_error: "Poné el título de la columna", invalid_type_error: "Poné el título de la columna" }).trim().min(1, "Poné el título de la columna").max(60, "El título de una columna tiene como máximo 60 caracteres")
+          })
+          .strict(),
+        { invalid_type_error: "Las columnas van en una lista" }
+      )
+      .max(20, "Se pueden agregar hasta 20 columnas")
+      .superRefine((columnas, ctx) => {
+        const seen = new Set<string>();
+        for (const column of columnas) {
+          const key = column.titulo.trim().toLowerCase();
+          if (MACHINE_HEADERS.includes(key)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `"${column.titulo}" ya es una columna del Excel: usá otro título.` });
+          else if (seen.has(key)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Hay dos columnas que se llaman "${column.titulo}".` });
+          seen.add(key);
+        }
+      }),
+    celdas: z
+      .record(
+        z.string().max(80),
+        z.record(z.string().max(80), z.string({ invalid_type_error: "El valor de una celda tiene que ser texto" }).max(300, "Una celda tiene como máximo 300 caracteres"))
+      )
+      .refine((celdas) => Object.keys(celdas).length <= 3000, "Hay demasiadas filas")
+  })
+  .strict("Hay datos del Excel que no se reconocen");
+
+export type ExcelCorteInput = z.infer<typeof excelCorteSchema>;

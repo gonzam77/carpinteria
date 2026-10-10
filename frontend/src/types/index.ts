@@ -398,6 +398,29 @@ export type OrderHardware = {
   origen: OrigenDetalle | null;
 };
 
+/** Una columna agregada a mano al Excel de corte (punto 5): su contenido va tal cual al archivo. */
+export type MachineExcelExtraColumn = { id: string; titulo: string };
+
+/** La pestaña "Excel de corte" (GET /api/pedidos-modulos/:id/excel-corte): lo mismo que sale en el archivo. */
+export type MachineExcel = {
+  numero: number;
+  fechaActualizacion: string;
+  /** Las de la maquina (titulo vacio en las 4 en blanco) y las agregadas (extra). critica: cambia lo que se corta. */
+  columnas: Array<{ key: string; titulo: string; extra: boolean; critica: boolean }>;
+  columnasExtra: MachineExcelExtraColumn[];
+  filas: Array<{
+    /** El codigo de barra de la pieza: no cambia al editar la solicitud. */
+    clave: string;
+    posicionModulo: number | null;
+    valores: Record<string, string | number>;
+    /** Lo que sale de la pieza, sin ajustes. */
+    base: Record<string, string | number>;
+    /** Las columnas de la maquina cambiadas a mano en esta fila. */
+    ajustadas: string[];
+  }>;
+  ajustes: { total: number; critical: number };
+};
+
 /** Respuesta de "Recalcular herrajes" (POST /api/pedidos-modulos/:id/herrajes/recalcular, F6.4): lo del catalogo, sin guardar. */
 export type OrderHardwareRecalc = {
   /** Con id, uno guardado que queda igual (conserva su precio). */

@@ -33,6 +33,8 @@ export function historyText(item: Pick<HistoryItem, "accion" | "valorAnterior" |
       return `Cambió la fecha de entrega del ${formatDay(item.valorAnterior) || "(sin fecha)"} al ${formatDay(item.valorNuevo)}`;
     case "EDITAR_PEDIDO":
       return item.valorNuevo ? `Editó la solicitud: ${item.valorNuevo}` : "Editó la solicitud";
+    case "AJUSTAR_EXCEL":
+      return item.valorNuevo ? `Ajustó el Excel de corte: ${item.valorNuevo}` : "Ajustó el Excel de corte";
     case "RECALCULAR_MODULO": {
       if (!item.valorNuevo) return "Recalculó un módulo";
       // "Módulo 2 · Bajo mesada · 900 × 780 × 580 mm": si cambiaron las medidas, se dicen las de antes.

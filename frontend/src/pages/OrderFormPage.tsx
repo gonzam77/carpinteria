@@ -2,6 +2,7 @@ import SaveIcon from "@mui/icons-material/Save";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CloseIcon from "@mui/icons-material/Close";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { Alert, Box, Button, Paper, Stack, Step, StepLabel, Stepper, TextField, Typography } from "@mui/material";
 import axios from "axios";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -14,6 +15,7 @@ import { getModuleOrder, moduleOrderError, recalculateOrderHardware } from "../a
 import { createEmptyDetail, OrderItemsGroup, OrderItemsTable } from "../components/OrderItemsTable";
 import { OrderHardwareEditor } from "../components/OrderHardwareEditor";
 import { OrderReceiptDialog } from "../components/OrderReceiptDialog";
+import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
 import { useAuth } from "../context/AuthContext";
 import { draftScope, useFormDraft } from "../hooks/useFormDraft";
 import { useTodayInArgentina } from "../hooks/useTodayInArgentina";
@@ -117,6 +119,9 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
   const [hardwareCatalog, setHardwareCatalog] = useState<ComparableHardware[]>([]);
   const [recalculatingHardware, setRecalculatingHardware] = useState(false);
   const [hardwareMessage, setHardwareMessage] = useState<{ severity: "success" | "error"; text: string } | null>(null);
+  // Eliminar una solicitud de modulos esta aca, en Editar (punto 5): se puede en cualquier estado, como antes.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [loadError, setLoadError] = useState("");
   const today = useTodayInArgentina();
   const [moduleListReturnTo] = useState(() => moduleListReturn(location.state));
@@ -550,13 +555,45 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
     }
   }
 
+  async function deleteModuleOrder() {
+    if (!savedModuleOrder) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/orders/${savedModuleOrder.id}`);
+      clearDraft();
+      navigate(moduleListReturnTo ?? "/modulos", { state: { notification: `Solicitud M-${savedModuleOrder.numero} eliminada.` } });
+    } catch (deleteError) {
+      setDeleteOpen(false);
+      const failure = moduleOrderError(deleteError, "No se pudo eliminar la solicitud.", true);
+      setError([failure.message, ...failure.items].join(" "));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const header = (
-    <Stack spacing={0.5}>
-      <Typography variant="h4">
-        {modules ? (savedModuleOrder ? `Editar solicitud M-${savedModuleOrder.numero}` : "Editar solicitud de módulos") : id ? "Editar solicitud" : "Nueva solicitud de corte"}
-      </Typography>
-      <Typography color="text.secondary">Cargá los datos del cliente, definí las piezas y revisá el resumen antes de enviar.</Typography>
+    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} justifyContent="space-between" alignItems={{ sm: "flex-start" }}>
+      <Stack spacing={0.5}>
+        <Typography variant="h4">
+          {modules ? (savedModuleOrder ? `Editar solicitud M-${savedModuleOrder.numero}` : "Editar solicitud de módulos") : id ? "Editar solicitud" : "Nueva solicitud de corte"}
+        </Typography>
+        <Typography color="text.secondary">Cargá los datos del cliente, definí las piezas y revisá el resumen antes de enviar.</Typography>
+      </Stack>
+      {modules && savedModuleOrder && (
+        <Button color="error" variant="outlined" startIcon={<DeleteOutlineIcon />} onClick={() => setDeleteOpen(true)} sx={{ flexShrink: 0, alignSelf: { xs: "flex-start", sm: "auto" } }}>
+          Eliminar solicitud
+        </Button>
+      )}
     </Stack>
+  );
+  const deleteDialog = modules && savedModuleOrder && (
+    <DeleteOrderDialog
+      order={savedModuleOrder as unknown as Order}
+      open={deleteOpen}
+      loading={deleting}
+      onCancel={() => setDeleteOpen(false)}
+      onConfirm={() => void deleteModuleOrder()}
+    />
   );
 
   // Modulos: mientras carga, o si no se puede editar, no hay formulario (no se escribe sobre datos que no llegaron).
@@ -565,11 +602,13 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
       <Stack spacing={3}>
         {header}
         {blockedMessage ? <Alert severity="error">{blockedMessage}</Alert> : <Alert severity="info">Cargando la solicitud...</Alert>}
+        {error && <Alert severity="error">{error}</Alert>}
         <Box>
           <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(moduleDetailPath, { state: { returnTo: moduleListReturnTo } })}>
             Volver a la solicitud
           </Button>
         </Box>
+        {deleteDialog}
       </Stack>
     );
   }
@@ -674,9 +713,12 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
               mode="edges"
               groups={groups}
             />
-            <Paper sx={{ p: 2, borderRadius: "8px" }}>
-              <CutOptimizer rows={rows} materials={materials} />
-            </Paper>
+            {/* Puntos 7 y 16: en modulos el optimizador esta solo en la pestaña Excel de corte del detalle. */}
+            {!modules && (
+              <Paper sx={{ p: 2, borderRadius: "8px" }}>
+                <CutOptimizer rows={rows} materials={materials} />
+              </Paper>
+            )}
           </Stack>
         )}
         {step === 3 && (
@@ -728,9 +770,11 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
                   {rows.length} piezas cargadas, {rows.reduce((total, row) => total + Number(row.cantidad || 0), 0)} unidades en total
                 </Typography>
               </Box>
-              <Paper sx={{ p: 2, borderRadius: "8px" }}>
-                <CutOptimizer rows={rows} materials={materials} />
-              </Paper>
+              {!modules && (
+                <Paper sx={{ p: 2, borderRadius: "8px" }}>
+                  <CutOptimizer rows={rows} materials={materials} />
+                </Paper>
+              )}
               {observaciones && <Typography color="text.secondary">{observaciones}</Typography>}
             </Stack>
           </Paper>
@@ -786,6 +830,7 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
         confirmLoading={submitLoading}
         errorMessage={error}
       />
+      {deleteDialog}
     </>
   );
 }

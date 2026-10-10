@@ -1,7 +1,7 @@
 // Llamadas a la API de solicitudes de modulos (/api/pedidos-modulos, spec §13.2).
 import axios from "axios";
 import { api } from "./client";
-import type { EstadoSolicitud, ModuleOrder, ModuleOrderClient, ModuleOrderLineInput, ModuleOrderClientSuggestion, ModuleOrderListItem, ModuleOrderPreview, ModuleRecalcPreview, OrderHardwareRecalc } from "../types";
+import type { EstadoSolicitud, ModuleOrder, ModuleOrderClient, ModuleOrderLineInput, ModuleOrderClientSuggestion, ModuleOrderListItem, MachineExcel, MachineExcelExtraColumn, ModuleOrderPreview, ModuleRecalcPreview, OrderHardwareRecalc } from "../types";
 
 /** Vista previa (spec §8.5). La senal corta la espera en el navegador (el servidor la calcula igual, PLAN P12). */
 export const previewModuleOrder = async (data: Partial<ModuleOrderClient> & { modulos: ModuleOrderLineInput[] }, options: { signal?: AbortSignal } = {}) =>
@@ -34,6 +34,17 @@ export const applyModuleRecalc = async (id: string, moduloPedidoId: string, line
 
 /** "Recalcular herrajes" de la edicion (F6.4): lo que da el catalogo para cada modulo, sin guardar. */
 export const recalculateOrderHardware = async (id: string) => (await api.post<OrderHardwareRecalc>(`/pedidos-modulos/${id}/herrajes/recalcular`)).data;
+
+/** El Excel de corte con sus ajustes a mano (punto 5). */
+export const getMachineExcel = async (id: string) => (await api.get<MachineExcel>(`/pedidos-modulos/${id}/excel-corte`)).data;
+
+/** Guarda los ajustes del Excel de corte: las columnas agregadas y, por codigo de barra, las celdas cambiadas. */
+export const saveMachineExcel = async (id: string, data: { columnas: MachineExcelExtraColumn[]; celdas: Record<string, Record<string, string>> }) =>
+  (await api.put<MachineExcel>(`/pedidos-modulos/${id}/excel-corte`, data)).data;
+
+/** El Excel de la maquina (con los ajustes) y el listado de materiales en Excel. */
+export const downloadMachineExcel = async (id: string) => (await api.get<Blob>("/orders/export", { params: { ids: id }, responseType: "blob" })).data;
+export const downloadMaterialsExcel = async (id: string) => (await api.get<Blob>(`/pedidos-modulos/${id}/materiales.xlsx`, { responseType: "blob" })).data;
 
 /** Listado (spec §9.1). La senal corta una busqueda vieja cuando se pide otra. */
 export async function listModuleOrders(

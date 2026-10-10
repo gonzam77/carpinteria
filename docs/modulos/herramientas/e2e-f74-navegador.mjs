@@ -75,7 +75,9 @@ try {
     { token, user: admin }
   );
   await page.goto(`${APP}/modulos/${o.id}`);
-  const pestaña = page.getByRole("tab", { name: "Plano de cortes" });
+  // El plano esta al final de la pestaña Excel de corte (punto 7, 2026-10-09): se calcula con su boton.
+  await page.getByRole("tab", { name: "Excel de corte" }).click({ timeout: 30000 });
+  const pestaña = page.getByRole("region", { name: "Optimizar cortes" }).getByRole("button", { name: "Optimizar cortes" });
   await pestaña.waitFor({ timeout: 30000 });
   // Cada cuadro que dibuja la página: si el cálculo la ocupara, habría un hueco de varios segundos entre cuadros.
   await page.evaluate(() => {

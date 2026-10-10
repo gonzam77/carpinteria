@@ -15,6 +15,7 @@ import {
 
 test("historial legible (spec §9.4)", () => {
   assert.equal(historyText({ accion: "CREAR_PEDIDO_MODULOS" }), "Creó la solicitud");
+  assert.equal(historyText({ accion: "AJUSTAR_EXCEL", valorNuevo: "1 celda modificada en total" }), "Ajustó el Excel de corte: 1 celda modificada en total");
   assert.equal(historyText({ accion: "CAMBIAR_ESTADO", valorAnterior: "PENDIENTE", valorNuevo: "EN_PROCESO" }), "Cambió el estado de Pendiente a En proceso");
   assert.equal(
     historyText({ accion: "CAMBIAR_FECHA_ENTREGA", valorAnterior: "2026-10-15", valorNuevo: "2026-10-20" }),
