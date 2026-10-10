@@ -79,7 +79,6 @@ export function ModuleEditorPage() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [serverErrors, setServerErrors] = useState<string[]>([]);
-  const [codeTouched, setCodeTouched] = useState(false);
   const [confirm, setConfirm] = useState<Confirm>(null);
   // Al crear se navega a /:id con el modulo ya cargado: no hace falta volver a pedirlo.
   const justCreated = useRef<string | null>(null);
@@ -103,7 +102,6 @@ export function ModuleEditorPage() {
     setLoadError("");
     setFeedback(null);
     setServerErrors([]);
-    setCodeTouched(false);
     Promise.all([
       id ? getModule(id) : Promise.resolve(null),
       listModuleCategories(),
@@ -183,7 +181,7 @@ export function ModuleEditorPage() {
     if (!draft || !evaluation || !defaults) return [0, 0, 0, 0, 0];
     const names = [...draft.parametros.map((param) => param.clave), ...draft.piezas.map((pieza) => pieza.codigo)];
     const claves = new Set(draft.parametros.map((param) => param.clave.toUpperCase()));
-    const general = (draft.nombre.trim().length < 2 ? 1 : 0) + (identifierProblem(draft.codigo, [draft.codigo]) ? 1 : 0) + (draft.categoriaId ? 0 : 1);
+    const general = (draft.nombre.trim().length < 2 ? 1 : 0) + (draft.categoriaId ? 0 : 1);
     const medidas =
       draft.parametros.filter((param) => identifierProblem(param.clave, names) || !param.etiqueta.trim()).length +
       defaults.errores.filter((error) => claves.has(error.ref.toUpperCase())).length;
@@ -256,9 +254,7 @@ export function ModuleEditorPage() {
   const update = (patch: Partial<ModuleDraft>) =>
     setDraft((current) => {
       if (!current) return current;
-      const next = { ...current, ...patch };
-      if (!id && !codeTouched && patch.nombre !== undefined) next.codigo = codeFromName(patch.nombre);
-      return next;
+      return { ...current, ...patch };
     });
   const setParametros = (change: (parametros: DraftParameter[]) => DraftParameter[]) =>
     setDraft((current) => (current ? { ...current, parametros: change(current.parametros) } : current));
@@ -407,8 +403,9 @@ export function ModuleEditorPage() {
             placas={placas}
             config={config}
             codeLocked={Boolean(definition?.tienePedidos)}
+            // El codigo lo arma el servidor con el nombre (punto 1): uno guardado sigue igual mientras no cambie el nombre.
+            codePreview={definition && (definition.tienePedidos || draft.nombre.trim() === definition.nombre) ? definition.codigo : codeFromName(draft.nombre)}
             importNotes={definition?.observaciones ?? null}
-            onCodeEdited={() => setCodeTouched(true)}
             moduleId={definition?.id ?? null}
             imagen={imagen}
             onImageChanged={setImagen}

@@ -25,3 +25,16 @@ test("tipo y ajuste de precios", () => {
   assert.equal(hardwareAdjustSchema.safeParse({ herrajeIds: [tipoId], percentage: -100 }).success, false);
   assert.equal(hardwareAdjustSchema.safeParse({ herrajeIds: [], percentage: 10 }).success, false);
 });
+
+test("fórmulas por defecto (punto 2): opcionales, vacías quedan null y tienen que poder leerse", () => {
+  const base = { nombre: "Corredera 450", tipoId: "3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b", unidad: "par", valor: 10500 };
+  const sin = hardwareSchema.safeParse(base);
+  assert.equal(sin.success && sin.data.formulaCantidadDefecto, undefined);
+  const con = hardwareSchema.safeParse({ ...base, formulaCantidadDefecto: " FONDO_CAJ.cant ", formulaMedidaDefecto: "  " });
+  assert.equal(con.success, true);
+  assert.equal(con.data?.formulaCantidadDefecto, "FONDO_CAJ.cant");
+  assert.equal(con.data?.formulaMedidaDefecto, null, "vacía queda null");
+  const mala = hardwareSchema.safeParse({ ...base, formulaMedidaDefecto: "PROFUNDIDAD - (50" });
+  assert.equal(mala.success, false);
+  assert.match(mala.error?.issues[0].message ?? "", /^La medida por defecto no se puede leer/);
+});

@@ -1,5 +1,5 @@
 // Configuracion › Herrajes sin React (DECISIONES 57): validar el formulario como el servidor y agrupar por tipo.
-import type { ResolvedHardware } from "./moduleFormula.ts";
+import { parseFormula, type ResolvedHardware } from "./moduleFormula.ts";
 import type { Hardware, HardwareInput, HardwareUnit } from "../types/index.ts";
 
 export const HARDWARE_UNITS: Array<{ value: HardwareUnit; label: string }> = [
@@ -9,9 +9,28 @@ export const HARDWARE_UNITS: Array<{ value: HardwareUnit; label: string }> = [
   { value: "metro", label: "Metro" }
 ];
 
-export type HardwareForm = { nombre: string; tipoId: string; unidad: HardwareUnit; valor: string; linea: string; medidaMm: string };
+export type HardwareForm = {
+  nombre: string;
+  tipoId: string;
+  unidad: HardwareUnit;
+  valor: string;
+  linea: string;
+  medidaMm: string;
+  /** Formulas por defecto: se precargan al agregarlo a un modulo. */
+  formulaCantidad: string;
+  formulaMedida: string;
+};
 
-export const emptyHardwareForm = (tipoId = ""): HardwareForm => ({ nombre: "", tipoId, unidad: "unidad", valor: "", linea: "", medidaMm: "" });
+export const emptyHardwareForm = (tipoId = ""): HardwareForm => ({
+  nombre: "",
+  tipoId,
+  unidad: "unidad",
+  valor: "",
+  linea: "",
+  medidaMm: "",
+  formulaCantidad: "",
+  formulaMedida: ""
+});
 
 export const hardwareToForm = (herraje: Hardware): HardwareForm => ({
   nombre: herraje.nombre,
@@ -19,8 +38,22 @@ export const hardwareToForm = (herraje: Hardware): HardwareForm => ({
   unidad: herraje.unidad,
   valor: String(herraje.valor),
   linea: herraje.linea ?? "",
-  medidaMm: herraje.medidaMm === null ? "" : String(herraje.medidaMm)
+  medidaMm: herraje.medidaMm === null ? "" : String(herraje.medidaMm),
+  formulaCantidad: herraje.formulaCantidadDefecto ?? "",
+  formulaMedida: herraje.formulaMedidaDefecto ?? ""
 });
+
+/** Formula por defecto: vacia es null; si no se puede leer, el problema (el servidor revisa lo mismo). */
+function defaultFormula(text: string, que: string, problems: string[]) {
+  const formula = text.trim();
+  if (!formula) return null;
+  try {
+    parseFormula(formula);
+  } catch (error) {
+    problems.push(`La ${que} por defecto no se puede leer: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return formula;
+}
 
 const number = (text: string) => Number(text.trim().replace(",", "."));
 
@@ -36,7 +69,11 @@ export function readHardwareForm(form: HardwareForm): { problems: string[]; inpu
   if (medidaMm !== null && (!Number.isFinite(medidaMm) || medidaMm <= 0)) problems.push("La medida tiene que ser un número mayor a 0.");
   const linea = form.linea.trim() || null;
   if (medidaMm !== null && !linea) problems.push("Un herraje con medida tiene que tener su línea (por ejemplo, Telescópica).");
-  return problems.length ? { problems, input: null } : { problems, input: { nombre, tipoId: form.tipoId, unidad: form.unidad, valor, linea, medidaMm } };
+  const formulaCantidadDefecto = defaultFormula(form.formulaCantidad, "cantidad", problems);
+  const formulaMedidaDefecto = defaultFormula(form.formulaMedida, "medida", problems);
+  return problems.length
+    ? { problems, input: null }
+    : { problems, input: { nombre, tipoId: form.tipoId, unidad: form.unidad, valor, linea, medidaMm, formulaCantidadDefecto, formulaMedidaDefecto } };
 }
 
 /** Los herrajes agrupados por tipo (en el orden que vienen) y, al final, los que no tienen tipo. */
@@ -77,4 +114,16 @@ export function hardwareLineSummary(resolved: ResolvedHardware, byId: Map<string
       : `${base} · necesita ${mmText(resolved.medidaNecesaria)}: ninguna entra, va la más chica (se cambia en la solicitud)`;
   }
   return base;
+}
+
+/** Por que modelo de la linea va, cuando se elige por medida (pie del campo Medida en el editor). Si no, null. */
+export function hardwareMeasureNote(resolved: ResolvedHardware) {
+  if (resolved.error) return null;
+  if (resolved.eleccion === "POR_MEDIDA" && resolved.medidaNecesaria !== null) return `Necesita ${mmText(resolved.medidaNecesaria)}: va la más larga que entra.`;
+  if (resolved.eleccion === "MAS_CHICO") {
+    return resolved.medidaNecesaria === null
+      ? "No se pudo calcular la medida: va la más chica (se cambia en la solicitud)."
+      : `Necesita ${mmText(resolved.medidaNecesaria)}: ninguna entra, va la más chica (se cambia en la solicitud).`;
+  }
+  return null;
 }

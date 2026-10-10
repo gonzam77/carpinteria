@@ -42,6 +42,20 @@ export const FORMULA_CONSTANTS = ["ESP"];
 /** Claves de medidas y codigos de piezas: UPPER_SNAKE. */
 export const IDENTIFIER_PATTERN = /^[A-Z][A-Z0-9_]*$/;
 
+/**
+ * Codigo del modulo a partir del nombre: "Bajo mesada 2 puertas" -> "BAJO_MESADA_2_PUERTAS". Lo arma el servidor al
+ * guardar (si ya lo tiene otro modulo, le agrega _2, _3...) y el editor lo muestra: no se escribe a mano.
+ */
+export function codeFromName(nombre: string) {
+  const code = nombre
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return /^[A-Z]/.test(code) ? code : code ? `M_${code}` : "";
+}
+
 /** Devuelve el motivo por el que un nombre no sirve como clave de medida o codigo de pieza, o null si es valido. */
 export function validateIdentifier(name: string): string | null {
   if (!IDENTIFIER_PATTERN.test(name)) return `"${name}" tiene que estar en mayúsculas, empezar con una letra y usar solo letras, números y _`;

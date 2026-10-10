@@ -97,7 +97,13 @@ hardwareRouter.put(
     if (!existing) throw new AppError(404, "Herraje no encontrado.");
     await assertType(data.tipoId);
     const updated = await uniqueName(
-      () => prisma.herraje.update({ where: { id: existing.id }, data: { ...data, linea: data.linea ?? null, medidaMm: data.medidaMm ?? null }, include: HARDWARE_INCLUDE }),
+      () => prisma.herraje.update({ where: { id: existing.id }, data: {
+          ...data,
+          linea: data.linea ?? null,
+          medidaMm: data.medidaMm ?? null,
+          formulaCantidadDefecto: data.formulaCantidadDefecto ?? null,
+          formulaMedidaDefecto: data.formulaMedidaDefecto ?? null
+        }, include: HARDWARE_INCLUDE }),
       `Ya hay un herraje "${data.nombre}".`
     );
     res.json(serialize(updated));

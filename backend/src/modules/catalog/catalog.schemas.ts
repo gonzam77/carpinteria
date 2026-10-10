@@ -47,8 +47,8 @@ export const piezaSchema = z.object({
     .default([])
 });
 
+/** El codigo no se manda: lo arma el servidor con el nombre (codeFromName). */
 export const moduloSchema = z.object({
-  codigo: clave,
   nombre: z.string().trim().min(2, "El nombre necesita al menos 2 caracteres"),
   categoriaId: z.string().uuid("Elegí una categoría"),
   descripcion: optionalText,

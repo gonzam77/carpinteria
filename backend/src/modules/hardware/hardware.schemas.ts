@@ -1,5 +1,6 @@
 // Validacion de Configuracion › Herrajes (spec §12 y §13.4, DECISIONES 57).
 import { z } from "zod";
+import { MAX_FORMULA_LENGTH, parseFormula } from "../../shared/moduleFormula.js";
 
 const UNIDADES = ["unidad", "par", "juego", "metro"] as const;
 
@@ -13,6 +14,28 @@ const nombre = (que: string) =>
 /** Texto opcional: vacio o con solo espacios queda null. */
 const optionalText = (max: number, message: string) =>
   z.preprocess((value) => (typeof value === "string" && !value.trim() ? null : value), z.string().trim().max(max, message).nullable().optional());
+
+/**
+ * Formula por defecto (opcional): vacia queda null. Se revisa que se pueda leer; si las piezas o medidas que nombra
+ * existen se ve en cada modulo, porque depende del modulo.
+ */
+const defaultFormula = (que: string) =>
+  z.preprocess(
+    (value) => (typeof value === "string" && !value.trim() ? null : value),
+    z
+      .string({ invalid_type_error: `La ${que} por defecto tiene que ser una fórmula` })
+      .trim()
+      .max(MAX_FORMULA_LENGTH, `La ${que} por defecto tiene como máximo ${MAX_FORMULA_LENGTH} caracteres`)
+      .superRefine((value, ctx) => {
+        try {
+          parseFormula(value);
+        } catch (error) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: `La ${que} por defecto no se puede leer: ${error instanceof Error ? error.message : String(error)}` });
+        }
+      })
+      .nullable()
+      .optional()
+  );
 
 export const hardwareTypeSchema = z
   .object({
@@ -31,6 +54,9 @@ export const hardwareSchema = z
     // Solo los que van por medida (correderas): la linea agrupa las medidas de un mismo modelo (DECISIONES 57).
     linea: optionalText(80, "La línea tiene como máximo 80 caracteres"),
     medidaMm: z.number({ invalid_type_error: "La medida tiene que ser un número" }).finite().positive("La medida tiene que ser mayor a 0").nullable().optional(),
+    // Se precargan al agregar el herraje a un modulo (ahi se pueden cambiar).
+    formulaCantidadDefecto: defaultFormula("cantidad"),
+    formulaMedidaDefecto: defaultFormula("medida"),
     activo: z.boolean().optional()
   })
   .strict("Hay datos del herraje que no se reconocen")

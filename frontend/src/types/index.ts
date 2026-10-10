@@ -212,7 +212,6 @@ export type ModuleFormulaError = { ref: string; mensaje: string };
 
 /** Lo que se manda al crear o guardar un modulo. */
 export type ModuleInput = {
-  codigo: string;
   nombre: string;
   categoriaId: string;
   descripcion: string | null;
@@ -229,6 +228,8 @@ export type ModuleInput = {
 
 export type ModuleDefinition = ModuleInput & {
   id: string;
+  /** Automatico, con el nombre: lo arma el servidor. */
+  codigo: string;
   categoria: { id: string; nombre: string };
   version: number;
   fechaActualizacion: string;
@@ -506,9 +507,21 @@ export type Hardware = {
   /** Solo los que van por medida: la linea agrupa las medidas de un mismo modelo. */
   linea: string | null;
   medidaMm: number | null;
+  /** Formulas que se precargan al agregarlo a un modulo (se pueden cambiar ahi). */
+  formulaCantidadDefecto: string | null;
+  formulaMedidaDefecto: string | null;
   usoModulos: number;
   usoSolicitudes: number;
   canDeletePermanently: boolean;
 };
 
-export type HardwareInput = { nombre: string; tipoId: string; unidad: HardwareUnit; valor: number; linea: string | null; medidaMm: number | null };
+export type HardwareInput = {
+  nombre: string;
+  tipoId: string;
+  unidad: HardwareUnit;
+  valor: number;
+  linea: string | null;
+  medidaMm: number | null;
+  formulaCantidadDefecto: string | null;
+  formulaMedidaDefecto: string | null;
+};

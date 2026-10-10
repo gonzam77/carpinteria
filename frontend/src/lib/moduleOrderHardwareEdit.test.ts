@@ -13,6 +13,8 @@ const modelo = (id: string, nombre: string, valor: number, activo = true): Hardw
   tipo: { id: "bisagra", nombre: "Bisagra", activo: true },
   linea: null,
   medidaMm: null,
+  formulaCantidadDefecto: null,
+  formulaMedidaDefecto: null,
   usoModulos: 0,
   usoSolicitudes: 0,
   canDeletePermanently: false

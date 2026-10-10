@@ -56,10 +56,11 @@ try {
   // Alta y validaciones
   const ok = await call("POST", "/modulos", input());
   if (ok.status === 201) created.push(ok.data.id);
-  check("alta: modulo valido", ok.status === 201 && ok.data.version === 1);
+  check("alta: modulo valido, con el codigo armado con el nombre", ok.status === 201 && ok.data.version === 1 && ok.data.codigo === "PRUEBA_API", ok.data?.codigo);
   check("alta: ida y vuelta igual", ok.status === 201 && JSON.stringify(ok.data.piezas) === JSON.stringify(base.piezas));
   const dup = await call("POST", "/modulos", input());
-  check("alta: codigo repetido", dup.status === 400 && dup.data.details?.errores?.some((e) => /Ya existe un módulo/.test(e)));
+  if (dup.status === 201) created.push(dup.data.id);
+  check("alta: el mismo nombre lleva el codigo con _2", dup.status === 201 && dup.data.codigo === "PRUEBA_API_2", dup.data?.codigo);
   const circular = input({ codigo: "PRUEBA_CIRC", piezas: base.piezas.map((p, i) => (i === 0 ? { ...p, formulaLargo: `${base.piezas[1].codigo}.largo` } : i === 1 ? { ...p, formulaLargo: `${base.piezas[0].codigo}.largo` } : p)) });
   const circularActive = await call("POST", "/modulos", circular);
   check("validacion: activo con referencia circular", circularActive.status === 400 && circularActive.data.code === "MODULE_INVALID" && JSON.stringify(circularActive.data.details).includes("circular"));
@@ -74,12 +75,15 @@ try {
   check("validacion: nombre reservado", reserved.status === 400 && JSON.stringify(reserved.data.details).includes("función"));
   const fixedWithout = await call("POST", "/modulos", input({ codigo: "PRUEBA_FIJO", piezas: base.piezas.map((p, i) => (i === 0 ? { ...p, rol: "FIJO", materialFijoId: null } : p)) }));
   check("validacion: material fijo sin material", fixedWithout.status === 400);
-  const badCode = await call("POST", "/modulos", input({ codigo: "minusculas" }));
-  check("validacion: codigo con formato invalido (zod)", badCode.status === 400);
+  const manual = await call("POST", "/modulos", input({ nombre: "Prueba código a mano", codigo: "minusculas" }));
+  if (manual.status === 201) created.push(manual.data.id);
+  check("un codigo mandado a mano se ignora: sale del nombre", manual.status === 201 && manual.data.codigo === "PRUEBA_CODIGO_A_MANO", manual.data?.codigo);
 
   // Edicion
-  const edited = await call("PUT", `/modulos/${ok.data.id}`, input({ nombre: "Prueba API editada", codigo: "PRUEBA_API_2" }));
-  check("edicion: sube la version y cambia el codigo", edited.status === 200 && edited.data.version === 2 && edited.data.codigo === "PRUEBA_API_2");
+  const same = await call("PUT", `/modulos/${ok.data.id}`, input({ descripcion: "Sin cambiar el nombre" }));
+  check("edicion sin cambiar el nombre: el codigo queda", same.status === 200 && same.data.version === 2 && same.data.codigo === "PRUEBA_API");
+  const edited = await call("PUT", `/modulos/${ok.data.id}`, input({ nombre: "Prueba API editada" }));
+  check("edicion: renombrar sube la version y el codigo sigue al nombre", edited.status === 200 && edited.data.version === 3 && edited.data.codigo === "PRUEBA_API_EDITADA", edited.data?.codigo);
   const off = await call("PATCH", `/modulos/${ok.data.id}/active`, { activo: false });
   const on = await call("PATCH", `/modulos/${ok.data.id}/active`, { activo: true });
   check("desactivar y activar", off.data.activo === false && on.data.activo === true);

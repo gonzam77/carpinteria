@@ -3,7 +3,7 @@
 import { readFile } from "node:fs/promises";
 import { Prisma, RolPiezaModulo, TipoMaterial, type PrismaClient } from "../../generated/prisma/client.js";
 import { AppError } from "../../utils/http.js";
-import { evaluateModuleDefinition, resolveModuleHardware, validateIdentifier, type ModuleError, type ParamDef, type RoundingMode } from "../../shared/moduleFormula.js";
+import { codeFromName, evaluateModuleDefinition, resolveModuleHardware, validateIdentifier, type ModuleError, type ParamDef, type RoundingMode } from "../../shared/moduleFormula.js";
 import type { ModuloInput } from "./catalog.schemas.js";
 import { moduleImagePath, removeModuleImage, storeModuleImage } from "./module-images.service.js";
 
@@ -114,14 +114,12 @@ export async function validateModuleInput(tx: Tx, input: ModuloInput, moduleId?:
   const problems: string[] = [];
   const config = await getModulesConfig(tx);
 
-  const [categoria, fondo, sameCode] = await Promise.all([
+  const [categoria, fondo] = await Promise.all([
     tx.categoriaModulo.findUnique({ where: { id: input.categoriaId } }),
-    input.materialFondoId ? tx.material.findUnique({ where: { id: input.materialFondoId } }) : Promise.resolve(null),
-    tx.modulo.findUnique({ where: { codigo: input.codigo } })
+    input.materialFondoId ? tx.material.findUnique({ where: { id: input.materialFondoId } }) : Promise.resolve(null)
   ]);
   if (!categoria) problems.push("La categoría no existe.");
   if (input.materialFondoId && (!fondo || fondo.tipo !== TipoMaterial.PLACA)) problems.push("El material de fondo tiene que ser una placa.");
-  if (sameCode && sameCode.id !== moduleId) problems.push(`Ya existe un módulo con el código ${input.codigo}.`);
 
   // Nombres: formato, palabras reservadas y sin repetir entre medidas y piezas.
   const names = [...input.parametros.map((param) => param.clave), ...input.piezas.map((pieza) => pieza.codigo)];
@@ -255,10 +253,23 @@ const moduleFields = (input: ModuloInput) => ({
   observaciones: input.observaciones ?? null
 });
 
+/**
+ * Codigo del modulo: automatico, con el nombre (codeFromName, el mismo que muestra el editor). Si ya lo tiene otro
+ * modulo, con _2, _3...
+ */
+async function freeModuleCode(tx: Tx, nombre: string, exceptId?: string) {
+  const base = codeFromName(nombre) || "MODULO";
+  for (let attempt = 1; ; attempt += 1) {
+    const candidate = attempt === 1 ? base : `${base}_${attempt}`;
+    const owner = await tx.modulo.findUnique({ where: { codigo: candidate }, select: { id: true } });
+    if (!owner || owner.id === exceptId) return candidate;
+  }
+}
+
 export async function createModule(prisma: PrismaClient, input: ModuloInput, userId: string) {
   await validateModuleInput(prisma, input);
   const id = await prisma.$transaction(async (tx) => {
-    const created = await tx.modulo.create({ data: { codigo: input.codigo, ...moduleFields(input) } });
+    const created = await tx.modulo.create({ data: { codigo: await freeModuleCode(tx, input.nombre), ...moduleFields(input) } });
     await writeDefinition(tx, created.id, input);
     await tx.auditoria.create({ data: { usuarioId: userId, accion: "CREAR_MODULO", entidad: "Modulo", entidadId: created.id } });
     return created.id;
@@ -269,12 +280,11 @@ export async function createModule(prisma: PrismaClient, input: ModuloInput, use
 /** Reemplaza la definicion completa e incrementa la version (spec §6.2, "Guardar"). */
 export async function updateModule(prisma: PrismaClient, id: string, input: ModuloInput, userId: string) {
   const existing = await loadModule(prisma, id);
-  if (input.codigo !== existing.codigo && existing._count.pedidos > 0) {
-    throw new AppError(409, "No se puede cambiar el código de un módulo que ya se usó en solicitudes.", { code: "MODULE_CODE_LOCKED" });
-  }
   await validateModuleInput(prisma, input, id);
   await prisma.$transaction(async (tx) => {
-    await tx.modulo.update({ where: { id }, data: { codigo: input.codigo, ...moduleFields(input), version: { increment: 1 } } });
+    // El codigo sigue al nombre si se renombro, salvo que el modulo ya se haya usado en solicitudes.
+    const codigo = existing._count.pedidos > 0 || input.nombre.trim() === existing.nombre ? existing.codigo : await freeModuleCode(tx, input.nombre, id);
+    await tx.modulo.update({ where: { id }, data: { codigo, ...moduleFields(input), version: { increment: 1 } } });
     await writeDefinition(tx, id, input);
     await tx.auditoria.create({
       data: { usuarioId: userId, accion: "EDITAR_MODULO", entidad: "Modulo", entidadId: id, metadata: { versionAnterior: existing.version } }
@@ -297,22 +307,15 @@ export async function setModuleActive(prisma: PrismaClient, id: string, activo: 
   return loadModule(prisma, id);
 }
 
-async function freeCopyCode(prisma: PrismaClient, codigo: string) {
-  for (let attempt = 1; ; attempt += 1) {
-    const candidate = attempt === 1 ? `${codigo}_COPIA` : `${codigo}_COPIA_${attempt}`;
-    if (!(await prisma.modulo.findUnique({ where: { codigo: candidate } }))) return candidate;
-  }
-}
-
-/** Copia completa (definicion e imagen), inactiva, con codigo X_COPIA. */
+/** Copia completa (definicion e imagen), inactiva, "X (copia)" con su codigo (X_COPIA, X_COPIA_2...). */
 export async function duplicateModule(prisma: PrismaClient, id: string, userId: string) {
   const source = await loadModule(prisma, id);
   const definition = toDefinition(source);
-  const codigo = await freeCopyCode(prisma, source.codigo);
+  const nombre = `${source.nombre} (copia)`;
+  const codigo = await freeModuleCode(prisma, nombre);
   const input: ModuloInput = {
     ...definition,
-    codigo,
-    nombre: `${source.nombre} (copia)`,
+    nombre,
     activo: false,
     descripcion: definition.descripcion,
     observaciones: definition.observaciones

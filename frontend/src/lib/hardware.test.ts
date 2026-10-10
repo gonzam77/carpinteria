@@ -4,7 +4,7 @@ import { emptyHardwareForm, groupByType, hardwareLabel, hardwareLineSummary, rea
 
 test("formulario de herraje: las mismas reglas que el servidor", () => {
   const ok = readHardwareForm({ ...emptyHardwareForm("t1"), nombre: " Corredera telescópica 400 ", unidad: "par", valor: "9800,5", linea: "Telescópica", medidaMm: "400" });
-  assert.deepEqual(ok, { problems: [], input: { nombre: "Corredera telescópica 400", tipoId: "t1", unidad: "par", valor: 9800.5, linea: "Telescópica", medidaMm: 400 } });
+  assert.deepEqual(ok, { problems: [], input: { nombre: "Corredera telescópica 400", tipoId: "t1", unidad: "par", valor: 9800.5, linea: "Telescópica", medidaMm: 400, formulaCantidadDefecto: null, formulaMedidaDefecto: null } });
   assert.deepEqual(readHardwareForm({ ...emptyHardwareForm(), nombre: "B", valor: "" }).problems, [
     "Escribí el nombre del herraje (al menos 2 caracteres).",
     "Elegí el tipo de herraje.",
@@ -44,4 +44,14 @@ test("línea de herraje del módulo: cómo queda con las medidas de prueba", () 
   assert.equal(hardwareLineSummary(line({ error: "Cantidad: No existe la medida X" }), byId), "Cantidad: No existe la medida X");
   assert.equal(hardwareLabel({ nombre: "Telescópica", medidaMm: 400, activo: true }), "Telescópica · 400 mm");
   assert.equal(hardwareLabel({ nombre: "Telescópica 400", medidaMm: 400, activo: false }), "Telescópica 400 (inactivo)");
+});
+
+test("fórmulas por defecto del herraje (punto 2): opcionales y que se puedan leer", () => {
+  const base = { ...emptyHardwareForm("t1"), nombre: "Corredera", valor: "10" };
+  const ok = readHardwareForm({ ...base, formulaCantidad: " FONDO_CAJ.cant ", formulaMedida: "PROFUNDIDAD - 50" });
+  assert.deepEqual([ok.input?.formulaCantidadDefecto, ok.input?.formulaMedidaDefecto], ["FONDO_CAJ.cant", "PROFUNDIDAD - 50"]);
+  assert.equal(readHardwareForm(base).input?.formulaCantidadDefecto, null, "vacía queda null");
+  const mala = readHardwareForm({ ...base, formulaCantidad: "PUERTAS.cant *" });
+  assert.equal(mala.input, null);
+  assert.match(mala.problems[0], /^La cantidad por defecto no se puede leer/);
 });

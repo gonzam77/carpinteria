@@ -420,6 +420,9 @@ model Herraje {
   tipoId             String?
   linea              String?
   medidaMm           Float?
+  // Formulas que se precargan al agregarlo a un modulo; ahi se pueden cambiar (punto 2, 2026-10-09).
+  formulaCantidadDefecto String?
+  formulaMedidaDefecto   String?
   fechaCreacion      DateTime        @default(now())
   fechaActualizacion DateTime        @updatedAt
   tipo               TipoHerraje?    @relation(fields: [tipoId], references: [id], onDelete: Restrict)

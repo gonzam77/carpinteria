@@ -1,6 +1,7 @@
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import UploadIcon from "@mui/icons-material/Upload";
-import { Alert, AlertTitle, Box, Button, FormControlLabel, MenuItem, Paper, Stack, Switch, TextField, Typography } from "@mui/material";
+import { Alert, AlertTitle, Box, Button, FormControlLabel, InputAdornment, MenuItem, Paper, Stack, Switch, TextField, Typography } from "@mui/material";
 import { useRef, useState } from "react";
 import { deleteModuleImage, uploadModuleImage, type ModuleImageInfo } from "../../api/moduleImages";
 import { formatMm, type ModuleDraft } from "../../lib/moduleEditor";
@@ -96,8 +97,8 @@ export function GeneralTab({
   placas,
   config,
   codeLocked,
+  codePreview,
   importNotes,
-  onCodeEdited,
   moduleId,
   imagen,
   onImageChanged
@@ -108,9 +109,10 @@ export function GeneralTab({
   placas: Material[];
   config: ModulesConfig;
   codeLocked: boolean;
+  /** El codigo como va a quedar: lo arma el servidor con el nombre. */
+  codePreview: string;
   /** Observaciones guardadas del modulo (las de la importacion del Excel, si vino de ahi). */
   importNotes: string | null;
-  onCodeEdited: () => void;
   moduleId: string | null;
   imagen: ModuleImageInfo | null;
   onImageChanged: (imagen: ModuleImageInfo | null) => void;
@@ -139,14 +141,27 @@ export function GeneralTab({
           <TextField label="Nombre" value={draft.nombre} onChange={(event) => update({ nombre: event.target.value })} required />
           <TextField
             label="Código"
-            value={draft.codigo}
-            disabled={codeLocked}
-            onChange={(event) => {
-              onCodeEdited();
-              update({ codigo: event.target.value.toUpperCase().replace(/\s+/g, "_") });
+            value={codePreview}
+            placeholder="Se arma con el nombre"
+            helperText={
+              codeLocked
+                ? "Ya se usó en solicitudes: el código queda fijo."
+                : "Automático, con el nombre. Si otro módulo ya lo tiene, se le agrega un número al guardar."
+            }
+            // Solo lectura: se ve distinto de un campo que se escribe (fondo gris y candado).
+            slotProps={{
+              input: {
+                readOnly: true,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <LockOutlinedIcon fontSize="small" sx={{ color: "text.disabled" }} />
+                  </InputAdornment>
+                )
+              },
+              inputLabel: { shrink: true },
+              htmlInput: { "aria-readonly": true, style: { fontFamily: "ui-monospace, Consolas, monospace" } }
             }}
-            helperText={codeLocked ? "Ya se usó en solicitudes: el código no se puede cambiar." : "En mayúsculas, con _ (ej. BAJO_MESADA_2_PUERTAS)."}
-            slotProps={{ htmlInput: { style: { fontFamily: "ui-monospace, Consolas, monospace" } } }}
+            sx={{ "& .MuiInputBase-root": { bgcolor: "action.hover" } }}
           />
           <TextField select label="Categoría" value={draft.categoriaId} onChange={(event) => update({ categoriaId: event.target.value })} required>
             {categories

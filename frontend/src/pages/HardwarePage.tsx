@@ -260,7 +260,7 @@ export function HardwarePage() {
         <Box
           component="form"
           onSubmit={submit}
-          sx={{ display: "grid", gap: 2, alignItems: "start", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "1.2fr 2.2fr 1fr 1fr 1.2fr 1fr auto" } }}
+          sx={{ display: "grid", gap: 2, alignItems: "start", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "1.2fr 2.2fr 1fr 1fr 1.2fr 1fr" } }}
         >
           <TextField select label="Tipo" value={form.tipoId} onChange={(event) => setForm({ ...form, tipoId: event.target.value })} required>
             {activeTypes.length === 0 && <MenuItem value="" disabled>Primero creá un tipo</MenuItem>}
@@ -281,7 +281,26 @@ export function HardwarePage() {
           <TextField label="Precio" value={form.valor} onChange={(event) => setForm({ ...form, valor: event.target.value })} required slotProps={{ htmlInput: { inputMode: "decimal" } }} />
           <TextField label="Línea" placeholder="Telescópica" value={form.linea} onChange={(event) => setForm({ ...form, linea: event.target.value })} helperText="Solo si va por medida" />
           <TextField label="Medida" value={form.medidaMm} onChange={(event) => setForm({ ...form, medidaMm: event.target.value })} helperText="En mm: el largo de la corredera, por ejemplo" slotProps={{ htmlInput: { inputMode: "decimal" } }} />
-          <Stack direction="row" spacing={1} sx={{ pt: { lg: 0.75 } }}>
+          {/* Formulas por defecto (punto 2): se precargan al agregar el herraje a un modulo y ahi se pueden cambiar. */}
+          <TextField
+            label="Cantidad por defecto (fórmula)"
+            placeholder="PUERTAS.cant * 2"
+            value={form.formulaCantidad}
+            onChange={(event) => setForm({ ...form, formulaCantidad: event.target.value })}
+            helperText="Opcional. Se precarga al agregarlo a un módulo; ahí se puede cambiar."
+            slotProps={{ htmlInput: { style: { fontFamily: "ui-monospace, Consolas, monospace" } } }}
+            sx={{ gridColumn: { lg: "span 3" } }}
+          />
+          <TextField
+            label="Medida por defecto (fórmula)"
+            placeholder="PROFUNDIDAD - 50"
+            value={form.formulaMedida}
+            onChange={(event) => setForm({ ...form, formulaMedida: event.target.value })}
+            helperText="Opcional. Para los que van por medida: la que necesita el módulo, en mm."
+            slotProps={{ htmlInput: { style: { fontFamily: "ui-monospace, Consolas, monospace" } } }}
+            sx={{ gridColumn: { lg: "span 3" } }}
+          />
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ gridColumn: "1 / -1" }}>
             <Button type="submit" variant="contained" startIcon={<SaveIcon />} disabled={busy}>
               {editingId ? "Guardar" : "Crear"}
             </Button>

@@ -62,14 +62,18 @@ try {
   const bisagra = (await api("POST", "/herrajes/tipos", { nombre: `${PREFIJO} Bisagra` })).data;
   const corredera = (await api("POST", "/herrajes/tipos", { nombre: `${PREFIJO} Corredera` })).data;
   const alta = async (data) => (await api("POST", "/herrajes", data)).data;
-  const cazoleta = await alta({ nombre: `${PREFIJO} Cazoleta común`, tipoId: bisagra.id, unidad: "unidad", valor: 850 });
+  // Con formulas por defecto (punto 2): se precargan al agregarlos al modulo.
+  const cazoleta = await alta({ nombre: `${PREFIJO} Cazoleta común`, tipoId: bisagra.id, unidad: "unidad", valor: 850, formulaCantidadDefecto: "PUESTAS.cant * 2" });
   const inactiva = await alta({ nombre: `${PREFIJO} Cazoleta vieja`, tipoId: bisagra.id, unidad: "unidad", valor: 500 });
   await api("PATCH", `/herrajes/${inactiva.id}/active`, { activo: false });
-  const t350 = await alta({ nombre: `${PREFIJO} Telescópica 350`, tipoId: corredera.id, unidad: "par", valor: 9100, linea: "Telescópica", medidaMm: 350 });
+  const t350 = await alta({ nombre: `${PREFIJO} Telescópica 350`, tipoId: corredera.id, unidad: "par", valor: 9100, linea: "Telescópica", medidaMm: 350, formulaCantidadDefecto: "2", formulaMedidaDefecto: "PROFUNDIDAD - 50" });
   const t450 = await alta({ nombre: `${PREFIJO} Telescópica 450`, tipoId: corredera.id, unidad: "par", valor: 10500, linea: "Telescópica", medidaMm: 450 });
   const copia = await api("POST", `/modulos/${BAJO}/duplicar`);
   copiaId = copia.data?.id;
   check("datos de prueba: tipos, herrajes y la copia del módulo", Boolean(cazoleta?.id && t350?.id && t450?.id && copiaId));
+  check("el herraje guarda sus fórmulas por defecto", t350.formulaCantidadDefecto === "2" && t350.formulaMedidaDefecto === "PROFUNDIDAD - 50" && t450.formulaMedidaDefecto === null);
+  const mala = await api("POST", "/herrajes", { nombre: `${PREFIJO} Mala`, tipoId: bisagra.id, unidad: "unidad", valor: 1, formulaCantidadDefecto: "PUERTAS.cant *" });
+  check("una fórmula por defecto que no se puede leer: 400", mala.status === 400 && JSON.stringify(mala.data).includes("no se puede leer"), JSON.stringify(mala.data).slice(0, 160));
 
   // ---------------------------------------------------------------- editor
   const context = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: "es-AR" });
@@ -96,11 +100,15 @@ try {
     await region.getByLabel(label).click();
     await page.getByRole("option", { name: opcion }).click();
   };
-  await page.getByRole("button", { name: "Agregar herraje" }).click();
-  await elegir(linea(1), "Tipo", `${PREFIJO} Bisagra`);
-  await elegir(linea(1), "Modelo por defecto", `${PREFIJO} Cazoleta común`);
-  await linea(1).getByLabel("Cantidad").fill("PUESTAS.cant * 2");
+  // Agregar: se elige el modelo y vienen sus formulas por defecto.
+  const agregar = async (opcion) => {
+    await page.getByRole("combobox", { name: "Agregar herraje" }).click();
+    await page.getByRole("option", { name: opcion }).click();
+  };
+  await agregar(`${PREFIJO} Cazoleta común`);
   await page.waitForTimeout(400);
+  check("agregar la bisagra precarga su cantidad por defecto", (await linea(1).getByLabel("Cantidad").inputValue()) === "PUESTAS.cant * 2");
+  check("la medida está siempre a la vista (también en la bisagra)", (await linea(1).getByLabel("Medida que necesita (mm)").count()) === 1);
   const resultado1 = norm(await page.getByLabel("Resultado del herraje 1").innerText());
   check("bisagra: 4 × Cazoleta común con las medidas por defecto", resultado1 === `4 × ${PREFIJO} Cazoleta común`, resultado1);
   check("el modelo inactivo no se ofrece", await (async () => {
@@ -110,19 +118,23 @@ try {
     return visible === 0;
   })());
 
-  await page.getByRole("button", { name: "Agregar herraje" }).click();
-  await elegir(linea(2), "Tipo", `${PREFIJO} Corredera`);
+  await agregar(new RegExp(`^${PREFIJO} Telescópica 350`));
+  await page.waitForTimeout(400);
+  check(
+    "agregar la corredera precarga cantidad y medida",
+    (await linea(2).getByLabel("Cantidad").inputValue()) === "2" && (await linea(2).getByLabel("Medida que necesita (mm)").inputValue()) === "PROFUNDIDAD - 50"
+  );
+  // Otra medida de la misma linea, sin formulas propias: quedan las de la linea. Y se vuelve a la de 350.
+  await elegir(linea(2), "Modelo por defecto", new RegExp(`^${PREFIJO} Telescópica 450`));
+  check("cambiar a un modelo sin fórmulas propias deja las de la línea", (await linea(2).getByLabel("Medida que necesita (mm)").inputValue()) === "PROFUNDIDAD - 50");
   await elegir(linea(2), "Modelo por defecto", new RegExp(`^${PREFIJO} Telescópica 350`));
-  await linea(2).getByLabel("Cantidad").fill("2");
-  check("corredera: aparece el campo de la medida", (await linea(2).getByLabel("Medida que necesita (mm)").count()) === 1);
-  await linea(2).getByLabel("Medida que necesita (mm)").fill("PROFUNDIDAD - 50");
   await page.waitForTimeout(400);
   const resultado2 = norm(await page.getByLabel("Resultado del herraje 2").innerText());
-  check("corredera: 530 mm, elige la telescópica de 450", resultado2 === `2 × ${PREFIJO} Telescópica 450 · necesita 530 mm: la más larga que entra`, resultado2);
+  check("corredera: 530 mm, elige la telescópica de 450", resultado2 === `2 × ${PREFIJO} Telescópica 450` && (await linea(2).getByText("Necesita 530 mm: va la más larga que entra.").count()) === 1, resultado2);
 
   await linea(1).getByLabel("Cantidad").fill("PUERTAZ.cant * 2");
   await page.waitForTimeout(400);
-  check("una fórmula mala marca la pestaña con error", norm(await pestaña.innerText()).includes("1 con error") && /Cantidad:/.test(await page.getByLabel("Resultado del herraje 1").innerText()), norm(await pestaña.innerText()));
+  check("una fórmula mala marca la pestaña con error", norm(await pestaña.innerText()).includes("1 con error") && norm(await page.getByLabel("Resultado del herraje 1").innerText()) === "Con error" && /Cantidad:/.test(await linea(1).getByRole("alert").innerText()), norm(await pestaña.innerText()));
   await linea(1).getByLabel("Cantidad").fill("PUESTAS.cant * 2");
   await page.screenshot({ path: join(shotsDir, "a1-herrajes-editor.png"), fullPage: true });
 

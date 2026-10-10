@@ -4,6 +4,7 @@
 // encaje usa findPiecesThatDoNotFit del optimizador (DECISIONES R2 y R6), igual que el resto del sistema.
 import { findPiecesThatDoNotFit } from "./cutOptimizer.ts";
 import { collectRefs, FORMULA_CONSTANTS, FORMULA_FUNCTIONS, parseFormula, validateIdentifier, type ParamOption } from "./moduleFormula.ts";
+export { codeFromName } from "./moduleFormula.ts";
 import { usableBoardSize, type EstimateOptimizerSettings } from "./orderEstimate.ts";
 import type { EspesorCanto, LadoCanto, ModuleDefinition, ModuleInput, ModuleParameter, ModulePiece } from "../types/index.ts";
 
@@ -22,7 +23,6 @@ export const ESPESORES_CANTO: EspesorCanto[] = [0.45, 1, 2];
 
 export function draftFromDefinition(definition: ModuleDefinition): ModuleDraft {
   return {
-    codigo: definition.codigo,
     nombre: definition.nombre,
     categoriaId: definition.categoriaId,
     descripcion: definition.descripcion,
@@ -53,7 +53,6 @@ export function newModuleDraft(categoriaId: string): ModuleDraft {
     orden
   });
   return {
-    codigo: "",
     nombre: "",
     categoriaId,
     descripcion: null,
@@ -117,7 +116,6 @@ export function draftToInput(draft: ModuleDraft): ModuleInput {
   const perfiles = [...draft.perfiles].sort((a, b) => a.orden - b.orden);
   const perfilOrdenes = new Set(perfiles.map((perfil) => perfil.orden));
   return {
-    codigo: draft.codigo.trim().toUpperCase(),
     nombre: draft.nombre.trim(),
     categoriaId: draft.categoriaId,
     descripcion: text(draft.descripcion),
@@ -360,15 +358,4 @@ export function fitWarnings(pieces: FitPiece[], settings: EstimateOptimizerSetti
         }.`
       }));
   });
-}
-
-/** Codigo sugerido a partir del nombre: "Bajo mesada 2 puertas" -> "BAJO_MESADA_2_PUERTAS". */
-export function codeFromName(nombre: string) {
-  const code = nombre
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  return /^[A-Z]/.test(code) ? code : code ? `M_${code}` : "";
 }
