@@ -12,9 +12,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-09
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.3 está commiteado y subido (con el OK de Gonzalo). F6.4 está commiteado en local; su push espera el OK. Cada push espera su OK.
-- **Último paso terminado:** F6.4 (herrajes en la edición, "Recalcular herrajes" y la hoja de taller). Las Fases 0 a 5 están completas; la 6 (herrajes) sigue con datos de ejemplo hasta que llegue el listado de ROMA.
-- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.5 (pruebas de punta a punta y no regresión de la Fase 6). Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.4 está subido (Gonzalo subió F6.4 y el arreglo del build de Docker, b8de29f). F7.5 (las mejoras que pidió el 2026-10-09) está terminado y sin commitear (espera el OK). Cada push espera su OK.
+- **Último paso terminado:** F7.5 (las 16 mejoras que pidió Gonzalo el 2026-10-09). Las Fases 0 a 5 están completas; la 6 (herrajes) sigue con datos de ejemplo hasta que llegue el listado de ROMA.
+- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.5 (pruebas de punta a punta y no regresión de la Fase 6), con lo que diga Gonzalo de F7.5 y el listado de herrajes de ROMA. Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -644,6 +644,27 @@ Autocompletar clientes, estados vacíos y de carga, y accesibilidad (spec §14.5
   - perfilar la búsqueda extra.
 - **Regla:** ninguna optimización de tiempo puede dar más placas. Se mide con `npm --prefix frontend run bench:optimizer`.
 - **Hecho (2026-10-08, DECISIONES 55):** sin tocar el optimizador. (1) Resultados guardados por entrada exacta en el código compartido: la vista previa y el alta calculan una sola vez. (2) En el backend, el cálculo en un hilo aparte (`worker_threads`): mientras calcula, el servidor sigue respondiendo; resuelve la causa de DECISIONES 29. (3) En el navegador, el plano en un Web Worker: la página no se congela. Medido con 20 bajo mesadas: antes, mientras calculaba 7,3 s, las otras consultas esperaban hasta 7,2 s y una falló, y el alta volvía a calcular 7,3 s; ahora responden en menos de 40 ms y el alta tarda 0,2 s. En el navegador, el cuadro más lento durante 5,1 s de cálculo fue de 0,27 s. Banco de pruebas: 55 casos, 200 placas antes y después, ninguno peor y todos cortables. Pruebas: tests (presupuesto 7) y de punta a punta: e2e-f74 8/8 (también contra el backend compilado, como en producción) y e2e-f74-navegador 5/5 (nuevas), f42 106/106, f43 96/96, f52 43/43, f53 21/21, f55 26/26, f71 25/25, f05 22/22, f04 12/12, f31 30/30, f23 4/4, f44-navegador sin fallas, f51-navegador 63/63 y f71-navegador 17/17 (con el cierre del diálogo esperado: ahora recalcular es casi instantáneo). **Quedan como ideas, si hicieran falta:** la caché por multiconjunto canónico (R5, sirve aunque cambie el orden de las filas) y perfilar la búsqueda extra.
+
+#### F7.5 Mejoras pedidas por Gonzalo (2026-10-09) · [x]
+Pedidas de a una, con reporte después de cada punto. Todo lo visual se revisa también en celular (390 px).
+- [x] 1. Catálogo: el código del módulo es automático con el nombre y de solo lectura (DECISIONES 58).
+- [x] 2. Herrajes en el módulo con el formato del despiece; fórmulas por defecto en cada herraje (migración `20261009120000_herrajes_formulas_por_defecto`, DECISIONES 59).
+- [x] 3. Asistente, paso 2: panel de elegidos a la derecha con Siguiente (celular: barra fija y cajón); Volver arriba a la izquierda (DECISIONES 60).
+- [x] 4. Asistente, paso 4: Crear solicitud debajo del total, en el resumen (DECISIONES 60).
+- [x] 5. Detalle: arriba solo Volver, Estado y Editar; Eliminar en Editar; pestañas Hoja de taller, Materiales y Excel de corte, cada una con descarga, PDF e impresión; el Excel se edita y se le agregan columnas, y se guarda con la solicitud (migración `20261009130000_pedido_excel_corte`, DECISIONES 61).
+- [x] 6. Detalle con diseño nuevo: encabezado con indicadores, datos con íconos, módulos en tarjetas y pestañas con íconos (DECISIONES 61).
+- [x] 7. El optimizador solo al final de la pestaña Excel de corte (DECISIONES 61).
+- [x] 8. Dashboard: métricas de las solicitudes de módulos (en curso, vencidas y por vencer, próximas entregas, presupuesto en curso, ticket promedio, entregadas a tiempo, 6 meses y más pedidos) (DECISIONES 62).
+- [x] 9. Menú: "Solicitudes de corte" y "Solicitudes de módulos" (DECISIONES 63).
+- [x] 10. Métricas del sistema compactas y con íconos (`MetricTile`): dashboard, listado y detalle de módulos (DECISIONES 62).
+- [x] 11. Orden de fechas: las columnas ordenan por la fecha y no por el texto (Solicitudes de corte y Materiales) (DECISIONES 64).
+- [x] 12. Asistente, paso 3: el botón para seguir a la derecha (fijo abajo) (DECISIONES 60).
+- [x] 13. Asistente, paso 4: mientras calcula, una tarjeta de carga alineada con el resumen y Crear solicitud deshabilitado (DECISIONES 65).
+- [x] 14. Revisar despiece: pestañas por categoría con su cantidad (DECISIONES 65).
+- [x] 15. Herrajes: el resumen los lista por modelo y el paso 4 avisa si están apagados (DECISIONES 65).
+- [x] 16. Sin el optimizador en las pantallas de módulos (asistente y edición); solo en el Excel de corte (DECISIONES 61).
+- **Pruebas nuevas o actualizadas:** e2e-excel-corte-navegador (nueva), f31, f44, f45, f51, f52-navegador, f54, f55, f62, f63 y f74.
+- **Tener en cuenta:** dos migraciones nuevas (`20261009120000_herrajes_formulas_por_defecto` y `20261009130000_pedido_excel_corte`), solo agregan columnas opcionales; en Docker se aplican solas al levantar el backend.
 
 #### F7.3 Aceptación con ROMA · [ ]
 La prueba de spec §17.3 completa, incluida la importación real del Excel en la máquina.

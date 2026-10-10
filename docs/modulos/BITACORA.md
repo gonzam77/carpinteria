@@ -27,6 +27,28 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-09 (37) · equipo Pinformatico15 · rama main
+
+**Pasos:** F7.5 terminado (las 16 mejoras que pidió Gonzalo el 2026-10-09).
+
+**Hecho:**
+- Fuera de lista: arreglo del build de Docker del frontend (el banco de pruebas importaba `docs/`; Gonzalo lo subió en b8de29f), el catálogo importado en el Docker de Gonzalo y un archivo de materiales (64 placas y 100 cantos de la copia, sin datos de clientes) para cargar en otra PC. No se exportaron usuarios (datos de clientes).
+- Respuesta sobre el listado de herrajes de ROMA (bisagras codo 0, codo 9 y 165°; cajones con tres sistemas): propuesta y preguntas para ROMA; sin código todavía.
+- F7.5, de a un punto con reporte (DECISIONES 58 a 65): código automático del módulo; herrajes del módulo como el despiece y fórmulas por defecto; navegación del asistente (panel de elegidos, Volver arriba, Crear debajo del total, seguir fijo abajo); detalle con pestañas (Hoja de taller, Materiales, Excel de corte editable y guardado, Historial), PDF por impresión y diseño nuevo; el optimizador solo al final del Excel de corte; dashboard con métricas de módulos y métricas compactas; menú con "Solicitudes de corte" y "Solicitudes de módulos"; orden de fechas; paso 4 con carga alineada, pestañas por categoría y herrajes en el resumen.
+- Dos migraciones nuevas, solo con columnas opcionales, probadas en la copia: `20261009120000_herrajes_formulas_por_defecto` y `20261009130000_pedido_excel_corte`.
+
+**Decisiones nuevas:** 58 a 65.
+
+**Verificaciones:** frontend `npm test` (13 suites) y backend `npm test` (46), `tsc`, `check:optimizer` y build en verde. e2e contra la copia, todas sin fallas: excel-corte-navegador 19/19 (nueva), f04, f05, f23, f31, f42, f43, f52 43/43, f53 21/21, f55 27/27, f71 25/25, y de navegador f44, f45 139/139, f51 64/64, f52 40/40, f54 24/24, f61 28/28, f62 20/20, f63 24/24, f64 30/30, f71 17/17, f72 18/18 y f74 5/5. Todo lo visual se revisó también en celular (390 px), sin scroll horizontal. La copia quedó como estaba.
+
+**Commits:** sin commit: los cambios están solo en este equipo (esperan el OK de Gonzalo).
+
+**Próximo paso:** que Gonzalo revise F7.5; después F6.5 y, cuando llegue, el listado de herrajes de ROMA.
+
+**Esperando a Gonzalo o a ROMA:** el OK de F7.5 para commitear; las respuestas de ROMA sobre los herrajes (precios, medidas de correderas, bisagras por puerta, esquinero, sistemas de cajón); P5 y P6.
+
+---
+
 ## 2026-10-09 (36) · equipo Pinformatico15 · rama main
 
 **Pasos:** F6.4 terminado.
