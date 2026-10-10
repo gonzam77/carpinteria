@@ -1,10 +1,6 @@
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Alert,
   Box,
   Button,
@@ -24,14 +20,19 @@ import {
   TableRow,
   TextField,
   Tooltip,
-  Typography
+  Typography,
+  Link,
+  CircularProgress,
+  Skeleton,
+  Tab,
+  Tabs
 } from "@mui/material";
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
+import { Link as RouterLink } from "react-router-dom";
 import type { ModuleOrderApiError } from "../../api/moduleOrders";
 import { changedSides, defaultEdgeId, edgeSummary, materialSummary, rowsByModule, type EdgeDefaultsContext, type WizardUnit } from "../../lib/moduleOrderWizard";
 import type { LadoCanto, Material, MissingDefaultEdge, ModuleDefinition, ModuleOrderDetail, ModuleOrderEstimate, ModuleOrderPreview, Hardware } from "../../types";
-import { CutOptimizer } from "../CutOptimizer";
-import { ModuleHardwareCard } from "./ModuleHardware";
+import { hardwareQuantityText, ModuleHardwareCard } from "./ModuleHardware";
 import { EDITED_BLUE } from "../PieceEdgesToggles";
 
 export type PreviewStatus = "idle" | "loading" | "stale" | "error" | "ready";
@@ -128,7 +129,23 @@ function PieceEdgeSelects({
 }
 
 /** Lo que muestra el resumen: una vista previa o una solicitud guardada (sus numeros guardados, DECISIONES R3). */
-export type SummaryData = ModuleOrderEstimate & { detalles: ModuleOrderDetail[] };
+export type SummaryData = ModuleOrderEstimate & {
+  detalles: ModuleOrderDetail[];
+  /** Los herrajes (de la vista previa o guardados): el resumen los lista sumados por modelo (punto 15). */
+  herrajes?: Array<{ nombre: string; unidad: string; cantidad: number }>;
+};
+
+/** Los herrajes sumados por modelo, en el orden en que aparecen: "8 × Codo 0", "2 pares × Telescópica 450". */
+function hardwareTotals(herrajes: SummaryData["herrajes"]) {
+  const totals = new Map<string, { nombre: string; unidad: string; cantidad: number }>();
+  for (const item of herrajes ?? []) {
+    const key = `${item.nombre}|${item.unidad}`;
+    const current = totals.get(key);
+    if (current) current.cantidad += item.cantidad;
+    else totals.set(key, { ...item });
+  }
+  return [...totals.values()];
+}
 
 /** El resumen de placas, cantos y presupuesto. Lo usan el paso 4 del asistente y el detalle de la solicitud. */
 export function SummaryPanel({
@@ -136,13 +153,16 @@ export function SummaryPanel({
   status,
   units,
   materials,
-  herrajesHabilitados
+  herrajesHabilitados,
+  footer
 }: {
   preview: SummaryData | null;
   status: PreviewStatus;
   units: number;
   materials: Material[];
   herrajesHabilitados: boolean;
+  /** Lo que va al final, despues del total (en el asistente, Crear solicitud). */
+  footer?: ReactNode;
 }) {
   const busy = status === "loading" || status === "stale";
   const materiales = useMemo(() => (preview ? materialSummary(preview).sort((a, b) => a.nombre.localeCompare(b.nombre, "es")) : []), [preview]);
@@ -180,9 +200,21 @@ export function SummaryPanel({
         </Typography>
         {busy && <LinearProgress aria-label="Calculando" />}
         {!preview ? (
-          <Typography variant="body2" color="text.secondary">
-            {status === "error" ? "No se pudo calcular: revisá el aviso del despiece. Cuando se corrige, el resumen se calcula de nuevo." : "Calculando placas y presupuesto..."}
-          </Typography>
+          status === "error" ? (
+            <Typography variant="body2" color="text.secondary">
+              No se pudo calcular: revisá el aviso del despiece. Cuando se corrige, el resumen se calcula de nuevo.
+            </Typography>
+          ) : (
+            // Punto 13: mientras calcula, el lugar de los numeros (no un hueco).
+            <Stack spacing={1} aria-hidden>
+              {[70, 55, 85, 60, 75, 50].map((width, index) => (
+                <Stack key={index} direction="row" justifyContent="space-between" spacing={2}>
+                  <Skeleton variant="text" width={`${width}%`} />
+                  <Skeleton variant="text" width={48} />
+                </Stack>
+              ))}
+            </Stack>
+          )
         ) : (
           <Box sx={{ opacity: busy ? 0.5 : 1, transition: "opacity 120ms" }}>
             <Stack spacing={1.25}>
@@ -222,6 +254,17 @@ export function SummaryPanel({
               {line("Cantos (material y pegado)", money(preview.costoCantos))}
               {herrajesHabilitados && line("Herrajes", money(preview.costoHerrajes))}
               {line("Total", money(preview.presupuestoConHerrajes), true)}
+              {hardwareTotals(preview.herrajes).length > 0 && (
+                <>
+                  <Divider />
+                  <Typography variant="caption" fontWeight={800} color="text.secondary">
+                    HERRAJES
+                  </Typography>
+                  {hardwareTotals(preview.herrajes).map((item) => (
+                    <Box key={`${item.nombre}|${item.unidad}`}>{line(item.nombre, hardwareQuantityText(item.cantidad, item.unidad))}</Box>
+                  ))}
+                </>
+              )}
               {preview.faltanteStock && <Alert severity="warning">No alcanza el stock de alguna placa para esta solicitud.</Alert>}
               <Typography variant="caption" color="text.secondary">
                 Las placas finales las define el optimizador al cortar.
@@ -229,6 +272,7 @@ export function SummaryPanel({
             </Stack>
           </Box>
         )}
+        {footer}
       </Stack>
     </Paper>
   );
@@ -358,7 +402,8 @@ export function ReviewStep({
   onEdgeChange,
   onResetPiece,
   onHardwareChange,
-  onRecalculate
+  onRecalculate,
+  action
 }: {
   preview: ModuleOrderPreview | null;
   status: PreviewStatus;
@@ -378,15 +423,25 @@ export function ReviewStep({
   onResetPiece: (uid: string, piezaCodigo: string) => void;
   onHardwareChange: (uid: string, defaultId: string, chosenId: string | null) => void;
   onRecalculate: () => void;
+  /** El boton de crear: va en el resumen, despues del total. */
+  action?: ReactNode;
 }) {
-  const [planOpen, setPlanOpen] = useState(false);
-  const [planMounted, setPlanMounted] = useState(false);
   const groups = useMemo(() => (preview ? rowsByModule(preview) : new Map<number, ModuleOrderDetail[]>()), [preview]);
-  // Para el plano, cada pieza lleva el numero de modulo en la etiqueta: solo se ve, no cambia el acomodo.
-  const planRows = useMemo(
-    () => (preview ? preview.detalles.map((row) => ({ ...row, nombreProducto: `M${row.posicionModulo} · ${row.nombreProducto ?? ""}` })) : []),
-    [preview]
-  );
+  // Punto 14: con muchos modulos, una pestaña por categoria (con su cantidad) para revisar de a un grupo.
+  const [categoria, setCategoria] = useState("todas");
+  const categorias = useMemo(() => {
+    const byId = new Map<string, { id: string; nombre: string; cantidad: number }>();
+    for (const unit of units) {
+      const definition = definitions.get(unit.moduloId);
+      if (!definition) continue;
+      const current = byId.get(definition.categoria.id) ?? { id: definition.categoria.id, nombre: definition.categoria.nombre, cantidad: 0 };
+      current.cantidad += 1;
+      byId.set(current.id, current);
+    }
+    return [...byId.values()];
+  }, [definitions, units]);
+  const filtro = categorias.some((item) => item.id === categoria) ? categoria : "todas";
+  const verPestañas = categorias.length > 1;
   // Un renglon de estado de alto fijo: aparecer y desaparecer avisos arriba de las tablas las correria mientras se tocan cantos.
   const statusText =
     status === "loading"
@@ -400,12 +455,38 @@ export function ReviewStep({
   return (
     <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 340px" }, alignItems: "start" }}>
       <Stack spacing={2} sx={{ minWidth: 0 }}>
-        {status !== "error" && (
+        {/* Punto 13: la primera vez (sin despiece todavia), una tarjeta de carga arriba, a la altura del resumen. */}
+        {!preview && status === "loading" && (
+          <Paper role="status" aria-live="polite" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "10px" }}>
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+              <CircularProgress size={22} />
+              <Typography variant="body2" fontWeight={700}>
+                {statusText}
+              </Typography>
+            </Stack>
+            <Stack spacing={1} aria-hidden>
+              {[0, 1, 2, 3].map((index) => (
+                <Skeleton key={index} variant="rounded" height={index === 0 ? 44 : 32} />
+              ))}
+            </Stack>
+          </Paper>
+        )}
+        {status !== "error" && preview && (
           <Box role="status" aria-live="polite" sx={{ minHeight: 24, display: "flex", alignItems: "center", gap: 1 }}>
             <Typography variant="body2" color={status === "ready" ? "text.secondary" : "text.primary"} fontWeight={status === "ready" ? 400 : 700}>
               {statusText}
             </Typography>
           </Box>
+        )}
+        {/* Punto 15: si los modulos tienen herrajes y estan apagados, se dice (si no, no se entiende por que no estan). */}
+        {!herrajesHabilitados && units.some((unit) => (definitions.get(unit.moduloId)?.herrajes ?? []).length > 0) && (
+          <Alert severity="info">
+            Algunos módulos tienen herrajes, pero están apagados en{" "}
+            <Link component={RouterLink} to="/configuracion-herrajes">
+              Configuración › Herrajes
+            </Link>
+            : esta solicitud no los calcula ni los cobra.
+          </Alert>
         )}
         {status === "error" && error && (
           <Alert
@@ -427,11 +508,22 @@ export function ReviewStep({
             )}
           </Alert>
         )}
+        {preview && verPestañas && (
+          <Paper sx={{ borderRadius: "10px", px: 1 }}>
+            <Tabs value={filtro} onChange={(_, value) => setCategoria(value)} variant="scrollable" allowScrollButtonsMobile aria-label="Módulos por categoría">
+              <Tab value="todas" label={`Todos (${units.length})`} sx={{ minHeight: 48 }} />
+              {categorias.map((item) => (
+                <Tab key={item.id} value={item.id} label={`${item.nombre} (${item.cantidad})`} sx={{ minHeight: 48 }} />
+              ))}
+            </Tabs>
+          </Paper>
+        )}
         {preview &&
           units.map((unit, index) => {
             const definition = definitions.get(unit.moduloId);
             const rows = groups.get(index + 1) ?? [];
             if (!definition) return null;
+            if (filtro !== "todas" && definition.categoria.id !== filtro) return null;
             const herrajes = herrajesHabilitados ? (preview.modulos[index]?.herrajes ?? []) : [];
             return [
               <ModuleDespieceCard
@@ -458,34 +550,8 @@ export function ReviewStep({
               )
             ];
           })}
-        {preview && (
-          <Accordion
-            expanded={planOpen}
-            onChange={(_, expanded) => {
-              setPlanOpen(expanded);
-              if (expanded) setPlanMounted(true);
-            }}
-            disableGutters
-            sx={{ borderRadius: "10px !important", "&:before": { display: "none" } }}
-          >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Box>
-                <Typography component="h3" fontWeight={800} fontSize="1rem">
-                  Plano de cortes
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Cómo se acomodan las piezas en las placas. Los importes son los del resumen.
-                </Typography>
-              </Box>
-            </AccordionSummary>
-            <AccordionDetails>
-              {/* Se arma recien al abrirlo y queda armado: con muchos modulos el calculo tarda (DECISIONES 24). */}
-              {planMounted && <CutOptimizer rows={planRows} materials={planMaterials} hideCosts />}
-            </AccordionDetails>
-          </Accordion>
-        )}
       </Stack>
-      <SummaryPanel preview={preview} status={status} units={units.length} materials={materials} herrajesHabilitados={herrajesHabilitados} />
+      <SummaryPanel preview={preview} status={status} units={units.length} materials={materials} herrajesHabilitados={herrajesHabilitados} footer={action} />
     </Box>
   );
 }

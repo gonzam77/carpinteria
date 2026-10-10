@@ -862,9 +862,34 @@ function ModuleOrderWizard() {
     );
   }
 
+  const createButton = (
+    <Button
+      type="button"
+      variant="contained"
+      fullWidth
+      size="large"
+      startIcon={creating ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+      onClick={() => void create()}
+      // Punto 13: recien con el primer calculo (el resumen) se puede crear.
+      disabled={creating || busy || !preview}
+    >
+      {creating ? "Creando..." : "Crear solicitud"}
+    </Button>
+  );
+
   return (
     <Stack spacing={3}>
-      <Stack spacing={0.5}>
+      <Stack spacing={0.5} alignItems="flex-start">
+        {/* Volver, siempre arriba a la izquierda: al paso anterior, o al listado desde el primero. */}
+        <Button
+          type="button"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => (step > 0 ? back() : navigate("/modulos"))}
+          disabled={creating || busy}
+          sx={{ ml: -1, mb: 0.5 }}
+        >
+          {step > 0 ? "Volver" : "Volver al listado"}
+        </Button>
         <Typography variant="h4" component="h1">
           Nueva solicitud de módulos
         </Typography>
@@ -947,6 +972,8 @@ function ModuleOrderWizard() {
             setSelecciones(value);
             setErrors([]);
           }}
+          onNext={() => void next()}
+          busy={busy}
         />
       )}
       {step === 2 && (
@@ -980,6 +1007,7 @@ function ModuleOrderWizard() {
           onResetPiece={onResetPiece}
           onHardwareChange={onHardwareChange}
           onRecalculate={() => requestPreview()}
+          action={createButton}
         />
       )}
 
@@ -1007,13 +1035,10 @@ function ModuleOrderWizard() {
         </Alert>
       )}
 
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-        {step > 0 && (
-          <Button type="button" variant="outlined" startIcon={<ArrowBackIcon />} onClick={back} disabled={creating || busy} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Volver
-          </Button>
-        )}
-        {step < 3 && (
+      {/* Pasos 1 y 3: seguir, abajo a la derecha. En el 2 va en el panel de elegidos y en el 4, debajo del total. */}
+      {(step === 0 || step === 2) && (
+        // Fija abajo a la derecha: con muchos modulos no hace falta bajar hasta el final para seguir.
+        <Stack direction="row" justifyContent="flex-end" sx={{ position: "sticky", bottom: 16, zIndex: 3, pointerEvents: "none", "& > *": { pointerEvents: "auto" } }}>
           <Button
             type="button"
             variant="contained"
@@ -1024,20 +1049,8 @@ function ModuleOrderWizard() {
           >
             {step === 2 ? "Revisar despiece" : "Siguiente"}
           </Button>
-        )}
-        {step === 3 && (
-          <Button
-            type="button"
-            variant="contained"
-            startIcon={creating ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
-            onClick={() => void create()}
-            disabled={creating || busy}
-            sx={{ width: { xs: "100%", sm: "auto" } }}
-          >
-            {creating ? "Creando..." : "Crear solicitud"}
-          </Button>
-        )}
-      </Stack>
+        </Stack>
+      )}
     </Stack>
   );
 }
