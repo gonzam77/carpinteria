@@ -11,9 +11,9 @@
 //   page.route, así el stock de la copia no se toca: "Stock insuficiente" con el 409 STOCK_SHORTAGE_CONFIRMATION_REQUIRED,
 //   "Continuar sin descontar stock" con forceWithoutStock, "Pedido terminado" con el WhatsApp de M-<número>. Los que no
 //   tocan el stock (Pendiente y Rechazada) van de verdad, con el aviso y el historial.
-// - Exportar Excel (nombre y filas del archivo, y un error inventado), Materiales, Eliminar (un 409 inventado y uno de
+// - Descargar Excel y Materiales en sus pestañas (nombre y filas del archivo, y un error inventado), Eliminar en Editar (un 409 inventado y uno de
 //   verdad que vuelve al listado filtrado con el aviso), pestañas Despiece (un módulo por región, la pieza Editada, los
-//   cantos y el Resumen con los números guardados), Plano de cortes (las placas guardadas) e Historial.
+//   cantos y el Resumen con los números guardados), el plano al final del Excel de corte (las placas guardadas) e Historial.
 // - Esqueleto mientras carga, un error de carga con Reintentar, las redirecciones entre /pedidos/:id y /modulos/:id, los
 //   tamaños de notebook, tablet y celular, y la consola sin errores inesperados.
 // Crea solicitudes "Prueba F5.1 ..." por la API (una la pasa a Entregada por SQL, sin reserva de stock) y las borra al
@@ -315,7 +315,7 @@ try {
   };
   const barra = async () => norm(await page.locator("header .MuiTypography-h6").innerText());
   const chips = async () => (await titulo.locator("xpath=..").locator(".MuiChip-root").allInnerTexts()).map(norm);
-  const subtitulo = async () => norm(await titulo.locator("xpath=../following-sibling::p[1]").innerText());
+  const subtitulo = async () => norm((await titulo.locator("xpath=../following-sibling::p").allInnerTexts()).map(norm).join(" · "));
   const tarjeta = page.getByRole("region", { name: "Datos de la solicitud", exact: true });
   const datos = () =>
     tarjeta.evaluate((region) =>
@@ -397,7 +397,7 @@ try {
     await page.unroute(`**/api/pedidos-modulos/${principalId}`, demorar);
     check("mientras carga: el esqueleto, sin título", esqueleto && sinTitulo);
   }
-  check("barra y menú: Módulos a medida", (await barra()) === "Módulos a medida" && (await page.getByRole("link", { name: "Módulos a medida" }).evaluate((link) => link.classList.contains("Mui-selected"))), await barra());
+  check("barra y menú: Solicitudes de módulos", (await barra()) === "Solicitudes de módulos" && (await page.getByRole("link", { name: "Solicitudes de módulos" }).evaluate((link) => link.classList.contains("Mui-selected"))), await barra());
   check("un solo título: Solicitud M-<número>", (await titulo.count()) === 1 && norm(await titulo.innerText()) === `Solicitud M-${numero}`);
   const chipsCabecera = await chips();
   const colorPlazo = await titulo.locator("xpath=..").locator(".MuiChip-root").nth(1).evaluate((element) => getComputedStyle(element).color);
@@ -409,27 +409,28 @@ try {
   );
   check("encabezado: cliente · referencia", (await subtitulo()) === `${PREFIJO} principal · Referencia F5.1`, await subtitulo());
   const botones = (await page.locator("main").getByRole("button").allInnerTexts()).map(norm);
+  // Punto 5: arriba solo Volver, Estado y Editar; Eliminar esta en Editar; Materiales y el Excel son pestañas.
   check(
-    "acciones: Volver, Editar, Materiales, Exportar Excel y Eliminar",
-    ["Volver", "Editar", "Materiales", "Exportar Excel", "Eliminar"].every((texto) => botones.includes(texto)) && (await selectorEstado.count()) === 1,
+    "acciones: Volver, Estado y Editar, sin Eliminar ni Exportar",
+    ["Volver", "Editar"].every((texto) => botones.includes(texto)) && !botones.some((texto) => ["Eliminar", "Exportar Excel"].includes(texto)) && (await selectorEstado.count()) === 1,
     botones.join(", ")
   );
   check("el selector de estado muestra Pendiente", norm(await selectorEstado.innerText()) === "Pendiente", norm(await selectorEstado.innerText()));
   const valores = await datos();
   const esperadoDatos = {
-    Cliente: `${PREFIJO} principal`,
-    Teléfono: "2664000001",
+    Teléfono: "2664000001 WhatsApp",
     Email: "Sin email",
     "Dirección de entrega": "Sin dirección",
     "Referencia del trabajo": "Referencia F5.1",
     "Fecha de entrega": `${dmy(FECHA)} Cambiar`,
-    Creada: norm(`${dmy(hoy)} por ${admin.nombre} ${admin.apellido}`),
-    Módulos: "2"
+    Creada: norm(`${dmy(hoy)} por ${admin.nombre} ${admin.apellido}`)
   };
   const datosMal = Object.entries(esperadoDatos)
     .filter(([campo, valor]) => valores[campo] !== valor)
     .map(([campo]) => `${campo}: "${campo === "Creada" ? "(no coincide)" : valores[campo]}"`);
-  check("tarjeta: cliente, teléfono, Sin email, Sin dirección, referencia, fecha con Cambiar, creada por y módulos", datosMal.length === 0, datosMal.join(" || "));
+  check("tarjeta: teléfono con WhatsApp, Sin email, Sin dirección, referencia, fecha con Cambiar y creada por", datosMal.length === 0, datosMal.join(" || "));
+  const indicadores = norm(await tarjeta.innerText());
+  check("indicadores: módulos, piezas, placas y presupuesto", /2 módulos/.test(indicadores) && / piezas/.test(indicadores) && / placas?/.test(indicadores) && /presupuesto|total con herrajes/.test(indicadores), indicadores.slice(0, 200));
   check("stepper: Pendiente actual y el resto por hacer", await esperarPasos("PENDIENTE"), (await pasos()).join(", "));
   await shot("d1-detalle");
 
@@ -668,7 +669,11 @@ try {
   await abrir();
   guardada = await leer();
   const pestañas = (await page.getByRole("tablist", { name: "Secciones de la solicitud" }).getByRole("tab").allInnerTexts()).map(norm);
-  check("pestañas: Despiece, Plano de cortes e Historial, con Despiece elegida", JSON.stringify(pestañas) === '["Despiece","Plano de cortes","Historial"]' && (await page.getByRole("tab", { name: "Despiece" }).getAttribute("aria-selected")) === "true", pestañas.join(", "));
+  check(
+    "pestañas: Despiece, Hoja de taller, Materiales, Excel de corte e Historial, con Despiece elegida",
+    JSON.stringify(pestañas) === '["Despiece","Hoja de taller","Materiales","Excel de corte","Historial"]' && (await page.getByRole("tab", { name: "Despiece" }).getAttribute("aria-selected")) === "true",
+    pestañas.join(", ")
+  );
   // Despiece: una región por módulo, con su subtítulo, sus filas, la pieza editada y los cantos de cada fila.
   const regiones = page.getByRole("region", { name: /^Módulo \d+ · / });
   check("despiece: una región por módulo y ninguna de piezas adicionales", (await regiones.count()) === 2 && (await page.getByRole("region", { name: "Piezas adicionales" }).count()) === 0, `${await regiones.count()} regiones`);
@@ -740,8 +745,10 @@ try {
     check("Resumen: placas por material, metros de canto y presupuesto guardados (total igual a GET /api/pedidos-modulos/:id)", ok, `${placas} placas en pantalla, ${guardada.placasEstimadas} guardadas`);
   }
   await shot("d4-despiece", true);
-  // Plano de cortes: las placas guardadas y el mismo importe.
-  await page.getByRole("tab", { name: "Plano de cortes" }).click();
+  // Plano de cortes: solo al final de la pestaña Excel de corte (punto 7), con las placas guardadas y el mismo importe.
+  await page.getByRole("tab", { name: "Excel de corte" }).click();
+  const optimizar = page.getByRole("region", { name: "Optimizar cortes" });
+  await optimizar.getByRole("button", { name: "Optimizar cortes" }).click({ timeout: 30000 });
   const plano = page.getByText(/^Placas necesarias: \d+ - Costo estimado: /);
   await plano.waitFor({ timeout: 60000 });
   const planoTexto = norm(await plano.innerText());
@@ -778,7 +785,10 @@ try {
 
   // ---------------------------------------------------------------- K. Exportar Excel y Materiales
   {
-    const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30000 }), page.getByRole("button", { name: "Exportar Excel" }).click()]);
+    await page.getByRole("tab", { name: "Excel de corte" }).click();
+    const descargar = page.getByRole("button", { name: "Descargar Excel" });
+    await page.getByRole("region", { name: "Excel de corte" }).getByRole("grid").waitFor({ timeout: 30000 });
+    const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30000 }), descargar.click()]);
     const archivo = join(shotsDir, download.suggestedFilename());
     await download.saveAs(archivo);
     const workbook = new ExcelJS.Workbook();
@@ -789,7 +799,7 @@ try {
     });
     const filasGuardadas = Number(psql(`select count(*) from detalle_pedidos where "pedidoId" = '${principalId}'`));
     check(
-      "Exportar Excel: descarga pedido-M<número>.xlsx con las filas de la solicitud",
+      "Descargar Excel (pestaña Excel de corte): pedido-M<número>.xlsx con las filas de la solicitud",
       download.suggestedFilename() === `pedido-M${numero}.xlsx` && prefijos.length === filasGuardadas && prefijos.every((prefijo) => prefijo === `M${numero}`),
       `${download.suggestedFilename() === `pedido-M${numero}.xlsx`} | ${prefijos.length} filas, esperadas ${filasGuardadas}`
     );
@@ -797,24 +807,21 @@ try {
     const esExportar = (url) => url.pathname.endsWith("/api/orders/export");
     await page.route(esExportar, exportarFalla);
     esperados.push(/^HTTP 500 GET \/orders\/export/, /^console: Failed to load resource: .*500.* @ \/orders\/export/);
-    await page.getByRole("button", { name: "Exportar Excel" }).click();
+    await descargar.click();
     const avisoExportar = await esperarAviso("Falla inventada al exportar.");
-    check("Exportar Excel con un error del servidor: lo muestra y el botón queda disponible", avisoExportar && (await page.getByRole("button", { name: "Exportar Excel" }).isEnabled()));
+    check("Descargar Excel con un error del servidor: lo muestra y el botón queda disponible", avisoExportar && (await descargar.isEnabled()));
     await page.unroute(esExportar, exportarFalla);
     await cerrarAvisos();
 
-    await page.getByRole("button", { name: "Materiales" }).click();
-    const dialogoMateriales = page.getByRole("dialog", { name: /^Listado de materiales/ });
-    await dialogoMateriales.waitFor({ timeout: 10000 });
-    const imprimir = dialogoMateriales.getByRole("button", { name: "Imprimir / Guardar PDF" });
-    let calculado = false;
-    for (let waited = 0; !calculado && waited < 30000; waited += 250) {
-      calculado = await imprimir.isEnabled();
-      if (!calculado) await page.waitForTimeout(250);
-    }
-    check("Materiales: abre el listado de materiales de la solicitud, calculado y sin error", calculado && (await dialogoMateriales.locator(".MuiAlert-standardError").count()) === 0);
-    await dialogoMateriales.getByRole("button", { name: "Cerrar" }).click();
-    await dialogoMateriales.waitFor({ state: "hidden", timeout: 5000 }).catch(() => undefined);
+    await page.getByRole("tab", { name: "Materiales" }).click();
+    const tablaPlacas = page.getByRole("table", { name: "Placas" });
+    const calculado = await tablaPlacas.waitFor({ timeout: 30000 }).then(() => true, () => false);
+    const filasPlacas = calculado ? await tablaPlacas.locator("tbody tr").count() : 0;
+    check(
+      "Materiales (pestaña): el listado de placas y cantos, calculado y sin error, con Descargar Excel",
+      calculado && filasPlacas > 0 && (await page.locator("#panel-materiales .MuiAlert-standardError").count()) === 0 && (await page.getByRole("button", { name: "Descargar Excel" }).isEnabled()),
+      `${filasPlacas} placas`
+    );
   }
 
   // ---------------------------------------------------------------- L. error de carga y Reintentar
@@ -863,7 +870,7 @@ try {
     await page.waitForTimeout(800);
     check(
       "/pedidos/:id de una solicitud de módulos pasa a /modulos/:id, con la barra de la sección, y la carga sin repetir de más (dentro de la app, menos veces que entrando directo)",
-      new URL(page.url()).pathname === `/modulos/${principalId}` && cargasModulos.length > 0 && cargasModulos.length <= directas && cargasComun.length > 0 && (await barra()) === "Módulos a medida",
+      new URL(page.url()).pathname === `/modulos/${principalId}` && cargasModulos.length > 0 && cargasModulos.length <= directas && cargasComun.length > 0 && (await barra()) === "Solicitudes de módulos",
       `cargas: directa ${directas}, con redirección ${cargasModulos.length}, del detalle común ${cargasComun.length}`
     );
     esperados.push(new RegExp(`^HTTP 404 GET /pedidos-modulos/${corteId}$`), new RegExp(`^console: Failed to load resource: .*404.* @ /pedidos-modulos/${corteId}$`));
@@ -887,18 +894,23 @@ try {
     await page.route(`**/api/orders/${principalId}`, borrarCambiada);
     esperados.push(/^HTTP 409 DELETE \/orders\/[0-9a-f-]{36}$/, /^console: Failed to load resource: .*409.* @ \/orders\/[0-9a-f-]{36}$/);
     await abrir();
-    await page.getByRole("button", { name: "Eliminar" }).click();
+    // Eliminar esta en Editar (punto 5).
+    await page.getByRole("button", { name: "Editar", exact: true }).click();
+    await page.getByRole("button", { name: "Eliminar solicitud" }).click({ timeout: 30000 });
     const dialogoBorrar = page.getByRole("dialog", { name: "Eliminar solicitud" });
     await dialogoBorrar.waitFor({ timeout: 10000 });
     await dialogoBorrar.getByRole("button", { name: "Sí, eliminar" }).click();
-    const avisoBorrar409 = await esperarAviso("La solicitud cambió mientras tanto. Recargá la página y volvé a intentar.");
+    const avisoBorrar409 = await page
+      .getByText("La solicitud cambió mientras tanto. Recargá la página y volvé a intentar.")
+      .first()
+      .waitFor({ timeout: 10000 })
+      .then(() => true, () => false);
     await dialogoBorrar.waitFor({ state: "hidden", timeout: 5000 }).catch(() => undefined);
     check(
-      "Eliminar con un 409 inventado: cierra el diálogo, muestra el mensaje y la solicitud sigue",
+      "Eliminar (en Editar) con un 409 inventado: cierra el diálogo, muestra el mensaje y la solicitud sigue",
       avisoBorrar409 &&
         (await dialogoBorrar.count()) === 0 &&
-        new URL(page.url()).pathname === `/modulos/${principalId}` &&
-        (await titulo.count()) === 1 &&
+        new URL(page.url()).pathname === `/modulos/${principalId}/editar` &&
         psql(`select count(*) from pedidos where id = '${principalId}'`) === "1"
     );
     await page.unroute(`**/api/orders/${principalId}`, borrarCambiada);
@@ -914,7 +926,8 @@ try {
     await page.waitForURL(`**/modulos/${borrar.id}`, { timeout: 15000 });
     const origen = await page.evaluate(() => window.history.state?.usr?.returnTo ?? null);
     await page.getByRole("button", { name: "Volver" }).waitFor({ timeout: 30000 });
-    await page.getByRole("button", { name: "Eliminar" }).click();
+    await page.getByRole("button", { name: "Editar", exact: true }).click();
+    await page.getByRole("button", { name: "Eliminar solicitud" }).click({ timeout: 30000 });
     await dialogoBorrar.getByRole("button", { name: "Sí, eliminar" }).click();
     await page.waitForURL((url) => url.pathname === "/modulos", { timeout: 15000 }).catch(() => undefined);
     const avisoBorrado = await esperarAviso(`Solicitud M-${borrar.numero} eliminada.`);
@@ -927,7 +940,7 @@ try {
         () => false
       );
     check(
-      "Eliminar de verdad desde el listado filtrado: vuelve al listado con el filtro, avisa Solicitud M-<número> eliminada. y ya no está",
+      "Eliminar de verdad (desde Editar, abierta del listado filtrado): vuelve al listado con el filtro, avisa Solicitud M-<número> eliminada. y ya no está",
       new URL(origen ?? "/x", APP).pathname === "/modulos" &&
         buscado(origen) === `${PREFIJO} borrar` &&
         llego.pathname === "/modulos" &&
@@ -945,24 +958,25 @@ try {
     await abrir();
     const medidas = [];
     let entra = true;
-    for (const pestaña of ["Despiece", "Plano de cortes", "Historial"]) {
+    for (const pestaña of ["Despiece", "Hoja de taller", "Materiales", "Excel de corte", "Historial"]) {
       // La captura de pagina completa deja la pagina desplazada: se vuelve arriba y se confirma que la pestaña quedo elegida.
       await page.evaluate(() => window.scrollTo(0, 0));
       const solapa = page.getByRole("tab", { name: pestaña });
       await solapa.click();
       if ((await solapa.getAttribute("aria-selected")) !== "true") await solapa.press("Enter");
-      if (pestaña === "Plano de cortes") await page.getByText(/^Placas necesarias: \d+ - Costo estimado: /).waitFor({ timeout: 60000 });
-      await page.waitForTimeout(300);
+      if (pestaña === "Excel de corte") await page.getByRole("region", { name: "Excel de corte" }).getByRole("grid").waitFor({ timeout: 30000 });
+      if (pestaña === "Materiales") await page.getByRole("table", { name: "Placas" }).waitFor({ timeout: 30000 });
+      await page.waitForTimeout(500);
       const medida = await desborde();
       medidas.push(`${pestaña} ${medida.pagina}`);
       entra &&= medida.ok;
       await shot(`d6-${nombre}-${pestaña.replace(/ /g, "-").toLowerCase()}`, true);
     }
-    const eliminar = await page.getByRole("button", { name: "Eliminar" }).boundingBox();
+    const editar = await page.getByRole("button", { name: "Editar", exact: true }).boundingBox();
     check(
-      `${nombre} ${ancho}x${alto}: nada se sale de la pantalla en las tres pestañas y las acciones se ven enteras`,
-      entra && Boolean(eliminar) && eliminar.x >= 0 && eliminar.x + eliminar.width <= ancho,
-      `${medidas.join(", ")}; Eliminar hasta ${eliminar ? Math.round(eliminar.x + eliminar.width) : "-"}`
+      `${nombre} ${ancho}x${alto}: nada se sale de la pantalla en las cinco pestañas y las acciones se ven enteras`,
+      entra && Boolean(editar) && editar.x >= 0 && editar.x + editar.width <= ancho,
+      `${medidas.join(", ")}; Editar hasta ${editar ? Math.round(editar.x + editar.width) : "-"}`
     );
   }
   await page.setViewportSize({ width: 1366, height: 900 });

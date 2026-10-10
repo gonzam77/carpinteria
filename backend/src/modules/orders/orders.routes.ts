@@ -183,7 +183,7 @@ ordersRouter.put(
     });
     if (!existing) throw new AppError(404, "Pedido no encontrado");
     if (existing.tipo === TipoPedido.MODULOS) {
-      throw new AppError(400, "Esta solicitud es de módulos a medida: editala desde Módulos a medida.", { code: "ORDER_IS_MODULES" });
+      throw new AppError(400, "Esta solicitud es de módulos a medida: editala desde Solicitudes de módulos.", { code: "ORDER_IS_MODULES" });
     }
     if (!canEditOrder(existing.estado)) {
       throw new AppError(403, "No se pueden editar pedidos en proceso, terminados o entregados.");

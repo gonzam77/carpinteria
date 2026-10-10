@@ -43,6 +43,27 @@ export type DashboardStats = {
   byStatus: Array<{ estado: EstadoSolicitud; total: number; modulos?: number }>;
   byTipo?: Array<{ tipo: TipoPedido; total: number }>;
   stockAlerts: StockAlert[];
+  /** Las solicitudes de modulos (punto 8). */
+  modulos?: ModuleOrdersStats;
+};
+
+export type ModuleOrdersStats = {
+  activas: number;
+  porEstado: Array<{ estado: EstadoSolicitud; total: number }>;
+  modulosActivos: number;
+  placasActivas: number;
+  /** Presupuesto con herrajes de las que estan en curso. */
+  presupuestoActivo: number;
+  vencidas: number;
+  porVencer: number;
+  diasAviso: number;
+  proximas: Array<{ id: string; numero: number; cliente: string; estado: EstadoSolicitud; fechaEntrega: string | null; dias: number | null }>;
+  /** De las entregadas en los ultimos 90 dias, cuantas salieron hasta su fecha. */
+  cumplimiento: { entregadas: number; aTiempo: number };
+  /** Promedio de las creadas en los ultimos 90 dias (sin las rechazadas). */
+  ticketPromedio: number;
+  meses: Array<{ mes: string; solicitudes: number; presupuesto: number }>;
+  topModulos: Array<{ nombre: string; cantidad: number }>;
 };
 
 export type Material = {

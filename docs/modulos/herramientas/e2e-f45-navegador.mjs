@@ -191,7 +191,7 @@ function listadoDe(page) {
     }
     return false;
   };
-  const valoresIndicadores = async () => (await page.locator('[aria-label="Indicadores"] .MuiTypography-h5').allTextContents()).map(norm);
+  const valoresIndicadores = async () => (await page.locator('[aria-label="Indicadores"] .metric-value').allTextContents()).map(norm);
   return { listado, filas, clientes, fila, esperarClientes, celda, barra, esperarBarra, valoresIndicadores };
 }
 
@@ -214,7 +214,7 @@ try {
     const { barra } = listadoDe(page);
     await page.goto(`${APP}/`);
     await page.getByRole("link", { name: "Solicitar cortes" }).waitFor();
-    check("carpintero: no ve Modulos a medida y la barra sigue igual", (await page.getByRole("link", { name: "Módulos a medida" }).count()) === 0 && (await barra()) === "Panel de solicitudes");
+    check("carpintero: no ve Modulos a medida y la barra sigue igual", (await page.getByRole("link", { name: "Solicitudes de módulos" }).count()) === 0 && (await barra()) === "Panel de solicitudes");
     await page.goto(`${APP}/modulos`);
     await page.waitForTimeout(1500);
     check("carpintero: /modulos vuelve al inicio", new URL(page.url()).pathname === "/", new URL(page.url()).pathname);
@@ -363,7 +363,7 @@ try {
 
   // ---------------------------------------------------------------- B. vacio (la copia no tiene solicitudes de modulos)
   await page.goto(`${APP}/`);
-  await page.getByRole("link", { name: "Módulos a medida" }).click();
+  await page.getByRole("link", { name: "Solicitudes de módulos" }).click();
   await page.waitForURL(`${APP}/modulos`);
   await page.getByText("Todavía no hay solicitudes de módulos").waitFor();
   check("vacio: lo dice y ofrece cargar la primera", (await page.getByRole("button", { name: "Cargar la primera solicitud" }).count()) === 1);
@@ -384,7 +384,7 @@ try {
     () => true,
     () => false
   );
-  const titulosDelVacio = await page.getByRole("heading", { level: 1, name: "Módulos a medida" }).count();
+  const titulosDelVacio = await page.getByRole("heading", { level: 1, name: "Solicitudes de módulos" }).count();
   check(
     "vacio: un filtro muestra la tabla sin resultados y limpiar vuelve al aviso (y lo anuncia), sin errores en la consola",
     tablaSinCoincidencias &&
@@ -413,13 +413,15 @@ try {
   }
   await page.reload();
   check("orden: las que siguen en curso por fecha, despues la rechazada y al final la entregada", await esperarClientes(ORDEN, 30000), (await clientes()).join(", "));
-  check("menu: Modulos a medida queda marcado", await page.getByRole("link", { name: "Módulos a medida" }).evaluate((link) => link.classList.contains("Mui-selected")));
-  check("titulo de la barra: Modulos a medida (y el de la pantalla, un solo encabezado)", (await barra()) === "Módulos a medida" && (await page.getByRole("heading", { name: "Módulos a medida" }).count()) === 1);
+  check("menu: Modulos a medida queda marcado", await page.getByRole("link", { name: "Solicitudes de módulos" }).evaluate((link) => link.classList.contains("Mui-selected")));
+  check("titulo de la barra: Modulos a medida (y el de la pantalla, un solo encabezado)", (await barra()) === "Solicitudes de módulos" && (await page.getByRole("heading", { name: "Solicitudes de módulos" }).count()) === 1);
   check("la tabla tiene nombre para los lectores de pantalla", (await page.getByRole("grid", { name: "Solicitudes de módulos" }).count()) === 1);
   const indicadores = norm(await page.locator('[aria-label="Indicadores"]').innerText());
   check("indicadores: 5 en curso, 6 modulos a fabricar, 3 vencen esta semana y 1 atrasada", JSON.stringify(await valoresIndicadores()) === '["5","6","3","1"]', indicadores);
-  const atrasadasColor = await page.locator('[aria-label="Indicadores"] .MuiPaper-root').nth(3).evaluate((element) => getComputedStyle(element).backgroundColor);
-  check("indicadores: Atrasadas resaltada", atrasadasColor === "rgb(253, 241, 238)", atrasadasColor);
+  // Resaltada (punto 10): el numero en el rojo de error y el fondo teñido.
+  const atrasadasColor = await page.locator('[aria-label="Indicadores"] .metric-value').nth(3).evaluate((element) => getComputedStyle(element).color);
+  const atrasadasFondo = await page.locator('[aria-label="Indicadores"] .MuiPaper-root').nth(3).evaluate((element) => getComputedStyle(element).backgroundColor);
+  check("indicadores: Atrasadas resaltada", atrasadasColor === "rgb(203, 91, 74)" && atrasadasFondo.startsWith("rgba(203, 91, 74"), `${atrasadasColor} ${atrasadasFondo}`);
   const encabezados = await listado.locator('[role="columnheader"]').evaluateAll((items) => items.map((item) => item.getAttribute("data-field")));
   const titulos = (await listado.locator(".MuiDataGrid-columnHeaderTitle").allTextContents()).map(norm).filter(Boolean);
   check("columnas: lo urgente primero (N°, Cliente, Entrega, Plazo, Estado) y despues Referencia, Modulos y Creada", JSON.stringify(encabezados) === JSON.stringify(COLUMNAS) && JSON.stringify(titulos) === JSON.stringify(TITULOS), `${encabezados.join(",")} | ${titulos.join(",")}`);
@@ -694,7 +696,7 @@ try {
     return cantidad;
   });
   const vaciaDelTodo = await desdeInput.evaluate((input) => input.value === "" && !input.validity.badInput);
-  await page.getByRole("heading", { name: "Módulos a medida" }).click();
+  await page.getByRole("heading", { name: "Solicitudes de módulos" }).click();
   const sacadaConElMouse =
     (await page.waitForFunction(() => !new URL(location.href).searchParams.has("desde"), null, { timeout: 3000 }).then(
       () => true,
@@ -948,9 +950,9 @@ try {
       cortesAlAbrirFila === 0 &&
       (await page.getByText(`${PREFIJO} gamma`).count()) >= 1 &&
       (await page.getByRole("region", { name: "Datos de la solicitud" }).count()) === 1 &&
-      (await esperarBarra("Módulos a medida")) &&
-      (await page.getByRole("link", { name: "Módulos a medida" }).evaluate((link) => link.classList.contains("Mui-selected"))) &&
-      !(await page.getByRole("link", { name: "Solicitudes", exact: true }).evaluate((link) => link.classList.contains("Mui-selected"))),
+      (await esperarBarra("Solicitudes de módulos")) &&
+      (await page.getByRole("link", { name: "Solicitudes de módulos" }).evaluate((link) => link.classList.contains("Mui-selected"))) &&
+      !(await page.getByRole("link", { name: "Solicitudes de corte", exact: true }).evaluate((link) => link.classList.contains("Mui-selected"))),
     `cargas al abrir la fila: modulos ${porMontaje}, corte ${cortesAlAbrirFila}`
   );
   await page.getByRole("button", { name: "Volver" }).click();
@@ -1086,7 +1088,7 @@ try {
     "/pedidos/:id de una solicitud de modulos pasa a /modulos/:id, cargandola una vez en cada pantalla",
     new URL(page.url()).pathname === `/modulos/${fila.get("delta").id}` &&
       redirigidoConTitulo &&
-      (await esperarBarra("Módulos a medida")) &&
+      (await esperarBarra("Solicitudes de módulos")) &&
       conRedireccion.corte === alRecargar &&
       conRedireccion.modulos === porMontaje,
     `cargas: directa ${JSON.stringify(directa)}, con redireccion ${JSON.stringify(conRedireccion)}, por montaje ${porMontaje}`
@@ -1122,7 +1124,7 @@ try {
   await filaDe("eta").locator('[data-field="cliente"]').click();
   await page.waitForURL(`**/modulos/${fila.get("eta").id}`);
   await page.getByRole("button", { name: "Volver" }).waitFor();
-  await page.getByRole("link", { name: "Solicitudes", exact: true }).click();
+  await page.getByRole("link", { name: "Solicitudes de corte", exact: true }).click();
   await page.waitForURL(`${APP}/pedidos`);
   await page.getByRole("button", { name: "Ver", exact: true }).first().click();
   await page.waitForURL(/\/pedidos\/[0-9a-f-]{36}$/);
@@ -1144,7 +1146,7 @@ try {
   };
   detalles.length = 0;
   await page.evaluate(() => window.history.go(-2));
-  const llegoAtras = await esperarQue(async () => (await page.getByText(`${PREFIJO} eta`).count()) >= 1 && (await barra()) === "Módulos a medida");
+  const llegoAtras = await esperarQue(async () => (await page.getByText(`${PREFIJO} eta`).count()) >= 1 && (await barra()) === "Solicitudes de módulos");
   await page.waitForTimeout(1500);
   const saltoAtras = {
     llego: llegoAtras,
@@ -1194,7 +1196,7 @@ try {
   };
   await page.route(detalleDeEta, demorarEta);
   await page.evaluate(() => window.history.go(-2));
-  await esperarQue(async () => (await barra()) === "Módulos a medida");
+  await esperarQue(async () => (await barra()) === "Solicitudes de módulos");
   const titulosMientrasCarga = await titulosDetalle.count();
   const llegoEta = await esperarQue(tituloEsEta);
   await page.unroute(detalleDeEta, demorarEta);
@@ -1216,7 +1218,7 @@ try {
   const volvioAEta = await esperarQue(tituloEsEta);
   soltarCorte();
   await page.waitForTimeout(1500);
-  const sigueEta = (await tituloEsEta()) && new URL(page.url()).pathname === `/modulos/${fila.get("eta").id}` && (await barra()) === "Módulos a medida";
+  const sigueEta = (await tituloEsEta()) && new URL(page.url()).pathname === `/modulos/${fila.get("eta").id}` && (await barra()) === "Solicitudes de módulos";
   await page.unroute(detalleDeCorte, retenerCorte);
   check("si la solicitud anterior responde tarde, no reemplaza a la que se esta viendo", volvioAEta && sigueEta);
   await page.goto(`${APP}/modulos`);
@@ -1493,7 +1495,7 @@ try {
   await esperarClientes(["alfa", "eta"]);
   const filtrada = new URL(page.url()).search;
   pedidos.length = 0;
-  await page.getByRole("link", { name: "Módulos a medida" }).click();
+  await page.getByRole("link", { name: "Solicitudes de módulos" }).click();
   await page.waitForURL(`${APP}/modulos`);
   await page.waitForTimeout(1000);
   check(
@@ -1519,11 +1521,11 @@ try {
   await esperarClientes(ORDEN);
   // El menu enseguida despues de escribir (antes de la pausa), con la URL ya sin filtros: tambien manda sobre lo escrito.
   await desdeInput.fill(addDays(hoy, 5));
-  await page.getByRole("link", { name: "Módulos a medida" }).click();
+  await page.getByRole("link", { name: "Solicitudes de módulos" }).click();
   await page.waitForTimeout(1200);
   check("el menu enseguida despues de elegir una fecha: no queda la fecha ni su filtro", new URL(page.url()).search === "" && (await desdeInput.inputValue()) === "" && (await esperarClientes(ORDEN)), new URL(page.url()).search);
   await buscar.fill("gamma");
-  await page.getByRole("link", { name: "Módulos a medida" }).click();
+  await page.getByRole("link", { name: "Solicitudes de módulos" }).click();
   await page.waitForTimeout(1200);
   check("el menu enseguida despues de escribir en Buscar: no queda la busqueda", new URL(page.url()).search === "" && (await buscar.inputValue()) === "" && (await esperarClientes(ORDEN)), new URL(page.url()).search);
 
@@ -1574,7 +1576,7 @@ try {
   await page.evaluate(() => {
     window.__capturar = false;
   });
-  await page.getByRole("link", { name: "Módulos a medida" }).click();
+  await page.getByRole("link", { name: "Solicitudes de módulos" }).click();
   let tomoElMenu = false;
   for (let waited = 0; waited < 5000 && !tomoElMenu; waited += 100) {
     tomoElMenu = (await buscar.inputValue()) === "";
@@ -1613,7 +1615,7 @@ try {
   // Atras con una fecha a medio escribir, sin salir del campo: el campo queda como la URL (vacio, sin segmentos sueltos).
   await elegirEstado("Pendiente");
   await esperarClientes(["alfa", "eta", "delta"]);
-  await page.getByRole("link", { name: "Módulos a medida" }).click();
+  await page.getByRole("link", { name: "Solicitudes de módulos" }).click();
   await page.waitForURL(`${APP}/modulos`);
   await esperarClientes(ORDEN);
   await escribirFecha(desdeInput, dmy(hoy).slice(0, 5).replace("/", ""), 0);
@@ -1631,7 +1633,7 @@ try {
   await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
   await page.waitForURL("**/modulos/nueva");
   await page.getByRole("heading", { name: "Nueva solicitud de módulos" }).waitFor({ timeout: 30000 });
-  check("boton Nueva solicitud: abre el asistente, con la barra de la seccion", await esperarBarra("Módulos a medida"), await barra());
+  check("boton Nueva solicitud: abre el asistente, con la barra de la seccion", await esperarBarra("Solicitudes de módulos"), await barra());
   await page.goto(`${APP}/configuracion-modulos`);
   check("titulo de la barra en el catalogo", await esperarBarra("Catálogo de módulos"), await barra());
   await page.goto(`${APP}/pedidos`);
@@ -2019,7 +2021,9 @@ try {
   await page.waitForURL(`**/modulos/${fila.get("delta").id}`);
   // Desde el detalle de modulos (F5.1): borra y vuelve a la pantalla que lo abrio con "Solicitud M-<numero> eliminada.".
   const borrarConTitulo = await esperarTitulo("delta");
-  await page.getByRole("button", { name: "Eliminar", exact: true }).click();
+  // Eliminar esta en Editar (punto 5): de ahi vuelve al listado que abrio el detalle.
+  await page.getByRole("button", { name: "Editar", exact: true }).click();
+  await page.getByRole("button", { name: "Eliminar solicitud" }).click({ timeout: 30000 });
   await page.getByRole("button", { name: "Sí, eliminar" }).click();
   await page.waitForURL(`**/modulos${conEstado}`, { timeout: 15000 }).catch(() => undefined);
   const textoBorrado = `Solicitud M-${fila.get("delta").numero} eliminada.`;

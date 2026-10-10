@@ -1,6 +1,6 @@
 // Prueba en el navegador de la hoja de taller (F5.4, spec §11.2): Edge sin ventana, contra el backend local (puerto 4100,
 // copia del backup) y Vite (puerto 5180, con VITE_API_URL=http://127.0.0.1:4100/api).
-// - Del listado filtrado al detalle y a "Hoja de taller" (/modulos/:id/taller); Volver regresa al detalle, que sigue
+// - Del listado filtrado al detalle, a su pestaña "Hoja de taller" y a "Pantalla completa" (/modulos/:id/taller); Volver regresa al detalle, que sigue
 //   volviendo al listado filtrado.
 // - Una hoja por módulo y una de piezas adicionales: encabezado (M-N · Módulo X de Y, cliente y entrega), bloque del
 //   módulo (imagen si el catálogo la tiene, medidas con su nombre, colores, fondo, perfil y observaciones), despiece en
@@ -150,14 +150,17 @@ try {
   await fila.waitFor({ timeout: 30000 });
   await fila.click();
   await page.waitForURL(`**/modulos/${o.id}`);
-  const boton = page.getByRole("button", { name: "Hoja de taller" });
-  await boton.waitFor({ timeout: 30000 });
-  await boton.click();
+  // La hoja de taller es una pestaña del detalle (punto 5): ahí se ven las hojas y "Pantalla completa" abre esta página.
+  await page.getByRole("tab", { name: "Hoja de taller" }).click({ timeout: 30000 });
+  const enPestaña = page.locator("#panel-taller section.taller-hoja");
+  await enPestaña.first().waitFor({ timeout: 30000 });
+  check("pestaña Hoja de taller: las tres hojas en el detalle", (await enPestaña.count()) === 3, String(await enPestaña.count()));
+  await page.getByRole("button", { name: "Pantalla completa" }).click();
   await page.waitForURL(`**/modulos/${o.id}/taller`);
   const hojas = page.locator("section.taller-hoja");
   await hojas.first().waitFor({ timeout: 30000 });
   await page.waitForTimeout(1500);
-  check("título y barra: Hojas de taller · M-N, Volver e Imprimir, sin el menú", norm(await page.getByRole("heading", { level: 1 }).innerText()) === `Hojas de taller · M-${n}` && (await page.getByRole("button", { name: "Imprimir" }).isEnabled()) && (await page.getByText("Módulos a medida").count()) === 0);
+  check("título y barra: Hojas de taller · M-N, Volver e Imprimir, sin el menú", norm(await page.getByRole("heading", { level: 1 }).innerText()) === `Hojas de taller · M-${n}` && (await page.getByRole("button", { name: "Imprimir" }).isEnabled()) && (await page.getByText("Solicitudes de módulos").count()) === 0);
   check("tres hojas: dos módulos y las adicionales", (await hojas.count()) === 3, String(await hojas.count()));
   const titulos = (await hojas.locator("h2").allInnerTexts()).map(norm);
   check("encabezados", JSON.stringify(titulos) === JSON.stringify([`M-${n} · Módulo 1 de 2`, `M-${n} · Módulo 2 de 2`, `M-${n} · Piezas adicionales`]), titulos.join(" | "));
@@ -209,7 +212,7 @@ try {
   // ---------------------------------------------------------------- D. Volver
   await page.getByRole("button", { name: "Volver" }).click();
   await page.waitForURL(`**/modulos/${o.id}`);
-  await page.getByRole("button", { name: "Hoja de taller" }).waitFor({ timeout: 30000 });
+  await page.getByRole("tab", { name: "Hoja de taller" }).waitFor({ timeout: 30000 });
   await page.locator("main").getByRole("button", { name: "Volver", exact: true }).click();
   await page.waitForURL((url) => url.pathname === "/modulos", { timeout: 15000 }).catch(() => undefined);
   check("Volver: al detalle, y de ahí al listado filtrado", new URL(page.url()).searchParams.get("q") === `${PREFIJO} hoja`, page.url().replace(APP, ""));

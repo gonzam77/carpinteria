@@ -115,7 +115,7 @@ try {
   const carpModulos = await call("GET", "/orders?tipo=MODULOS", undefined, carpintero);
   check("§15 ?tipo=MODULOS a un carpintero no le muestra solicitudes ajenas", carpModulos.status === 200 && carpModulos.data.every((p) => p.usuarioId === carpinteroId));
   const putCorte = await call("PUT", `/orders/${o.id}`, { cliente: "x", numeroContacto: "000000", detalles: o.detalles });
-  check("§15 PUT /api/orders/:id sobre módulos: 400 ORDER_IS_MODULES", putCorte.status === 400 && putCorte.data?.code === "ORDER_IS_MODULES" && /Módulos a medida/.test(putCorte.data?.message ?? ""), putCorte.data?.message);
+  check("§15 PUT /api/orders/:id sobre módulos: 400 ORDER_IS_MODULES", putCorte.status === 400 && putCorte.data?.code === "ORDER_IS_MODULES" && /Solicitudes de módulos/.test(putCorte.data?.message ?? ""), putCorte.data?.message);
   const detalle = await call("GET", `/orders/${o.id}`);
   check("§15 GET /api/orders/:id sobre módulos responde", detalle.status === 200 && detalle.data.tipo === "MODULOS");
   const corte = await call("POST", "/orders", { cliente: `${PREFIJO} corte`, numeroContacto: "2664000000", detalles: [{ materialId: colorA, largo: 500, ancho: 400, cantidad: 2 }] });
@@ -136,6 +136,19 @@ try {
     "§15 dashboard: cada estado dice cuántas son de módulos",
     stats.byStatus.every((item) => item.modulos === Number(modulosPorEstado[item.estado] ?? 0)) && stats.byStatus.reduce((sum, item) => sum + item.total, 0) === stats.totalOrders,
     JSON.stringify(stats.byStatus)
+  );
+  // Punto 8 (2026-10-09): las metricas de las solicitudes de modulos.
+  const activasDb = Number(psql(`select count(*) from pedidos where tipo = 'MODULOS' and estado in ('PENDIENTE', 'EN_PROCESO', 'TERMINADA')`));
+  const enCursoDb = Number(psql(`select coalesce(round(sum("presupuestoEstimado" + "costoHerrajes")::numeric, 2), 0) from pedidos where tipo = 'MODULOS' and estado in ('PENDIENTE', 'EN_PROCESO', 'TERMINADA')`));
+  check(
+    "punto 8: módulos en curso, su presupuesto, 6 meses y los más pedidos",
+    stats.modulos &&
+      stats.modulos.activas === activasDb &&
+      Math.abs(stats.modulos.presupuestoActivo - enCursoDb) < 0.01 &&
+      stats.modulos.meses.length === 6 &&
+      stats.modulos.topModulos.length > 0 &&
+      stats.modulos.proximas.length === Math.min(6, activasDb),
+    `${stats.modulos?.activas} activas (${activasDb}), ${stats.modulos?.presupuestoActivo} (${enCursoDb})`
   );
   // La demanda de placas de una de módulos pendiente entra en las alertas: sin stock de colorA, la alerta suma sus placas.
   psql(`update materiales set "stockPlacas" = 0 where id = '${colorA}'`);

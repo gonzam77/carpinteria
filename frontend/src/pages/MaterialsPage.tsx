@@ -355,7 +355,7 @@ export function MaterialsPage() {
       { field: "valor", headerName: "Valor", width: 130, valueFormatter: (value) => Number(value).toLocaleString() },
       { field: "espesorMm", headerName: "Espesor", width: 110, valueFormatter: (value) => `${value} mm` },
       { field: "linkedOrdersCount", headerName: "Solicitudes", width: 120, valueGetter: (_value, row) => row.linkedOrdersCount ?? 0 },
-      { field: "fechaActualizacion", headerName: "Últ. cambio", width: 130, valueGetter: (_value, row) => (row.fechaActualizacion ? new Date(row.fechaActualizacion).toLocaleDateString() : "-") },
+      { field: "fechaActualizacion", headerName: "Últ. cambio", width: 130, type: "date", valueGetter: (_value, row) => (row.fechaActualizacion ? new Date(row.fechaActualizacion) : null), valueFormatter: (value: Date | null) => (value ? value.toLocaleDateString("es-AR") : "-") },
       buildActionColumn(true)
     ],
     []
@@ -367,7 +367,7 @@ export function MaterialsPage() {
       { field: "espesorMm", headerName: "Espesor", width: 110, valueFormatter: (value) => `${value} mm` },
       { field: "valor", headerName: "Valor por metro", width: 150, valueFormatter: (value) => Number(value).toLocaleString() },
       { field: "linkedOrdersCount", headerName: "Solicitudes", width: 120, valueGetter: (_value, row) => row.linkedOrdersCount ?? 0 },
-      { field: "fechaActualizacion", headerName: "Últ. cambio", width: 130, valueGetter: (_value, row) => (row.fechaActualizacion ? new Date(row.fechaActualizacion).toLocaleDateString() : "-") },
+      { field: "fechaActualizacion", headerName: "Últ. cambio", width: 130, type: "date", valueGetter: (_value, row) => (row.fechaActualizacion ? new Date(row.fechaActualizacion) : null), valueFormatter: (value: Date | null) => (value ? value.toLocaleDateString("es-AR") : "-") },
       buildActionColumn(true)
     ],
     []

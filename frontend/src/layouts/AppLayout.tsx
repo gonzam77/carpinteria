@@ -34,7 +34,8 @@ export function AppLayout() {
 
   // Solo ADMIN (spec §14.2): el listado, y desde ahi el asistente y el detalle.
   const modulesNavItem = {
-    label: "Módulos a medida",
+    // Punto 9 (2026-10-09): los dos listados se llaman igual, "Solicitudes de ...".
+    label: "Solicitudes de módulos",
     to: "/modulos",
     icon: <KitchenIcon />,
     match: (pathname: string) => pathname === "/modulos" || pathname.startsWith("/modulos/")
@@ -43,7 +44,7 @@ export function AppLayout() {
   const mainNavItems = [
     { label: "Dashboard", to: "/", icon: <AssessmentIcon />, match: (pathname: string) => pathname === "/" },
     {
-      label: user?.rol === "ADMIN" ? "Solicitudes" : "Mis solicitudes",
+      label: user?.rol === "ADMIN" ? "Solicitudes de corte" : "Mis solicitudes",
       to: user?.rol === "ADMIN" ? "/pedidos" : "/mis-solicitudes",
       icon: <AssignmentIcon />,
       match: (pathname: string) => pathname === "/pedidos" || pathname === "/mis-solicitudes" || /^\/pedidos\/(?!nuevo$).+/.test(pathname)

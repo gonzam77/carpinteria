@@ -205,6 +205,10 @@ try {
   const resumen = () => page.locator("aside, [aria-label='Resumen']").first();
   const totalHerrajes = async () => norm(await page.getByText("Herrajes", { exact: true }).locator("xpath=..").innerText());
   check("paso 4: el resumen suma los herrajes", (await totalHerrajes()).includes(money(13900)), await totalHerrajes());
+  // Punto 15 (2026-10-09): el resumen tambien los lista, sumados por modelo.
+  const resumenTexto = norm(await page.getByText("HERRAJES", { exact: true }).locator("xpath=..").innerText());
+  check("paso 4: el resumen lista los herrajes por modelo", resumenTexto.includes(`${PREFIJO} Cazoleta común 4`) && resumenTexto.includes(`${PREFIJO} Telescópica 450 1 par`), resumenTexto.slice(-160));
+  check("con los herrajes prendidos no hay aviso de apagados", (await page.getByText(/están apagados en/).count()) === 0);
   await page.screenshot({ path: join(shotsDir, "a1-paso4-herrajes.png"), fullPage: true });
   await herrajesCard.getByRole("combobox", { name: `Modelo de ${PREFIJO} Bisagra del módulo 1` }).click();
   await page.getByRole("option", { name: `${PREFIJO} Cierre suave` }).click();
@@ -246,6 +250,25 @@ try {
   await page.waitForTimeout(500);
   await page.screenshot({ path: join(shotsDir, "a3-constancia-herrajes.png") });
   await constancia.getByRole("button", { name: "Cerrar" }).click();
+  // Punto 15: con los herrajes apagados, el paso 4 avisa que los modulos los tienen pero no se cobran.
+  setEnabled(false);
+  await page.goto(`${APP}/modulos/nueva`);
+  await page.getByLabel("Nombre o razón social").fill(`${PREFIJO} apagados`);
+  await page.getByLabel("Teléfono").fill("2664000000");
+  await page.getByRole("button", { name: "Siguiente" }).click();
+  await page.getByLabel("Buscar por nombre o código").fill(PREFIJO);
+  await page.getByRole("button", { name: `${PREFIJO} Bajo mesada`, exact: true }).click();
+  await page.getByRole("button", { name: "Siguiente" }).click();
+  const tarjetaApagados = page.getByRole("region", { name: `Módulo 1 · ${PREFIJO} Bajo mesada`, exact: true });
+  await tarjetaApagados.waitFor({ timeout: 15000 });
+  for (const label of ["Esqueleto", "Frentes"]) {
+    await tarjetaApagados.getByLabel(label).click();
+    await page.getByRole("option", { name: new RegExp(`^${nombreA.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} ·`) }).first().click();
+  }
+  await page.getByRole("button", { name: "Revisar despiece" }).click();
+  const avisoApagados = await page.getByText(/Algunos módulos tienen herrajes, pero están apagados/).waitFor({ timeout: 30000 }).then(() => true, () => false);
+  check("apagados: el paso 4 avisa que los módulos tienen herrajes pero no se cobran", avisoApagados && (await page.getByRole("region", { name: "Herrajes del módulo 1" }).count()) === 0);
+  setEnabled(true);
   await context.close();
 } catch (error) {
   check(`la prueba se cortó: ${error.message.split("\n").slice(0, 4).join(" / ")}`, false);

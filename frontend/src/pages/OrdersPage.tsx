@@ -183,7 +183,15 @@ export function OrdersPage() {
       },
       { field: "cliente", headerName: "Cliente", flex:1, minWidth: 190 },
       { field: "estado", headerName: "Estado", width: 150, renderCell: ({ value }) => <StatusChip size="small" status={value as EstadoSolicitud} /> },
-      { field: "fechaCreacion", headerName: "Fecha", width: 190, valueGetter: (_, row) => new Date(row.fechaCreacion).toLocaleDateString("es-AR", {day:"2-digit",month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit",}) },
+      // Punto 11 (2026-10-09): ordena por la fecha (no por el texto "dd/mm/aaaa"); se ve igual que antes.
+      {
+        field: "fechaCreacion",
+        headerName: "Fecha",
+        width: 190,
+        type: "dateTime",
+        valueGetter: (_, row) => new Date(row.fechaCreacion),
+        valueFormatter: (value: Date) => value.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+      },
       { field: "piezas", headerName: "Piezas", width: 100, valueGetter: (_, row) => row.detalles.reduce((total, detail) => total + Number(detail.cantidad || 0), 0) },
       { field: "presupuestoEstimado", headerName: "Total estimado", width: 170, valueFormatter: (value) => formatMoney(Number(value ?? 0)) },
       // { field: "usuario", headerName: "Carpintero", width: 180, valueGetter: (_, row) => (row.usuario ? `${row.usuario.nombre} ${row.usuario.apellido}` : "") }
@@ -194,7 +202,7 @@ export function OrdersPage() {
   return (
     <Stack spacing={2.5}>
       <Stack spacing={0.5}>
-        <Typography variant="h4">{user?.rol === "ADMIN" ? "Solicitudes recibidas" : "Mis solicitudes"}</Typography>
+        <Typography variant="h4">{user?.rol === "ADMIN" ? "Solicitudes de corte" : "Mis solicitudes"}</Typography>
         <Typography color="text.secondary">Seguimiento de pedidos, filtros rápidos y exportación de cortes.</Typography>
       </Stack>
       <Paper sx={{ p: { xs: 2, sm: 2.25 }, borderRadius: "8px", overflow: "hidden" }}>

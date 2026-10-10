@@ -1,4 +1,8 @@
 import AddIcon from "@mui/icons-material/Add";
+import EventBusyOutlinedIcon from "@mui/icons-material/EventBusyOutlined";
+import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
+import HourglassBottomOutlinedIcon from "@mui/icons-material/HourglassBottomOutlined";
+import ViewModuleOutlinedIcon from "@mui/icons-material/ViewModuleOutlined";
 import DownloadIcon from "@mui/icons-material/Download";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -18,12 +22,13 @@ import {
   type GridSlotProps
 } from "@mui/x-data-grid";
 import { saveAs } from "file-saver";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { useLocation, useNavigate, useNavigationType, useSearchParams } from "react-router-dom";
 import { getModulesConfig } from "../api/catalog";
 import { api } from "../api/client";
 import { listModuleOrders, moduleOrderError, type ModuleOrderApiError } from "../api/moduleOrders";
 import { DeliveryChip } from "../components/DeliveryChip";
+import { MetricTile } from "../components/MetricTile";
 import { StatusChip, getStatusStyle } from "../components/StatusChip";
 import { useTodayInArgentina } from "../hooks/useTodayInArgentina";
 import {
@@ -87,38 +92,37 @@ const visuallyHidden = {
   whiteSpace: "nowrap"
 } as const;
 
-function Indicator({ label, value, hint, alert = false, unavailable = false }: { label: string; value: number | null; hint?: string; alert?: boolean; unavailable?: boolean }) {
-  return (
-    <Paper
-      variant="outlined"
-      sx={{ px: 2, py: 1.5, borderRadius: "10px", ...(alert ? { borderColor: "#efb1a6", bgcolor: "#fdf1ee" } : {}) }}
-    >
-      {value !== null ? (
-        // Un numero grande, no un encabezado: el encabezado de la pantalla es el h1.
-        <Typography variant="h5" component="div" fontWeight={800} sx={{ fontVariantNumeric: "tabular-nums", color: alert ? "#96382b" : "text.primary" }}>
-          {value}
-        </Typography>
-      ) : unavailable ? (
-        // Sin el listado no hay numeros: un guion quieto, no un esqueleto que parece cargar.
-        <Typography variant="h5" component="div" fontWeight={800} color="text.disabled">
-          <span aria-hidden="true">—</span>
-          <Box component="span" sx={visuallyHidden}>
-            sin datos
-          </Box>
-        </Typography>
-      ) : (
-        <Skeleton variant="text" width={48} height={36} />
-      )}
-      <Typography variant="body2" fontWeight={700} color={alert ? "#96382b" : "text.secondary"}>
-        {label}
-      </Typography>
-      {hint && (
-        <Typography variant="caption" color="text.secondary">
-          {hint}
-        </Typography>
-      )}
-    </Paper>
-  );
+/** Un indicador del listado (punto 10): el mismo formato compacto, con icono, que el dashboard y el detalle. */
+function Indicator({
+  icon,
+  label,
+  value,
+  hint,
+  alert = false,
+  unavailable = false
+}: {
+  icon: ReactNode;
+  label: string;
+  value: number | null;
+  hint?: string;
+  alert?: boolean;
+  unavailable?: boolean;
+}) {
+  const shown =
+    value !== null ? (
+      value
+    ) : unavailable ? (
+      // Sin el listado no hay numeros: un guion quieto, no un esqueleto que parece cargar.
+      <Box component="span" sx={{ color: "text.disabled" }}>
+        <span aria-hidden="true">—</span>
+        <Box component="span" sx={visuallyHidden}>
+          sin datos
+        </Box>
+      </Box>
+    ) : (
+      <Skeleton variant="text" width={48} />
+    );
+  return <MetricTile icon={icon} label={label} value={shown} hint={hint} tone={alert ? "error" : "primary"} />;
 }
 
 function ErrorAlert({ error, onRetry }: { error: ModuleOrderApiError; onRetry: () => void }) {
@@ -619,7 +623,7 @@ export function ModuleOrdersPage() {
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" alignItems={{ sm: "flex-end" }}>
         <Stack spacing={0.5}>
           <Typography variant="h4" component="h1">
-            Módulos a medida
+            Solicitudes de módulos
           </Typography>
           <Typography color="text.secondary">Solicitudes de muebles armados por ROMA. Van aparte de las solicitudes de corte de los carpinteros.</Typography>
         </Stack>
@@ -631,11 +635,11 @@ export function ModuleOrdersPage() {
       {rowsError && <ErrorAlert error={rowsError} onRetry={retry} />}
       {allError && <ErrorAlert error={allError} onRetry={retry} />}
 
-      <Box component="section" aria-label="Indicadores" sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" } }}>
-        <Indicator label="En curso" value={indicators?.enCurso ?? null} unavailable={indicatorsUnavailable} hint="Pendientes, en proceso y terminadas" />
-        <Indicator label="Módulos a fabricar" value={indicators?.modulosAFabricar ?? null} unavailable={indicatorsUnavailable} hint="De las pendientes y en proceso" />
-        <Indicator label="Vencen esta semana" value={indicators?.vencenEstaSemana ?? null} unavailable={indicatorsUnavailable} hint={`Hoy y los próximos ${DIAS_SEMANA} días`} />
-        <Indicator label="Atrasadas" value={indicators?.atrasadas ?? null} unavailable={indicatorsUnavailable} hint="Ya pasó la fecha de entrega" alert={Boolean(indicators?.atrasadas)} />
+      <Box component="section" aria-label="Indicadores" sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" } }}>
+        <Indicator icon={<HourglassBottomOutlinedIcon />} label="En curso" value={indicators?.enCurso ?? null} unavailable={indicatorsUnavailable} hint="Pendientes, en proceso y terminadas" />
+        <Indicator icon={<ViewModuleOutlinedIcon />} label="Módulos a fabricar" value={indicators?.modulosAFabricar ?? null} unavailable={indicatorsUnavailable} hint="De las pendientes y en proceso" />
+        <Indicator icon={<EventOutlinedIcon />} label="Vencen esta semana" value={indicators?.vencenEstaSemana ?? null} unavailable={indicatorsUnavailable} hint={`Hoy y los próximos ${DIAS_SEMANA} días`} />
+        <Indicator icon={<EventBusyOutlinedIcon />} label="Atrasadas" value={indicators?.atrasadas ?? null} unavailable={indicatorsUnavailable} hint="Ya pasó la fecha de entrega" alert={Boolean(indicators?.atrasadas)} />
       </Box>
 
       {/* Desde md, los filtros en una o dos lineas: en una notebook de 1024 px se ve alguna solicitud sin bajar. Los dos
