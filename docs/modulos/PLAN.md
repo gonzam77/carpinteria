@@ -12,7 +12,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-09
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.4 está subido (Gonzalo subió F6.4 y el arreglo del build de Docker, b8de29f). F7.5 (las mejoras que pidió el 2026-10-09) está terminado y sin commitear (espera el OK). Cada push espera su OK.
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.4 está subido (Gonzalo subió F6.4 y el arreglo del build de Docker, b8de29f). F7.5 (las mejoras que pidió el 2026-10-09) está terminado y subido (con el OK de Gonzalo, 2026-10-10). Cada push espera su OK.
 - **Último paso terminado:** F7.5 (las 16 mejoras que pidió Gonzalo el 2026-10-09). Las Fases 0 a 5 están completas; la 6 (herrajes) sigue con datos de ejemplo hasta que llegue el listado de ROMA.
 - **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.5 (pruebas de punta a punta y no regresión de la Fase 6), con lo que diga Gonzalo de F7.5 y el listado de herrajes de ROMA. Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.

@@ -41,11 +41,11 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 **Verificaciones:** frontend `npm test` (13 suites) y backend `npm test` (46), `tsc`, `check:optimizer` y build en verde. e2e contra la copia, todas sin fallas: excel-corte-navegador 19/19 (nueva), f04, f05, f23, f31, f42, f43, f52 43/43, f53 21/21, f55 27/27, f71 25/25, y de navegador f44, f45 139/139, f51 64/64, f52 40/40, f54 24/24, f61 28/28, f62 20/20, f63 24/24, f64 30/30, f71 17/17, f72 18/18 y f74 5/5. Todo lo visual se revisó también en celular (390 px), sin scroll horizontal. La copia quedó como estaba.
 
-**Commits:** sin commit: los cambios están solo en este equipo (esperan el OK de Gonzalo).
+**Commits:** con el OK de Gonzalo, cinco commits por tema (3058fe5 catálogo, 6287618 asistente, 4645df5 detalle y Excel de corte, 0b5ae07 dashboard, métricas, menú y fechas, bd43095 documentación) y subidos.
 
 **Próximo paso:** que Gonzalo revise F7.5; después F6.5 y, cuando llegue, el listado de herrajes de ROMA.
 
-**Esperando a Gonzalo o a ROMA:** el OK de F7.5 para commitear; las respuestas de ROMA sobre los herrajes (precios, medidas de correderas, bisagras por puerta, esquinero, sistemas de cajón); P5 y P6.
+**Esperando a Gonzalo o a ROMA:** que Gonzalo pruebe F7.5 en su Docker; las respuestas de ROMA sobre los herrajes (precios, medidas de correderas, bisagras por puerta, esquinero, sistemas de cajón); P5 y P6.
 
 ---
 
