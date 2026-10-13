@@ -1,8 +1,10 @@
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
+import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
 import HistoryIcon from "@mui/icons-material/History";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
@@ -14,6 +16,7 @@ import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import SaveIcon from "@mui/icons-material/Save";
 import TableChartOutlinedIcon from "@mui/icons-material/TableChartOutlined";
 import TuneIcon from "@mui/icons-material/Tune";
 import ViewModuleOutlinedIcon from "@mui/icons-material/ViewModuleOutlined";
@@ -24,7 +27,6 @@ import {
   Box,
   Button,
   Chip,
-  Divider,
   Link,
   MenuItem,
   Paper,
@@ -51,6 +53,8 @@ import { api } from "../api/client";
 import { getModulesConfig } from "../api/catalog";
 import { changeModuleOrderDeliveryDate, getModuleOrder, moduleOrderError } from "../api/moduleOrders";
 import { DeliveryChip } from "../components/DeliveryChip";
+import { fieldIcon } from "../components/fieldIcon";
+import { MetricGrid, MetricTile } from "../components/MetricTile";
 import { SummaryPanel } from "../components/moduleOrderWizard/ReviewStep";
 import { RecalcModuleDialog } from "../components/RecalcModuleDialog";
 import { OrderHardwareList } from "../components/moduleOrderWizard/ModuleHardware";
@@ -101,26 +105,22 @@ function Field({ label, icon, children }: { label: string; icon: ReactNode; chil
   );
 }
 
-/** Un indicador del encabezado: compacto, para leer de un vistazo (punto 10). */
-function Kpi({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+const money = (value: number) => value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+/** En el celular el indicador es angosto: "$ 1,2 M" en lugar de "$ 1.234.567". */
+const compactMoney = (value: number) =>
+  Math.abs(value) >= 1_000_000 ? `$ ${(value / 1_000_000).toLocaleString("es-AR", { maximumFractionDigits: 1 })} M` : money(value);
+function MoneyValue({ value }: { value: number }) {
   return (
-    <Stack direction="row" spacing={1.25} alignItems="center" sx={{ p: 1.25, borderRadius: "12px", bgcolor: "background.default", border: 1, borderColor: "divider", minWidth: 0 }}>
-      <Box sx={{ width: 36, height: 36, borderRadius: "10px", display: "grid", placeItems: "center", bgcolor: "primary.main", color: "primary.contrastText", flexShrink: 0, "& svg": { fontSize: 20 } }} aria-hidden>
-        {icon}
+    <>
+      <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }} title={money(value)}>
+        {compactMoney(value)}
       </Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography fontWeight={800} fontSize="1.05rem" lineHeight={1.2} sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
-          {value}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" noWrap component="p">
-          {label}
-        </Typography>
+      <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+        {money(value)}
       </Box>
-    </Stack>
+    </>
   );
 }
-
-const money = (value: number) => value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
 /** Los cantos de una fila: el nombre de cada lado que lleva canto. */
 function EdgesCell({ row }: { row: ModuleOrderDetail }) {
@@ -133,7 +133,8 @@ function EdgesCell({ row }: { row: ModuleOrderDetail }) {
     );
   }
   return (
-    <Stack spacing={0.25}>
+    // Centrado en la celda, con los lados alineados entre si.
+    <Stack spacing={0.25} alignItems="flex-start" sx={{ display: "inline-flex", textAlign: "left" }}>
       {lados.map((side) => (
         <Typography key={side.label} variant="body2" sx={{ whiteSpace: "nowrap" }}>
           <Box component="span" sx={{ fontWeight: 800, mr: 0.75 }}>
@@ -155,9 +156,9 @@ function PiecesTable({ titleId, rows }: { titleId: string; rows: ModuleOrderDeta
           <TableRow>
             <TableCell>Pieza</TableCell>
             <TableCell>Material</TableCell>
-            <TableCell align="right">Largo</TableCell>
-            <TableCell align="right">Ancho</TableCell>
-            <TableCell align="right">Cant.</TableCell>
+            <TableCell>Largo</TableCell>
+            <TableCell>Ancho</TableCell>
+            <TableCell>Cant.</TableCell>
             <TableCell>Cantos</TableCell>
           </TableRow>
         </TableHead>
@@ -168,7 +169,7 @@ function PiecesTable({ titleId, rows }: { titleId: string; rows: ModuleOrderDeta
             return (
               <TableRow key={row.id ?? `${row.codigoBarra}-${row.indice}`} sx={editada || agregada ? { boxShadow: `inset 4px 0 0 ${EDITED_BLUE}` } : undefined}>
                 <TableCell>
-                  <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                  <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" useFlexGap flexWrap="wrap">
                     <Typography variant="body2" fontWeight={700}>
                       {row.nombreProducto ?? row.piezaCodigo}
                     </Typography>
@@ -181,13 +182,13 @@ function PiecesTable({ titleId, rows }: { titleId: string; rows: ModuleOrderDeta
                   </Typography>
                 </TableCell>
                 <TableCell>{row.material}</TableCell>
-                <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>
                   {row.largo}
                 </TableCell>
-                <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>
                   {row.ancho}
                 </TableCell>
-                <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>
                   {row.cantidad}
                 </TableCell>
                 <TableCell>
@@ -477,6 +478,7 @@ export function ModuleOrderDetailPage() {
               if (estado !== order.estado) void submitStatusChange(estado);
             }}
             sx={{ minWidth: 170, flex: { xs: 1, sm: "none" } }}
+            slotProps={{ input: fieldIcon(<FlagOutlinedIcon />) }}
           >
             {STATUS_ORDER.map((estado) => (
               <MenuItem key={estado} value={estado}>
@@ -493,33 +495,39 @@ export function ModuleOrderDetailPage() {
         </Stack>
       </Stack>
 
-      {/* Encabezado (punto 6): quien, cuando y cuanto, de un vistazo. */}
-      <Paper component="section" aria-label="Datos de la solicitud" className="no-imprimir" sx={{ p: { xs: 2, sm: 3 }, borderRadius: "16px" }}>
-        <Stack direction={{ xs: "column", lg: "row" }} spacing={{ xs: 2, lg: 3 }} justifyContent="space-between">
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1, lineHeight: 1.6 }}>
-              Solicitud de módulos a medida
-            </Typography>
-            <Stack direction="row" spacing={1.25} alignItems="center" useFlexGap flexWrap="wrap">
-              <Typography variant="h4" component="h1" sx={{ whiteSpace: "nowrap" }}>
-                Solicitud M-{order.numero}
-              </Typography>
-              <StatusChip size="small" status={order.estado} />
-              <DeliveryChip size="small" status={plazo} />
-            </Stack>
-            <Typography fontWeight={700} fontSize="1.1rem" sx={{ mt: 0.5 }}>
-              {order.cliente}
-            </Typography>
-            {order.observaciones && <Typography color="text.secondary">{order.observaciones}</Typography>}
-          </Box>
-          <Box sx={{ display: "grid", gap: 1.25, gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" }, alignSelf: { lg: "center" }, minWidth: { lg: 560 } }}>
-            <Kpi icon={<WidgetsOutlinedIcon />} label={order.modulos.length === 1 ? "módulo" : "módulos"} value={String(order.modulos.length)} />
-            <Kpi icon={<ViewModuleOutlinedIcon />} label={piezas === 1 ? "pieza" : "piezas"} value={String(piezas)} />
-            <Kpi icon={<LayersOutlinedIcon />} label={order.placasEstimadas === 1 ? "placa" : "placas"} value={String(order.placasEstimadas)} />
-            <Kpi icon={<PaymentsOutlinedIcon />} label={order.costoHerrajes > 0 ? "total con herrajes" : "presupuesto"} value={money(order.presupuestoConHerrajes)} />
-          </Box>
+      {/* Encabezado (punto 6): quien, y abajo, arriba de todo, cuanto (2026-10-13: las 4 metricas primero). */}
+      <Box className="no-imprimir" sx={{ minWidth: 0 }}>
+        <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1, lineHeight: 1.6 }}>
+          Solicitud de módulos a medida
+        </Typography>
+        <Stack direction="row" spacing={1.25} alignItems="center" useFlexGap flexWrap="wrap">
+          <Typography variant="h4" component="h1" sx={{ whiteSpace: "nowrap" }}>
+            Solicitud M-{order.numero}
+          </Typography>
+          <StatusChip size="small" status={order.estado} />
+          <DeliveryChip size="small" status={plazo} />
         </Stack>
-        <Divider sx={{ my: 2.5 }} />
+        <Typography fontWeight={700} fontSize="1.1rem" sx={{ mt: 0.5 }}>
+          {order.cliente}
+        </Typography>
+        {order.observaciones && <Typography color="text.secondary">{order.observaciones}</Typography>}
+      </Box>
+      <Box component="section" aria-label="Indicadores de la solicitud" className="no-imprimir">
+        <MetricGrid>
+          <MetricTile icon={<WidgetsOutlinedIcon />} label="Módulos" value={order.modulos.length} hint={order.modulos.length === 1 ? "Un mueble a fabricar" : "Muebles a fabricar"} />
+          <MetricTile icon={<ViewModuleOutlinedIcon />} label="Piezas" value={piezas} hint="Del despiece, a cortar" tone="info" />
+          <MetricTile icon={<LayersOutlinedIcon />} label="Placas" value={order.placasEstimadas} hint="Estimadas por el optimizador" tone="neutral" />
+          <MetricTile
+            icon={<PaymentsOutlinedIcon />}
+            label={order.costoHerrajes > 0 ? "Total con herrajes" : "Presupuesto"}
+            value={<MoneyValue value={order.presupuestoConHerrajes} />}
+            hint={order.costoHerrajes > 0 ? `Incluye ${money(order.costoHerrajes)} de herrajes` : "Placas, cortes y cantos"}
+            tone="success"
+          />
+        </MetricGrid>
+      </Box>
+
+      <Paper component="section" aria-label="Datos de la solicitud" className="no-imprimir" sx={{ p: { xs: 2, sm: 3 }, borderRadius: "16px" }}>
         <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(3, minmax(0, 1fr))" } }}>
           <Field label="Teléfono" icon={<PhoneOutlinedIcon />}>
             {order.numeroContacto ? (
@@ -567,16 +575,17 @@ export function ModuleOrderDetailPage() {
                   }}
                   error={Boolean(dateError)}
                   helperText={dateError || " "}
-                  slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: today } }}
+                  slotProps={{ input: fieldIcon(<EventOutlinedIcon />), inputLabel: { shrink: true }, htmlInput: { min: today } }}
                   disabled={savingDate}
                   autoFocus
                 />
-                <Stack direction="row" spacing={1}>
-                  <Button size="small" variant="contained" onClick={() => void saveDate()} disabled={savingDate}>
-                    {savingDate ? "Guardando..." : "Guardar"}
-                  </Button>
-                  <Button size="small" onClick={() => setEditingDate(false)} disabled={savingDate}>
+                {/* Cancelar a la izquierda y Guardar a la derecha, como en todas las pantallas. */}
+                <Stack direction="row" spacing={1} justifyContent="space-between">
+                  <Button size="small" startIcon={<CloseIcon />} onClick={() => setEditingDate(false)} disabled={savingDate}>
                     Cancelar
+                  </Button>
+                  <Button size="small" variant="contained" startIcon={<SaveIcon />} onClick={() => void saveDate()} disabled={savingDate}>
+                    {savingDate ? "Guardando..." : "Guardar"}
                   </Button>
                 </Stack>
               </Stack>

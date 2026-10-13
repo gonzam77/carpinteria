@@ -442,8 +442,9 @@ try {
     .filter(([campo, valor]) => valores[campo] !== valor)
     .map(([campo]) => `${campo}: "${campo === "Creada" ? "(no coincide)" : valores[campo]}"`);
   check("tarjeta: teléfono con WhatsApp, Sin email, Sin dirección, referencia, fecha con Cambiar y creada por", datosMal.length === 0, datosMal.join(" || "));
-  const indicadores = norm(await tarjeta.innerText());
-  check("indicadores: módulos, piezas, placas y presupuesto", /2 módulos/.test(indicadores) && / piezas/.test(indicadores) && / placas?/.test(indicadores) && /presupuesto|total con herrajes/.test(indicadores), indicadores.slice(0, 200));
+  // Las cuatro métricas van arriba de todo, fuera de la tarjeta (DECISIONES 70).
+  const indicadores = norm(await page.getByRole("region", { name: "Indicadores de la solicitud" }).or(page.locator('[aria-label="Indicadores de la solicitud"]')).first().innerText());
+  check("indicadores: módulos, piezas, placas y presupuesto", /Módulos 2 /.test(`${indicadores} `) && /Piezas \d/.test(indicadores) && /Placas \d/.test(indicadores) && /Presupuesto|Total con herrajes/.test(indicadores), indicadores.slice(0, 200));
   check("stepper: Pendiente actual y el resto por hacer", await esperarPasos("PENDIENTE"), (await pasos()).join(", "));
   await shot("d1-detalle");
 

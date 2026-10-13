@@ -1,8 +1,15 @@
-import { Autocomplete, Box, Paper, TextField, Typography } from "@mui/material";
+import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
+import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
+import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
+import PersonSearchIcon from "@mui/icons-material/PersonSearch";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
+import { Autocomplete, Box, CircularProgress, Paper, TextField, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { searchModuleOrderClients } from "../../api/moduleOrders";
 import { clientSuggestionPatch, MAX_DIRECCION, MAX_REFERENCIA, type WizardDraft } from "../../lib/moduleOrderWizard";
 import type { ModuleOrderClientSuggestion } from "../../types";
+import { fieldIcon } from "../fieldIcon";
 
 type ClientFields = Pick<WizardDraft, "cliente" | "numeroContacto" | "emailContacto" | "direccionEntrega" | "fechaEntrega" | "observaciones">;
 
@@ -34,7 +41,7 @@ export function ClientStep({ value, onChange, today }: { value: ClientFields; on
 
   return (
     <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "10px" }}>
-      <Typography component="h2" fontWeight={800} fontSize="1rem" gutterBottom>
+      <Typography component="h2" fontWeight={800} fontSize="1rem" sx={{ mb: 2 }}>
         Cliente y entrega
       </Typography>
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
@@ -62,7 +69,27 @@ export function ClientStep({ value, onChange, today }: { value: ClientFields; on
               </Box>
             </li>
           )}
-          renderInput={(params) => <TextField {...params} label="Nombre o razón social" required helperText="Escribí el nombre o el teléfono para buscar un cliente de otra solicitud" />}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Nombre o razón social"
+              required
+              helperText="Escribí el nombre o el teléfono para buscar un cliente de otra solicitud"
+              // El icono de buscar cliente a la izquierda; a la derecha, lo del Autocomplete (y una rueda mientras busca).
+              slotProps={{
+                input: {
+                  ...params.InputProps,
+                  startAdornment: fieldIcon(<PersonSearchIcon />).startAdornment,
+                  endAdornment: (
+                    <>
+                      {loading && <CircularProgress color="inherit" size={18} aria-hidden />}
+                      {params.InputProps.endAdornment}
+                    </>
+                  )
+                }
+              }}
+            />
+          )}
         />
         <TextField
           label="Teléfono"
@@ -71,7 +98,7 @@ export function ClientStep({ value, onChange, today }: { value: ClientFields; on
           onChange={(event) => onChange({ numeroContacto: event.target.value })}
           required
           autoComplete="off"
-          slotProps={{ htmlInput: { inputMode: "tel" } }}
+          slotProps={{ input: fieldIcon(<PhoneOutlinedIcon />), htmlInput: { inputMode: "tel" } }}
         />
         <TextField
           label="Email"
@@ -79,14 +106,14 @@ export function ClientStep({ value, onChange, today }: { value: ClientFields; on
           value={value.emailContacto}
           onChange={(event) => onChange({ emailContacto: event.target.value })}
           autoComplete="off"
-          slotProps={{ htmlInput: { inputMode: "email" } }}
+          slotProps={{ input: fieldIcon(<EmailOutlinedIcon />), htmlInput: { inputMode: "email" } }}
         />
         <TextField
           label="Dirección de entrega"
           value={value.direccionEntrega}
           onChange={(event) => onChange({ direccionEntrega: event.target.value })}
           autoComplete="off"
-          slotProps={{ htmlInput: { maxLength: MAX_DIRECCION } }}
+          slotProps={{ input: fieldIcon(<PlaceOutlinedIcon />), htmlInput: { maxLength: MAX_DIRECCION } }}
         />
         <TextField
           label="Fecha de entrega comprometida"
@@ -94,7 +121,7 @@ export function ClientStep({ value, onChange, today }: { value: ClientFields; on
           value={value.fechaEntrega}
           onChange={(event) => onChange({ fechaEntrega: event.target.value })}
           required
-          slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: today } }}
+          slotProps={{ input: fieldIcon(<EventOutlinedIcon />), inputLabel: { shrink: true }, htmlInput: { min: today } }}
         />
         <TextField
           label="Referencia del trabajo"
@@ -102,7 +129,7 @@ export function ClientStep({ value, onChange, today }: { value: ClientFields; on
           value={value.observaciones}
           onChange={(event) => onChange({ observaciones: event.target.value })}
           autoComplete="off"
-          slotProps={{ htmlInput: { maxLength: MAX_REFERENCIA } }}
+          slotProps={{ input: fieldIcon(<NotesOutlinedIcon />), htmlInput: { maxLength: MAX_REFERENCIA } }}
         />
       </Box>
     </Paper>

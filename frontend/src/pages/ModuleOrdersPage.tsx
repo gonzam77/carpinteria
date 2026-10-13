@@ -1,10 +1,13 @@
 import AddIcon from "@mui/icons-material/Add";
 import EventBusyOutlinedIcon from "@mui/icons-material/EventBusyOutlined";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
+import FilterAltOffOutlinedIcon from "@mui/icons-material/FilterAltOffOutlined";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
 import HourglassBottomOutlinedIcon from "@mui/icons-material/HourglassBottomOutlined";
 import ViewModuleOutlinedIcon from "@mui/icons-material/ViewModuleOutlined";
 import DownloadIcon from "@mui/icons-material/Download";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import SearchIcon from "@mui/icons-material/Search";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { Alert, Box, Button, CircularProgress, IconButton, LinearProgress, MenuItem, Paper, Skeleton, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import {
@@ -28,7 +31,8 @@ import { getModulesConfig } from "../api/catalog";
 import { api } from "../api/client";
 import { listModuleOrders, moduleOrderError, type ModuleOrderApiError } from "../api/moduleOrders";
 import { DeliveryChip } from "../components/DeliveryChip";
-import { MetricTile } from "../components/MetricTile";
+import { fieldIcon } from "../components/fieldIcon";
+import { MetricGrid, MetricTile } from "../components/MetricTile";
 import { StatusChip, getStatusStyle } from "../components/StatusChip";
 import { useTodayInArgentina } from "../hooks/useTodayInArgentina";
 import {
@@ -162,7 +166,7 @@ function ListNoRowsOverlay({ motivo, onClear, ...props }: GridSlotProps["noRowsO
         ) : (
           <>
             <Typography fontWeight={800}>No hay solicitudes que coincidan con los filtros</Typography>
-            <Button variant="outlined" onClick={onClear}>
+            <Button variant="outlined" startIcon={<FilterAltOffOutlinedIcon />} onClick={onClear}>
               Limpiar filtros
             </Button>
           </>
@@ -496,8 +500,9 @@ export function ModuleOrdersPage() {
     const definitions: GridColDef<ModuleOrderListItem>[] = [
       {
         field: "ver",
-        headerName: "",
-        width: 48,
+        headerName: "Acciones",
+        // Angostas para que en 1024 px Plazo y Estado se vean sin desplazar la tabla (e2e-f45).
+        width: 84,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
@@ -523,7 +528,7 @@ export function ModuleOrdersPage() {
       {
         field: "numero",
         headerName: "N°",
-        width: 84,
+        width: 72,
         type: "number",
         align: "left",
         headerAlign: "left",
@@ -553,7 +558,7 @@ export function ModuleOrdersPage() {
       {
         field: "fechaEntrega",
         headerName: "Entrega",
-        width: 100,
+        width: 96,
         valueFormatter: (value: string | null) => formatDay(value) || "Sin fecha"
       },
       {
@@ -643,11 +648,14 @@ export function ModuleOrdersPage() {
       {rowsError && <ErrorAlert error={rowsError} onRetry={retry} />}
       {allError && <ErrorAlert error={allError} onRetry={retry} />}
 
-      <Box component="section" aria-label="Indicadores" sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" } }}>
-        <Indicator icon={<HourglassBottomOutlinedIcon />} label="En curso" value={indicators?.enCurso ?? null} unavailable={indicatorsUnavailable} hint="Pendientes, en proceso y terminadas" />
-        <Indicator icon={<ViewModuleOutlinedIcon />} label="Módulos a fabricar" value={indicators?.modulosAFabricar ?? null} unavailable={indicatorsUnavailable} hint="De las pendientes y en proceso" />
-        <Indicator icon={<EventOutlinedIcon />} label="Vencen esta semana" value={indicators?.vencenEstaSemana ?? null} unavailable={indicatorsUnavailable} hint={`Hoy y los próximos ${DIAS_SEMANA} días`} />
-        <Indicator icon={<EventBusyOutlinedIcon />} label="Atrasadas" value={indicators?.atrasadas ?? null} unavailable={indicatorsUnavailable} hint="Ya pasó la fecha de entrega" alert={Boolean(indicators?.atrasadas)} />
+      {/* Los indicadores en una fila que usa todo el ancho (2026-10-13); en el celular, uno por renglon para leerlos enteros. */}
+      <Box component="section" aria-label="Indicadores">
+        <MetricGrid sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(auto-fit, minmax(190px, 1fr))" } }}>
+          <Indicator icon={<HourglassBottomOutlinedIcon />} label="En curso" value={indicators?.enCurso ?? null} unavailable={indicatorsUnavailable} hint="Pendientes, en proceso y terminadas" />
+          <Indicator icon={<ViewModuleOutlinedIcon />} label="Módulos a fabricar" value={indicators?.modulosAFabricar ?? null} unavailable={indicatorsUnavailable} hint="De las pendientes y en proceso" />
+          <Indicator icon={<EventOutlinedIcon />} label="Vencen esta semana" value={indicators?.vencenEstaSemana ?? null} unavailable={indicatorsUnavailable} hint={`Hoy y los próximos ${DIAS_SEMANA} días`} />
+          <Indicator icon={<EventBusyOutlinedIcon />} label="Atrasadas" value={indicators?.atrasadas ?? null} unavailable={indicatorsUnavailable} hint="Ya pasó la fecha de entrega" alert={Boolean(indicators?.atrasadas)} />
+        </MetricGrid>
       </Box>
 
       {/* Desde md, los filtros en una o dos lineas: en una notebook de 1024 px se ve alguna solicitud sin bajar. Los dos
@@ -657,10 +665,11 @@ export function ModuleOrdersPage() {
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} useFlexGap sx={{ alignItems: { md: "center" }, flexWrap: "wrap" }}>
           <TextField
             label="Buscar"
-            placeholder="Cliente, teléfono, ref. o M-1044"
+            placeholder="Cliente, tel., ref. o M-1044"
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
             inputRef={searchInput}
+            slotProps={{ input: fieldIcon(<SearchIcon />) }}
             sx={{ flex: { md: "2 1 260px" } }}
             fullWidth
           />
@@ -669,6 +678,7 @@ export function ModuleOrdersPage() {
             label="Estado"
             value={filters.estado}
             onChange={(event) => setFilters({ estado: event.target.value as EstadoSolicitud | "" })}
+            slotProps={{ input: fieldIcon(<FlagOutlinedIcon />), select: { displayEmpty: true }, inputLabel: { shrink: true } }}
             sx={{ flex: { md: "1 1 160px" } }}
             fullWidth
           >
@@ -688,7 +698,7 @@ export function ModuleOrdersPage() {
             onKeyDown={onDateKeyDown}
             onKeyUp={recheckDates}
             inputRef={desdeInput}
-            slotProps={{ inputLabel: { shrink: true } }}
+            slotProps={{ input: fieldIcon(<EventOutlinedIcon />), inputLabel: { shrink: true } }}
             sx={{ flex: { md: "1 1 150px" } }}
             fullWidth
           />
@@ -701,11 +711,11 @@ export function ModuleOrdersPage() {
             onKeyDown={onDateKeyDown}
             onKeyUp={recheckDates}
             inputRef={hastaInput}
-            slotProps={{ inputLabel: { shrink: true } }}
+            slotProps={{ input: fieldIcon(<EventOutlinedIcon />), inputLabel: { shrink: true } }}
             sx={{ flex: { md: "1 1 150px" } }}
             fullWidth
           />
-          <Button variant="outlined" onClick={clearFilters} disabled={!active} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
+          <Button variant="outlined" startIcon={<FilterAltOffOutlinedIcon />} onClick={clearFilters} disabled={!active} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
             Limpiar filtros
           </Button>
           <Button

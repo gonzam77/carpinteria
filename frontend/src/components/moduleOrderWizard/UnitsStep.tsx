@@ -1,6 +1,11 @@
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import FlipToBackOutlinedIcon from "@mui/icons-material/FlipToBackOutlined";
 import FormatPaintIcon from "@mui/icons-material/FormatPaint";
+import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
+import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import StraightenIcon from "@mui/icons-material/Straighten";
+import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { useId, useMemo } from "react";
 import type { RoundingMode } from "../../lib/moduleFormula";
@@ -15,11 +20,14 @@ import {
   type WizardUnit
 } from "../../lib/moduleOrderWizard";
 import type { Material, ModuleDefinition } from "../../types";
+import { fieldIcon } from "../fieldIcon";
 import { ModuleImage } from "../ModuleCard";
 import { EDITED_BLUE } from "../PieceEdgesToggles";
 
 const mmText = (value: number) => value.toLocaleString("es-AR", { useGrouping: false, maximumFractionDigits: 2 });
 const plateLabel = (material: Material) => `${material.nombre.trim()} · ${mmText(material.espesorMm)} mm`;
+/** El valor del selector de fondo por defecto que quiere decir "el del catalogo de cada modulo" (null en DefaultColors). */
+const CATALOG_BACK = "__catalogo";
 
 /**
  * Valida todas las tarjetas con el motor compartido (lo usa tambien la pagina para no dejar avanzar). Con el contexto
@@ -41,36 +49,87 @@ function DefaultColorsBar({
   onChange,
   onApply,
   materials,
-  espesores
+  espesores,
+  showBack
 }: {
   defaults: DefaultColors;
   onChange: (patch: Partial<DefaultColors>) => void;
   onApply: () => void;
   materials: Material[];
   espesores: number[];
+  /** Algun modulo elegido tiene piezas de fondo: se ofrece el fondo por defecto. */
+  showBack: boolean;
 }) {
   // Esqueleto y frentes: las placas de los espesores de diseno de los modulos elegidos (spec §8.6).
   const design = espesores.flatMap((espesor) => designPlates(materials, espesor));
+  // El fondo, con las mismas opciones que el de cada modulo: el del catalogo o cualquier placa activa (2026-10-13).
+  const plates = activePlates(materials);
+  const backValue = defaults.materialFondoId === undefined ? "" : defaults.materialFondoId === null ? CATALOG_BACK : defaults.materialFondoId;
+  // Sin elegir, "Aplicar a todos" no cambia ese color en los modulos.
+  const noChange = (
+    <MenuItem value="">
+      <Box component="span" sx={{ color: "text.secondary" }}>
+        Sin cambiar
+      </Box>
+    </MenuItem>
+  );
   return (
     <Paper sx={{ p: 2, borderRadius: "10px" }}>
-      <Typography component="h2" fontWeight={800} fontSize="1rem" gutterBottom>
+      <Typography component="h2" fontWeight={800} fontSize="1rem" sx={{ mb: 2 }}>
         Colores por defecto
       </Typography>
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }}>
-        <TextField select size="small" label="Esqueleto" value={defaults.colorEsqueletoId} onChange={(event) => onChange({ colorEsqueletoId: event.target.value })} sx={{ flex: 1 }}>
+        <TextField
+          select
+          size="small"
+          label="Esqueleto"
+          value={defaults.colorEsqueletoId}
+          onChange={(event) => onChange({ colorEsqueletoId: event.target.value })}
+          sx={{ flex: 1, minWidth: 0 }}
+          slotProps={{ input: fieldIcon(<PaletteOutlinedIcon />), select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+        >
+          {noChange}
           {design.map((material) => (
             <MenuItem key={material.id} value={material.id}>
               {plateLabel(material)}
             </MenuItem>
           ))}
         </TextField>
-        <TextField select size="small" label="Frentes" value={defaults.colorFrentesId} onChange={(event) => onChange({ colorFrentesId: event.target.value })} sx={{ flex: 1 }}>
+        <TextField
+          select
+          size="small"
+          label="Frentes"
+          value={defaults.colorFrentesId}
+          onChange={(event) => onChange({ colorFrentesId: event.target.value })}
+          sx={{ flex: 1, minWidth: 0 }}
+          slotProps={{ input: fieldIcon(<PaletteOutlinedIcon />), select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+        >
+          {noChange}
           {design.map((material) => (
             <MenuItem key={material.id} value={material.id}>
               {plateLabel(material)}
             </MenuItem>
           ))}
         </TextField>
+        {showBack && (
+          <TextField
+            select
+            size="small"
+            label="Fondo"
+            value={backValue}
+            onChange={(event) => onChange({ materialFondoId: event.target.value === "" ? undefined : event.target.value === CATALOG_BACK ? null : event.target.value })}
+            sx={{ flex: 1, minWidth: 0 }}
+            slotProps={{ input: fieldIcon(<FlipToBackOutlinedIcon />), select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+          >
+            {noChange}
+            <MenuItem value={CATALOG_BACK}>El del catálogo de cada módulo</MenuItem>
+            {plates.map((material) => (
+              <MenuItem key={material.id} value={material.id}>
+                {plateLabel(material)}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
         <Button variant="outlined" startIcon={<FormatPaintIcon />} onClick={onApply} sx={{ flexShrink: 0, width: { xs: "100%", md: "auto" } }}>
           Aplicar a todos
         </Button>
@@ -150,6 +209,7 @@ export function UnitCard({
                 onChange={(event) => onChange({ valores: { ...unit.valores, [clave]: event.target.value } })}
                 error={errors.length > 0}
                 helperText={helper}
+                slotProps={{ input: fieldIcon(<TuneOutlinedIcon />) }}
               >
                 {(param.opciones ?? []).map((option) => (
                   <MenuItem key={option.valor} value={String(option.valor)}>
@@ -166,7 +226,7 @@ export function UnitCard({
                 onChange={(event) => onChange({ valores: { ...unit.valores, [clave]: event.target.value } })}
                 error={errors.length > 0}
                 helperText={helper}
-                slotProps={{ htmlInput: { inputMode: "decimal", style: { textAlign: "right", fontVariantNumeric: "tabular-nums" } } }}
+                slotProps={{ input: fieldIcon(<StraightenIcon />), htmlInput: { inputMode: "decimal", style: { textAlign: "right", fontVariantNumeric: "tabular-nums" } } }}
               />
             );
           })}
@@ -181,6 +241,7 @@ export function UnitCard({
             onChange={(event) => onChange({ colorEsqueletoId: event.target.value })}
             error={!unit.colorEsqueletoId}
             helperText={!design.length ? `No hay placas de ${mmText(definition.espesorDisenoMm)} mm activas: cargalas en Materiales` : unit.colorEsqueletoId ? " " : "Elegí un color"}
+            slotProps={{ input: fieldIcon(<PaletteOutlinedIcon />) }}
           >
             {design.map((material) => (
               <MenuItem key={material.id} value={material.id}>
@@ -196,6 +257,7 @@ export function UnitCard({
             onChange={(event) => onChange({ colorFrentesId: event.target.value })}
             error={!unit.colorFrentesId}
             helperText={!design.length ? `No hay placas de ${mmText(definition.espesorDisenoMm)} mm activas: cargalas en Materiales` : unit.colorFrentesId ? " " : "Elegí un color"}
+            slotProps={{ input: fieldIcon(<PaletteOutlinedIcon />) }}
           >
             {design.map((material) => (
               <MenuItem key={material.id} value={material.id}>
@@ -210,7 +272,7 @@ export function UnitCard({
               label="Material de fondo"
               value={unit.materialFondoId ?? ""}
               onChange={(event) => onChange({ materialFondoId: event.target.value || null })}
-              slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+              slotProps={{ input: fieldIcon(<FlipToBackOutlinedIcon />), select: { displayEmpty: true }, inputLabel: { shrink: true } }}
               error={Boolean(validation?.fondo)}
               helperText={validation?.fondo ? `Elegí un fondo: ${validation.fondo}` : unit.materialFondoId ? "Elegido para este módulo" : " "}
             >
@@ -257,7 +319,7 @@ export function UnitCard({
           placeholder="Salen en la hoja de taller"
           value={unit.observaciones}
           onChange={(event) => onChange({ observaciones: event.target.value })}
-          slotProps={{ htmlInput: { maxLength: 500 } }}
+          slotProps={{ input: fieldIcon(<NotesOutlinedIcon />), htmlInput: { maxLength: 500 } }}
         />
 
         {validation && validation.generales.length > 0 && (
@@ -310,7 +372,17 @@ export function UnitsStep({
 
   return (
     <Stack spacing={2}>
-      <DefaultColorsBar defaults={defaults} onChange={onDefaultsChange} onApply={onApplyDefaults} materials={materials} espesores={espesores} />
+      <DefaultColorsBar
+        defaults={defaults}
+        onChange={onDefaultsChange}
+        onApply={onApplyDefaults}
+        materials={materials}
+        espesores={espesores}
+        showBack={units.some((unit) => {
+          const definition = definitions.get(unit.moduloId);
+          return Boolean(definition && hasBackPieces(definition));
+        })}
+      />
       {conErrores > 0 && (
         <Alert severity="warning">
           {conErrores === 1 ? "Hay 1 módulo para revisar." : `Hay ${conErrores} módulos para revisar.`} Los datos que faltan o no sirven están marcados en rojo.

@@ -1,11 +1,14 @@
 import AddIcon from "@mui/icons-material/Add";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import RemoveIcon from "@mui/icons-material/Remove";
+import SearchIcon from "@mui/icons-material/Search";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import { Box, Button, Chip, CircularProgress, Divider, Drawer, IconButton, MenuItem, Paper, Stack, TextField, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useId, useMemo, useRef, useState } from "react";
 import type { ModuleCategory, ModuleListItem } from "../../types";
+import { fieldIcon } from "../fieldIcon";
 import { ModuleCard } from "../ModuleCard";
 
 export type Seleccion = { moduloId: string; cantidad: number };
@@ -136,7 +139,15 @@ export function ModulePickerStep({
       <Stack spacing={2} sx={{ minWidth: 0 }}>
         <Paper sx={{ p: 2, borderRadius: "10px" }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }}>
-            <TextField select size="small" label="Categoría" value={categoriaId} onChange={(event) => setCategoriaId(event.target.value)} sx={{ minWidth: 220 }}>
+            <TextField
+              select
+              size="small"
+              label="Categoría"
+              value={categoriaId}
+              onChange={(event) => setCategoriaId(event.target.value)}
+              sx={{ minWidth: 220 }}
+              slotProps={{ input: fieldIcon(<CategoryOutlinedIcon />), select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+            >
               <MenuItem value="">Todas</MenuItem>
               {visibleCategories.map((category) => (
                 <MenuItem key={category.id} value={category.id}>
@@ -144,7 +155,14 @@ export function ModulePickerStep({
                 </MenuItem>
               ))}
             </TextField>
-            <TextField size="small" label="Buscar por nombre o código" value={search} onChange={(event) => setSearch(event.target.value)} sx={{ flex: 1 }} />
+            <TextField
+              size="small"
+              label="Buscar por nombre o código"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              sx={{ flex: 1 }}
+              slotProps={{ input: fieldIcon(<SearchIcon />) }}
+            />
           </Stack>
         </Paper>
 

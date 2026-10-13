@@ -1,6 +1,8 @@
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import RestoreIcon from "@mui/icons-material/Restore";
 import SaveIcon from "@mui/icons-material/Save";
 import { Alert, Box, Button, CircularProgress, Paper, Skeleton, Stack, Step, StepLabel, Stepper, Typography, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import axios from "axios";
@@ -953,10 +955,10 @@ function ModuleOrderWizard() {
         </DialogContent>
         {/* En el celular, los dos botones uno abajo del otro y a lo ancho (Recuperar arriba). */}
         <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexDirection: { xs: "column-reverse", sm: "row" }, alignItems: { xs: "stretch", sm: "center" }, "& > :not(style) ~ :not(style)": { ml: { xs: 0, sm: 1 } } }}>
-          <Button onClick={dismissDraft} disabled={busy || creating} color="inherit">
+          <Button onClick={dismissDraft} disabled={busy || creating} color="inherit" startIcon={<DeleteOutlineIcon />}>
             Descartar y empezar una nueva
           </Button>
-          <Button variant="contained" onClick={() => void applyDraft()} disabled={busy || creating} autoFocus>
+          <Button variant="contained" onClick={() => void applyDraft()} disabled={busy || creating} autoFocus startIcon={<RestoreIcon />}>
             Recuperar
           </Button>
         </DialogActions>
@@ -1006,7 +1008,15 @@ function ModuleOrderWizard() {
           configFondoId={data.config.materialFondoId}
           defaults={defaults}
           onDefaultsChange={(patch) => setDefaults((current) => ({ ...current, ...patch }))}
-          onApplyDefaults={() => editUnits((current) => applyColorsToAll(current, defaults, definitions, materials))}
+          // Con otro color o fondo, un canto elegido a mano que quedo igual al de por defecto deja de ser un cambio (como en updateUnit).
+          onApplyDefaults={() =>
+            editUnits((current) =>
+              applyColorsToAll(current, defaults, definitions, materials).map((unit) => {
+                const definition = definitions.get(unit.moduloId);
+                return definition ? normalizeOverrides(unit, definition, edgeContext) : unit;
+              })
+            )
+          }
           onUnitChange={updateUnit}
           onCopyMeasures={(uid) => editUnits((current) => copyMeasuresToSameModel(current, uid))}
         />

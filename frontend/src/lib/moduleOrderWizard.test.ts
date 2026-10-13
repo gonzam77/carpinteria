@@ -214,6 +214,50 @@ test("copiar medidas a los iguales y aplicar colores a todos", () => {
   assert.equal(applied[3].colorEsqueletoId, "", "un modulo de 5,5 mm no recibe un color de 18 mm");
 });
 
+test("fondo por defecto (2026-10-13): Aplicar a todos lo pone en los modulos con piezas de fondo", () => {
+  const sinFondo = definition({ id: "sin-fondo", piezas: definition().piezas.filter((pieza) => pieza.rol !== "FONDO") });
+  const defs = new Map([
+    ["bajo", definition()],
+    ["sin-fondo", sinFondo]
+  ]);
+  const units = syncUnits([], [{ moduloId: "bajo", cantidad: 2 }, { moduloId: "sin-fondo", cantidad: 1 }], defs, DEFAULTS, MATERIALS);
+  units[1] = { ...units[1], materialFondoId: "fino" };
+
+  const sinElegir = applyColorsToAll(units, DEFAULTS, defs, MATERIALS);
+  assert.deepEqual(sinElegir.map((unit) => unit.materialFondoId), [null, "fino", null], "sin fondo por defecto, el de cada modulo queda");
+
+  const fibro = applyColorsToAll(units, { ...DEFAULTS, materialFondoId: "fibro" }, defs, MATERIALS);
+  assert.deepEqual(fibro.map((unit) => unit.materialFondoId), ["fibro", "fibro", null], "solo en los que tienen piezas de fondo");
+  assert.deepEqual(fibro.map((unit) => [unit.colorEsqueletoId, unit.colorFrentesId]), units.map((unit) => [unit.colorEsqueletoId, unit.colorFrentesId]), "los colores no cambian");
+
+  const catalogo = applyColorsToAll(fibro, { ...DEFAULTS, materialFondoId: null }, defs, MATERIALS);
+  assert.deepEqual(catalogo.map((unit) => unit.materialFondoId), [null, null, null], "null vuelve todos al del catalogo");
+
+  const inactivo = applyColorsToAll(fibro, { ...DEFAULTS, materialFondoId: "viejo" }, defs, MATERIALS);
+  assert.deepEqual(inactivo.map((unit) => unit.materialFondoId), ["fibro", "fibro", null], "una placa inactiva no se pone");
+
+  // El fondo viaja igual que si se eligiera en la tarjeta: el pedido a la API no cambia de forma.
+  const elegidoAMano = { ...units[0], materialFondoId: "fibro" };
+  assert.deepEqual(linePayload(fibro[0], definition()), linePayload(elegidoAMano, definition()));
+
+  // Las tarjetas nuevas lo traen, si tienen piezas de fondo.
+  assert.equal(newUnit(definition(), { ...DEFAULTS, materialFondoId: "fibro" }, MATERIALS).materialFondoId, "fibro");
+  assert.equal(newUnit(sinFondo, { ...DEFAULTS, materialFondoId: "fibro" }, MATERIALS).materialFondoId, null);
+  assert.equal(newUnit(definition(), { ...DEFAULTS, materialFondoId: "viejo" }, MATERIALS).materialFondoId, null);
+});
+
+test("fondo por defecto en el borrador: no cuenta como contenido y un borrador viejo sin el sigue cargando", () => {
+  const empty = { cliente: "", numeroContacto: "", emailContacto: "", direccionEntrega: "", observaciones: "", selecciones: [], defaults: { ...DEFAULTS, materialFondoId: "fibro" } };
+  assert.equal(hasWizardContent(empty), false, "el fondo por defecto no cuenta");
+  const context = { definitions: new Map([["bajo", definition()]]), materials: MATERIALS, today: "2026-10-05", defaultFecha: "2026-10-20" };
+  const viejo = restoreWizardDraft({ cliente: "Ana", defaults: { colorEsqueletoId: "blanco", colorFrentesId: "negro" } }, context).draft;
+  assert.deepEqual(viejo.defaults, { colorEsqueletoId: "blanco", colorFrentesId: "negro" }, "sin fondo por defecto: queda sin elegir");
+  assert.deepEqual(restoreWizardDraft({ cliente: "Ana" }, context).draft.defaults, { colorEsqueletoId: "", colorFrentesId: "" });
+  assert.equal(restoreWizardDraft({ cliente: "Ana", defaults: { ...DEFAULTS, materialFondoId: "fibro" } }, context).draft.defaults.materialFondoId, "fibro");
+  assert.equal(restoreWizardDraft({ cliente: "Ana", defaults: { ...DEFAULTS, materialFondoId: null } }, context).draft.defaults.materialFondoId, null);
+  assert.equal(restoreWizardDraft({ cliente: "Ana", defaults: { ...DEFAULTS, materialFondoId: "viejo" } }, context).draft.defaults.materialFondoId, undefined, "una placa inactiva se descarta");
+});
+
 test("validacion en vivo con el armador compartido: medidas, piezas y colores", () => {
   const ok = validateUnit(newUnit(definition(), DEFAULTS, MATERIALS), definition(), "REDONDEAR");
   assert.equal(ok.ok, true);

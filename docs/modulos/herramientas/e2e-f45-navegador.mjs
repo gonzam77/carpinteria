@@ -138,7 +138,7 @@ const FIXTURES = [
 // entregada. Es el mismo que el de la columna Plazo.
 const ORDEN = ["alfa", "beta", "gamma", "eta", "delta", "zeta", "epsilon"];
 const COLUMNAS = ["__check__", "ver", "numero", "cliente", "fechaEntrega", "plazo", "estado", "observaciones", "cantidadModulos", "fechaCreacion"];
-const TITULOS = ["N°", "Cliente", "Entrega", "Plazo", "Estado", "Referencia", "Módulos", "Creada"];
+const TITULOS = ["Acciones", "N°", "Cliente", "Entrega", "Plazo", "Estado", "Referencia", "Módulos", "Creada"];
 
 // Con barras de desplazamiento reales, como en Windows: ocupan lugar y cambian lo que entra en pantalla.
 const browser = await chromium.launch({ channel: "msedge", headless: true, ignoreDefaultArgs: ["--hide-scrollbars"] });

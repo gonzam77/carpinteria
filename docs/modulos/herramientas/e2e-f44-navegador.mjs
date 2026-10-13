@@ -300,7 +300,8 @@ try {
   const menu = page.getByRole("link", { name: "Solicitudes de módulos" });
   await menu.waitFor();
   const menuItems = await page.locator("nav a, .MuiDrawer-root a").evaluateAll((links) => [...new Set(links.map((link) => link.textContent.trim()))]);
-  check("menu: Modulos a medida debajo de Solicitar cortes", menuItems.indexOf("Solicitudes de módulos") === menuItems.indexOf("Solicitar cortes") + 1, menuItems.join(" / "));
+  // Orden del 2026-10-13: Dashboard, Solicitudes de corte, Solicitudes de módulos, Solicitar cortes.
+  check("menu: Solicitudes de módulos debajo de Solicitudes de corte y antes de Solicitar cortes", menuItems.indexOf("Solicitudes de módulos") === menuItems.indexOf("Solicitudes de corte") + 1 && menuItems.indexOf("Solicitar cortes") === menuItems.indexOf("Solicitudes de módulos") + 1, menuItems.join(" / "));
   // El menu lleva al listado (F4.5); desde ahi se entra al asistente.
   await menu.click();
   await page.waitForURL(`${APP}/modulos`);
@@ -397,11 +398,12 @@ try {
   check("paso 3: colores sin elegir dicen que hacer", (await c1.getByText("Elegí un color").count()) === 2);
   const barra = page.locator(".MuiPaper-root", { hasText: "Colores por defecto" });
   // DECISIONES 45: ya no se elige un color de cantos, ni en la barra ni en las tarjetas, y no hay avisos de espesores.
+  // La barra tiene Esqueleto, Frentes y Fondo (DECISIONES 70: el fondo por defecto, porque el módulo tiene piezas de fondo).
   const selectoresCantos = await page.getByRole("combobox", { name: /^Cantos/ }).count();
   const combosBarra = await barra.getByRole("combobox").count();
   check(
     "paso 3: no hay selector de color de cantos ni avisos de espesores",
-    selectoresCantos === 0 && combosBarra === 2 && (await page.getByText(/sin canto de/).count()) === 0,
+    selectoresCantos === 0 && combosBarra === 3 && (await page.getByText(/sin canto de/).count()) === 0,
     `${selectoresCantos} selectores Cantos, ${combosBarra} en la barra`
   );
   await selectIn(barra, "Esqueleto", colorA);

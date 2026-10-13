@@ -1,8 +1,10 @@
+import HardwareOutlinedIcon from "@mui/icons-material/HardwareOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import { Box, Button, MenuItem, Paper, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import { formatHardwarePrice, hardwareLabel } from "../../lib/hardware";
 import { hardwareCost, toCentavos } from "../../lib/orderEstimate";
 import type { Hardware, OrderHardware, PlannedHardware } from "../../types";
+import { fieldIcon } from "../fieldIcon";
 
 /** La cantidad con su unidad: "4", "1 par", "3 pares", "2 juegos", "2 m". */
 export const hardwareQuantityText = (cantidad: number, unidad: string) => (unidad === "unidad" ? `${cantidad}` : `${cantidad} ${unidad === "par" ? (cantidad === 1 ? "par" : "pares") : unidad === "juego" ? (cantidad === 1 ? "juego" : "juegos") : "m"}`);
@@ -53,10 +55,10 @@ export function ModuleHardwareCard({
           <TableHead>
             <TableRow>
               <TableCell>Tipo</TableCell>
-              <TableCell align="right">Cant.</TableCell>
+              <TableCell>Cant.</TableCell>
               <TableCell>Modelo</TableCell>
-              <TableCell align="right">Precio</TableCell>
-              <TableCell align="right">Subtotal</TableCell>
+              <TableCell>Precio</TableCell>
+              <TableCell>Subtotal</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -67,7 +69,7 @@ export function ModuleHardwareCard({
               return (
                 <TableRow key={item.herrajeDefectoId}>
                   <TableCell>{item.tipo ?? "-"}</TableCell>
-                  <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                  <TableCell sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
                     {hardwareQuantityText(item.cantidad, item.unidad)}
                   </TableCell>
                   <TableCell sx={{ minWidth: 260 }}>
@@ -79,7 +81,7 @@ export function ModuleHardwareCard({
                       disabled={locked || opciones.length < 2}
                       onChange={(event) => onChange(item.herrajeDefectoId, event.target.value)}
                       // Sin label visible: el nombre va en el combobox, no en el input oculto.
-                      slotProps={{ select: { SelectDisplayProps: { "aria-label": `Modelo de ${item.tipo ?? "herraje"} del módulo ${posicion}` } } }}
+                      slotProps={{ input: fieldIcon(<HardwareOutlinedIcon />), select: { SelectDisplayProps: { "aria-label": `Modelo de ${item.tipo ?? "herraje"} del módulo ${posicion}` } } }}
                       helperText={nota || " "}
                       error={item.eleccion === "MAS_CHICO"}
                     >
@@ -95,10 +97,10 @@ export function ModuleHardwareCard({
                       </Button>
                     )}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                  <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>
                     {formatHardwarePrice(item.valorUnitario)}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>
+                  <TableCell sx={{ fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>
                     {formatHardwarePrice(subtotal(item))}
                   </TableCell>
                 </TableRow>
@@ -129,17 +131,17 @@ export function OrderHardwareList({ titulo, herrajes }: { titulo: string; herraj
         <TableHead>
           <TableRow>
             <TableCell>Tipo</TableCell>
-            <TableCell align="right">Cant.</TableCell>
+            <TableCell>Cant.</TableCell>
             <TableCell>Modelo</TableCell>
-            <TableCell align="right">Precio</TableCell>
-            <TableCell align="right">Subtotal</TableCell>
+            <TableCell>Precio</TableCell>
+            <TableCell>Subtotal</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {herrajes.map((item) => (
             <TableRow key={item.id}>
               <TableCell>{item.tipo ?? "-"}</TableCell>
-              <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+              <TableCell sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
                 {hardwareQuantityText(item.cantidad, item.unidad)}
               </TableCell>
               <TableCell>
@@ -150,10 +152,10 @@ export function OrderHardwareList({ titulo, herrajes }: { titulo: string; herraj
                   </Typography>
                 )}
               </TableCell>
-              <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
+              <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>
                 {formatHardwarePrice(item.valorUnitario)}
               </TableCell>
-              <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>
+              <TableCell sx={{ fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>
                 {formatHardwarePrice(subtotal(item))}
               </TableCell>
             </TableRow>

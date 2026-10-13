@@ -83,16 +83,16 @@ export function MaterialsTab({ order, onError }: { order: ModuleOrder; onError: 
                     <TableRow>
                       <TableCell sx={head}>Material</TableCell>
                       <TableCell sx={head}>Medida de la placa</TableCell>
-                      <TableCell sx={head} align="right">
+                      <TableCell sx={head}>
                         Espesor
                       </TableCell>
-                      <TableCell sx={head} align="right">
+                      <TableCell sx={head}>
                         Piezas
                       </TableCell>
-                      <TableCell sx={head} align="right">
+                      <TableCell sx={head}>
                         Placas
                       </TableCell>
-                      <TableCell sx={head} align="right">
+                      <TableCell sx={head}>
                         Stock
                       </TableCell>
                     </TableRow>
@@ -102,16 +102,16 @@ export function MaterialsTab({ order, onError }: { order: ModuleOrder; onError: 
                       <TableRow key={placa.materialId}>
                         <TableCell sx={{ fontWeight: 600 }}>{placa.nombre.trim()}</TableCell>
                         <TableCell sx={num}>{boardSize(placa.anchoPlaca, placa.altoPlaca)}</TableCell>
-                        <TableCell align="right" sx={num}>
+                        <TableCell sx={num}>
                           {mm(placa.espesorMm)}
                         </TableCell>
-                        <TableCell align="right" sx={num}>
+                        <TableCell sx={num}>
                           {placa.piezas}
                         </TableCell>
-                        <TableCell align="right" sx={{ ...num, fontWeight: 800 }}>
+                        <TableCell sx={{ ...num, fontWeight: 800 }}>
                           {placa.placas}
                         </TableCell>
-                        <TableCell align="right" sx={num}>
+                        <TableCell sx={num}>
                           {placa.faltantePlacas > 0 ? <Chip size="small" color="error" label={`Faltan ${placa.faltantePlacas}`} /> : (placa.stockPlacas ?? "-")}
                         </TableCell>
                       </TableRow>
@@ -137,10 +137,10 @@ export function MaterialsTab({ order, onError }: { order: ModuleOrder; onError: 
                   <TableHead>
                     <TableRow>
                       <TableCell sx={head}>Canto</TableCell>
-                      <TableCell sx={head} align="right">
+                      <TableCell sx={head}>
                         Espesor
                       </TableCell>
-                      <TableCell sx={head} align="right">
+                      <TableCell sx={head}>
                         Metros
                       </TableCell>
                     </TableRow>
@@ -149,10 +149,10 @@ export function MaterialsTab({ order, onError }: { order: ModuleOrder; onError: 
                     {summary.cantos.map((canto) => (
                       <TableRow key={canto.cantoId}>
                         <TableCell sx={{ fontWeight: 600 }}>{canto.nombre.trim()}</TableCell>
-                        <TableCell align="right" sx={num}>
+                        <TableCell sx={num}>
                           {mm(canto.espesorMm)}
                         </TableCell>
-                        <TableCell align="right" sx={{ ...num, fontWeight: 800 }}>
+                        <TableCell sx={{ ...num, fontWeight: 800 }}>
                           {meters(canto.metros)}
                         </TableCell>
                       </TableRow>

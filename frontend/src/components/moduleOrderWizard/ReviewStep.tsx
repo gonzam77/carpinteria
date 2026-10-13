@@ -319,7 +319,7 @@ function ModuleDespieceCard({
             <TableRow>
               <TableCell>Pieza</TableCell>
               <TableCell>Cantos</TableCell>
-              <TableCell />
+              <TableCell>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -360,7 +360,7 @@ function ModuleDespieceCard({
                   </TableCell>
                   <TableCell sx={{ width: 104 }}>
                     {edited && (
-                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5}>
                         <Chip size="small" label="Editada" variant="outlined" sx={{ borderColor: EDITED_BLUE, color: EDITED_BLUE }} />
                         <Tooltip title="Volver a los cantos por defecto">
                           <span>

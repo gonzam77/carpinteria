@@ -3,6 +3,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SaveIcon from "@mui/icons-material/Save";
+import TitleOutlinedIcon from "@mui/icons-material/TitleOutlined";
+import UndoIcon from "@mui/icons-material/Undo";
 import {
   Alert,
   Box,
@@ -28,6 +30,7 @@ import { downloadMachineExcel, getMachineExcel, moduleOrderError, saveMachineExc
 import { exportErrorMessage } from "../../lib/moduleOrdersList";
 import type { MachineExcel, MachineExcelExtraColumn, Material, ModuleOrder } from "../../types";
 import { CutOptimizer } from "../CutOptimizer";
+import { fieldIcon } from "../fieldIcon";
 import { PRINT_TARGET, SectionActions } from "./SectionActions";
 
 type Draft = { columnas: MachineExcelExtraColumn[]; celdas: Record<string, Record<string, string>> };
@@ -281,7 +284,7 @@ export function MachineExcelTab({
                   Restaurar todo
                 </Button>
                 {dirty && (
-                  <Button size="small" onClick={() => setDraft(draftFrom(data))}>
+                  <Button size="small" startIcon={<UndoIcon />} onClick={() => setDraft(draftFrom(data))}>
                     Descartar
                   </Button>
                 )}
@@ -372,12 +375,15 @@ export function MachineExcelTab({
             }}
             error={Boolean(columnDialog?.titulo.trim()) && Boolean(columnProblem)}
             helperText={columnDialog?.titulo.trim() ? columnProblem || " " : "Por ejemplo: Caja, Pallet, Observación"}
-            slotProps={{ htmlInput: { maxLength: 60 } }}
+            slotProps={{ input: fieldIcon(<TitleOutlinedIcon />), htmlInput: { maxLength: 60 } }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setColumnDialog(null)}>Cancelar</Button>
-          <Button variant="contained" onClick={saveColumn} disabled={Boolean(columnProblem)}>
+        {/* Cancelar a la izquierda; la accion, a la derecha. */}
+        <DialogActions sx={{ justifyContent: "space-between", px: 3, pb: 2 }}>
+          <Button startIcon={<CloseIcon />} onClick={() => setColumnDialog(null)}>
+            Cancelar
+          </Button>
+          <Button variant="contained" startIcon={columnDialog?.id ? <EditOutlinedIcon /> : <AddIcon />} onClick={saveColumn} disabled={Boolean(columnProblem)}>
             {columnDialog?.id ? "Renombrar" : "Agregar"}
           </Button>
         </DialogActions>

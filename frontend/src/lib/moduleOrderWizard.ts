@@ -26,7 +26,26 @@ export type WizardUnit = {
   herrajesOverride: Record<string, string>;
 };
 
-export type DefaultColors = { colorEsqueletoId: string; colorFrentesId: string };
+export type DefaultColors = {
+  colorEsqueletoId: string;
+  colorFrentesId: string;
+  /**
+   * El fondo por defecto (2026-10-13), para los modulos con piezas de fondo: una placa activa, null = el del catalogo de
+   * cada modulo, o sin elegir (undefined: "Aplicar a todos" no toca el fondo). Los borradores de antes no lo tienen.
+   */
+  materialFondoId?: string | null;
+};
+
+/**
+ * El fondo por defecto que le toca a un modulo: undefined si no se elige (no tiene piezas de fondo, no hay uno por
+ * defecto o la placa ya no esta activa), null para el del catalogo, o la placa.
+ */
+function defaultBackFor(definition: Pick<ModuleDefinition, "piezas">, defaults: DefaultColors, plates: Set<string>) {
+  const fondo = defaults.materialFondoId;
+  if (fondo === undefined || !hasBackPieces(definition)) return undefined;
+  if (fondo === null) return null;
+  return plates.has(fondo) ? fondo : undefined;
+}
 
 let nextUid = 0;
 export const newUnitUid = () => `modulo-${Date.now().toString(36)}-${++nextUid}`;
@@ -84,10 +103,12 @@ const defaultProfile = (definition: Pick<ModuleDefinition, "perfiles">) =>
 
 /**
  * Una tarjeta nueva: medidas por defecto, perfil predeterminado y los colores por defecto que sirvan para el
- * modulo (el esqueleto y los frentes tienen que ser del espesor de diseno; si no, quedan sin elegir).
+ * modulo (el esqueleto y los frentes tienen que ser del espesor de diseno; si no, quedan sin elegir). El fondo por
+ * defecto, si el modulo tiene piezas de fondo; si no, el del catalogo.
  */
 export function newUnit(definition: ModuleDefinition, defaults: DefaultColors, materials: Material[]): WizardUnit {
   const design = new Set(designPlates(materials, definition.espesorDisenoMm).map((material) => material.id));
+  const fondo = defaultBackFor(definition, defaults, new Set(activePlates(materials).map((material) => material.id)));
   return {
     uid: newUnitUid(),
     moduloId: definition.id,
@@ -95,7 +116,7 @@ export function newUnit(definition: ModuleDefinition, defaults: DefaultColors, m
     colorEsqueletoId: design.has(defaults.colorEsqueletoId) ? defaults.colorEsqueletoId : "",
     colorFrentesId: design.has(defaults.colorFrentesId) ? defaults.colorFrentesId : "",
     perfilCantoOrden: defaultProfile(definition),
-    materialFondoId: null,
+    materialFondoId: fondo ?? null,
     observaciones: "",
     cantosOverride: {},
     herrajesOverride: {}
@@ -215,16 +236,22 @@ export function copyMeasuresToSameModel(units: WizardUnit[], uid: string) {
   return units.map((unit) => (unit.uid !== uid && unit.moduloId === source.moduloId ? { ...unit, valores: { ...source.valores } } : unit));
 }
 
-/** "Aplicar a todos": pone los colores por defecto en cada tarjeta donde sirven (el esqueleto y los frentes, del espesor de diseno). */
+/**
+ * "Aplicar a todos": pone los colores por defecto en cada tarjeta donde sirven (el esqueleto y los frentes, del espesor de
+ * diseno) y el fondo por defecto, si se eligio, en las que tienen piezas de fondo (2026-10-13).
+ */
 export function applyColorsToAll(units: WizardUnit[], defaults: DefaultColors, definitions: Map<string, ModuleDefinition>, materials: Material[]) {
+  const plates = new Set(activePlates(materials).map((material) => material.id));
   return units.map((unit) => {
     const definition = definitions.get(unit.moduloId);
     if (!definition) return unit;
     const design = new Set(designPlates(materials, definition.espesorDisenoMm).map((material) => material.id));
+    const fondo = defaultBackFor(definition, defaults, plates);
     return {
       ...unit,
       colorEsqueletoId: design.has(defaults.colorEsqueletoId) ? defaults.colorEsqueletoId : unit.colorEsqueletoId,
-      colorFrentesId: design.has(defaults.colorFrentesId) ? defaults.colorFrentesId : unit.colorFrentesId
+      colorFrentesId: design.has(defaults.colorFrentesId) ? defaults.colorFrentesId : unit.colorFrentesId,
+      materialFondoId: fondo === undefined ? unit.materialFondoId : fondo
     };
   });
 }
@@ -593,7 +620,7 @@ export function orderSignature(payload: unknown) {
   return hash.toString(36);
 }
 
-/** Un borrador vale la pena si se cargo algo: la fecha y los colores por defecto no cuentan. */
+/** Un borrador vale la pena si se cargo algo: la fecha y los colores por defecto (tambien el fondo) no cuentan. */
 export function hasWizardContent(
   draft: Pick<WizardDraft, "cliente" | "numeroContacto" | "emailContacto" | "direccionEntrega" | "observaciones" | "selecciones"> | null | undefined
 ) {
@@ -673,8 +700,10 @@ export function restoreWizardDraft(
     if (fechaEntrega) avisos.push("La fecha de entrega del borrador ya pasó: se puso la de por defecto.");
     fechaEntrega = context.defaultFecha;
   }
-  const defaults = raw.defaults ?? { colorEsqueletoId: "", colorFrentesId: "" };
+  const defaults: Partial<DefaultColors> = raw.defaults && typeof raw.defaults === "object" ? raw.defaults : {};
   const color = (value: unknown) => (plates.has(asText(value)) ? asText(value) : "");
+  // El fondo por defecto: un borrador de antes no lo tiene (queda sin elegir); una placa que ya no esta activa, tampoco.
+  const fondo = defaults.materialFondoId === null ? null : plates.has(asText(defaults.materialFondoId)) ? asText(defaults.materialFondoId) : undefined;
   return {
     draft: {
       cliente: asText(raw.cliente),
@@ -685,7 +714,11 @@ export function restoreWizardDraft(
       observaciones: asText(raw.observaciones),
       selecciones: disponibles,
       units,
-      defaults: { colorEsqueletoId: color(defaults.colorEsqueletoId), colorFrentesId: color(defaults.colorFrentesId) },
+      defaults: {
+        colorEsqueletoId: color(defaults.colorEsqueletoId),
+        colorFrentesId: color(defaults.colorFrentesId),
+        ...(fondo !== undefined ? { materialFondoId: fondo } : {})
+      },
       step: Math.max(0, Math.min(typeof raw.step === "number" ? raw.step : 0, disponibles.length ? 2 : 1)),
       enviado: asSentMark(raw.enviado)
     },
