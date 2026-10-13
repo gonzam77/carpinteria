@@ -61,4 +61,6 @@ Scripts para comprobar los cálculos y el stock contra una copia restaurada de u
    - instalar `playwright-core` en una carpeta temporal (`npm i playwright-core`), fuera del proyecto;
    - correr `PLAYWRIGHT_DIR=<esa carpeta> node docs/modulos/herramientas/e2e-f44-navegador.mjs` (o el de f45, f51, f52, f54, f61, f62, f63, f64, f71, f72 o f74). Las capturas van a `SHOTS_DIR`, por defecto una carpeta del directorio temporal. `e2e-f45` y `e2e-f51` leen el Excel exportado con el `exceljs` del backend.
 
+Desde el 2026-10-13 los errores de la pantalla salen en una ventana en el medio (`role="alertdialog"`, DECISIONES 66): las pruebas de navegador la leen y la cierran con "Entendido" antes de seguir, porque mientras está abierta tapa la página.
+
 Los scripts crean un pedido de prueba, lo borran al terminar y dejan el stock como estaba. Al final, apagar el backend (y Vite, si se usó) y verificar que los puertos 4100 y 5180 quedaron libres: si queda un proceso viejo, la próxima corrida prueba el código anterior.

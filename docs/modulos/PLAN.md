@@ -10,11 +10,11 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 ## 1. Estado actual
 
-**Actualizado:** 2026-10-09
+**Actualizado:** 2026-10-13
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.4 está subido (Gonzalo subió F6.4 y el arreglo del build de Docker, b8de29f). F7.5 (las mejoras que pidió el 2026-10-09) está terminado y subido (con el OK de Gonzalo, 2026-10-10). Cada push espera su OK.
-- **Último paso terminado:** F7.5 (las 16 mejoras que pidió Gonzalo el 2026-10-09). Las Fases 0 a 5 están completas; la 6 (herrajes) sigue con datos de ejemplo hasta que llegue el listado de ROMA.
-- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.5 (pruebas de punta a punta y no regresión de la Fase 6), con lo que diga Gonzalo de F7.5 y el listado de herrajes de ROMA. Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.4 está subido (Gonzalo subió F6.4 y el arreglo del build de Docker, b8de29f). F7.5 (las mejoras que pidió el 2026-10-09) está terminado y subido (con el OK de Gonzalo, 2026-10-10). F7.6 (errores en una ventana) está terminado y sin commitear: espera el OK de Gonzalo. Cada push espera su OK.
+- **Último paso terminado:** F7.6, los errores del sistema en una ventana en el medio (pedido de Gonzalo, 2026-10-13); antes, F7.5 (las 16 mejoras del 2026-10-09). Las Fases 0 a 5 están completas; la 6 (herrajes) sigue con datos de ejemplo hasta que llegue el listado de ROMA.
+- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.5 (pruebas de punta a punta y no regresión de la Fase 6), con lo que diga Gonzalo de F7.5 y F7.6 y el listado de herrajes de ROMA. Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -38,7 +38,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [x] |
 | F6 | Herrajes (contratados, DECISIONES 10 y 57) | [~] en curso, con datos de ejemplo |
-| F7.1–F7.3 | Recalcular módulo, pulido y aceptación con ROMA | [~] F7.1, F7.2 y F7.4 hechos; falta F7.3 (con ROMA) |
+| F7.1–F7.6 | Recalcular módulo, pulido, mejoras pedidas y aceptación con ROMA | [~] F7.1, F7.2, F7.4, F7.5 y F7.6 hechos; falta F7.3 (con ROMA) |
 | F8 | Pase a producción (VPS), al final | [ ] |
 
 ---
@@ -665,6 +665,13 @@ Pedidas de a una, con reporte después de cada punto. Todo lo visual se revisa t
 - [x] 16. Sin el optimizador en las pantallas de módulos (asistente y edición); solo en el Excel de corte (DECISIONES 61).
 - **Pruebas nuevas o actualizadas:** e2e-excel-corte-navegador (nueva), f31, f44, f45, f51, f52-navegador, f54, f55, f62, f63 y f74.
 - **Tener en cuenta:** dos migraciones nuevas (`20261009120000_herrajes_formulas_por_defecto` y `20261009130000_pedido_excel_corte`), solo agregan columnas opcionales; en Docker se aplican solas al levantar el backend.
+
+#### F7.6 Errores en una ventana (2026-10-13) · [x]
+Pedido de Gonzalo: con muchos módulos cargados, el aviso del borrador y los errores que salían arriba o al pie no se veían. Todos los errores del sistema, en todas las vistas, salen en una ventana en el medio (DECISIONES 66).
+- [x] `ErrorDialogProvider` y `useErrorDialog()` en `frontend/src/context/ErrorDialogContext.tsx`, montado en `main.tsx`; `frontend/src/lib/apiError.ts` arma el mensaje y los detalles de un error de la API. Red de seguridad para los errores de la API sin `catch`.
+- [x] Pantallas: asistente de módulos (validaciones, crear y vista previa), formulario de solicitudes, ingreso, materiales, herrajes, catálogo, editor de módulos, listado de módulos y los dos detalles.
+- [x] El borrador del asistente se pregunta en una ventana al entrar; en el celular, los botones uno abajo del otro.
+- **Pruebas actualizadas:** f44, f45, f51, f52-navegador y f61 (leen la ventana y la cierran con Entendido). Revisado en celular (390 px).
 
 #### F7.3 Aceptación con ROMA · [ ]
 La prueba de spec §17.3 completa, incluida la importación real del Excel en la máquina.

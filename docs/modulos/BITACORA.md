@@ -27,6 +27,28 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-13 (38) · equipo Pinformatico15 · rama main
+
+**Pasos:** F7.6 terminado (errores en una ventana, pedido de Gonzalo del 2026-10-13).
+
+**Hecho:**
+- Ventana de errores común a todo el sistema (`ErrorDialogContext.tsx` y `apiError.ts`), con título, mensaje, lista de problemas, acciones opcionales y "Entendido"; red de seguridad para los errores de la API que ninguna pantalla atrapaba (DECISIONES 66).
+- Convertidas: asistente de módulos, formulario de solicitudes, ingreso, materiales, herrajes, catálogo, editor de módulos, listado de módulos y los dos detalles. Quedan en su lugar los avisos de un campo, los de un diálogo abierto, los de carga con Reintentar, las advertencias y los éxitos.
+- El borrador del asistente se pregunta en una ventana al entrar ("Todavía no tiene módulos" cuando solo tiene datos del cliente); en el celular, los botones uno abajo del otro.
+- e2e actualizadas para leer la ventana: f44, f45, f51, f52-navegador y f61.
+
+**Decisiones nuevas:** 66.
+
+**Verificaciones:** frontend `npm test` y backend `npm test` (46), `tsc` de los dos y build (con `check:optimizer`) en verde. e2e contra la copia, todas sin fallas: excel-corte-navegador 19/19, f04 12/12, f05 22/22, f23 4/4, f31, f41 10/10, f42 106/106, f43 96/96, f52 43/43, f53 21/21, f55 27/27, f71 25/25, f74 8/8, y de navegador f44, f45 139/139, f51 64/64, f52 40/40, f54 24/24, f61 28/28, f62 20/20, f63 24/24, f64 30/30, f71 17/17, f72 18/18 y f74 5/5. La ventana de error y la del borrador, revisadas en celular (390 px), sin scroll horizontal.
+
+**Commits:** sin commit: los cambios están solo en este equipo, esperando el OK de Gonzalo.
+
+**Próximo paso:** que Gonzalo pruebe F7.5 y F7.6; después F6.5 y el listado de herrajes de ROMA.
+
+**Esperando a Gonzalo o a ROMA:** el OK para el commit de F7.6; las respuestas de ROMA sobre los herrajes; P5 y P6.
+
+---
+
 ## 2026-10-09 (37) · equipo Pinformatico15 · rama main
 
 **Pasos:** F7.5 terminado (las 16 mejoras que pidió Gonzalo el 2026-10-09).
