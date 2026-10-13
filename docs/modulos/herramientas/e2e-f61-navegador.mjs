@@ -137,8 +137,11 @@ try {
   await form.getByLabel("Precio").fill("10500");
   await form.getByLabel("Medida", { exact: true }).fill("450");
   await form.getByRole("button", { name: "Crear" }).click();
-  const aviso = page.getByRole("alert").filter({ hasText: "Hay datos para corregir." });
-  check("pantalla: medida sin línea, el aviso", (await aviso.waitFor({ timeout: 5000 }).then(() => true, () => false)) && (await aviso.innerText()).includes("tiene que tener su línea"));
+  // Los errores salen en la ventana del medio (2026-10-13).
+  const aviso = page.getByRole("alertdialog").filter({ hasText: "Hay datos para corregir." });
+  check("pantalla: medida sin línea, el aviso en la ventana", (await aviso.waitFor({ timeout: 5000 }).then(() => true, () => false)) && (await aviso.innerText()).includes("tiene que tener su línea"));
+  await aviso.getByRole("button", { name: "Entendido" }).click();
+  await aviso.waitFor({ state: "hidden", timeout: 5000 }).catch(() => undefined);
   await form.getByLabel("Línea").fill("Telescópica");
   await form.getByRole("button", { name: "Crear" }).click();
   await page.getByText(`Herraje "${PREFIJO} Telescópica 450" creado.`).waitFor({ timeout: 15000 });

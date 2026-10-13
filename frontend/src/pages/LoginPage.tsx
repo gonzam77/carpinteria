@@ -7,9 +7,10 @@ import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { Alert, Box, Button, Paper, Stack, TextField, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useErrorDialog } from "../context/ErrorDialogContext";
 
 const logoUrl = new URL("../../assets/roma_logo.png", import.meta.url).href;
 
@@ -19,6 +20,13 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  // El error de ingreso en la ventana del medio (2026-10-13).
+  const { showError } = useErrorDialog();
+  useEffect(() => {
+    if (!error) return;
+    showError({ title: "No se pudo ingresar", message: error });
+    setError("");
+  }, [error, showError]);
 
   function getErrorMessage(err: unknown, fallback: string) {
     if (axios.isAxiosError(err)) {
@@ -178,7 +186,6 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
               </Typography>
             </Stack>
 
-            {error && <Alert severity="error">{error}</Alert>}
 
             {isGoogleMode ? (
               import.meta.env.VITE_GOOGLE_CLIENT_ID ? (

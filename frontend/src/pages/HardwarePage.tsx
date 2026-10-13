@@ -40,6 +40,7 @@ import {
 import { moduleOrderError } from "../api/moduleOrders";
 import { emptyHardwareForm, formatHardwarePrice, groupByType, HARDWARE_UNITS, hardwareToForm, readHardwareForm, type HardwareForm } from "../lib/hardware";
 import type { Hardware, HardwareType, ModulesConfig } from "../types";
+import { useErrorDialog } from "../context/ErrorDialogContext";
 
 const unitLabel = (unidad: string) => HARDWARE_UNITS.find((item) => item.value === unidad)?.label ?? unidad;
 
@@ -61,7 +62,10 @@ export function HardwarePage() {
   const [feedback, setFeedback] = useState<{ message: string; severity: AlertColor; items?: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const notify = (message: string, severity: AlertColor = "success", items: string[] = []) => setFeedback({ message, severity, items });
+  const { showError } = useErrorDialog();
+  // Los errores en la ventana del medio (2026-10-13); los avisos de exito quedan arriba.
+  const notify = (message: string, severity: AlertColor = "success", items: string[] = []) =>
+    severity === "error" ? showError({ title: "No se pudo completar la acción", message, items }) : setFeedback({ message, severity, items });
   const fail = (error: unknown, fallback: string) => {
     const apiError = moduleOrderError(error, fallback, true);
     notify(apiError.message, "error", apiError.items);

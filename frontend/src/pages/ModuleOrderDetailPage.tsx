@@ -66,6 +66,7 @@ import { deliveryStatus, formatCreatedDay, formatDay, STATUS_ORDER } from "../li
 import { buildWhatsappLink } from "../lib/whatsapp";
 import type { EstadoSolicitud, Material, ModuleOrder, ModuleOrderDetail, ModulesConfig } from "../types";
 import { WorkshopSheetsView } from "./ModuleOrderWorkshopPage";
+import { useErrorDialog } from "../context/ErrorDialogContext";
 
 type ApiErrorBody = { message?: string; code?: string; details?: { stockShortages?: StockShortage[] } };
 
@@ -292,7 +293,13 @@ export function ModuleOrderDetailPage() {
   const [dateError, setDateError] = useState("");
   const backTo = backTarget(location.state);
 
+  const { showError } = useErrorDialog();
+  // Los errores en la ventana del medio (2026-10-13); los avisos de exito, abajo como siempre.
   const notify = (message: string, level: AlertColor = "success") => {
+    if (level === "error") {
+      showError({ title: "No se pudo completar la acción", message });
+      return;
+    }
     setSeverity(level);
     setNotification(message);
   };

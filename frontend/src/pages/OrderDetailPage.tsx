@@ -29,6 +29,7 @@ import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
 import { buildWhatsappLink } from "../lib/whatsapp";
 import { EstadoSolicitud, Material, Order } from "../types";
+import { useErrorDialog } from "../context/ErrorDialogContext";
 
 const estados: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
 
@@ -49,6 +50,7 @@ export function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [notification, setNotification] = useState("");
+  const { showError } = useErrorDialog();
   const [notificationSeverity, setNotificationSeverity] = useState<AlertColor>("success");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -127,8 +129,8 @@ export function OrderDetailPage() {
       const message = axios.isAxiosError<StatusChangeError>(error)
         ? error.response?.data?.message ?? "No se pudo actualizar el estado."
         : "No se pudo actualizar el estado.";
-      setNotificationSeverity("error");
-      setNotification(message);
+      // En la ventana del medio (2026-10-13).
+      showError({ title: "No se pudo actualizar el estado", message });
     } finally {
       setChangingStatus(false);
     }

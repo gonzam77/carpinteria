@@ -2,11 +2,12 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SaveIcon from "@mui/icons-material/Save";
-import { Alert, Box, Button, CircularProgress, Paper, Skeleton, Stack, Step, StepLabel, Stepper, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Paper, Skeleton, Stack, Step, StepLabel, Stepper, Typography, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getModule, getModulesConfig, listModuleCategories, listModules } from "../api/catalog";
+import { useErrorDialog } from "../context/ErrorDialogContext";
 import { listHardware } from "../api/hardware";
 import { api } from "../api/client";
 import { createModuleOrder, getModuleOrder, listModuleOrders, moduleOrderError, previewModuleOrder, type ModuleOrderApiError } from "../api/moduleOrders";
@@ -509,16 +510,44 @@ function ModuleOrderWizard() {
 
   // ---------------------------------------------------------------- pasos
   const validations = useUnitValidations(units, definitions, redondeo, checkContext);
-  const errorsRef = useRef<HTMLDivElement | null>(null);
+  // Los errores en la ventana del medio (2026-10-13): arriba o al pie de una pagina larga no se ven.
+  const { showError, closeError } = useErrorDialog();
+  // El error de crear que se ve: si deja de valer (por ejemplo, termino el calculo que habia que esperar), se cierra.
+  const shownCreateError = useRef<Parameters<typeof showError>[0] | null>(null);
   useEffect(() => {
     if (!errors.length) return;
-    // La lista aparece arriba: se la trae a la vista y se le da el foco, para que no parezca que el boton no anda.
-    errorsRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-    errorsRef.current?.focus({ preventScroll: true });
+    showError({ title: "Revisá esto antes de seguir", message: errors.length === 1 ? errors[0] : "Hay datos que faltan o no sirven:", items: errors.length > 1 ? errors : [] });
+    // Solo cuando cambia la lista.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [errors]);
+  useEffect(() => {
+    if (!createError) {
+      if (shownCreateError.current) closeError(shownCreateError.current);
+      shownCreateError.current = null;
+      return;
+    }
+    const yaCreada = createError.code === "ALREADY_CREATED" && typeof createError.details?.id === "string";
+    const input = {
+      title: "No se pudo crear la solicitud",
+      message: createError.message,
+      items: createError.items,
+      actions: yaCreada
+        ? [{ label: `Ver M-${String(createError.details!.numero)}`, onClick: () => navigate(`/modulos/${createError.details!.id as string}`, { state: { returnTo: "/modulos" } }) }]
+        : undefined
+    };
+    shownCreateError.current = input;
+    showError(input);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createError]);
+  useEffect(() => {
+    if (!previewError) return;
+    // El aviso queda tambien en el paso 4 (con Volver a calcular); la ventana lo hace ver aunque la pagina este abajo.
+    showError({ title: "No se pudo calcular el despiece", message: previewError.message, items: previewError.items });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewError]);
   const avisosRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (!avisos.length || errors.length) return;
+    if (!avisos.length) return;
     // Igual con los avisos (por ejemplo, el catalogo cambio al tocar "Revisar despiece"): que se vean.
     avisosRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
     avisosRef.current?.focus({ preventScroll: true });
@@ -641,7 +670,7 @@ function ModuleOrderWizard() {
     // Con un borrador anterior ofrecido y sin decidir, la marca de envio no tendria donde guardarse (DECISIONES 36).
     if (recoverable) {
       setCreateError({
-        message: "Antes de crear, decidí qué hacer con la solicitud sin terminar que se ofrece arriba: Descartar la borra y seguís con lo que ves; Recuperar reemplaza lo que ves por esa.",
+        message: "Antes de crear, decidí qué hacer con la solicitud sin terminar (en la ventana del medio): Descartar la borra y seguís con lo que ves; Recuperar reemplaza lo que ves por esa.",
         items: []
       });
       return;
@@ -896,19 +925,6 @@ function ModuleOrderWizard() {
         <Typography color="text.secondary">Elegí los muebles del catálogo, sus medidas y colores, y revisá el despiece antes de crear la solicitud.</Typography>
       </Stack>
 
-      {errors.length > 0 && (
-        <Alert ref={errorsRef} tabIndex={-1} severity="error" onClose={() => setErrors([])} sx={{ "& .MuiAlert-message": { minWidth: 0, overflowWrap: "anywhere" } }}>
-          {errors.length === 1 ? (
-            errors[0]
-          ) : (
-            <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
-              {errors.map((error, index) => (
-                <li key={index}>{error}</li>
-              ))}
-            </Box>
-          )}
-        </Alert>
-      )}
       {avisos.length > 0 && (
         <Alert ref={avisosRef} tabIndex={-1} severity="warning" onClose={() => setAvisos([])}>
           {avisos.length === 1 ? (
@@ -922,24 +938,29 @@ function ModuleOrderWizard() {
           )}
         </Alert>
       )}
-      {recoverable && (
-        <Alert
-          severity="info"
-          action={
-            <Stack direction="row" spacing={1}>
-              <Button color="inherit" size="small" onClick={() => void applyDraft()} disabled={busy || creating}>
-                Recuperar
-              </Button>
-              <Button color="inherit" size="small" onClick={dismissDraft} disabled={busy || creating}>
-                Descartar
-              </Button>
-            </Stack>
-          }
-        >
-          Tenés una solicitud sin terminar ({draftModules === 1 ? "1 módulo" : `${draftModules} módulos`}, guardada {describeAge(draftSavedAt ?? Date.now())}).
-          {recoverable.enviado ? " Se estaba creando cuando se cerró la pantalla: al crearla se revisa primero si ya quedó cargada." : ""}
-        </Alert>
-      )}
+      {/* El borrador anterior (2026-10-13): se pregunta en una ventana al entrar, y hay que elegir antes de seguir. */}
+      <Dialog open={Boolean(recoverable)} aria-labelledby="borrador-titulo" maxWidth="sm" fullWidth>
+        <DialogTitle id="borrador-titulo">Tenés una solicitud sin terminar</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {draftModules === 0 ? "Todavía no tiene módulos" : draftModules === 1 ? "Tiene 1 módulo" : `Tiene ${draftModules} módulos`} y se guardó {describeAge(draftSavedAt ?? Date.now())}. ¿La recuperás para seguirla, o la descartás y empezás una nueva?
+          </Typography>
+          {recoverable?.enviado && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Se estaba creando cuando se cerró la pantalla: al crearla se revisa primero si ya quedó cargada.
+            </Typography>
+          )}
+        </DialogContent>
+        {/* En el celular, los dos botones uno abajo del otro y a lo ancho (Recuperar arriba). */}
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexDirection: { xs: "column-reverse", sm: "row" }, alignItems: { xs: "stretch", sm: "center" }, "& > :not(style) ~ :not(style)": { ml: { xs: 0, sm: 1 } } }}>
+          <Button onClick={dismissDraft} disabled={busy || creating} color="inherit">
+            Descartar y empezar una nueva
+          </Button>
+          <Button variant="contained" onClick={() => void applyDraft()} disabled={busy || creating} autoFocus>
+            Recuperar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Stepper activeStep={step} sx={{ maxWidth: 900, overflowX: "auto", pb: 0.5, width: "100%", "& .MuiStepLabel-label": { fontSize: { xs: 12, sm: 14 } } }}>
         {STEPS.map((label) => (
@@ -1009,30 +1030,6 @@ function ModuleOrderWizard() {
           onRecalculate={() => requestPreview()}
           action={createButton}
         />
-      )}
-
-      {createError && (
-        <Alert
-          severity="error"
-          onClose={() => setCreateError(null)}
-          action={
-            createError.code === "ALREADY_CREATED" && typeof createError.details?.id === "string" ? (
-              <Button color="inherit" size="small" onClick={() => navigate(`/modulos/${createError.details!.id as string}`, { state: { returnTo: "/modulos" } })}>
-                Ver M-{String(createError.details.numero)}
-              </Button>
-            ) : undefined
-          }
-          sx={{ "& .MuiAlert-message": { minWidth: 0, overflowWrap: "anywhere" } }}
-        >
-          {createError.message}
-          {createError.items.length > 0 && (
-            <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
-              {createError.items.map((item, index) => (
-                <li key={index}>{item}</li>
-              ))}
-            </Box>
-          )}
-        </Alert>
       )}
 
       {/* Pasos 1 y 3: seguir, abajo a la derecha. En el 2 va en el panel de elegidos y en el 4, debajo del total. */}

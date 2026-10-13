@@ -350,6 +350,19 @@ try {
         () => true,
         () => false
       );
+  // Los errores salen en la ventana del medio (2026-10-13): se espera la ventana con el texto y se cierra con Entendido.
+  const esperarError = async (texto, timeout = 10000) => {
+    const ventana = page.getByRole("alertdialog").filter({ hasText: texto });
+    const visto = await ventana.waitFor({ timeout }).then(
+      () => true,
+      () => false
+    );
+    if (visto) {
+      await ventana.getByRole("button", { name: "Entendido" }).click();
+      await ventana.waitFor({ state: "hidden", timeout: 5000 }).catch(() => undefined);
+    }
+    return visto;
+  };
   const cerrarAvisos = async () => {
     for (const boton of await page.locator(".MuiSnackbar-root").getByRole("button", { name: /^(Close|Cerrar)$/ }).all()) await boton.click().catch(() => undefined);
     await page.locator(".MuiSnackbar-root").first().waitFor({ state: "detached", timeout: 3000 }).catch(() => undefined);
@@ -808,8 +821,8 @@ try {
     await page.route(esExportar, exportarFalla);
     esperados.push(/^HTTP 500 GET \/orders\/export/, /^console: Failed to load resource: .*500.* @ \/orders\/export/);
     await descargar.click();
-    const avisoExportar = await esperarAviso("Falla inventada al exportar.");
-    check("Descargar Excel con un error del servidor: lo muestra y el botón queda disponible", avisoExportar && (await descargar.isEnabled()));
+    const avisoExportar = await esperarError("Falla inventada al exportar.");
+    check("Descargar Excel con un error del servidor: lo muestra en la ventana y el botón queda disponible", avisoExportar && (await descargar.isEnabled()));
     await page.unroute(esExportar, exportarFalla);
     await cerrarAvisos();
 
@@ -900,14 +913,10 @@ try {
     const dialogoBorrar = page.getByRole("dialog", { name: "Eliminar solicitud" });
     await dialogoBorrar.waitFor({ timeout: 10000 });
     await dialogoBorrar.getByRole("button", { name: "Sí, eliminar" }).click();
-    const avisoBorrar409 = await page
-      .getByText("La solicitud cambió mientras tanto. Recargá la página y volvé a intentar.")
-      .first()
-      .waitFor({ timeout: 10000 })
-      .then(() => true, () => false);
     await dialogoBorrar.waitFor({ state: "hidden", timeout: 5000 }).catch(() => undefined);
+    const avisoBorrar409 = await esperarError("La solicitud cambió mientras tanto. Recargá la página y volvé a intentar.");
     check(
-      "Eliminar (en Editar) con un 409 inventado: cierra el diálogo, muestra el mensaje y la solicitud sigue",
+      "Eliminar (en Editar) con un 409 inventado: cierra el diálogo, muestra el mensaje en la ventana y la solicitud sigue",
       avisoBorrar409 &&
         (await dialogoBorrar.count()) === 0 &&
         new URL(page.url()).pathname === `/modulos/${principalId}/editar` &&

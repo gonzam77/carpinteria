@@ -1265,10 +1265,13 @@ try {
   const exportacionCaida = (route) => route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ message: "Error de prueba al exportar." }) });
   await page.route("**/orders/export*", exportacionCaida);
   await exportar.click();
-  await page.getByText("Error de prueba al exportar.").waitFor({ timeout: 15000 }).catch(() => undefined);
-  check("exportar con error del servidor: muestra su mensaje", (await page.getByText("Error de prueba al exportar.").count()) === 1);
+  // Los errores salen en la ventana del medio (2026-10-13).
+  const ventanaExportar = page.getByRole("alertdialog").filter({ hasText: "Error de prueba al exportar." });
+  await ventanaExportar.waitFor({ timeout: 15000 }).catch(() => undefined);
+  check("exportar con error del servidor: muestra su mensaje en la ventana", (await ventanaExportar.count()) === 1 && (await page.getByText("Error de prueba al exportar.").count()) === 1);
   await page.unroute("**/orders/export*", exportacionCaida);
-  await page.locator(".MuiAlert-root", { hasText: "Error de prueba al exportar." }).getByRole("button").click();
+  await ventanaExportar.getByRole("button", { name: "Entendido" }).click();
+  await ventanaExportar.waitFor({ state: "hidden", timeout: 5000 }).catch(() => undefined);
 
   // Una busqueda que falla no desmarca nada: mientras dura el error no hay que exportar, y con Reintentar vuelven marcadas.
   await casilla("beta").check();

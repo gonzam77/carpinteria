@@ -33,6 +33,7 @@ import axios from "axios";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { Material, MaterialType } from "../types";
+import { useErrorDialog } from "../context/ErrorDialogContext";
 
 type MaterialForm = {
   tipo: MaterialType;
@@ -97,6 +98,13 @@ export function MaterialsPage() {
   const [bulkForm, setBulkForm] = useState<BulkValueForm>(emptyBulkForm);
   const [feedback, setFeedback] = useState("");
   const [feedbackSeverity, setFeedbackSeverity] = useState<"success" | "error" | "warning">("success");
+  // Los errores en la ventana del medio (2026-10-13); los avisos de exito y advertencia quedan arriba.
+  const { showError } = useErrorDialog();
+  useEffect(() => {
+    if (!feedback || feedbackSeverity !== "error") return;
+    showError({ title: "No se pudo completar la acción", message: feedback });
+    setFeedback("");
+  }, [feedback, feedbackSeverity, showError]);
   const [view, setView] = useState<"activos" | "historial">("activos");
   const [deleteDialog, setDeleteDialog] = useState<MaterialDeleteDialogState>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);

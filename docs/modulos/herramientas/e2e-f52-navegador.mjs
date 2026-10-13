@@ -134,7 +134,15 @@ await page.addInitScript(
 const shot = (name, fullPage = false) => page.screenshot({ path: join(shotsDir, `${name}.png`), fullPage });
 const titulo = () => page.getByRole("heading", { level: 4 }).first();
 const siguiente = () => page.getByRole("button", { name: "Siguiente" });
-const errorAlert = () => page.locator("main .MuiAlert-standardError, main .MuiAlert-colorError").first();
+// Los errores salen en la ventana del medio (2026-10-13): se lee su mensaje y se cierra.
+const errorVentana = async () => {
+  const ventana = page.getByRole("alertdialog");
+  if (!(await ventana.waitFor({ timeout: 10000 }).then(() => true, () => false))) return "";
+  const texto = norm(await ventana.locator(".MuiDialogContent-root").innerText());
+  await ventana.getByRole("button", { name: "Entendido" }).click();
+  await ventana.waitFor({ state: "hidden", timeout: 5000 }).catch(() => undefined);
+  return texto;
+};
 const filasPieza = () => page.locator("tbody tr").filter({ has: page.locator('input[type="number"]') });
 const filaNumero = (numero) => page.locator("tbody tr").filter({ has: page.locator("td:first-child", { hasText: new RegExp(`^${numero}$`) }) });
 const accionesDe = (fila) => fila.locator("td").last().locator("button");
@@ -209,11 +217,12 @@ try {
   // ---------------------------------------------------------------- B. validación de Datos
   await page.getByLabel("Fecha de entrega").fill(addDays(hoy, -1));
   await siguiente().click();
-  check("una fecha nueva pasada no pasa", norm(await errorAlert().innerText()).includes("La fecha de entrega no puede ser anterior a hoy."), norm(await errorAlert().innerText()));
+  const errorFecha = await errorVentana();
+  check("una fecha nueva pasada no pasa (en la ventana)", errorFecha.includes("La fecha de entrega no puede ser anterior a hoy."), errorFecha);
   await page.getByLabel("Fecha de entrega").fill(NUEVA_FECHA);
   await page.getByLabel("Email").fill("prueba@");
   await siguiente().click();
-  check("un email mal escrito no pasa", norm(await errorAlert().innerText()).includes("El email no es válido."));
+  check("un email mal escrito no pasa (en la ventana)", (await errorVentana()).includes("El email no es válido."));
   await page.getByLabel("Email").fill("prueba-f52@example.com");
   await page.getByLabel("Teléfono de contacto").fill("2664111111");
   await siguiente().click();

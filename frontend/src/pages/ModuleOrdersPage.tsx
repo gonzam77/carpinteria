@@ -53,6 +53,7 @@ import {
   type ListFilters
 } from "../lib/moduleOrdersList";
 import type { EstadoSolicitud, ModuleOrderListItem } from "../types";
+import { useErrorDialog } from "../context/ErrorDialogContext";
 
 // Lo que la grilla le pasa al aviso de "sin filas" de este listado.
 declare module "@mui/x-data-grid" {
@@ -259,6 +260,13 @@ export function ModuleOrdersPage() {
   const [widths, setWidths] = useState<Record<string, number>>({});
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+  // El error de exportar en la ventana del medio (2026-10-13).
+  const { showError } = useErrorDialog();
+  useEffect(() => {
+    if (!exportError) return;
+    showError({ title: "No se pudo exportar", message: exportError });
+    setExportError("");
+  }, [exportError, showError]);
   const today = useTodayInArgentina();
   const active = hasActiveFilters(filters);
   const problem = filtersProblem(filters);
@@ -720,11 +728,6 @@ export function ModuleOrdersPage() {
       </Box>
 
       {problem && <Alert severity="warning">{problem}</Alert>}
-      {exportError && (
-        <Alert severity="error" onClose={() => setExportError("")}>
-          {exportError}
-        </Alert>
-      )}
 
       {emptyCatalog ? (
         <Paper variant="outlined" sx={{ p: 4, textAlign: "center", borderRadius: "10px" }}>

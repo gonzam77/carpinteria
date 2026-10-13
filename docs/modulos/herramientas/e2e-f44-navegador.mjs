@@ -250,7 +250,19 @@ try {
     }
   });
   const nextPreview = () => page.waitForResponse((response) => response.url().endsWith("/pedidos-modulos/preview") && response.request().method() === "POST", { timeout: 90000 });
-  const firstError = async () => norm(await page.locator(".MuiAlert-standardError").first().innerText({ timeout: 5000 }).catch(() => ""));
+  // Los errores salen en la ventana del medio (2026-10-13): se lee su texto, se mira si tiene el foco y se cierra.
+  const ventanaError = page.getByRole("alertdialog");
+  let focoEnLaVentana = false;
+  const firstError = async () => {
+    const abierta = await ventanaError.waitFor({ timeout: 5000 }).then(() => true, () => false);
+    if (!abierta) return "";
+    await page.waitForTimeout(250);
+    focoEnLaVentana = await page.evaluate(() => Boolean(document.activeElement?.closest('[role="alertdialog"]')));
+    const texto = norm(await ventanaError.locator(".MuiDialogContent-root").innerText());
+    await ventanaError.getByRole("button", { name: "Entendido" }).click();
+    await ventanaError.waitFor({ state: "hidden", timeout: 5000 }).catch(() => undefined);
+    return texto;
+  };
   const next = () => page.getByRole("button", { name: "Siguiente" }).click();
   const selectIn = async (scope, label, option) => {
     await scope.getByRole("combobox", { name: new RegExp(`^${label}`) }).click();
@@ -306,7 +318,7 @@ try {
   await next();
   let text = await firstError();
   check("paso 1: sin datos no avanza y dice que falta", text.includes("Completá el cliente") && text.includes("Completá el teléfono"), text);
-  check("paso 1: el error toma el foco", await page.evaluate(() => document.activeElement?.classList.contains("MuiAlert-root")));
+  check("paso 1: el error sale en la ventana del medio, con el foco", focoEnLaVentana);
   await page.getByLabel("Nombre o razón social").fill(`${PREFIJO} navegador`);
   await page.getByLabel("Teléfono").fill("000000");
   await page.getByLabel("Email").fill("ana@gmail.com.");
@@ -336,7 +348,7 @@ try {
   let names = await cardNames();
   check("paso 2: la busqueda filtra", names.length > 0 && names.every((name) => /bajo mesada 2/i.test(name)), names.join(" / "));
   await moduleButton("Bajo mesada 2 puertas").click();
-  check("paso 2: al elegir se borra el error", (await page.locator(".MuiAlert-standardError").count()) === 0);
+  check("paso 2: al elegir no queda ninguna ventana de error", (await ventanaError.count()) === 0);
   check("paso 2: click marca la tarjeta (aria-pressed, el nombre no cambia)", (await moduleButton("Bajo mesada 2 puertas").getAttribute("aria-pressed")) === "true");
   await page.getByRole("button", { name: "Una más de Bajo mesada 2 puertas" }).click();
   await search.fill("alacena 2");
@@ -422,7 +434,7 @@ try {
   text = await firstError();
   check("paso 3: con errores no avanza y nombra la medida", text.startsWith("Módulo 1 (Bajo mesada 2 puertas): ANCHO: Escribí solo el número, en mm"), text.slice(0, 160));
   await ancho1.fill("900");
-  check("paso 3: al corregir se borra la lista de problemas", (await page.locator(".MuiAlert-standardError").count()) === 0);
+  check("paso 3: al corregir no queda ninguna ventana de error", (await ventanaError.count()) === 0);
   await c1.getByLabel("Alto (mm)").fill("800");
   await page.waitForTimeout(150);
   check("paso 3: medida corregida", (await estados())[0] === "Listo");
@@ -751,10 +763,10 @@ try {
   const postsAntes = posts.length;
   await page.getByRole("button", { name: "Crear solicitud" }).click();
   await page.waitForTimeout(300);
-  const junto = norm(await page.locator(".MuiAlert-standardError").last().innerText());
+  const junto = await firstError();
   check(
-    "paso 4: con error no crea y dice por que junto al boton",
-    posts.length === postsAntes && junto.startsWith("Todavía no se puede crear: corregí lo que dice el aviso del despiece.") && junto.includes("Detalle inventado para la prueba."),
+    "paso 4: con error no crea y dice por que, en la ventana",
+    posts.length === postsAntes && junto.includes("Todavía no se puede crear: corregí lo que dice el aviso del despiece.") && junto.includes("Detalle inventado para la prueba."),
     junto.slice(0, 160)
   );
   await shot("w4-error-vista-previa");
@@ -840,7 +852,7 @@ try {
   expectedErrors.push(/^HTTP 409 POST \/pedidos-modulos$/, /status of 409/);
   preview = await (await response).json();
   await page.waitForTimeout(500);
-  text = norm(await page.locator(".MuiAlert-standardError").last().innerText());
+  text = await firstError();
   const avisoVersion = norm(await page.locator(".MuiAlert-standardWarning").first().innerText().catch(() => ""));
   check(
     "crear con el modulo cambiado: avisa, revisa el catalogo y vuelve a calcular",
@@ -886,6 +898,8 @@ try {
       /^[0-9a-f-]{36}$/.test(JSON.parse(posts[posts.length - 1].postData()).claveAlta ?? ""),
     `${posts.length - postsPrevios} altas`
   );
+  // El aviso esta en la ventana del medio: se cierra para seguir.
+  await firstError();
   // Se cambia un canto: lo que se ve ya no es lo que se mando. Al crear, primero se busca con lo que se mando.
   response = nextPreview();
   await elegir(3, etiqueta(cantoB045));
@@ -893,12 +907,14 @@ try {
   await page.getByText("Despiece y resumen calculados por el servidor.").waitFor();
   const postsAntesDeReintentar = posts.length;
   await page.getByRole("button", { name: "Crear solicitud" }).click();
-  const yaCargada = page.locator(".MuiAlert-standardError", { hasText: `La solicitud M-${creadaA.numero} ya había quedado cargada` });
+  const yaCargada = page.getByRole("alertdialog").filter({ hasText: `La solicitud M-${creadaA.numero} ya había quedado cargada` });
   await yaCargada.waitFor({ timeout: 30000 });
   check(
     "reintento con cambios: avisa que ya habia quedado cargada, ofrece verla y no crea otra",
     posts.length === postsAntesDeReintentar && (await yaCargada.getByRole("button", { name: `Ver M-${creadaA.numero}` }).count()) === 1
   );
+  await yaCargada.getByRole("button", { name: "Entendido" }).click();
+  await yaCargada.waitFor({ state: "hidden", timeout: 5000 }).catch(() => undefined);
   await page.unroute(listado, busquedaCaida);
   // Otra vez Crear: ahora si, una nueva con lo que se ve.
   const respuestaB = page.waitForResponse((r) => r.url().endsWith("/pedidos-modulos") && r.request().method() === "POST" && r.status() === 201, { timeout: 90000 });
@@ -1085,7 +1101,7 @@ try {
   await page.waitForURL(`${APP}/`);
   await page.getByRole("link", { name: "Solicitudes de módulos" }).click();
   await page.getByRole("button", { name: "Nueva solicitud de módulos" }).click();
-  const bannerPerdida = page.locator(".MuiAlert-root", { hasText: "Tenés una solicitud sin terminar" });
+  const bannerPerdida = page.getByRole("dialog", { name: "Tenés una solicitud sin terminar" });
   await bannerPerdida.waitFor({ timeout: 60000 });
   await page.unroute("**/pedidos-modulos", perdidaLenta);
   check(
@@ -1206,9 +1222,10 @@ try {
   // Chromium guarda localStorage en diferido: sin esta espera, la pagina nueva puede leer el valor anterior.
   await page.waitForTimeout(2000);
   await page.goto(`${APP}/modulos/nueva`);
-  const banner = page.locator(".MuiAlert-root", { hasText: "Tenés una solicitud sin terminar" });
+  // El borrador se pregunta en una ventana al entrar (2026-10-13).
+  const banner = page.getByRole("dialog", { name: "Tenés una solicitud sin terminar" });
   await banner.waitFor();
-  check("borrador: lo ofrece al volver", norm(await banner.innerText()).includes("Tenés una solicitud sin terminar (1 módulo, guardada"), norm(await banner.innerText()));
+  check("borrador: lo ofrece al volver, en una ventana", norm(await banner.innerText()).includes("Tiene 1 módulo y se guardó"), norm(await banner.innerText()));
   await banner.getByRole("button", { name: "Recuperar" }).click();
   await page.getByText("Colores por defecto").waitFor();
   const avisos = norm(await page.locator(".MuiAlert-standardWarning").first().innerText().catch(() => ""));
@@ -1228,7 +1245,7 @@ try {
   await page.waitForTimeout(2000);
   await page.goto(`${APP}/modulos/nueva`);
   await banner.waitFor();
-  await banner.getByRole("button", { name: "Descartar" }).click();
+  await banner.getByRole("button", { name: "Descartar y empezar una nueva" }).click();
   await page.waitForTimeout(1200);
   guardado = await page.evaluate((key) => [localStorage.getItem(key), localStorage.getItem(`${key}~live`)], draftKey);
   check("borrador: descartar lo borra", (await banner.count()) === 0 && guardado[0] === null && guardado[1] === null && (await page.getByLabel("Nombre o razón social").inputValue()) === "");

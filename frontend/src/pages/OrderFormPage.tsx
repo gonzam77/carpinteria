@@ -26,6 +26,7 @@ import { MAX_DIRECCION, MAX_REFERENCIA } from "../lib/moduleOrderWizard";
 import { Hardware, Material, ModuleOrder, Order, OrderDetail } from "../types";
 import { CutOptimizer } from "../components/CutOptimizer";
 import { getStatusStyle } from "../components/StatusChip";
+import { useErrorDialog } from "../context/ErrorDialogContext";
 
 function resolveMaterialId(row: OrderDetail, materials: Material[]) {
   return row.materialId || materials.find((material) => material.tipo === "PLACA" && material.nombre === row.material)?.id || "";
@@ -100,8 +101,15 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
   const [rows, setRows] = useState<OrderDetail[]>([createEmptyDetail()]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [error, setError] = useState("");
+  // Los errores en la ventana del medio (2026-10-13). Con el comprobante abierto se ven ahi (no una ventana encima).
+  const { showError } = useErrorDialog();
   const [step, setStep] = useState(0);
   const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
+  useEffect(() => {
+    if (!error || previewOrder) return;
+    showError({ title: "Revisá esto", message: error });
+    setError("");
+  }, [error, previewOrder, showError]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const previewRequest = useRef<AbortController | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -420,7 +428,7 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
       });
     } catch (recalcError) {
       const apiError = moduleOrderError(recalcError, "No se pudieron recalcular los herrajes.");
-      setHardwareMessage({ severity: "error", text: [apiError.message, ...apiError.items].join(" ") });
+      showError({ title: "No se pudieron recalcular los herrajes", message: apiError.message, items: apiError.items });
     } finally {
       setRecalculatingHardware(false);
     }
@@ -602,7 +610,6 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
       <Stack spacing={3}>
         {header}
         {blockedMessage ? <Alert severity="error">{blockedMessage}</Alert> : <Alert severity="info">Cargando la solicitud...</Alert>}
-        {error && <Alert severity="error">{error}</Alert>}
         <Box>
           <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(moduleDetailPath, { state: { returnTo: moduleListReturnTo } })}>
             Volver a la solicitud
@@ -617,7 +624,6 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
     <>
       <Stack spacing={3} component="form" onSubmit={openPreview}>
         {header}
-        {error && <Alert severity="error">{error}</Alert>}
         {recoverableDraft && (
           <Alert
             severity="info"
@@ -824,7 +830,12 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
       <OrderReceiptDialog
         order={previewOrder}
         open={Boolean(previewOrder)}
-        onClose={() => !submitLoading && setPreviewOrder(null)}
+        onClose={() => {
+          if (submitLoading) return;
+          // El error ya se vio en el comprobante: no se repite en la ventana al cerrarlo.
+          setError("");
+          setPreviewOrder(null);
+        }}
         onConfirm={handleConfirmSubmit}
         confirmLabel={id ? "Confirmar cambios" : "Confirmar solicitud"}
         confirmLoading={submitLoading}

@@ -38,6 +38,7 @@ import {
 import { api } from "../api/client";
 import { ModuleCard } from "../components/ModuleCard";
 import type { Material, ModuleCategory, ModuleListItem, ModulesConfig } from "../types";
+import { useErrorDialog } from "../context/ErrorDialogContext";
 
 type Feedback = { severity: "success" | "error" | "warning"; message: string } | null;
 
@@ -250,6 +251,13 @@ export function ModuleCatalogPage() {
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
+  // Los errores en la ventana del medio (2026-10-13); los avisos de exito quedan arriba.
+  const { showError } = useErrorDialog();
+  useEffect(() => {
+    if (feedback?.severity !== "error") return;
+    showError({ title: "No se pudo completar la acción", message: feedback.message });
+    setFeedback(null);
+  }, [feedback, showError]);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);

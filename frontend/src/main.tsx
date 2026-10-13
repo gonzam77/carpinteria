@@ -8,6 +8,7 @@ import { NewVersionNotice } from "./components/NewVersionNotice";
 import { SessionExpiredDialog } from "./components/SessionExpiredDialog";
 import { AuthProvider } from "./context/AuthContext";
 import { CompanySettingsProvider } from "./context/CompanySettingsContext";
+import { ErrorDialogProvider } from "./context/ErrorDialogContext";
 import { theme } from "./theme/theme";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -18,7 +19,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <AuthProvider>
             <CompanySettingsProvider>
-              <App />
+              <ErrorDialogProvider>
+                <App />
+              </ErrorDialogProvider>
               <SessionExpiredDialog />
             </CompanySettingsProvider>
           </AuthProvider>

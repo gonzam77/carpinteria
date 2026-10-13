@@ -52,6 +52,7 @@ import {
 } from "../lib/moduleEditor";
 import { evaluateModuleDefinition, resolveModuleHardware, type RoundingMode } from "../lib/moduleFormula";
 import type { Material, ModuleCategory, ModuleDefinition, ModuleProfile, ModulesConfig, OptimizerSettings, Hardware, HardwareType } from "../types";
+import { useErrorDialog } from "../context/ErrorDialogContext";
 
 type Feedback = { severity: "success" | "error" | "info"; message: string } | null;
 type Confirm = { title: string; message: string; confirmLabel: string; action: () => void | Promise<void> } | null;
@@ -78,6 +79,13 @@ export function ModuleEditorPage() {
   const [testValues, setTestValues] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
+  // Los errores en la ventana del medio (2026-10-13); los avisos de exito quedan arriba.
+  const { showError } = useErrorDialog();
+  useEffect(() => {
+    if (feedback?.severity !== "error") return;
+    showError({ title: "No se pudo completar la acción", message: feedback.message });
+    setFeedback(null);
+  }, [feedback, showError]);
   const [serverErrors, setServerErrors] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<Confirm>(null);
   // Al crear se navega a /:id con el modulo ya cargado: no hace falta volver a pedirlo.
