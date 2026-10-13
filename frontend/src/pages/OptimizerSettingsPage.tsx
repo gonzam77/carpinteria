@@ -1,7 +1,12 @@
 import SaveIcon from "@mui/icons-material/Save";
+import CropFreeIcon from "@mui/icons-material/CropFree";
+import ContentCutIcon from "@mui/icons-material/ContentCut";
+import TuneIcon from "@mui/icons-material/Tune";
 import { Alert, Button, Paper, Stack, TextField, Typography } from "@mui/material";
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "../api/client";
+import { fieldIcon } from "../components/fieldIcon";
+import { SectionHeading } from "../components/SectionHeading";
 import { OptimizerSettings } from "../types";
 
 export function OptimizerSettingsPage() {
@@ -39,6 +44,7 @@ export function OptimizerSettingsPage() {
       {message && <Alert severity="success">{message}</Alert>}
       <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "8px" }}>
         <Stack component="form" spacing={2.5} onSubmit={submit}>
+          <SectionHeading icon={<TuneIcon />} title="Medidas de corte" subtitle="Lo que el optimizador descuenta en cada corte y en el borde de la placa." />
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
             <TextField
               fullWidth
@@ -46,7 +52,8 @@ export function OptimizerSettingsPage() {
               type="number"
               value={form.espesorSierraMm}
               onChange={(event) => setForm((current) => ({ ...current, espesorSierraMm: event.target.value }))}
-              inputProps={{ step: "0.1", min: 0.1 }}
+              slotProps={{ input: fieldIcon(<ContentCutIcon />), htmlInput: { step: "0.1", min: 0.1 } }}
+              helperText="Lo que se come la sierra en cada corte."
               required
             />
             <TextField
@@ -55,14 +62,16 @@ export function OptimizerSettingsPage() {
               type="number"
               value={form.perfiladoBordeMm}
               onChange={(event) => setForm((current) => ({ ...current, perfiladoBordeMm: event.target.value }))}
-              inputProps={{ step: "1", min: 0 }}
+              slotProps={{ input: fieldIcon(<CropFreeIcon />), htmlInput: { step: "1", min: 0 } }}
               helperText="Se descuenta este valor por cada lado de la placa."
               required
             />
           </Stack>
-          <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Guardar configuración
-          </Button>
+          <Stack direction="row" justifyContent="flex-end">
+            <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              Guardar configuración
+            </Button>
+          </Stack>
         </Stack>
       </Paper>
     </Stack>

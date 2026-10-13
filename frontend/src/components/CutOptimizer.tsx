@@ -1,5 +1,10 @@
 import CalculateIcon from "@mui/icons-material/Calculate";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import BorderStyleIcon from "@mui/icons-material/BorderStyle";
+import ContentCutIcon from "@mui/icons-material/ContentCut";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import RequestQuoteOutlinedIcon from "@mui/icons-material/RequestQuoteOutlined";
+import ShuffleIcon from "@mui/icons-material/Shuffle";
 import { Alert, Box, Button, CircularProgress, Divider, Paper, Stack, Typography } from "@mui/material";
 import axios from "axios";
 import { useEffect, useRef, useState } from "react";
@@ -8,6 +13,8 @@ import { BoardPlan, FreeRect, PlacedPiece, calculateBoardUtilization, getLargest
 import { computeOrderEstimateAsync } from "../lib/estimateInWorker";
 import { type EstimateTotals } from "../lib/orderEstimate";
 import { BudgetSettings, Material, OptimizerSettings, OrderDetail } from "../types";
+import { MetricGrid, MetricTile } from "./MetricTile";
+import { SectionHeading } from "./SectionHeading";
 
 type MaterialCutResult = {
   material: Material;
@@ -375,12 +382,22 @@ function CutResults({ calculation, settings, hideCosts = false }: { calculation:
   return (
     <Paper sx={{ p: { xs: 2, sm: 2.5 }, overflow: "hidden" }}>
       <Stack spacing={2}>
+        <SectionHeading
+          icon={<ContentCutIcon />}
+          title="Optimizador de cortes"
+          subtitle={
+            <>
+              Placas necesarias: {totalBoards}
+              {hideCosts ? "" : ` - Costo estimado: ${hasErrors ? "no se puede calcular hasta corregir los errores" : formatMoney(totals.presupuestoEstimado)}`}
+            </>
+          }
+        />
+        <MetricGrid min={170}>
+          <MetricTile icon={<LayersOutlinedIcon />} label="Placas necesarias" value={totalBoards} />
+          {!hideCosts && !hasErrors && <MetricTile icon={<RequestQuoteOutlinedIcon />} label="Costo estimado" value={formatMoney(totals.presupuestoEstimado)} tone="neutral" />}
+          {!hideCosts && !hasErrors && <MetricTile icon={<BorderStyleIcon />} label="Metros de canto" value={`${totals.metrosCanto.toFixed(2)} m`} tone="neutral" />}
+        </MetricGrid>
         <Box>
-          <Typography variant="h6">Optimizador de cortes</Typography>
-          <Typography color="text.secondary">
-            Placas necesarias: {totalBoards}
-            {hideCosts ? "" : ` - Costo estimado: ${hasErrors ? "no se puede calcular hasta corregir los errores" : formatMoney(totals.presupuestoEstimado)}`}
-          </Typography>
           {!hasErrors && !hideCosts && (
             <Typography variant="body2" color="text.secondary">
               Placas: {formatMoney(totals.costoPlacas)} - Mano de obra por cortes: {formatMoney(totals.costoManoObraCortes)} - Material canto: {formatMoney(totals.costoMaterialCantos)} - Pegado canto: {formatMoney(totals.costoPegadoCantos)} ({totals.metrosCanto.toFixed(2)} m de canto)
@@ -435,9 +452,12 @@ function CutResults({ calculation, settings, hideCosts = false }: { calculation:
         {results.map((result) => (
           <Box key={result.material.id}>
             <Divider sx={{ mb: 2 }} />
-            <Typography fontWeight={700}>
-              {result.material.nombre} {result.material.espesorMm}mm - Placa {result.material.anchoPlaca}x{result.material.altoPlaca} mm
-            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <LayersOutlinedIcon fontSize="small" color="primary" aria-hidden />
+              <Typography fontWeight={700}>
+                {result.material.nombre} {result.material.espesorMm}mm - Placa {result.material.anchoPlaca}x{result.material.altoPlaca} mm
+              </Typography>
+            </Stack>
             <Typography variant="body2" color="text.secondary">
               {hideCosts
                 ? `${result.optimizedBoards.length} placas en el acomodo`
@@ -646,7 +666,7 @@ export function CutOptimizer({
           {calculating ? "Calculando..." : "Optimizar cortes"}
         </Button>
         {results.length > 0 && (
-          <Button type="button" variant="outlined" startIcon={<CalculateIcon />} onClick={() => calculate(variant + 1)} aria-disabled={calculating || undefined} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          <Button type="button" variant="outlined" startIcon={<ShuffleIcon />} onClick={() => calculate(variant + 1)} aria-disabled={calculating || undefined} sx={{ width: { xs: "100%", sm: "auto" } }}>
             Recalcular distribución
           </Button>
         )}

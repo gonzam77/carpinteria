@@ -1,8 +1,9 @@
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import NotificationsOffIcon from "@mui/icons-material/NotificationsOff";
-import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Button, Paper, Stack } from "@mui/material";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { SectionHeading } from "./SectionHeading";
 
 type PushConfig = {
   enabled: boolean;
@@ -100,12 +101,12 @@ export function PushNotificationsCard({ compact = false }: PushNotificationsCard
   return (
     <Paper sx={{ p: compact ? { xs: 1.5, sm: 2 } : { xs: 2, sm: 3 }, borderRadius: "8px" }}>
       <Stack spacing={compact ? 1.5 : 2}>
-        <Stack spacing={0.5}>
-          <Typography variant={compact ? "subtitle1" : "h6"}>Notificaciones en este dispositivo</Typography>
-          <Typography color="text.secondary" variant={compact ? "body2" : "body1"}>
-            Activá Web Push para recibir avisos cuando ingrese una nueva solicitud.
-          </Typography>
-        </Stack>
+        <SectionHeading
+          icon={<NotificationsActiveIcon />}
+          title="Notificaciones en este dispositivo"
+          subtitle="Activá Web Push para recibir avisos cuando ingrese una nueva solicitud."
+          variant={compact ? "subtitle1" : "h6"}
+        />
         {message && <Alert severity="success">{message}</Alert>}
         {!config?.enabled && <Alert severity="warning">Faltan configurar las claves VAPID del backend para habilitar las notificaciones push.</Alert>}
         <Stack direction={{ xs: "column", sm: compact ? "column" : "row" }} spacing={1.5}>

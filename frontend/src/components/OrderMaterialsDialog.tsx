@@ -1,4 +1,8 @@
-import PrintIcon from "@mui/icons-material/Print";
+import PrintOutlinedIcon from "@mui/icons-material/PrintOutlined";
+import BorderStyleIcon from "@mui/icons-material/BorderStyle";
+import CloseIcon from "@mui/icons-material/Close";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 import {
   Alert,
   Box,
@@ -22,6 +26,8 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useCompanySettings } from "../context/CompanySettingsContext";
 import { Order, OrderMaterialsSummary } from "../types";
+import { MetricGrid, MetricTile } from "./MetricTile";
+import { SectionHeading } from "./SectionHeading";
 
 function formatThickness(value: number) {
   return `${Number(value.toFixed(2)).toLocaleString("es-AR", { maximumFractionDigits: 2 })} mm`;
@@ -178,11 +184,23 @@ export function OrderMaterialsDialog({ order, open, onClose }: { order: Order | 
                   Esta solicitud se guardó antes de que se registrara el detalle de su constancia: las placas se recalcularon con los valores de hoy y pueden no coincidir con la constancia.
                 </Alert>
               )}
+              <MetricGrid min={170}>
+                <MetricTile icon={<LayersOutlinedIcon />} label="Total de placas" value={summary.totalPlacas} />
+                <MetricTile icon={<BorderStyleIcon />} label="Metros de canto" value={`${summary.totalMetrosCanto.toFixed(2)} m`} tone="neutral" />
+                <MetricTile
+                  icon={<WarningAmberOutlinedIcon />}
+                  label="Placas con faltante"
+                  value={summary.placas.filter((placa) => placa.faltantePlacas > 0).length}
+                  tone={summary.placas.some((placa) => placa.faltantePlacas > 0) ? "error" : "neutral"}
+                />
+              </MetricGrid>
               <Box>
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
-                  <Typography variant="h6">Placas necesarias</Typography>
-                  <Chip size="small" label={`${summary.totalPlacas} placas`} />
-                </Stack>
+                <SectionHeading
+                  icon={<LayersOutlinedIcon />}
+                  title="Placas necesarias"
+                  action={<Chip size="small" color="primary" variant="outlined" label={`${summary.totalPlacas} placas`} sx={{ fontWeight: 700 }} />}
+                  sx={{ mb: 1.5 }}
+                />
                 <Paper variant="outlined" sx={{ borderRadius: "12px", overflowX: "auto" }}>
                   <Table size="small">
                     <TableHead>
@@ -219,10 +237,12 @@ export function OrderMaterialsDialog({ order, open, onClose }: { order: Order | 
               </Box>
 
               <Box>
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
-                  <Typography variant="h6">Cantos solicitados</Typography>
-                  <Chip size="small" label={`${summary.totalMetrosCanto.toFixed(2)} m`} />
-                </Stack>
+                <SectionHeading
+                  icon={<BorderStyleIcon />}
+                  title="Cantos solicitados"
+                  action={<Chip size="small" color="primary" variant="outlined" label={`${summary.totalMetrosCanto.toFixed(2)} m`} sx={{ fontWeight: 700 }} />}
+                  sx={{ mb: 1.5 }}
+                />
                 <Paper variant="outlined" sx={{ borderRadius: "12px", overflowX: "auto" }}>
                   <Table size="small">
                     <TableHead>
@@ -256,8 +276,10 @@ export function OrderMaterialsDialog({ order, open, onClose }: { order: Order | 
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cerrar</Button>
-        <Button variant="outlined" startIcon={<PrintIcon />} onClick={handlePrint} disabled={loading || !summary}>
+        <Button startIcon={<CloseIcon />} onClick={onClose} sx={{ mr: "auto" }}>
+          Cerrar
+        </Button>
+        <Button variant="outlined" startIcon={<PrintOutlinedIcon />} onClick={handlePrint} disabled={loading || !summary}>
           Imprimir / Guardar PDF
         </Button>
       </DialogActions>

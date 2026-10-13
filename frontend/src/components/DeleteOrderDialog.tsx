@@ -1,3 +1,5 @@
+import CloseIcon from "@mui/icons-material/Close";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
 import { Order } from "../types";
 
@@ -27,10 +29,10 @@ export function DeleteOrderDialog({
         </DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCancel} disabled={loading}>
+        <Button startIcon={<CloseIcon />} onClick={onCancel} disabled={loading} sx={{ mr: "auto" }}>
           Cancelar
         </Button>
-        <Button color="error" variant="contained" onClick={onConfirm} disabled={loading}>
+        <Button color="error" variant="contained" startIcon={<DeleteOutlineIcon />} onClick={onConfirm} disabled={loading}>
           {loading ? "Eliminando..." : "Sí, eliminar"}
         </Button>
       </DialogActions>

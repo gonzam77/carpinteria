@@ -1,5 +1,8 @@
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import AddIcon from "@mui/icons-material/Add";
+import HardwareOutlinedIcon from "@mui/icons-material/HardwareOutlined";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import {
   Alert,
   Box,
@@ -24,6 +27,8 @@ import type { ComparableHardware } from "../lib/moduleOrderChanges";
 import { toCentavos } from "../lib/orderEstimate";
 import type { Hardware, ModuleOrder, OrderHardware } from "../types";
 import { hardwareQuantityText } from "./moduleOrderWizard/ModuleHardware";
+import { fieldIcon } from "./fieldIcon";
+import { SectionHeading } from "./SectionHeading";
 
 const ORIGEN: Record<string, string> = { EDITADO: "Modificado a mano", MANUAL: "Agregado a mano" };
 
@@ -63,19 +68,22 @@ export function OrderHardwareEditor({
 
   return (
     <Paper variant="outlined" component="section" aria-label="Herrajes" sx={{ borderRadius: "10px", overflow: "hidden" }}>
-      <Box sx={{ px: 2, py: 1.25, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 1, bgcolor: "background.default" }}>
-        <Box>
-          <Typography variant="h6">Herrajes</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Cambiar las piezas no los recalcula: ajustalos acá o recalculalos con lo del catálogo.
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <Typography fontWeight={800}>{formatHardwarePrice(costo)}</Typography>
-          <Button variant="outlined" startIcon={<AutorenewIcon />} onClick={onRecalculate} disabled={recalculating}>
-            {recalculating ? "Recalculando..." : "Recalcular herrajes"}
-          </Button>
-        </Stack>
+      <Box sx={{ px: 2, py: 1.5, bgcolor: "background.default", borderBottom: 1, borderColor: "divider" }}>
+        <SectionHeading
+          icon={<HardwareOutlinedIcon />}
+          title="Herrajes"
+          subtitle="Cambiar las piezas no los recalcula: ajustalos acá o recalculalos con lo del catálogo."
+          action={
+            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent={{ xs: "space-between", sm: "flex-end" }}>
+              <Typography fontWeight={800} sx={{ fontVariantNumeric: "tabular-nums" }}>
+                {formatHardwarePrice(costo)}
+              </Typography>
+              <Button variant="outlined" startIcon={<AutorenewIcon />} onClick={onRecalculate} disabled={recalculating}>
+                {recalculating ? "Recalculando..." : "Recalcular herrajes"}
+              </Button>
+            </Stack>
+          }
+        />
       </Box>
       {recalcMessage && (
         <Alert severity={recalcMessage.severity} role="status" sx={{ mx: 2, mt: 1.5 }}>
@@ -106,9 +114,9 @@ export function OrderHardwareEditor({
                         <TableCell>Tipo</TableCell>
                         <TableCell sx={{ width: 120 }}>Cant.</TableCell>
                         <TableCell>Modelo</TableCell>
-                        <TableCell align="right">Precio</TableCell>
-                        <TableCell align="right">Subtotal</TableCell>
-                        <TableCell sx={{ width: 48 }} />
+                        <TableCell>Precio</TableCell>
+                        <TableCell>Subtotal</TableCell>
+                        <TableCell sx={{ width: 96 }}>Acciones</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -143,7 +151,7 @@ export function OrderHardwareEditor({
                                   value={current.id}
                                   disabled={opciones.length < 2}
                                   onChange={(event) => update(line.key, { herrajeId: event.target.value })}
-                                  slotProps={{ select: { SelectDisplayProps: { "aria-label": `Modelo del herraje ${numero} del módulo ${modulo.posicion}` } } }}
+                                  slotProps={{ input: fieldIcon(<Inventory2OutlinedIcon />), select: { SelectDisplayProps: { "aria-label": `Modelo del herraje ${numero} del módulo ${modulo.posicion}` } } }}
                                   helperText={nota}
                                   error={Boolean(problem)}
                                 >
@@ -163,15 +171,16 @@ export function OrderHardwareEditor({
                                 </Box>
                               )}
                             </TableCell>
-                            <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                            <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>
                               {row ? formatHardwarePrice(row.valorUnitario) : "-"}
                             </TableCell>
-                            <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>
+                            <TableCell sx={{ fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>
                               {row ? formatHardwarePrice((toCentavos(row.valorUnitario) * row.cantidad) / 100) : "-"}
                             </TableCell>
                             <TableCell>
                               <Tooltip title="Quitar">
                                 <IconButton
+                                  color="error"
                                   aria-label={`Quitar el herraje ${numero} del módulo ${modulo.posicion}`}
                                   onClick={() => onChange(lines.filter((item) => item.key !== line.key))}
                                 >
@@ -200,8 +209,8 @@ export function OrderHardwareEditor({
                     event.target.value &&
                     onChange([...lines, { key: newHardwareKey(), id: null, pedidoModuloId: modulo.id, herrajeId: event.target.value, cantidad: 1 }])
                   }
-                  slotProps={{ select: { SelectDisplayProps: { "aria-label": `Agregar herraje al módulo ${modulo.posicion}` } } }}
-                  sx={{ mt: 1, minWidth: 280 }}
+                  slotProps={{ input: fieldIcon(<AddIcon />), select: { SelectDisplayProps: { "aria-label": `Agregar herraje al módulo ${modulo.posicion}` } } }}
+                  sx={{ mt: 1, minWidth: { xs: "100%", sm: 300 } }}
                 >
                   {tipos.flatMap((tipo) => [
                     <ListSubheader key={`tipo-${tipo}`}>{tipo}</ListSubheader>,

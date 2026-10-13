@@ -1,12 +1,24 @@
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
+import AddIcon from "@mui/icons-material/Add";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import BorderStyleIcon from "@mui/icons-material/BorderStyle";
+import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import HistoryIcon from "@mui/icons-material/History";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import LabelOutlinedIcon from "@mui/icons-material/LabelOutlined";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import PercentIcon from "@mui/icons-material/Percent";
+import StraightenIcon from "@mui/icons-material/Straighten";
 import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
 import SaveIcon from "@mui/icons-material/Save";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import {
   Alert,
+  Box,
   Button,
   Checkbox,
   Dialog,
@@ -34,6 +46,9 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { Material, MaterialType } from "../types";
 import { useErrorDialog } from "../context/ErrorDialogContext";
+import { fieldIcon } from "../components/fieldIcon";
+import { MetricGrid, MetricTile } from "../components/MetricTile";
+import { SectionHeading } from "../components/SectionHeading";
 
 type MaterialForm = {
   tipo: MaterialType;
@@ -287,42 +302,42 @@ export function MaterialsPage() {
   function buildActionColumn(isHistoryView: boolean): GridColDef<Material> {
     return {
       field: "acciones",
-      headerName: "",
-      width: isHistoryView ? 180 : 220,
+      headerName: "Acciones",
+      width: 150,
       sortable: false,
       renderCell: ({ row }) => (
         <>
           {!isHistoryView ? (
             <Tooltip title="Editar">
-              <IconButton onClick={() => editMaterial(row)}>
-                <EditIcon />
+              <IconButton aria-label="Editar" onClick={() => editMaterial(row)}>
+                <EditOutlinedIcon />
               </IconButton>
             </Tooltip>
           ) : null}
           {isHistoryView ? (
             <Tooltip title="Reactivar">
-              <IconButton color="primary" onClick={() => reactivateMaterial(row)}>
+              <IconButton aria-label="Reactivar" color="primary" onClick={() => reactivateMaterial(row)}>
                 <RestoreFromTrashIcon />
               </IconButton>
             </Tooltip>
           ) : (
             <Tooltip title="Quitar del listado">
-              <IconButton color="warning" onClick={() => setDeleteDialog({ material: row, mode: "deactivate" })}>
+              <IconButton aria-label="Quitar del listado" color="warning" onClick={() => setDeleteDialog({ material: row, mode: "deactivate" })}>
                 <HistoryIcon />
               </IconButton>
             </Tooltip>
           )}
           {row.canDeletePermanently ? (
             <Tooltip title="Eliminar definitivamente">
-              <IconButton color="error" onClick={() => setDeleteDialog({ material: row, mode: "permanent" })}>
-                <DeleteIcon />
+              <IconButton aria-label="Eliminar definitivamente" color="error" onClick={() => setDeleteDialog({ material: row, mode: "permanent" })}>
+                <DeleteOutlineIcon />
               </IconButton>
             </Tooltip>
           ) : (
             <Tooltip title="No se puede eliminar definitivamente porque está vinculado a solicitudes o cantos">
               <span>
-                <IconButton color="error" disabled>
-                  <DeleteIcon />
+                <IconButton aria-label="Eliminar definitivamente" color="error" disabled>
+                  <DeleteOutlineIcon />
                 </IconButton>
               </span>
             </Tooltip>
@@ -388,6 +403,7 @@ export function MaterialsPage() {
   const historialPlacas = inactiveMaterials.filter((material) => material.tipo === "PLACA");
   const historialCantos = inactiveMaterials.filter((material) => material.tipo === "CANTO");
   const allSelected = activeMaterials.length > 0 && bulkForm.selectedIds.length === activeMaterials.length;
+  const stockPlacas = placas.reduce((total, material) => total + Number(material.stockPlacas ?? 0), 0);
   const canSubmitBulkUpdate = bulkForm.selectedIds.length > 0 && bulkForm.percentage !== "" && !Number.isNaN(Number(bulkForm.percentage)) && Number(bulkForm.percentage) > -100;
 
   return (
@@ -401,7 +417,24 @@ export function MaterialsPage() {
           {feedback}
         </Alert>
       )}
+      <MetricGrid>
+        <MetricTile icon={<LayersOutlinedIcon />} label="Placas activas" value={placas.length} />
+        <MetricTile icon={<BorderStyleIcon />} label="Cantos activos" value={cantos.length} />
+        <MetricTile icon={<Inventory2OutlinedIcon />} label="Placas en stock" value={stockPlacas.toLocaleString("es-AR")} tone="neutral" />
+        <MetricTile icon={<HistoryIcon />} label="En el historial" value={inactiveMaterials.length} tone="neutral" />
+      </MetricGrid>
       <Paper sx={{ p: { xs: 2, sm: 2.25 }, borderRadius: "8px", overflow: "hidden" }}>
+        <SectionHeading
+          icon={editingId ? <EditOutlinedIcon /> : <AddIcon />}
+          title={editingId ? "Editar material" : "Nuevo material"}
+          subtitle={form.tipo === "PLACA" ? "Placa: nombre, espesor, valor, medidas y stock." : "Canto: la placa a la que acompaña, la medida y el valor por metro."}
+          action={
+            <Button type="button" variant="outlined" startIcon={<TrendingUpIcon />} onClick={() => setBulkDialogOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              Actualizar Valor
+            </Button>
+          }
+          sx={{ mb: 2 }}
+        />
         <Stack
           component="form"
           onSubmit={submit}
@@ -424,14 +457,15 @@ export function MaterialsPage() {
               setForm({ ...emptyForm, tipo: nextType, espesorMm: nextType === "PLACA" ? "18" : "" });
             }}
             sx={{ maxWidth: { lg: 180 } }}
+            slotProps={{ input: fieldIcon(<CategoryOutlinedIcon />) }}
           >
             <MenuItem value="PLACA">Placa</MenuItem>
             <MenuItem value="CANTO">Canto</MenuItem>
           </TextField>
           {form.tipo === "PLACA" ? (
-            <TextField fullWidth label="Nombre del material" value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} required sx={{ flex: { lg: "2 1 220px" } }} />
+            <TextField fullWidth label="Nombre del material" value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} required sx={{ flex: { lg: "2 1 220px" } }} slotProps={{ input: fieldIcon(<LabelOutlinedIcon />) }} />
           ) : (
-            <TextField select fullWidth label="Material de placa" value={form.placaMaterialId} onChange={(event) => setForm({ ...form, placaMaterialId: event.target.value })} required sx={{ flex: { lg: "2 1 220px" } }}>
+            <TextField select fullWidth label="Material de placa" value={form.placaMaterialId} onChange={(event) => setForm({ ...form, placaMaterialId: event.target.value })} required sx={{ flex: { lg: "2 1 220px" } }} slotProps={{ input: fieldIcon(<LayersOutlinedIcon />) }}>
               {placas.map((material) => (
                 <MenuItem key={material.id} value={material.id}>
                   {material.nombre} {material.espesorMm}mm
@@ -446,7 +480,7 @@ export function MaterialsPage() {
               type="number"
               value={form.espesorMm}
               onChange={(event) => setForm({ ...form, espesorMm: event.target.value })}
-              inputProps={{ step: "0.01", min: 0 }}
+              slotProps={{ input: fieldIcon(<StraightenIcon />), htmlInput: { step: "0.01", min: 0 } }}
               required
             />
           ) : (
@@ -457,6 +491,7 @@ export function MaterialsPage() {
               value={form.espesorMm}
               onChange={(event) => setForm({ ...form, espesorMm: event.target.value })}
               required
+              slotProps={{ input: fieldIcon(<StraightenIcon />) }}
             >
               {CANTO_MEASURE_OPTIONS.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
@@ -465,30 +500,30 @@ export function MaterialsPage() {
               ))}
             </TextField>
           )}
-          <TextField fullWidth label={form.tipo === "PLACA" ? "Valor placa" : "Valor material por metro"} type="number" value={form.valor} onChange={(event) => setForm({ ...form, valor: event.target.value })} required />
+          <TextField fullWidth label={form.tipo === "PLACA" ? "Valor placa" : "Valor material por metro"} type="number" value={form.valor} onChange={(event) => setForm({ ...form, valor: event.target.value })} required slotProps={{ input: fieldIcon(<AttachMoneyIcon />) }} />
           {form.tipo === "PLACA" ? (
             <>
-              <TextField fullWidth label="Largo placa mm" type="number" value={form.altoPlaca} onChange={(event) => setForm({ ...form, altoPlaca: event.target.value })} required />
-              <TextField fullWidth label="Ancho placa mm" type="number" value={form.anchoPlaca} onChange={(event) => setForm({ ...form, anchoPlaca: event.target.value })} required />
-              <TextField fullWidth label="Stock placas" type="number" value={form.stockPlacas} onChange={(event) => setForm({ ...form, stockPlacas: event.target.value })} inputProps={{ min: 0, step: 1 }} required />
+              <TextField fullWidth label="Largo placa mm" type="number" value={form.altoPlaca} onChange={(event) => setForm({ ...form, altoPlaca: event.target.value })} required slotProps={{ input: fieldIcon(<StraightenIcon />) }} />
+              <TextField fullWidth label="Ancho placa mm" type="number" value={form.anchoPlaca} onChange={(event) => setForm({ ...form, anchoPlaca: event.target.value })} required slotProps={{ input: fieldIcon(<StraightenIcon />) }} />
+              <TextField fullWidth label="Stock placas" type="number" value={form.stockPlacas} onChange={(event) => setForm({ ...form, stockPlacas: event.target.value })} required slotProps={{ input: fieldIcon(<Inventory2OutlinedIcon />), htmlInput: { min: 0, step: 1 } }} />
             </>
           ) : null}
-          <Button type="submit" variant="contained" startIcon={<SaveIcon />} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
-            {editingId ? "Guardar" : "Crear"}
-          </Button>
-          <Button type="button" variant="outlined" startIcon={<TrendingUpIcon />} onClick={() => setBulkDialogOpen(true)} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
-            Actualizar Valor
-          </Button>
-          {editingId && (
-            <Button type="button" variant="outlined" onClick={resetForm} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
-              Cancelar
+          {/* Cancelar a la izquierda y Guardar a la derecha (en el celular, apilados con el principal abajo). */}
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ flexShrink: 0, ml: { lg: "auto" }, justifyContent: "flex-end" }}>
+            {editingId && (
+              <Button type="button" variant="outlined" startIcon={<CloseIcon />} onClick={resetForm} sx={{ width: { xs: "100%", sm: "auto" } }}>
+                Cancelar
+              </Button>
+            )}
+            <Button type="submit" variant="contained" startIcon={editingId ? <SaveIcon /> : <AddIcon />} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              {editingId ? "Guardar" : "Crear"}
             </Button>
-          )}
+          </Stack>
         </Stack>
       </Paper>
 
       <Paper sx={{ borderRadius: "8px", overflow: "hidden" }}>
-        <Tabs value={view} onChange={(_event, nextValue) => setView(nextValue)} sx={{ px: 2, pt: 1 }}>
+        <Tabs value={view} onChange={(_event, nextValue) => setView(nextValue)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile sx={{ px: { xs: 0.5, sm: 2 }, pt: 1 }}>
           <Tab value="activos" icon={<ViewListIcon />} iconPosition="start" label={`Materiales activos (${activeMaterials.length})`} />
           <Tab value="historial" icon={<HistoryIcon />} iconPosition="start" label={`Historial de materiales (${inactiveMaterials.length})`} />
         </Tabs>
@@ -497,17 +532,13 @@ export function MaterialsPage() {
       {view === "activos" ? (
         <Stack spacing={2}>
           <Paper sx={{ p: 2, borderRadius: "8px", overflow: "hidden" }}>
-            <Typography variant="h6" sx={{ mb: 1.5 }}>
-              Placas activas
-            </Typography>
+            <SectionHeading icon={<LayersOutlinedIcon />} title="Placas activas" sx={{ mb: 1.5 }} />
             <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
               <DataGrid rows={placas} columns={activePlacaColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 1020, md: "100%" } }} />
             </Paper>
           </Paper>
           <Paper sx={{ p: 2, borderRadius: "8px", overflow: "hidden" }}>
-            <Typography variant="h6" sx={{ mb: 1.5 }}>
-              Cantos activos
-            </Typography>
+            <SectionHeading icon={<BorderStyleIcon />} title="Cantos activos" sx={{ mb: 1.5 }} />
             <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
               <DataGrid rows={cantos} columns={activeCantoColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 960, md: "100%" } }} />
             </Paper>
@@ -516,23 +547,23 @@ export function MaterialsPage() {
       ) : (
         <Stack spacing={2}>
           <Paper sx={{ p: 2, borderRadius: "8px", overflow: "hidden" }}>
-            <Typography variant="h6" sx={{ mb: 0.75 }}>
-              Historial de placas
-            </Typography>
-            <Typography color="text.secondary" sx={{ mb: 1.5 }}>
-              Estos materiales ya no aparecen al cargar nuevas solicitudes, pero siguen preservados para mantener consistencia histórica.
-            </Typography>
+            <SectionHeading
+              icon={<HistoryIcon />}
+              title="Historial de placas"
+              subtitle="Estos materiales ya no aparecen al cargar nuevas solicitudes, pero siguen preservados para mantener consistencia histórica."
+              sx={{ mb: 1.5 }}
+            />
             <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
               <DataGrid rows={historialPlacas} columns={historyPlacaColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 920, md: "100%" } }} />
             </Paper>
           </Paper>
           <Paper sx={{ p: 2, borderRadius: "8px", overflow: "hidden" }}>
-            <Typography variant="h6" sx={{ mb: 0.75 }}>
-              Historial de cantos
-            </Typography>
-            <Typography color="text.secondary" sx={{ mb: 1.5 }}>
-              Podés reactivar un material cuando vuelva a usarse o eliminarlo definitivamente solo si nunca quedó vinculado a solicitudes.
-            </Typography>
+            <SectionHeading
+              icon={<HistoryIcon />}
+              title="Historial de cantos"
+              subtitle="Podés reactivar un material cuando vuelva a usarse o eliminarlo definitivamente solo si nunca quedó vinculado a solicitudes."
+              sx={{ mb: 1.5 }}
+            />
             <Paper sx={{ height: 360, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
               <DataGrid rows={historialCantos} columns={historyCantoColumns} disableRowSelectionOnClick sx={{ minWidth: { xs: 960, md: "100%" } }} />
             </Paper>
@@ -570,15 +601,17 @@ export function MaterialsPage() {
               type="number"
               value={bulkForm.percentage}
               onChange={(event) => setBulkForm((current) => ({ ...current, percentage: event.target.value }))}
-              inputProps={{ step: "0.01" }}
+              slotProps={{ input: fieldIcon(<PercentIcon />), htmlInput: { step: "0.01" } }}
               helperText="Usá valores positivos para aumentar y negativos para disminuir. Ejemplo: 10 o -5."
               required
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeBulkDialog}>Cancelar</Button>
-          <Button variant="contained" onClick={submitBulkValueUpdate} disabled={!canSubmitBulkUpdate}>
+          <Button startIcon={<CloseIcon />} onClick={closeBulkDialog} sx={{ mr: "auto" }}>
+            Cancelar
+          </Button>
+          <Button variant="contained" startIcon={<CheckIcon />} onClick={submitBulkValueUpdate} disabled={!canSubmitBulkUpdate}>
             Aplicar ajuste
           </Button>
         </DialogActions>
@@ -604,10 +637,16 @@ export function MaterialsPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialog(null)} disabled={deleteLoading}>
+          <Button startIcon={<CloseIcon />} onClick={() => setDeleteDialog(null)} disabled={deleteLoading} sx={{ mr: "auto" }}>
             Cancelar
           </Button>
-          <Button variant="contained" color={deleteDialog?.mode === "permanent" ? "error" : "warning"} onClick={confirmDeleteMaterial} disabled={deleteLoading}>
+          <Button
+            variant="contained"
+            color={deleteDialog?.mode === "permanent" ? "error" : "warning"}
+            startIcon={deleteDialog?.mode === "permanent" ? <DeleteOutlineIcon /> : <HistoryIcon />}
+            onClick={confirmDeleteMaterial}
+            disabled={deleteLoading}
+          >
             {deleteLoading ? "Procesando..." : deleteDialog?.mode === "permanent" ? "Sí, eliminar" : "Sí, quitar"}
           </Button>
         </DialogActions>

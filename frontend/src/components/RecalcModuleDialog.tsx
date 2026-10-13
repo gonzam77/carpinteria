@@ -1,3 +1,8 @@
+import AutorenewIcon from "@mui/icons-material/Autorenew";
+import CloseIcon from "@mui/icons-material/Close";
+import HardwareOutlinedIcon from "@mui/icons-material/HardwareOutlined";
+import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getModule } from "../api/catalog";
@@ -172,9 +177,9 @@ export function RecalcModuleDialog({
                     <TableRow>
                       <TableCell>Pieza</TableCell>
                       <TableCell>Material</TableCell>
-                      <TableCell align="right">Largo</TableCell>
-                      <TableCell align="right">Ancho</TableCell>
-                      <TableCell align="right">Cant.</TableCell>
+                      <TableCell>Largo</TableCell>
+                      <TableCell>Ancho</TableCell>
+                      <TableCell>Cant.</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -182,36 +187,42 @@ export function RecalcModuleDialog({
                       <TableRow key={`${row.piezaCodigo}-${index}`}>
                         <TableCell>{row.nombreProducto}</TableCell>
                         <TableCell>{row.material.trim()}</TableCell>
-                        <TableCell align="right">{row.largo}</TableCell>
-                        <TableCell align="right">{row.ancho}</TableCell>
-                        <TableCell align="right">{row.cantidad}</TableCell>
+                        <TableCell>{row.largo}</TableCell>
+                        <TableCell>{row.ancho}</TableCell>
+                        <TableCell>{row.cantidad}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </Box>
               {preview.herrajes.length > 0 && (
-                <Typography variant="body2" aria-label="Herrajes nuevos">
-                  Herrajes: {preview.herrajes.map((item) => `${hardwareQuantityText(item.cantidad, item.unidad)} × ${item.nombre}`).join(" · ")}
-                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <HardwareOutlinedIcon fontSize="small" color="primary" aria-hidden />
+                  <Typography variant="body2" aria-label="Herrajes nuevos">
+                    Herrajes: {preview.herrajes.map((item) => `${hardwareQuantityText(item.cantidad, item.unidad)} × ${item.nombre}`).join(" · ")}
+                  </Typography>
+                </Stack>
               )}
-              <Typography variant="body2" aria-label="Pedido entero, antes y después">
-                Pedido entero: {preview.antes.placasEstimadas} → {preview.despues.placasEstimadas} placas · {money(preview.antes.presupuestoConHerrajes)} → {money(preview.despues.presupuestoConHerrajes)}
-              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ p: 1.25, borderRadius: "8px", bgcolor: "primary.light" }}>
+                <ReceiptLongOutlinedIcon fontSize="small" color="primary" aria-hidden />
+                <Typography variant="body2" fontWeight={700} aria-label="Pedido entero, antes y después">
+                  Pedido entero: {preview.antes.placasEstimadas} → {preview.despues.placasEstimadas} placas · {money(preview.antes.presupuestoConHerrajes)} → {money(preview.despues.presupuestoConHerrajes)}
+                </Typography>
+              </Stack>
             </Stack>
           )}
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={onClose} disabled={busy}>
+        <Button startIcon={<CloseIcon />} onClick={onClose} disabled={busy} sx={{ mr: "auto" }}>
           Cancelar
         </Button>
         {preview ? (
-          <Button variant="contained" color="warning" onClick={() => void apply()} disabled={busy}>
+          <Button variant="contained" color="warning" startIcon={<AutorenewIcon />} onClick={() => void apply()} disabled={busy}>
             {saving ? "Recalculando..." : "Recalcular el módulo"}
           </Button>
         ) : (
-          <Button variant="contained" onClick={() => void calculate()} disabled={busy || !unit || !validation?.ok}>
+          <Button variant="contained" startIcon={<VisibilityOutlinedIcon />} onClick={() => void calculate()} disabled={busy || !unit || !validation?.ok}>
             {previewing ? "Calculando..." : "Ver cómo queda"}
           </Button>
         )}

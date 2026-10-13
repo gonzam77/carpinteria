@@ -1,12 +1,19 @@
 import AddIcon from "@mui/icons-material/Add";
 import Autocomplete from "@mui/material/Autocomplete";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import DeleteIcon from "@mui/icons-material/Delete";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import RemoveIcon from "@mui/icons-material/Remove";
-import StraightenIcon from "@mui/icons-material/Straighten";
-import { Box, Button, Checkbox, IconButton, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from "@mui/material";
+import BorderStyleIcon from "@mui/icons-material/BorderStyle";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import LabelOutlinedIcon from "@mui/icons-material/LabelOutlined";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
+import { Box, Button, Checkbox, Chip, IconButton, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from "@mui/material";
 import { ReactNode, useState } from "react";
 import { Material, OrderDetail } from "../types";
+import { fieldIcon } from "./fieldIcon";
+import { SectionHeading } from "./SectionHeading";
 
 const emptyRow: OrderDetail = {
   codigoBarra: "",
@@ -103,14 +110,14 @@ function formatPlacaOption(material: Material) {
 
 function DimensionPreview({ label, value, count }: { label: string; value: number | string; count: number }) {
   return (
-    <Box sx={{ minWidth: 74 }}>
+    <Box sx={{ minWidth: 74, textAlign: "center" }}>
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
       <Typography variant="body2" fontWeight={800} lineHeight={1.2}>
         {value || "-"}
       </Typography>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35, mt: 0.35, minHeight: 7 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.35, mt: 0.35, minHeight: 7 }}>
         {Array.from({ length: count }).map((_, index) => (
           <Box key={index} sx={{ width: 28, height: 3, borderRadius: "999px", bgcolor: "#17203a" }} />
         ))}
@@ -130,7 +137,7 @@ function PartSummary({ row, index }: { row: OrderDetail; index: number }) {
           {row.material || "Sin placa"}
         </Typography>
       </Box>
-      <Stack direction="row" spacing={1.25} alignItems="flex-start" flexWrap="wrap" useFlexGap>
+      <Stack direction="row" spacing={1.25} alignItems="flex-start" justifyContent="center" flexWrap="wrap" useFlexGap>
         <DimensionPreview label="Largo" value={row.largo} count={activeEdgeCount(row, largoEdgeFlags)} />
         <Typography sx={{ pt: 2.2, color: "text.secondary", fontWeight: 800 }}>x</Typography>
         <DimensionPreview label="Ancho" value={row.ancho} count={activeEdgeCount(row, anchoEdgeFlags)} />
@@ -264,7 +271,7 @@ export function OrderItemsTable({
         <TableRow key={`grupo-${group.id ?? "adicionales"}`}>
           <TableCell colSpan={columns} sx={{ bgcolor: "background.default", py: 1 }}>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between">
-              <Box>
+              <Box sx={{ textAlign: "left" }}>
                 <Typography variant="subtitle2" fontWeight={900}>
                   {group.title}
                 </Typography>
@@ -463,27 +470,13 @@ export function OrderItemsTable({
     return (
       <Stack spacing={2}>
         <Paper sx={{ borderRadius: "8px", overflow: "hidden" }}>
-          <Box
-            sx={{
-              px: { xs: 1.5, sm: 2 },
-              py: 1.25,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 1.5,
-              bgcolor: "primary.main",
-              color: "primary.contrastText"
-            }}
-          >
-            <Stack direction="row" spacing={1} alignItems="center">
-              <StraightenIcon fontSize="small" />
-              <Typography variant="subtitle1" fontWeight={900}>
-                Cantos por pieza
-              </Typography>
-            </Stack>
-            <Typography variant="body2" fontWeight={700}>
-              {rows.length} partes
-            </Typography>
+          <Box sx={{ px: { xs: 1.5, sm: 2 }, py: 1.5, borderBottom: 1, borderColor: "divider" }}>
+            <SectionHeading
+              icon={<BorderStyleIcon />}
+              title="Cantos por pieza"
+              subtitle="Elegí el canto y marcá los lados que lo llevan."
+              action={<Chip color="primary" variant="outlined" label={`${rows.length} partes`} sx={{ fontWeight: 800 }} />}
+            />
           </Box>
           <Box sx={{ overflowX: "auto" }}>
             <Table
@@ -577,6 +570,8 @@ export function OrderItemsTable({
                             value={selectedCantoId}
                             onChange={(event) => setEdgeTypeValue(row, index, typeIndex, event.target.value)}
                             fullWidth
+                            slotProps={{ input: fieldIcon(<BorderStyleIcon />) }}
+                            sx={{ "& .MuiSelect-select": { textAlign: "left" } }}
                           >
                             <MenuItem value="">Seleccionar canto</MenuItem>
                             {options.map((option) => (
@@ -628,13 +623,16 @@ export function OrderItemsTable({
   return (
     <Stack spacing={2.25}>
       <Paper variant="outlined" sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "10px", bgcolor: "background.default" }}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} justifyContent="space-between">
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Cliente
-            </Typography>
-            <Typography fontWeight={700}>{clientName || "Sin cliente"}</Typography>
-          </Box>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} justifyContent="space-between" alignItems={{ md: "center" }}>
+          <Stack direction="row" spacing={1.25} alignItems="center">
+            <PersonOutlineIcon color="primary" aria-hidden />
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Cliente
+              </Typography>
+              <Typography fontWeight={700}>{clientName || "Sin cliente"}</Typography>
+            </Box>
+          </Stack>
           <Box>
             <Typography variant="caption" color="text.secondary">
               Teléfono
@@ -644,37 +642,35 @@ export function OrderItemsTable({
               value={clientPhone}
               onChange={(event) => onClientPhoneChange(event.target.value)}
               placeholder="Teléfono de contacto"
-              sx={{ minWidth: { md: 240 } }}
+              fullWidth
+              slotProps={{ input: fieldIcon(<PhoneOutlinedIcon />) }}
+              sx={{ minWidth: { md: 260 } }}
             />
           </Box>
         </Stack>
       </Paper>
 
       <Paper sx={{ borderRadius: "8px", overflow: "hidden" }}>
-        <Box
-          sx={{
-            px: { xs: 1.5, sm: 2 },
-            py: 1.25,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 1.5,
-            bgcolor: "primary.main",
-            color: "primary.contrastText"
-          }}
-        >
-          <Typography variant="subtitle1" fontWeight={900}>
-            Partes
-          </Typography>
-          <Typography variant="body2" fontWeight={700}>
-            {rows.length} partes, {rows.reduce((total, row) => total + Number(row.cantidad || 0), 0)} unidades
-          </Typography>
+        <Box sx={{ px: { xs: 1.5, sm: 2 }, py: 1.5, borderBottom: 1, borderColor: "divider" }}>
+          <SectionHeading
+            icon={<ViewInArOutlinedIcon />}
+            title="Partes"
+            subtitle="Placa, medidas en mm, cantidad y nombre de cada pieza."
+            action={
+              <Chip
+                color="primary"
+                variant="outlined"
+                label={`${rows.length} partes, ${rows.reduce((total, row) => total + Number(row.cantidad || 0), 0)} unidades`}
+                sx={{ fontWeight: 800 }}
+              />
+            }
+          />
         </Box>
         <Box sx={{ overflowX: "auto" }}>
           <Table
             size="small"
             sx={{
-              minWidth: 1040,
+              minWidth: 1080,
               "& .MuiTableCell-root": {
                 borderRight: "1px solid",
                 borderColor: "divider",
@@ -693,7 +689,7 @@ export function OrderItemsTable({
                 <TableCell sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>Ancho</TableCell>
                 <TableCell sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>Cantidad</TableCell>
                 <TableCell sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>Nombre</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>
+                <TableCell sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>
                   <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
                     <Checkbox
                       size="small"
@@ -708,14 +704,14 @@ export function OrderItemsTable({
                     </Typography>
                   </Stack>
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, whiteSpace: "nowrap" }} />
+                <TableCell sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {bodyRows(8, (row, index) => (
                 <TableRow key={index}>
                   <TableCell sx={{ width: 48, fontWeight: 900 }}>{index + 1}</TableCell>
-                  <TableCell sx={{ width: 280, minWidth: 280 }}>
+                  <TableCell sx={{ width: 320, minWidth: 320 }}>
                     <Autocomplete
                       fullWidth
                       size="small"
@@ -729,7 +725,9 @@ export function OrderItemsTable({
                         return options.filter((option) => option.nombre.toLocaleLowerCase("es").includes(query));
                       }}
                       onChange={(_event, material) => patchMaterial(index, material?.id ?? "")}
-                      renderInput={(params) => <TextField {...params} placeholder="Buscar material" required />}
+                      renderInput={(params) => (
+                        <TextField {...params} placeholder="Buscar material" required slotProps={{ input: { ...params.InputProps, ...fieldIcon(<LayersOutlinedIcon />) } }} />
+                      )}
                     />
                   </TableCell>
                   <TableCell sx={{ width: 90, minWidth: 90 }}>
@@ -739,25 +737,31 @@ export function OrderItemsTable({
                     <TextField label="mm" type="number" value={row.ancho ?? ""} onChange={(event) => patchRow(index, { ancho: event.target.value })} inputProps={{ min: 1, step: 1 }} fullWidth required sx={{ minWidth: 85 }} />
                   </TableCell>
                   <TableCell sx={{ width: 90, minWidth: 90 }}>
-                    <TextField type="number" value={row.cantidad ?? ""} onChange={(event) => patchRow(index, { cantidad: event.target.value })} inputProps={{ min: 1, step: 1 }} fullWidth required />
+                    <TextField type="number" value={row.cantidad ?? ""} onChange={(event) => patchRow(index, { cantidad: event.target.value })} inputProps={{ min: 1, step: 1 }} fullWidth required sx={{ minWidth: 85 }} />
                   </TableCell>
                   <TableCell sx={{ minWidth: 210 }}>
-                    <TextField value={row.nombreProducto ?? ""} onChange={(event) => patchRow(index, { nombreProducto: event.target.value })} placeholder="Piso, techo, estante..." fullWidth />
+                    <TextField
+                      value={row.nombreProducto ?? ""}
+                      onChange={(event) => patchRow(index, { nombreProducto: event.target.value })}
+                      placeholder="Piso, techo, estante..."
+                      fullWidth
+                      slotProps={{ input: fieldIcon(<LabelOutlinedIcon />) }}
+                    />
                   </TableCell>
-                  <TableCell align="center" sx={{ width: 86 }}>
+                  <TableCell sx={{ width: 86 }}>
                     <Switch checked={Boolean(row.permiteRotar)} onChange={(event) => patchRow(index, { permiteRotar: event.target.checked })} inputProps={{ "aria-label": `Rotar pieza ${index + 1}` }} />
                   </TableCell>
-                  <TableCell align="right" sx={{ width: 104 }}>
-                    <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                  <TableCell sx={{ width: 104 }}>
+                    <Stack direction="row" spacing={0.5} justifyContent="center">
                       <Tooltip title="Duplicar pieza">
-                        <IconButton onClick={() => setRows([...rows.slice(0, index + 1), groups ? { ...row, id: undefined } : { ...row }, ...rows.slice(index + 1)])}>
+                        <IconButton aria-label="Duplicar pieza" onClick={() => setRows([...rows.slice(0, index + 1), groups ? { ...row, id: undefined } : { ...row }, ...rows.slice(index + 1)])}>
                           <ContentCopyIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar pieza">
                         <span>
-                          <IconButton disabled={rows.length === 1} onClick={() => setRows(rows.filter((_, rowIndex) => rowIndex !== index))}>
-                            <DeleteIcon fontSize="small" />
+                          <IconButton aria-label="Eliminar pieza" color="error" disabled={rows.length === 1} onClick={() => setRows(rows.filter((_, rowIndex) => rowIndex !== index))}>
+                            <DeleteOutlineIcon fontSize="small" />
                           </IconButton>
                         </span>
                       </Tooltip>
@@ -771,7 +775,7 @@ export function OrderItemsTable({
       </Paper>
 
       {!groups && (
-        <Button startIcon={<AddIcon />} sx={{ width: { xs: "100%", sm: "auto" } }} variant="outlined" onClick={() => setRows([...rows, createNextDetail()])}>
+        <Button startIcon={<AddIcon />} sx={{ width: { xs: "100%", sm: "auto" }, alignSelf: { sm: "flex-start" } }} variant="outlined" onClick={() => setRows([...rows, createNextDetail()])}>
           Agregar pieza
         </Button>
       )}

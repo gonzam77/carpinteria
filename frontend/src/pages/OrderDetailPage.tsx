@@ -1,11 +1,18 @@
-import DownloadIcon from "@mui/icons-material/Download";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
+import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
+import HistoryIcon from "@mui/icons-material/History";
+import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
 import {
   type AlertColor,
   Box,
   Button,
+  Chip,
+  InputAdornment,
   MenuItem,
   Paper,
   Select,
@@ -30,6 +37,7 @@ import { useAuth } from "../context/AuthContext";
 import { buildWhatsappLink } from "../lib/whatsapp";
 import { EstadoSolicitud, Material, Order } from "../types";
 import { useErrorDialog } from "../context/ErrorDialogContext";
+import { SectionHeading } from "../components/SectionHeading";
 
 const estados: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
 
@@ -172,7 +180,7 @@ export function OrderDetailPage() {
     return (
       <Box sx={{ minWidth: 56 }}>
         <Typography variant="body2">{value}</Typography>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.35, mt: 0.35, minHeight: 4 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.35, mt: 0.35, minHeight: 4 }}>
           {Array.from({ length: count }).map((_, index) => (
             <Box key={index} sx={{ width: 18, height: 3, borderRadius: "999px", bgcolor: "#1f1f1f" }} />
           ))}
@@ -183,32 +191,49 @@ export function OrderDetailPage() {
 
   return (
     <Stack spacing={3}>
+      {/* Volver siempre a la izquierda, arriba del titulo; las acciones de la solicitud a la derecha. */}
+      <Box>
+        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(backTo)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          Volver
+        </Button>
+      </Box>
       <Stack direction={{ xs: "column", md: "row" }} alignItems={{ md: "center" }} justifyContent="space-between" gap={2}>
         <div>
           <Stack direction="row" spacing={1.25} alignItems="center" flexWrap="wrap">
             <Typography variant="h4">{order.cliente}</Typography>
             <StatusChip size="small" status={order.estado} />
           </Stack>
-          <Typography color="text.secondary">{order.observaciones}</Typography>
-          <Typography color="text.secondary">
-            Teléfono: {order.numeroContacto ?? order.usuario?.telefono ?? "Sin teléfono"}
-          </Typography>
+          {order.observaciones && (
+            <Stack direction="row" spacing={0.75} alignItems="center" sx={{ color: "text.secondary", mt: 0.5 }}>
+              <NotesOutlinedIcon fontSize="small" aria-hidden />
+              <Typography color="text.secondary">{order.observaciones}</Typography>
+            </Stack>
+          )}
+          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ color: "text.secondary", mt: 0.5 }}>
+            <PhoneOutlinedIcon fontSize="small" aria-hidden />
+            <Typography color="text.secondary">
+              Teléfono: {order.numeroContacto ?? order.usuario?.telefono ?? "Sin teléfono"}
+            </Typography>
+          </Stack>
         </div>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap sx={{ flexWrap: "wrap", width: { xs: "100%", md: "auto" } }}>
-          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(backTo)} sx={{ width: { xs: "100%", sm: "auto" } }}>
-            Volver
-          </Button>
           {user?.rol === "ADMIN" ? (
             <Select
               size="small"
               value={order.estado}
               disabled={changingStatus}
               onChange={(event) => changeStatus(event.target.value as EstadoSolicitud)}
-              sx={{ minWidth: { sm: 150 }, width: { xs: "100%", sm: "auto" } }}
+              inputProps={{ "aria-label": "Estado de la solicitud" }}
+              startAdornment={
+                <InputAdornment position="start" aria-hidden>
+                  <FlagOutlinedIcon />
+                </InputAdornment>
+              }
+              sx={{ minWidth: { sm: 180 }, width: { xs: "100%", sm: "auto" } }}
             >
               {estados.map((estado) => (
                 <MenuItem key={estado} value={estado}>
-                  {estado}
+                  {getStatusStyle(estado).label}
                 </MenuItem>
               ))}
             </Select>
@@ -216,24 +241,39 @@ export function OrderDetailPage() {
             <StatusChip status={order.estado} />
           )}
           {user?.rol === "ADMIN" && (
-            <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => setDeleteOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            <Button color="error" variant="outlined" startIcon={<DeleteOutlineIcon />} onClick={() => setDeleteOpen(true)} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Eliminar
             </Button>
           )}
           {/* Una solicitud de modulos tiene su detalle aparte: aca no se edita (el formulario de corte no la puede guardar). */}
           {canEditOrder(order.estado) && order.tipo !== "MODULOS" && (
-            <Button variant="outlined" startIcon={<EditIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => navigate(`/pedidos/${order.id}/editar`, { state: { returnTo: `/pedidos/${order.id}` } })} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Editar
             </Button>
           )}
           {user?.rol === "ADMIN" && (
-            <Button variant="contained" startIcon={<DownloadIcon />} onClick={exportOrder} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            <Button variant="contained" startIcon={<FileDownloadOutlinedIcon />} onClick={exportOrder} sx={{ width: { xs: "100%", sm: "auto" } }}>
               Exportar
             </Button>
           )}
         </Stack>
       </Stack>
-      <Paper sx={{ overflowX: "auto", borderRadius: "8px" }}>
+      <Paper sx={{ borderRadius: "8px", overflow: "hidden" }}>
+        <Box sx={{ px: { xs: 1.5, sm: 2 }, py: 1.5, borderBottom: 1, borderColor: "divider" }}>
+          <SectionHeading
+            icon={<ViewInArOutlinedIcon />}
+            title="Piezas solicitadas"
+            action={
+              <Chip
+                color="primary"
+                variant="outlined"
+                label={`${order.detalles.length} piezas, ${order.detalles.reduce((total, detail) => total + Number(detail.cantidad || 0), 0)} unidades`}
+                sx={{ fontWeight: 800 }}
+              />
+            }
+          />
+        </Box>
+        <Box sx={{ overflowX: "auto" }}>
         <Table size="small" sx={{ minWidth: 920 }}>
           <TableHead>
             <TableRow>
@@ -266,6 +306,7 @@ export function OrderDetailPage() {
             ))}
           </TableBody>
         </Table>
+        </Box>
       </Paper>
       {user?.rol === "ADMIN" && (
         <Paper sx={{ p: 2, borderRadius: "8px" }}>
@@ -273,9 +314,7 @@ export function OrderDetailPage() {
         </Paper>
       )}
       <Paper sx={{ p: 2.5, borderRadius: "8px" }}>
-        <Typography variant="h6" gutterBottom>
-          Historial
-        </Typography>
+        <SectionHeading icon={<HistoryIcon />} title="Historial" sx={{ mb: 1.5 }} />
         <Stack spacing={1}>
           {(order.historial ?? []).map((item) => (
             <Typography key={item.id} variant="body2">

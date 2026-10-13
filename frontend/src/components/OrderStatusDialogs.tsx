@@ -1,4 +1,7 @@
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import CloseIcon from "@mui/icons-material/Close";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import { Alert, type AlertColor, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Snackbar, Stack, Typography } from "@mui/material";
 
 // Dialogos y aviso del cambio de estado de una solicitud: los usan el detalle de corte y el de modulos.
@@ -37,21 +40,30 @@ export function StockShortageDialog({
           </Alert>
           <Stack spacing={1}>
             {shortages.map((item) => (
-              <Box key={item.materialId} sx={{ p: 1.25, border: "1px solid #f3d27a", borderRadius: "8px", bgcolor: "#fff8e6" }}>
-                <Typography variant="subtitle2">{item.materialNombre}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Disponible: {item.disponible} placas. Requerido: {item.requerido}. Faltante: {item.faltante}.
-                </Typography>
-              </Box>
+              <Stack
+                key={item.materialId}
+                direction="row"
+                spacing={1.25}
+                alignItems="center"
+                sx={{ p: 1.25, border: "1px solid #f3d27a", borderRadius: "8px", bgcolor: "#fff8e6" }}
+              >
+                <Inventory2OutlinedIcon aria-hidden sx={{ color: "warning.dark" }} />
+                <Box>
+                  <Typography variant="subtitle2">{item.materialNombre}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Disponible: {item.disponible} placas. Requerido: {item.requerido}. Faltante: {item.faltante}.
+                  </Typography>
+                </Box>
+              </Stack>
             ))}
           </Stack>
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onCancel} disabled={busy}>
+        <Button startIcon={<CloseIcon />} onClick={onCancel} disabled={busy} sx={{ mr: "auto" }}>
           Cancelar
         </Button>
-        <Button variant="contained" color="warning" onClick={onConfirm} disabled={busy}>
+        <Button variant="contained" color="warning" endIcon={<ArrowForwardIcon />} onClick={onConfirm} disabled={busy}>
           Continuar sin descontar stock
         </Button>
       </DialogActions>
@@ -92,7 +104,9 @@ export function OrderCompletedDialog({ open, whatsappLink, onClose }: { open: bo
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose}>Cerrar</Button>
+        <Button startIcon={<CloseIcon />} onClick={onClose} sx={{ mr: "auto" }}>
+          Cerrar
+        </Button>
         <Button
           variant="contained"
           startIcon={<WhatsAppIcon />}

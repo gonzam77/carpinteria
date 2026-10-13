@@ -1,5 +1,5 @@
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import PrintIcon from "@mui/icons-material/Print";
+import PrintOutlinedIcon from "@mui/icons-material/PrintOutlined";
 import { Alert, Box, Button, CircularProgress, GlobalStyles, Stack, Typography } from "@mui/material";
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
@@ -311,8 +311,12 @@ export function ModuleOrderWorkshopPage() {
   return (
     <Box className="taller-fondo" sx={{ minHeight: "100vh", bgcolor: "#e9e4dc", pb: 4 }}>
       <Box className="taller-pantalla" sx={{ position: "sticky", top: 0, zIndex: 2, bgcolor: "background.paper", borderBottom: "1px solid", borderColor: "divider", mb: 3 }}>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} justifyContent="space-between" sx={{ maxWidth: "210mm", mx: "auto", px: 2, py: 1.5 }}>
-          <Box>
+        {/* Volver a la izquierda e Imprimir a la derecha; en el celular, el titulo arriba y los dos botones abajo. */}
+        <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1.5, maxWidth: "210mm", mx: "auto", px: 2, py: 1.5 }}>
+          <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={back} sx={{ order: { xs: 1, sm: 0 } }}>
+            Volver
+          </Button>
+          <Box sx={{ order: { xs: 0, sm: 1 }, flex: { xs: "1 1 100%", sm: "1 1 auto" }, minWidth: 0 }}>
             <Typography component="h1" variant="h5" fontWeight={900}>
               Hojas de taller{order ? ` · M-${order.numero}` : ""}
             </Typography>
@@ -320,15 +324,10 @@ export function ModuleOrderWorkshopPage() {
               {sheets.length ? `${sheets.length} ${sheets.length === 1 ? "hoja" : "hojas"} A4: una por módulo${sheets.some((sheet) => !sheet.modulo) ? " y una de piezas adicionales" : ""}.` : " "}
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1}>
-            <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={back}>
-              Volver
-            </Button>
-            <Button variant="contained" startIcon={<PrintIcon />} onClick={() => window.print()} disabled={!order}>
-              Imprimir
-            </Button>
-          </Stack>
-        </Stack>
+          <Button variant="contained" startIcon={<PrintOutlinedIcon />} onClick={() => window.print()} disabled={!order} sx={{ order: 2, ml: "auto" }}>
+            Imprimir
+          </Button>
+        </Box>
       </Box>
       {error && (
         <Alert className="taller-pantalla" severity="error" sx={{ maxWidth: "210mm", mx: "auto", mb: 2 }}>

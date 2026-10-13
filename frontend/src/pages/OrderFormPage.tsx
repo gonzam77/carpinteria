@@ -3,6 +3,18 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import RestoreIcon from "@mui/icons-material/Restore";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
+import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
+import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
+import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
+import ContactPhoneOutlinedIcon from "@mui/icons-material/ContactPhoneOutlined";
+import DifferenceOutlinedIcon from "@mui/icons-material/DifferenceOutlined";
+import ContentCutIcon from "@mui/icons-material/ContentCut";
+import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import { Alert, Box, Button, Paper, Stack, Step, StepLabel, Stepper, TextField, Typography } from "@mui/material";
 import axios from "axios";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -27,6 +39,9 @@ import { Hardware, Material, ModuleOrder, Order, OrderDetail } from "../types";
 import { CutOptimizer } from "../components/CutOptimizer";
 import { getStatusStyle } from "../components/StatusChip";
 import { useErrorDialog } from "../context/ErrorDialogContext";
+import { fieldIcon } from "../components/fieldIcon";
+import { MetricGrid, MetricTile } from "../components/MetricTile";
+import { SectionHeading } from "../components/SectionHeading";
 
 function resolveMaterialId(row: OrderDetail, materials: Material[]) {
   return row.materialId || materials.find((material) => material.tipo === "PLACA" && material.nombre === row.material)?.id || "";
@@ -629,10 +644,10 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
             severity="info"
             action={
               <Stack direction="row" spacing={1}>
-                <Button color="inherit" size="small" onClick={applyDraft}>
+                <Button color="inherit" size="small" startIcon={<RestoreIcon />} onClick={applyDraft}>
                   Recuperar
                 </Button>
-                <Button color="inherit" size="small" onClick={dismissDraft}>
+                <Button color="inherit" size="small" startIcon={<DeleteOutlineIcon />} onClick={dismissDraft}>
                   Descartar
                 </Button>
               </Stack>
@@ -660,23 +675,33 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
         {step === 0 && (
           <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "8px" }}>
             <Stack spacing={2}>
+              <SectionHeading icon={<PersonOutlineIcon />} title="Datos del cliente" subtitle="A nombre de quién va la solicitud y cómo contactarlo." />
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                <TextField label="Cliente" value={cliente} onChange={(event) => setCliente(event.target.value)} required fullWidth />
-                <TextField label="Teléfono de contacto" value={telefono} onChange={(event) => setTelefono(event.target.value)} required fullWidth />
+                <TextField label="Cliente" value={cliente} onChange={(event) => setCliente(event.target.value)} required fullWidth slotProps={{ input: fieldIcon(<PersonOutlineIcon />) }} />
+                <TextField label="Teléfono de contacto" value={telefono} onChange={(event) => setTelefono(event.target.value)} required fullWidth slotProps={{ input: fieldIcon(<PhoneOutlinedIcon />) }} />
               </Stack>
               {modules && (
                 <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                  <TextField label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} fullWidth />
-                  <TextField label="Dirección de entrega" value={direccion} onChange={(event) => setDireccion(event.target.value)} inputProps={{ maxLength: MAX_DIRECCION }} fullWidth />
+                  <TextField label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} fullWidth slotProps={{ input: fieldIcon(<EmailOutlinedIcon />) }} />
+                  <TextField
+                    label="Dirección de entrega"
+                    value={direccion}
+                    onChange={(event) => setDireccion(event.target.value)}
+                    fullWidth
+                    slotProps={{ input: fieldIcon(<PlaceOutlinedIcon />), htmlInput: { maxLength: MAX_DIRECCION } }}
+                  />
                   <TextField
                     label="Fecha de entrega"
                     type="date"
                     value={fechaEntrega}
                     onChange={(event) => setFechaEntrega(event.target.value)}
                     required
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ min: fechaEntrega && fechaEntrega === savedModuleOrder?.fechaEntrega && fechaEntrega < today ? fechaEntrega : today }}
-                    sx={{ minWidth: { md: 200 } }}
+                    slotProps={{
+                      input: fieldIcon(<EventOutlinedIcon />),
+                      inputLabel: { shrink: true },
+                      htmlInput: { min: fechaEntrega && fechaEntrega === savedModuleOrder?.fechaEntrega && fechaEntrega < today ? fechaEntrega : today }
+                    }}
+                    sx={{ minWidth: { md: 220 } }}
                   />
                 </Stack>
               )}
@@ -685,7 +710,7 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
                   label={modules ? "Referencia del trabajo" : "Observaciones"}
                   value={observaciones}
                   onChange={(event) => setObservaciones(event.target.value)}
-                  inputProps={modules ? { maxLength: MAX_REFERENCIA } : undefined}
+                  slotProps={{ input: fieldIcon(<NotesOutlinedIcon />), htmlInput: modules ? { maxLength: MAX_REFERENCIA } : undefined }}
                   fullWidth
                 />
               </Stack>
@@ -730,18 +755,18 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
         {step === 3 && (
           <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: "8px", overflow: "hidden" }}>
             <Stack spacing={2}>
-              <Box>
-                <Typography variant="h6">Datos de contacto</Typography>
+              <Stack spacing={1}>
+                <SectionHeading icon={<ContactPhoneOutlinedIcon />} title="Datos de contacto" />
                 <Typography>{cliente} - {telefono}</Typography>
                 {modules && (
                   <Typography color="text.secondary">
                     {[email.trim(), direccion.trim(), fechaEntrega ? `Entrega ${fechaEntrega.split("-").reverse().join("/")}` : ""].filter(Boolean).join(" · ")}
                   </Typography>
                 )}
-              </Box>
+              </Stack>
               {changes && (
-                <Box>
-                  <Typography variant="h6">Cambios detectados</Typography>
+                <Stack spacing={1}>
+                  <SectionHeading icon={<DifferenceOutlinedIcon />} title="Cambios detectados" />
                   {hasChanges(changes) ? (
                     <Stack component="ul" spacing={0.25} sx={{ m: 0, pl: 2.5 }} aria-label="Cambios detectados">
                       {changes.modificadas > 0 && <li>{changes.modificadas === 1 ? "1 pieza modificada" : `${changes.modificadas} piezas modificadas`}</li>}
@@ -755,7 +780,7 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
                   ) : (
                     <Typography color="text.secondary">No hay cambios para guardar.</Typography>
                   )}
-                </Box>
+                </Stack>
               )}
               {modules && savedModuleOrder && herrajes && (
                 <OrderHardwareEditor
@@ -770,22 +795,30 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
                   onRecalculate={recalculateHardware}
                 />
               )}
-              <Box>
-                <Typography variant="h6">Cortes solicitados</Typography>
-                <Typography>
-                  {rows.length} piezas cargadas, {rows.reduce((total, row) => total + Number(row.cantidad || 0), 0)} unidades en total
-                </Typography>
-              </Box>
+              <Stack spacing={1.5}>
+                <SectionHeading icon={<ContentCutIcon />} title="Cortes solicitados" />
+                <MetricGrid>
+                  <MetricTile icon={<ViewInArOutlinedIcon />} label="Piezas cargadas" value={rows.length} />
+                  <MetricTile icon={<Inventory2OutlinedIcon />} label="Unidades en total" value={rows.reduce((total, row) => total + Number(row.cantidad || 0), 0)} tone="neutral" />
+                </MetricGrid>
+              </Stack>
               {!modules && (
                 <Paper sx={{ p: 2, borderRadius: "8px" }}>
                   <CutOptimizer rows={rows} materials={materials} />
                 </Paper>
               )}
-              {observaciones && <Typography color="text.secondary">{observaciones}</Typography>}
+              {observaciones && (
+                <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ color: "text.secondary" }}>
+                  <NotesOutlinedIcon fontSize="small" aria-hidden sx={{ mt: 0.25 }} />
+                  <Typography color="text.secondary">{observaciones}</Typography>
+                </Stack>
+              )}
             </Stack>
           </Paper>
         )}
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+        {/* Volver y Cancelar a la izquierda, el paso siguiente a la derecha (en el celular, apilados con el principal abajo). */}
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} justifyContent="space-between">
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
           {id && (
             <Button
               variant="outlined"
@@ -813,6 +846,7 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
               Volver
             </Button>
           )}
+          </Stack>
           {/* Cada boton con su key: si React reusara el mismo, el clic en Siguiente del paso Cantos tambien contaria como
               el submit del boton de enviar que lo reemplaza, y se abria el comprobante sin ver el Resumen (P14). */}
           {step < 3 ? (
