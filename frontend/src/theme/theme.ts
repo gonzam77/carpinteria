@@ -57,16 +57,32 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           boxShadow: "none",
-          borderRadius: 8,
+          borderRadius: 10,
           minHeight: 40,
           paddingLeft: 18,
-          paddingRight: 18
+          paddingRight: 18,
+          // Todos los botones responden al mouse (2026-10-13): se levantan un poco y el icono se corre hacia afuera.
+          transition: "transform 140ms ease, box-shadow 160ms ease, background-color 160ms ease, border-color 160ms ease, color 160ms ease",
+          "& .MuiButton-startIcon, & .MuiButton-endIcon": { transition: "transform 160ms ease" },
+          "&:hover:not(.Mui-disabled)": { transform: "translateY(-1px)" },
+          "&:hover .MuiButton-startIcon": { transform: "translateX(-2px)" },
+          "&:hover .MuiButton-endIcon": { transform: "translateX(2px)" },
+          "&:active:not(.Mui-disabled)": { transform: "translateY(0)" },
+          "@media (prefers-reduced-motion: reduce)": {
+            transition: "none",
+            "&:hover:not(.Mui-disabled)": { transform: "none" },
+            "&:hover .MuiButton-startIcon, &:hover .MuiButton-endIcon": { transform: "none" }
+          }
+        },
+        text: {
+          "&:hover": { backgroundColor: alpha(brandOrange, 0.1) }
         },
         contained: {
           background: "linear-gradient(135deg, #f28c28 0%, #cf6d14 58%, #2f2a25 100%)",
           boxShadow: "0 14px 32px rgba(198, 106, 18, 0.24)",
           "&:hover": {
-            boxShadow: "0 16px 38px rgba(123, 66, 14, 0.3)"
+            background: "linear-gradient(135deg, #f59a3c 0%, #d87413 52%, #3a332d 100%)",
+            boxShadow: "0 18px 40px rgba(123, 66, 14, 0.34)"
           },
           // Deshabilitado se ve deshabilitado: sin el degradado ni la sombra, que lo hacian parecer activo (F7.2).
           "&.Mui-disabled": {
@@ -81,8 +97,40 @@ export const theme = createTheme({
           backgroundColor: brandPaper,
           "&:hover": {
             borderColor: brandOrange,
-            backgroundColor: alpha(brandOrange, 0.06)
+            backgroundColor: alpha(brandOrange, 0.08),
+            boxShadow: `0 8px 20px ${alpha(brandOrange, 0.16)}`
           }
+        },
+        // Los de color (error, etc.) conservan su color en el borde y el texto.
+        outlinedError: {
+          borderColor: alpha("#cb5b4a", 0.4),
+          color: "#96382b",
+          "&:hover": { borderColor: "#cb5b4a", backgroundColor: alpha("#cb5b4a", 0.08), boxShadow: `0 8px 20px ${alpha("#cb5b4a", 0.16)}` }
+        },
+        outlinedInherit: {
+          borderColor: alpha(brandGraphite, 0.22),
+          color: brandGraphite,
+          "&:hover": { borderColor: brandGraphite, backgroundColor: alpha(brandGraphite, 0.05), boxShadow: `0 8px 20px ${alpha(brandGraphite, 0.1)}` }
+        }
+      }
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          transition: "background-color 160ms ease, transform 140ms ease, color 160ms ease",
+          "&:hover:not(.Mui-disabled)": { transform: "scale(1.08)" },
+          "@media (prefers-reduced-motion: reduce)": { "&:hover:not(.Mui-disabled)": { transform: "none" } }
+        }
+      }
+    },
+    MuiInputAdornment: {
+      styleOverrides: {
+        // Los iconos de los campos (2026-10-13): en el gris de la marca, y naranja cuando el campo tiene el foco.
+        root: {
+          color: brandStone,
+          "& .MuiSvgIcon-root": { fontSize: 19 },
+          ".Mui-focused &": { color: brandOrangeDeep },
+          ".Mui-error &": { color: "#cb5b4a" }
         }
       }
     },
@@ -138,17 +186,32 @@ export const theme = createTheme({
         }
       }
     },
+    // Grillas (2026-10-13): todo el texto centrado, encabezados claros y filas que se marcan al pasar el mouse.
     MuiTableCell: {
       styleOverrides: {
+        root: {
+          textAlign: "center"
+        },
         head: {
           backgroundColor: "#f7f1e8",
-          color: "#7b6f63",
-          fontSize: 12,
-          textTransform: "uppercase",
-          letterSpacing: 0.4
+          color: "#6b5f54",
+          fontSize: 12.5,
+          fontWeight: 800,
+          letterSpacing: 0.2,
+          borderBottom: `2px solid ${alpha(brandOrange, 0.22)}`,
+          whiteSpace: "nowrap"
         },
         body: {
-          borderBottomColor: "#efe5d9"
+          borderBottomColor: "#efe5d9",
+          fontVariantNumeric: "tabular-nums"
+        }
+      }
+    },
+    MuiTableRow: {
+      styleOverrides: {
+        root: {
+          transition: "background-color 120ms ease",
+          "&.MuiTableRow-hover:hover, tbody &:hover": { backgroundColor: alpha(brandOrange, 0.045) }
         }
       }
     },
@@ -170,16 +233,27 @@ export const theme = createTheme({
           border: 0,
           color: "#2a241f",
           "--DataGrid-rowBorderColor": "#efe5d9",
+          fontVariantNumeric: "tabular-nums",
           "& .MuiDataGrid-columnHeaders": {
+            color: "#6b5f54",
+            fontSize: 12.5,
+            letterSpacing: 0.2
+          },
+          "& .MuiDataGrid-columnHeader": {
             backgroundColor: "#f7f1e8",
-            color: "#7b6f63",
-            textTransform: "uppercase",
-            letterSpacing: 0.4,
-            fontSize: 12
+            borderBottom: `2px solid ${alpha(brandOrange, 0.22)}`
           },
+          "& .MuiDataGrid-columnHeaderTitle": { fontWeight: 800 },
+          // Todo centrado (2026-10-13), aunque la columna diga otra cosa: encabezados y celdas.
+          "& .MuiDataGrid-columnHeaderTitleContainer": { justifyContent: "center" },
+          "& .MuiDataGrid-columnHeader--alignRight .MuiDataGrid-columnHeaderTitleContainer": { flexDirection: "row" },
+          "& .MuiDataGrid-columnHeaderTitleContainerContent": { justifyContent: "center" },
+          "& .MuiDataGrid-cell--textLeft, & .MuiDataGrid-cell--textRight": { textAlign: "center", justifyContent: "center" },
+          "& .MuiDataGrid-row": { transition: "background-color 120ms ease" },
           "& .MuiDataGrid-row:hover": {
-            backgroundColor: alpha(brandOrange, 0.06)
+            backgroundColor: alpha(brandOrange, 0.07)
           },
+          "& .MuiDataGrid-footerContainer": { borderTop: "1px solid #efe5d9", backgroundColor: alpha("#f7f1e8", 0.5) },
           "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus-within": {
             outline: "none"
           },

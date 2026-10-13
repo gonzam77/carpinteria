@@ -1,11 +1,16 @@
 import LockClockIcon from "@mui/icons-material/LockClock";
 import LoginIcon from "@mui/icons-material/Login";
+import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
+import GoogleIcon from "@mui/icons-material/Google";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import LogoutIcon from "@mui/icons-material/Logout";
 import { GoogleLogin } from "@react-oauth/google";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Stack, TextField, Typography } from "@mui/material";
 import axios from "axios";
 import { FormEvent, useEffect, useState } from "react";
 import { getAuthMethod } from "../api/session";
 import { useAuth } from "../context/AuthContext";
+import { fieldIcon } from "./fieldIcon";
 
 /**
  * Reingreso sin perder el trabajo en curso.
@@ -48,7 +53,7 @@ export function SessionExpiredDialog() {
     try {
       await login(email, password);
     } catch (err) {
-      setError(describe(err, "Email o password incorrectos"));
+      setError(describe(err, "Email o contraseña incorrectos"));
     } finally {
       setSubmitting(false);
     }
@@ -94,21 +99,38 @@ export function SessionExpiredDialog() {
                 text="continue_with"
               />
               <Divider />
-              <Button size="small" onClick={() => setUsePassword(true)}>
-                Ingresar con email y password
+              <Button size="small" startIcon={<EmailOutlinedIcon />} onClick={() => setUsePassword(true)}>
+                Ingresar con email y contraseña
               </Button>
             </Stack>
           )}
 
           {usePassword && (
             <Stack spacing={2} component="form" onSubmit={handlePasswordSubmit}>
-              <TextField label="Email" type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} fullWidth autoFocus />
-              <TextField label="Password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} fullWidth />
+              <TextField
+                label="Email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                fullWidth
+                autoFocus
+                slotProps={{ input: fieldIcon(<EmailOutlinedIcon />) }}
+              />
+              <TextField
+                label="Contraseña"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                fullWidth
+                slotProps={{ input: fieldIcon(<LockOutlinedIcon />) }}
+              />
               <Button type="submit" variant="contained" startIcon={<LoginIcon />} disabled={submitting}>
                 {submitting ? "Ingresando..." : "Continuar"}
               </Button>
               {googleEnabled && (
-                <Button size="small" onClick={() => setUsePassword(false)}>
+                <Button size="small" startIcon={<GoogleIcon />} onClick={() => setUsePassword(false)}>
                   Ingresar con Google
                 </Button>
               )}
@@ -118,7 +140,7 @@ export function SessionExpiredDialog() {
       </DialogContent>
 
       <DialogActions>
-        <Button color="inherit" onClick={abandonSession}>
+        <Button color="inherit" startIcon={<LogoutIcon />} onClick={abandonSession} sx={{ mr: "auto" }}>
           Salir y descartar
         </Button>
       </DialogActions>
