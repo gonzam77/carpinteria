@@ -2,7 +2,15 @@ import DownloadIcon from "@mui/icons-material/Download";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DescriptionIcon from "@mui/icons-material/Description";
 import EditIcon from "@mui/icons-material/Edit";
+import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
+import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
+import HourglassBottomOutlinedIcon from "@mui/icons-material/HourglassBottomOutlined";
 import InventoryIcon from "@mui/icons-material/Inventory2";
+import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
+import PendingActionsOutlinedIcon from "@mui/icons-material/PendingActionsOutlined";
+import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
+import SearchIcon from "@mui/icons-material/Search";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { Box, Button, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
@@ -12,11 +20,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
+import { fieldIcon } from "../components/fieldIcon";
+import { MetricGrid, MetricTile } from "../components/MetricTile";
 import { OrderMaterialsDialog } from "../components/OrderMaterialsDialog";
 import { OrderReceiptDialog } from "../components/OrderReceiptDialog";
-import { StatusChip } from "../components/StatusChip";
+import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
-import { EstadoSolicitud, Order } from "../types";
+import { CutOrdersStats, DashboardStats, EstadoSolicitud, Order } from "../types";
 
 const statusOptions: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
 
@@ -67,11 +77,29 @@ export function OrdersPage() {
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isAdmin = user?.rol === "ADMIN";
+  // Los indicadores del encabezado (2026-10-13), solo para el administrador: salen del tablero (GET /api/stats). Si el
+  // servidor todavia no los manda, la pantalla sigue igual, sin indicadores.
+  const [cutStats, setCutStats] = useState<CutOrdersStats | null>(null);
 
   async function loadOrders(nextStatus = status) {
     const response = await api.get<Order[]>("/orders", { params: { search, estado: nextStatus || undefined, desde: from, hasta: to } });
     setOrders(response.data);
   }
+
+  function loadStats() {
+    if (!isAdmin) return;
+    api
+      .get<DashboardStats>("/stats")
+      .then((response) => setCutStats(response.data.corte ?? null))
+      .catch(() => undefined);
+  }
+
+  useEffect(() => {
+    loadStats();
+    // Solo al entrar (o si cambia el rol).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
   useEffect(() => {
     const nextStatus = getValidStatus(searchParams.get("estado"));
@@ -105,6 +133,7 @@ export function OrdersPage() {
     try {
       await api.delete(`/orders/${order.id}`);
       await loadOrders();
+      loadStats();
     } finally {
       setDeleting(false);
       setOrderToDelete(null);
@@ -199,12 +228,44 @@ export function OrdersPage() {
     [navigate, user]
   );
 
+  const pendientes = cutStats?.porEstado.find((item) => item.estado === "PENDIENTE")?.total ?? 0;
+
   return (
     <Stack spacing={2.5}>
       <Stack spacing={0.5}>
-        <Typography variant="h4">{user?.rol === "ADMIN" ? "Solicitudes de corte" : "Mis solicitudes"}</Typography>
+        <Typography variant="h4">{isAdmin ? "Solicitudes de corte" : "Mis solicitudes"}</Typography>
         <Typography color="text.secondary">Seguimiento de pedidos, filtros rápidos y exportación de cortes.</Typography>
       </Stack>
+      {isAdmin && cutStats && (
+        // En el celular, uno por renglon: a lo ancho se leen enteros el titulo y la aclaracion.
+        <Box component="section" aria-label="Indicadores">
+          <MetricGrid sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(auto-fit, minmax(190px, 1fr))" } }}>
+            <MetricTile
+              icon={<HourglassBottomOutlinedIcon />}
+              label="En curso"
+              value={cutStats.activas}
+              hint={`${cutStats.piezasActivas.toLocaleString("es-AR")} piezas · ${cutStats.placasActivas.toLocaleString("es-AR")} ${cutStats.placasActivas === 1 ? "placa" : "placas"}`}
+            />
+            <MetricTile
+              icon={<PendingActionsOutlinedIcon />}
+              label="Pendientes"
+              value={pendientes}
+              hint="Esperan para cortarse"
+              tone="info"
+              onClick={() => handleStatusChange("PENDIENTE")}
+            />
+            <MetricTile icon={<PaymentsOutlinedIcon />} label="Presupuesto en curso" value={formatMoney(cutStats.presupuestoActivo)} hint="De las solicitudes en curso" tone="success" />
+            <MetricTile
+              icon={<ReportProblemOutlinedIcon />}
+              label="Sin stock"
+              value={cutStats.sinStock}
+              hint={cutStats.sinStock ? "Pendientes sin placas suficientes" : "Todas las pendientes tienen placas"}
+              tone={cutStats.sinStock ? "error" : "neutral"}
+              onClick={cutStats.sinStock ? () => handleStatusChange("PENDIENTE") : undefined}
+            />
+          </MetricGrid>
+        </Box>
+      )}
       <Paper sx={{ p: { xs: 2, sm: 2.25 }, borderRadius: "8px", overflow: "hidden" }}>
         <Stack
           direction={{ xs: "column", lg: "row" }}
@@ -216,21 +277,39 @@ export function OrdersPage() {
             "& .MuiTextField-root": { flex: { lg: "1 1 150px" }, minWidth: { lg: 150 } }
           }}
         >
-          <TextField fullWidth label="Buscar" value={search} onChange={(event) => setSearch(event.target.value)} sx={{ flex: { lg: "2 1 220px" } }} />
-          <TextField fullWidth select label="Estado" value={status} onChange={(event) => handleStatusChange(event.target.value as EstadoSolicitud | "")} sx={{ minWidth: { lg: 160 } }}>
+          <TextField
+            fullWidth
+            label="Buscar"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") applyFilters();
+            }}
+            slotProps={{ input: fieldIcon(<SearchIcon />) }}
+            sx={{ flex: { lg: "2 1 220px" } }}
+          />
+          <TextField
+            fullWidth
+            select
+            label="Estado"
+            value={status}
+            onChange={(event) => handleStatusChange(event.target.value as EstadoSolicitud | "")}
+            slotProps={{ input: fieldIcon(<FlagOutlinedIcon />), select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+            sx={{ minWidth: { lg: 160 } }}
+          >
             <MenuItem value="">Todos</MenuItem>
             {statusOptions.map((option) => (
               <MenuItem key={option} value={option}>
-                {option}
+                {getStatusStyle(option).label}
               </MenuItem>
             ))}
           </TextField>
-          <TextField fullWidth label="Desde" type="date" value={from} onChange={(event) => setFrom(event.target.value)} InputLabelProps={{ shrink: true }} />
-          <TextField fullWidth label="Hasta" type="date" value={to} onChange={(event) => setTo(event.target.value)} InputLabelProps={{ shrink: true }} />
-          <Button variant="outlined" onClick={applyFilters} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
+          <TextField fullWidth label="Desde" type="date" value={from} onChange={(event) => setFrom(event.target.value)} slotProps={{ input: fieldIcon(<EventOutlinedIcon />), inputLabel: { shrink: true } }} />
+          <TextField fullWidth label="Hasta" type="date" value={to} onChange={(event) => setTo(event.target.value)} slotProps={{ input: fieldIcon(<EventOutlinedIcon />), inputLabel: { shrink: true } }} />
+          <Button variant="outlined" startIcon={<FilterAltOutlinedIcon />} onClick={applyFilters} sx={{ flexShrink: 0, width: { xs: "100%", sm: "auto" } }}>
             Filtrar
           </Button>
-          {user?.rol === "ADMIN" && (
+          {isAdmin && (
             <Button sx={{ color: "#fff", flexShrink: 0, width: { xs: "100%", sm: "auto" } }} variant="contained" startIcon={<DownloadIcon />} disabled={!selection.length} onClick={() => exportOrders(selection as string[])}>
               Exportar selección
             </Button>
@@ -253,7 +332,8 @@ export function OrdersPage() {
               bgcolor: "background.paper"
             },
             "& .MuiDataGrid-columnHeader.orders-actions-column": {
-              zIndex: 4
+              zIndex: 4,
+              bgcolor: "#f7f1e8"
             },
             "& .MuiDataGrid-cell.orders-actions-column": {
               zIndex: 3

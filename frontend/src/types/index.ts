@@ -45,6 +45,31 @@ export type DashboardStats = {
   stockAlerts: StockAlert[];
   /** Las solicitudes de modulos (punto 8). */
   modulos?: ModuleOrdersStats;
+  /** Las solicitudes de corte (2026-10-13): su propio tablero. */
+  corte?: CutOrdersStats;
+};
+
+export type CutOrdersStats = {
+  /** Pendientes, en proceso y terminadas (sin entregar). */
+  activas: number;
+  porEstado: Array<{ estado: EstadoSolicitud; total: number }>;
+  piezasActivas: number;
+  placasActivas: number;
+  /** Presupuesto estimado de las que estan en curso. */
+  presupuestoActivo: number;
+  /** Las pendientes que no tienen stock para cortarse. */
+  sinStock: number;
+  /** Promedio de las creadas en los ultimos 90 dias (sin las rechazadas). */
+  ticketPromedio: number;
+  /** Creadas en los ultimos 30 dias y las 30 anteriores, para la tendencia. */
+  ultimos30: { solicitudes: number; anteriores: number };
+  meses: Array<{ mes: string; solicitudes: number; piezas: number; presupuesto: number }>;
+  /** Las placas mas usadas en las solicitudes de los ultimos 90 dias (sin las rechazadas). */
+  topMateriales: Array<{ nombre: string; piezas: number }>;
+  /** Quienes mas cargaron en los ultimos 90 dias. */
+  topCarpinteros: Array<{ nombre: string; solicitudes: number }>;
+  /** Las pendientes mas viejas, para atenderlas primero. */
+  masAntiguas: Array<{ id: string; numero: number; cliente: string; estado: EstadoSolicitud; creada: string; dias: number }>;
 };
 
 export type ModuleOrdersStats = {
@@ -64,6 +89,8 @@ export type ModuleOrdersStats = {
   ticketPromedio: number;
   meses: Array<{ mes: string; solicitudes: number; presupuesto: number }>;
   topModulos: Array<{ nombre: string; cantidad: number }>;
+  /** Las categorias del catalogo mas pedidas (2026-10-13). */
+  topCategorias?: Array<{ nombre: string; cantidad: number }>;
 };
 
 export type Material = {

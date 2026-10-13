@@ -5,7 +5,7 @@ import { authenticate, authorize } from "../../middlewares/auth.js";
 import { orderMaterialBoards } from "../orders/order-estimate.service.js";
 import { DETALLES_ORDENADOS } from "../orders/order-queries.js";
 import { asyncHandler } from "../../utils/http.js";
-import { summarizeModuleOrders, summarizeOrders } from "./stats-summary.js";
+import { summarizeCutOrders, summarizeModuleOrders, summarizeOrders, topCategories } from "./stats-summary.js";
 import { getModulesConfig } from "../catalog/catalog.service.js";
 import { toDateOnly, todayInBusinessZone } from "../../utils/dates.js";
 
@@ -66,7 +66,7 @@ statsRouter.get(
       }));
 
     // Solicitudes de modulos (punto 8): en curso, entregas, cumplimiento, ticket, meses y los modulos mas pedidos.
-    const [moduleOrders, entregas, topModulos, config] = await Promise.all([
+    const [moduleOrders, entregas, topModulos, config, categoriasPedidas] = await Promise.all([
       prisma.pedido.findMany({
         where: { tipo: TipoPedido.MODULOS },
         select: {
@@ -94,7 +94,12 @@ statsRouter.get(
         orderBy: { _count: { nombreModulo: "desc" } },
         take: 5
       }),
-      getModulesConfig(prisma)
+      getModulesConfig(prisma),
+      // La categoria de cada modulo pedido (2026-10-13): los tipos mas pedidos.
+      prisma.pedidoModulo.findMany({
+        where: { pedido: { estado: { not: EstadoPedido.RECHAZADA } } },
+        select: { modulo: { select: { categoria: { select: { nombre: true } } } } }
+      })
     ]);
     // El dia en que cada una paso a Entregada (la ultima vez).
     const entregadaEl = new Map(entregas.map((item) => [item.pedidoId, todayInBusinessZone(item.fechaCreacion)]));
@@ -116,9 +121,55 @@ statsRouter.get(
       { today: todayInBusinessZone(), diasAviso: config.diasAvisoVencimiento }
     );
 
+    // Solicitudes de corte (2026-10-13): su propio tablero. Las placas y el presupuesto son los guardados en cada
+    // pedido, los mismos de la constancia y del listado.
+    const desde90 = new Date(Date.now() - 90 * 86400000);
+    const [cutOrders, piezasPorPedido, materiales] = await Promise.all([
+      prisma.pedido.findMany({
+        where: { tipo: TipoPedido.CORTE },
+        select: {
+          id: true,
+          numero: true,
+          cliente: true,
+          estado: true,
+          fechaCreacion: true,
+          presupuestoEstimado: true,
+          placasEstimadas: true,
+          faltanteStock: true,
+          usuario: { select: { nombre: true, apellido: true } }
+        }
+      }),
+      prisma.detallePedido.groupBy({ by: ["pedidoId"], where: { pedido: { tipo: TipoPedido.CORTE } }, _sum: { cantidad: true } }),
+      prisma.detallePedido.groupBy({
+        by: ["material"],
+        where: { pedido: { tipo: TipoPedido.CORTE, estado: { not: EstadoPedido.RECHAZADA }, fechaCreacion: { gte: desde90 } } },
+        _sum: { cantidad: true },
+        orderBy: { _sum: { cantidad: "desc" } },
+        take: 6
+      })
+    ]);
+    const piezas = new Map(piezasPorPedido.map((item) => [item.pedidoId, item._sum.cantidad ?? 0]));
+    const corte = summarizeCutOrders(
+      cutOrders.map((order) => ({
+        id: order.id,
+        numero: order.numero,
+        cliente: order.cliente,
+        estado: order.estado,
+        creada: todayInBusinessZone(order.fechaCreacion),
+        presupuestoEstimado: order.presupuestoEstimado,
+        placasEstimadas: order.placasEstimadas,
+        piezas: piezas.get(order.id) ?? 0,
+        faltanteStock: order.faltanteStock,
+        carpintero: `${order.usuario.nombre} ${order.usuario.apellido}`.trim()
+      })),
+      materiales.map((item) => ({ nombre: item.material, piezas: item._sum.cantidad ?? 0 })),
+      { today: todayInBusinessZone() }
+    );
+
     res.json({
       totalOrders,
-      modulos,
+      modulos: { ...modulos, topCategorias: topCategories(categoriasPedidas.map((item) => item.modulo?.categoria.nombre ?? null)) },
+      corte,
       totalUsers,
       totalPieces: totalPieces._sum.cantidad ?? 0,
       totalRows: totalPieces._count._all,

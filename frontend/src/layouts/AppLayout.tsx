@@ -49,13 +49,14 @@ export function AppLayout() {
       icon: <AssignmentIcon />,
       match: (pathname: string) => pathname === "/pedidos" || pathname === "/mis-solicitudes" || /^\/pedidos\/(?!nuevo$).+/.test(pathname)
     },
+    // Orden pedido por Gonzalo (2026-10-13): Dashboard, los dos listados, Solicitar cortes y Configuración.
+    ...(user?.rol === "ADMIN" ? [modulesNavItem] : []),
     {
       label: "Solicitar cortes",
       to: user?.rol === "ADMIN" ? "/pedidos/nuevo" : "/solicitar",
       icon: <PostAddIcon />,
       match: (pathname: string) => pathname === "/pedidos/nuevo" || pathname === "/solicitar"
-    },
-    ...(user?.rol === "ADMIN" ? [modulesNavItem] : [])
+    }
   ];
 
   const settingsNavItems = useMemo(

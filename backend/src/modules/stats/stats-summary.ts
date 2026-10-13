@@ -106,3 +106,91 @@ export function summarizeModuleOrders(
     topModulos
   };
 }
+
+// ---------------------------------------------------------------- solicitudes de corte (2026-10-13)
+
+export type CutOrderForStats = {
+  id: string;
+  numero: number;
+  cliente: string;
+  estado: string;
+  /** AAAA-MM-DD en la zona del negocio. */
+  creada: string;
+  presupuestoEstimado: number;
+  /** Las mismas placas que la constancia (guardadas en el pedido). */
+  placasEstimadas: number;
+  piezas: number;
+  faltanteStock: boolean;
+  /** Quien la cargo (nombre y apellido del usuario). */
+  carpintero: string;
+};
+
+const daysAgo = (today: string, days: number) => new Date(Date.parse(`${today}T00:00:00Z`) - days * DAY).toISOString().slice(0, 10);
+
+/**
+ * El tablero de las solicitudes de corte: lo que esta en curso (por estado, piezas, placas y presupuesto), las pendientes
+ * sin stock, el ticket promedio, la tendencia de 30 dias, los ultimos 6 meses, quienes mas cargan y las pendientes mas
+ * viejas. Los materiales mas cortados llegan sumados de la base. Los importes se suman en centavos.
+ */
+export function summarizeCutOrders(orders: CutOrderForStats[], topMateriales: Array<{ nombre: string; piezas: number }>, options: { today: string }) {
+  const { today } = options;
+  const activas = orders.filter((order) => ACTIVE.has(order.estado));
+  const total = (list: CutOrderForStats[]) => list.reduce((sum, order) => sum + centavos(order.presupuestoEstimado), 0);
+  const desde90 = daysAgo(today, 90);
+  const recientes = orders.filter((order) => order.estado !== "RECHAZADA" && order.creada >= desde90);
+
+  const desde30 = daysAgo(today, 29);
+  const desde60 = daysAgo(today, 59);
+  const ultimos30 = {
+    solicitudes: orders.filter((order) => order.creada >= desde30 && order.creada <= today).length,
+    anteriores: orders.filter((order) => order.creada >= desde60 && order.creada < desde30).length
+  };
+
+  const [year, month] = today.split("-").map(Number);
+  const meses = Array.from({ length: 6 }, (_, index) => new Date(Date.UTC(year, month - 1 - (5 - index), 1)).toISOString().slice(0, 7)).map((mes) => {
+    const delMes = orders.filter((order) => order.creada.startsWith(mes));
+    const validas = delMes.filter((order) => order.estado !== "RECHAZADA");
+    return { mes, solicitudes: delMes.length, piezas: validas.reduce((sum, order) => sum + order.piezas, 0), presupuesto: total(validas) / 100 };
+  });
+
+  const porCarpintero = new Map<string, number>();
+  for (const order of recientes) porCarpintero.set(order.carpintero, (porCarpintero.get(order.carpintero) ?? 0) + 1);
+  const topCarpinteros = [...porCarpintero]
+    .map(([nombre, solicitudes]) => ({ nombre, solicitudes }))
+    .sort((a, b) => b.solicitudes - a.solicitudes || a.nombre.localeCompare(b.nombre))
+    .slice(0, 5);
+
+  const masAntiguas = orders
+    .filter((order) => order.estado === "PENDIENTE")
+    .sort((a, b) => a.creada.localeCompare(b.creada) || a.numero - b.numero)
+    .slice(0, 6)
+    .map((order) => ({ id: order.id, numero: order.numero, cliente: order.cliente, estado: order.estado, creada: order.creada, dias: daysBetween(order.creada, today) }));
+
+  return {
+    activas: activas.length,
+    porEstado: ["PENDIENTE", "EN_PROCESO", "TERMINADA"].map((estado) => ({ estado, total: activas.filter((order) => order.estado === estado).length })),
+    piezasActivas: activas.reduce((sum, order) => sum + order.piezas, 0),
+    placasActivas: activas.reduce((sum, order) => sum + order.placasEstimadas, 0),
+    presupuestoActivo: total(activas) / 100,
+    sinStock: orders.filter((order) => order.estado === "PENDIENTE" && order.faltanteStock).length,
+    ticketPromedio: recientes.length ? Math.round(total(recientes) / recientes.length) / 100 : 0,
+    ultimos30,
+    meses,
+    topMateriales,
+    topCarpinteros,
+    masAntiguas
+  };
+}
+
+/** Las categorias del catalogo mas pedidas, a partir de la categoria de cada modulo pedido (los borrados del catalogo, aparte). */
+export function topCategories(categorias: Array<string | null>, limit = 5) {
+  const counts = new Map<string, number>();
+  for (const categoria of categorias) {
+    const nombre = categoria ?? "Sin categoría";
+    counts.set(nombre, (counts.get(nombre) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([nombre, cantidad]) => ({ nombre, cantidad }))
+    .sort((a, b) => b.cantidad - a.cantidad || a.nombre.localeCompare(b.nombre))
+    .slice(0, limit);
+}
