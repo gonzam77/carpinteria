@@ -4,6 +4,16 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import LabelOutlinedIcon from "@mui/icons-material/LabelOutlined";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import ListAltOutlinedIcon from "@mui/icons-material/ListAltOutlined";
+import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
+import NumbersIcon from "@mui/icons-material/Numbers";
+import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
+import StraightenIcon from "@mui/icons-material/Straighten";
+import TagIcon from "@mui/icons-material/Tag";
+import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
 import {
   Alert,
   Box,
@@ -36,6 +46,8 @@ import type { ModuleEvaluation } from "../../lib/moduleFormula";
 import type { Material, RolPiezaModulo } from "../../types";
 import { FormulaInput } from "../FormulaInput";
 import { PieceEdgesToggles } from "../PieceEdgesToggles";
+import { fieldIcon } from "../fieldIcon";
+import { SectionHeading } from "../SectionHeading";
 import { plateLabel, plateOptions } from "./GeneralTab";
 
 const ROLES: Array<{ value: RolPiezaModulo; label: string }> = [
@@ -67,17 +79,17 @@ function TestValuesPanel({
 
   return (
     <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "10px" }}>
-      <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={1} sx={{ mb: 1.5 }}>
-        <Box>
-          <Typography fontWeight={800}>Probar con medidas</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Cambiá las medidas para ver cómo quedan las piezas. No se guardan: el módulo guarda los valores por defecto de la pestaña Medidas.
-          </Typography>
-        </Box>
-        <Button size="small" startIcon={<RestartAltIcon />} onClick={onReset} sx={{ flexShrink: 0 }}>
-          Valores por defecto
-        </Button>
-      </Stack>
+      <SectionHeading
+        icon={<ScienceOutlinedIcon />}
+        title="Probar con medidas"
+        subtitle="Cambiá las medidas para ver cómo quedan las piezas. No se guardan: el módulo guarda los valores por defecto de la pestaña Medidas."
+        action={
+          <Button size="small" variant="outlined" startIcon={<RestartAltIcon />} onClick={onReset} sx={{ width: { xs: "100%", sm: "auto" } }}>
+            Valores por defecto
+          </Button>
+        }
+        sx={{ mb: 1.5 }}
+      />
       <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
         {pedibles.map((param) => {
           const clave = param.clave.toUpperCase();
@@ -95,6 +107,7 @@ function TestValuesPanel({
               onChange={(event) => onChange(clave, event.target.value === "" ? null : Number(event.target.value))}
               error={Boolean(error)}
               helperText={error}
+              slotProps={{ input: fieldIcon(<ListAltOutlinedIcon />) }}
             >
               {(param.opciones ?? []).map((option) => (
                 <MenuItem key={option.valor} value={option.valor}>
@@ -112,7 +125,7 @@ function TestValuesPanel({
               onChange={(event) => onChange(clave, event.target.value === "" ? null : Number(event.target.value))}
               error={Boolean(error)}
               helperText={error}
-              slotProps={{ htmlInput: { style: { textAlign: "right", fontVariantNumeric: "tabular-nums" } } }}
+              slotProps={{ input: fieldIcon(param.tipo === "MEDIDA" ? <StraightenIcon /> : <NumbersIcon />), htmlInput: { style: { fontVariantNumeric: "tabular-nums" } } }}
             />
           );
         })}
@@ -197,7 +210,8 @@ function PieceCard({
             onChange={(event) => onPatch({ nombre: event.target.value })}
             error={!pieza.nombre.trim()}
             helperText="Sale en el Excel y en la hoja de taller"
-            sx={{ width: { xs: "100%", sm: 210 } }}
+            slotProps={{ input: fieldIcon(<LabelOutlinedIcon />) }}
+            sx={{ width: { xs: "100%", sm: 230 } }}
           />
           <TextField
             size="small"
@@ -211,8 +225,8 @@ function PieceCard({
             }}
             error={Boolean(nameProblem)}
             helperText={nameProblem ?? "Para usarla en otras fórmulas"}
-            slotProps={{ htmlInput: { style: { fontFamily: "ui-monospace, Consolas, monospace", fontSize: 13 } } }}
-            sx={{ width: { xs: "100%", sm: 170 } }}
+            slotProps={{ input: fieldIcon(<TagIcon />), htmlInput: { style: { fontFamily: "ui-monospace, Consolas, monospace", fontSize: 13 } } }}
+            sx={{ width: { xs: "100%", sm: 196 } }}
           />
           <TextField
             select
@@ -221,7 +235,8 @@ function PieceCard({
             value={pieza.rol}
             onChange={(event) => onPatch({ rol: event.target.value as RolPiezaModulo })}
             helperText={pieza.rol === "ESQUELETO" ? "Color de esqueleto" : pieza.rol === "FRENTE" ? "Color de frentes" : pieza.rol === "FONDO" ? "Material de fondo" : "Siempre la misma placa"}
-            sx={{ width: { xs: "100%", sm: 150 } }}
+            slotProps={{ input: fieldIcon(<CategoryOutlinedIcon />) }}
+            sx={{ width: { xs: "100%", sm: 176 } }}
           >
             {ROLES.map((rol) => (
               <MenuItem key={rol.value} value={rol.value}>
@@ -238,7 +253,8 @@ function PieceCard({
               onChange={(event) => onPatch({ materialFijoId: event.target.value || null })}
               error={!pieza.materialFijoId}
               helperText={pieza.materialFijoId ? " " : "Elegí la placa"}
-              sx={{ width: { xs: "100%", sm: 240 } }}
+              slotProps={{ input: fieldIcon(<LayersOutlinedIcon />) }}
+              sx={{ width: { xs: "100%", sm: 260 } }}
             >
               {plateOptions(placas, pieza.materialFijoId).map((material) => (
                 <MenuItem key={material.id} value={material.id}>
@@ -263,18 +279,30 @@ function PieceCard({
               title={result ? "Largo × ancho × cantidad, en mm enteros" : evalError ? evalError : "Con estas medidas la cantidad da 0"}
               sx={{ fontVariantNumeric: "tabular-nums", fontWeight: 700 }}
             />
-            <IconButton size="small" aria-label="Subir" disabled={index === 0} onClick={() => onMove(-1)}>
-              <ArrowUpwardIcon fontSize="inherit" />
-            </IconButton>
-            <IconButton size="small" aria-label="Bajar" disabled={index === total - 1} onClick={() => onMove(1)}>
-              <ArrowDownwardIcon fontSize="inherit" />
-            </IconButton>
-            <IconButton size="small" aria-label={`Duplicar ${pieza.nombre}`} onClick={onDuplicate}>
-              <ContentCopyIcon fontSize="inherit" />
-            </IconButton>
-            <IconButton size="small" color="error" aria-label={`Quitar ${pieza.nombre}`} onClick={onRemove}>
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
+            <Tooltip title="Subir">
+              <span>
+                <IconButton size="small" aria-label="Subir" disabled={index === 0} onClick={() => onMove(-1)}>
+                  <ArrowUpwardIcon fontSize="inherit" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Bajar">
+              <span>
+                <IconButton size="small" aria-label="Bajar" disabled={index === total - 1} onClick={() => onMove(1)}>
+                  <ArrowDownwardIcon fontSize="inherit" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Duplicar pieza">
+              <IconButton size="small" aria-label={`Duplicar ${pieza.nombre}`} onClick={onDuplicate}>
+                <ContentCopyIcon fontSize="inherit" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Quitar pieza">
+              <IconButton size="small" color="error" aria-label={`Quitar ${pieza.nombre}`} onClick={onRemove}>
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Stack>
         </Stack>
 
@@ -282,6 +310,7 @@ function PieceCard({
           <FormulaInput
             id={`pieza-${pieza.uid}-largo`}
             label="Largo"
+            kind="pieza-largo"
             value={pieza.formulaLargo}
             onChange={(formulaLargo) => onPatch({ formulaLargo })}
             suggestions={formulaSuggestionsForPiece}
@@ -291,6 +320,7 @@ function PieceCard({
           <FormulaInput
             id={`pieza-${pieza.uid}-ancho`}
             label="Ancho"
+            kind="pieza-ancho"
             value={pieza.formulaAncho}
             onChange={(formulaAncho) => onPatch({ formulaAncho })}
             suggestions={formulaSuggestionsForPiece}
@@ -300,6 +330,7 @@ function PieceCard({
           <FormulaInput
             id={`pieza-${pieza.uid}-cantidad`}
             label="Cantidad"
+            kind="pieza-cantidad"
             value={pieza.formulaCantidad}
             onChange={(formulaCantidad) => onPatch({ formulaCantidad })}
             suggestions={formulaSuggestionsForPiece}
@@ -331,6 +362,7 @@ function PieceCard({
             label="Observaciones"
             value={pieza.observaciones ?? ""}
             onChange={(event) => onPatch({ observaciones: event.target.value })}
+            slotProps={{ input: fieldIcon(<NotesOutlinedIcon />) }}
             sx={{ flex: 1, minWidth: 200 }}
           />
         </Stack>
@@ -395,11 +427,11 @@ export function PiecesTab({
           {warning}
         </Alert>
       ))}
-      <Typography variant="body2" color="text.secondary">
-        Las fórmulas usan las claves de las medidas, ESP (espesor de diseño) y otras piezas con CODIGO.largo, CODIGO.ancho y CODIGO.cant. Las referencias
-        entre piezas usan los valores exactos; solo el resultado final se redondea al mm. Los cantos de cada lado se eligen por perfil: L1 y L2 son los
-        lados largos; A1 y A2, los anchos.
-      </Typography>
+      <SectionHeading
+        icon={<ViewInArOutlinedIcon />}
+        title="Despiece y cantos"
+        subtitle="Las fórmulas usan las claves de las medidas, ESP (espesor de diseño) y otras piezas con CODIGO.largo, CODIGO.ancho y CODIGO.cant. Las referencias entre piezas usan los valores exactos; solo el resultado final se redondea al mm. Los cantos de cada lado se eligen por perfil: L1 y L2 son los lados largos; A1 y A2, los anchos."
+      />
       {draft.piezas.map((pieza, index) => (
         <PieceCard
           key={pieza.uid}

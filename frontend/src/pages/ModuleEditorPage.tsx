@@ -1,6 +1,16 @@
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import BorderStyleIcon from "@mui/icons-material/BorderStyle";
+import CloseIcon from "@mui/icons-material/Close";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import HardwareOutlinedIcon from "@mui/icons-material/HardwareOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import LogoutIcon from "@mui/icons-material/Logout";
 import SaveIcon from "@mui/icons-material/Save";
+import StraightenIcon from "@mui/icons-material/Straighten";
+import UndoIcon from "@mui/icons-material/Undo";
+import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
 import {
   Alert,
   AlertTitle,
@@ -58,6 +68,8 @@ type Feedback = { severity: "success" | "error" | "info"; message: string } | nu
 type Confirm = { title: string; message: string; confirmLabel: string; action: () => void | Promise<void> } | null;
 
 const TABS = ["General", "Medidas", "Despiece y cantos", "Perfiles de canto", "Herrajes"];
+/** El icono de cada pestaña, en el mismo orden. */
+const TAB_ICONS = [<InfoOutlinedIcon key="general" />, <StraightenIcon key="medidas" />, <ViewInArOutlinedIcon key="despiece" />, <BorderStyleIcon key="perfiles" />, <HardwareOutlinedIcon key="herrajes" />];
 
 /** Editor de un modulo del catalogo (spec §6.2): /configuracion-modulos/nuevo y /configuracion-modulos/:id. */
 export function ModuleEditorPage() {
@@ -341,6 +353,7 @@ export function ModuleEditorPage() {
           )}
           {dirty && definition && (
             <Button
+              startIcon={<UndoIcon />}
               onClick={() => {
                 applyDefinition(definition);
                 setServerErrors([]);
@@ -388,6 +401,9 @@ export function ModuleEditorPage() {
               key={label}
               id={`modulo-tab-${index}`}
               aria-controls={`modulo-panel-${index}`}
+              icon={TAB_ICONS[index]}
+              iconPosition="start"
+              sx={{ minHeight: 56 }}
               label={
                 <Stack direction="row" spacing={0.75} alignItems="center">
                   <span>{label}</span>
@@ -504,10 +520,13 @@ export function ModuleEditorPage() {
           <DialogContentText>{confirm?.message}</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirm(null)}>Cancelar</Button>
+          <Button startIcon={<CloseIcon />} onClick={() => setConfirm(null)} sx={{ mr: "auto" }}>
+            Cancelar
+          </Button>
           <Button
             color="error"
             variant="contained"
+            startIcon={confirm?.confirmLabel === "Copiar" ? <ContentCopyIcon /> : <DeleteOutlineIcon />}
             onClick={async () => {
               const action = confirm?.action;
               setConfirm(null);
@@ -525,8 +544,10 @@ export function ModuleEditorPage() {
           <DialogContentText>Si salís ahora, se pierden los cambios de este módulo.</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={guard.cancelLeave}>Seguir editando</Button>
-          <Button color="error" onClick={guard.confirmLeave}>
+          <Button startIcon={<EditOutlinedIcon />} onClick={guard.cancelLeave} sx={{ mr: "auto" }}>
+            Seguir editando
+          </Button>
+          <Button color="error" variant="outlined" startIcon={<LogoutIcon />} onClick={guard.confirmLeave}>
             Salir sin guardar
           </Button>
         </DialogActions>

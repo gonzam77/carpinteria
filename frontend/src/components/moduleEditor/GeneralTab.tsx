@@ -1,12 +1,26 @@
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import UploadIcon from "@mui/icons-material/Upload";
+import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import LabelOutlinedIcon from "@mui/icons-material/LabelOutlined";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
+import QrCode2Icon from "@mui/icons-material/QrCode2";
+import StraightenIcon from "@mui/icons-material/Straighten";
 import { Alert, AlertTitle, Box, Button, FormControlLabel, InputAdornment, MenuItem, Paper, Stack, Switch, TextField, Typography } from "@mui/material";
 import { useRef, useState } from "react";
 import { deleteModuleImage, uploadModuleImage, type ModuleImageInfo } from "../../api/moduleImages";
 import { formatMm, type ModuleDraft } from "../../lib/moduleEditor";
 import type { Material, ModuleCategory, ModulesConfig } from "../../types";
 import { ModuleImage } from "../ModuleCard";
+import { fieldIcon } from "../fieldIcon";
+import { SectionHeading } from "../SectionHeading";
+
+/** En los campos de varias lineas el icono va arriba, a la altura de la primera linea. */
+const multilineIcon = { "& .MuiInputBase-root": { alignItems: "flex-start" }, "& .MuiInputAdornment-root": { mt: 1.25 } };
 
 export const plateLabel = (material: Pick<Material, "nombre" | "espesorMm" | "activo">) =>
   `${material.nombre.trim()} · ${formatMm(material.espesorMm)} mm${material.activo ? "" : " (inactiva)"}`;
@@ -137,8 +151,9 @@ export function GeneralTab({
         </Alert>
       )}
       <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "10px" }}>
+        <SectionHeading icon={<InfoOutlinedIcon />} title="Datos del módulo" subtitle="Cómo se llama, a qué categoría pertenece y con qué espesor están escritas las fórmulas." sx={{ mb: 2 }} />
         <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
-          <TextField label="Nombre" value={draft.nombre} onChange={(event) => update({ nombre: event.target.value })} required />
+          <TextField label="Nombre" value={draft.nombre} onChange={(event) => update({ nombre: event.target.value })} required slotProps={{ input: fieldIcon(<LabelOutlinedIcon />) }} />
           <TextField
             label="Código"
             value={codePreview}
@@ -151,6 +166,7 @@ export function GeneralTab({
             // Solo lectura: se ve distinto de un campo que se escribe (fondo gris y candado).
             slotProps={{
               input: {
+                ...fieldIcon(<QrCode2Icon />),
                 readOnly: true,
                 endAdornment: (
                   <InputAdornment position="end">
@@ -163,7 +179,7 @@ export function GeneralTab({
             }}
             sx={{ "& .MuiInputBase-root": { bgcolor: "action.hover" } }}
           />
-          <TextField select label="Categoría" value={draft.categoriaId} onChange={(event) => update({ categoriaId: event.target.value })} required>
+          <TextField select label="Categoría" value={draft.categoriaId} onChange={(event) => update({ categoriaId: event.target.value })} required slotProps={{ input: fieldIcon(<CategoryOutlinedIcon />) }}>
             {categories
               .filter((category) => category.activo || category.id === draft.categoriaId)
               .map((category) => (
@@ -181,14 +197,14 @@ export function GeneralTab({
             helperText={`El espesor con el que están escritas las fórmulas (ESP). Al pedir el módulo solo se ofrecen placas de ese espesor${
               espesores.length ? `; hay placas activas de ${espesores.map((espesor) => `${formatMm(espesor)} mm`).join(" / ")}` : ""
             }.`}
-            slotProps={{ htmlInput: { min: 1, step: 0.5 } }}
+            slotProps={{ input: fieldIcon(<StraightenIcon />), htmlInput: { min: 1, step: 0.5 } }}
           />
           <TextField
             select
             label="Material de fondo"
             value={draft.materialFondoId ?? ""}
             onChange={(event) => update({ materialFondoId: event.target.value || null })}
-            slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+            slotProps={{ input: fieldIcon(<LayersOutlinedIcon />), select: { displayEmpty: true }, inputLabel: { shrink: true } }}
             helperText="Para las piezas que van en fondo. Si no elegís uno, se usa el de la configuración del catálogo."
           >
             <MenuItem value="">Usar el de la configuración{configFondo ? ` (${configFondo.nombre})` : " (sin configurar)"}</MenuItem>
@@ -210,7 +226,8 @@ export function GeneralTab({
             onChange={(event) => update({ descripcion: event.target.value })}
             multiline
             minRows={2}
-            sx={{ gridColumn: { md: "1 / -1" } }}
+            slotProps={{ input: fieldIcon(<DescriptionOutlinedIcon />) }}
+            sx={{ gridColumn: { md: "1 / -1" }, ...multilineIcon }}
           />
           <TextField
             label="Observaciones (internas)"
@@ -219,14 +236,13 @@ export function GeneralTab({
             multiline
             minRows={3}
             helperText="Notas para el administrador. Una por línea: cada línea cuenta como una observación pendiente en el catálogo."
-            sx={{ gridColumn: { md: "1 / -1" } }}
+            slotProps={{ input: fieldIcon(<NotesOutlinedIcon />) }}
+            sx={{ gridColumn: { md: "1 / -1" }, ...multilineIcon }}
           />
         </Box>
       </Paper>
       <Paper sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "10px" }}>
-        <Typography fontWeight={800} gutterBottom>
-          Imagen
-        </Typography>
+        <SectionHeading icon={<ImageOutlinedIcon />} title="Imagen" sx={{ mb: 1.5 }} />
         <ImageSection moduleId={moduleId} imagen={imagen} onChanged={onImageChanged} />
       </Paper>
     </Stack>

@@ -2,6 +2,11 @@ import AddIcon from "@mui/icons-material/Add";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import LabelOutlinedIcon from "@mui/icons-material/LabelOutlined";
+import StraightenIcon from "@mui/icons-material/Straighten";
+import TagIcon from "@mui/icons-material/Tag";
 import {
   Button,
   IconButton,
@@ -15,6 +20,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography
 } from "@mui/material";
 import { useEffect, useState } from "react";
@@ -32,6 +38,8 @@ import {
 import type { ModuleEvaluation } from "../../lib/moduleFormula";
 import type { TipoParametroModulo } from "../../types";
 import { FormulaInput } from "../FormulaInput";
+import { fieldIcon } from "../fieldIcon";
+import { SectionHeading } from "../SectionHeading";
 
 const TIPOS: Array<{ value: TipoParametroModulo; label: string; ayuda: string }> = [
   { value: "MEDIDA", label: "Medida (mm)", ayuda: "Se pide al cargar, en mm" },
@@ -120,10 +128,11 @@ export function ParametersTab({
 
   return (
     <Stack spacing={2}>
-      <Typography color="text.secondary" variant="body2">
-        Las medidas que se piden al cargar el módulo (ancho, alto, luces, cantidad de estantes, variantes) y las que se calculan solas. Las piezas las usan
-        en sus fórmulas por la clave. Si cambiás una clave, las fórmulas que la usan se actualizan solas.
-      </Typography>
+      <SectionHeading
+        icon={<StraightenIcon />}
+        title="Medidas del módulo"
+        subtitle="Las medidas que se piden al cargar el módulo (ancho, alto, luces, cantidad de estantes, variantes) y las que se calculan solas. Las piezas las usan en sus fórmulas por la clave. Si cambiás una clave, las fórmulas que la usan se actualizan solas."
+      />
       <Paper sx={{ borderRadius: "10px", overflow: "hidden" }}>
         <TableContainer>
           <Table size="small" sx={{ "& td": { verticalAlign: "top", py: 1 } }}>
@@ -133,12 +142,12 @@ export function ParametersTab({
                 <TableCell>Clave</TableCell>
                 <TableCell>Etiqueta</TableCell>
                 <TableCell>Tipo</TableCell>
-                <TableCell align="right">Por defecto</TableCell>
-                <TableCell align="right">Mínimo</TableCell>
-                <TableCell align="right">Máximo</TableCell>
+                <TableCell>Por defecto</TableCell>
+                <TableCell>Mínimo</TableCell>
+                <TableCell>Máximo</TableCell>
                 <TableCell>Opciones o fórmula</TableCell>
                 <TableCell>Ayuda</TableCell>
-                <TableCell />
+                <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -154,7 +163,7 @@ export function ParametersTab({
                     value={param[field] ?? ""}
                     disabled={!pedible}
                     onChange={(event) => patch(index, { [field]: numberOrNull(event.target.value) })}
-                    slotProps={{ htmlInput: { "aria-label": `${label} de ${param.clave}`, style: { textAlign: "right", fontVariantNumeric: "tabular-nums" } } }}
+                    slotProps={{ htmlInput: { "aria-label": `${label} de ${param.clave}`, style: { textAlign: "center", fontVariantNumeric: "tabular-nums" } } }}
                     sx={{ width: 104 }}
                     error={field === "valorDefecto" && errors.length > 0}
                     helperText={field === "valorDefecto" && errors.length ? errors.join(". ") : undefined}
@@ -163,7 +172,7 @@ export function ParametersTab({
                 return (
                   <TableRow key={param.uid}>
                     <TableCell>
-                      <Stack direction="row">
+                      <Stack direction="row" justifyContent="center">
                         <IconButton size="small" aria-label="Subir" disabled={index === 0} onClick={() => move(index, -1)}>
                           <ArrowUpwardIcon fontSize="inherit" />
                         </IconButton>
@@ -184,8 +193,8 @@ export function ParametersTab({
                         }}
                         error={Boolean(nameProblem)}
                         helperText={nameProblem ?? undefined}
-                        slotProps={{ htmlInput: { "aria-label": "Clave", style: { fontFamily: "ui-monospace, Consolas, monospace", fontSize: 13 } } }}
-                        sx={{ width: 170 }}
+                        slotProps={{ input: fieldIcon(<TagIcon />), htmlInput: { "aria-label": "Clave", style: { fontFamily: "ui-monospace, Consolas, monospace", fontSize: 13 } } }}
+                        sx={{ width: 196 }}
                       />
                     </TableCell>
                     <TableCell>
@@ -194,8 +203,8 @@ export function ParametersTab({
                         value={param.etiqueta}
                         onChange={(event) => patch(index, { etiqueta: event.target.value })}
                         error={!param.etiqueta.trim()}
-                        slotProps={{ htmlInput: { "aria-label": "Etiqueta" } }}
-                        sx={{ width: 160 }}
+                        slotProps={{ input: fieldIcon(<LabelOutlinedIcon />), htmlInput: { "aria-label": "Etiqueta" } }}
+                        sx={{ width: 186 }}
                       />
                     </TableCell>
                     <TableCell>
@@ -204,8 +213,8 @@ export function ParametersTab({
                         size="small"
                         value={param.tipo}
                         onChange={(event) => patch(index, { tipo: event.target.value as TipoParametroModulo })}
-                        slotProps={{ htmlInput: { "aria-label": "Tipo" } }}
-                        sx={{ width: 150 }}
+                        slotProps={{ input: fieldIcon(<CategoryOutlinedIcon />), htmlInput: { "aria-label": "Tipo" } }}
+                        sx={{ width: 178 }}
                       >
                         {TIPOS.map((tipo) => (
                           <MenuItem key={tipo.value} value={tipo.value} title={tipo.ayuda}>
@@ -214,15 +223,16 @@ export function ParametersTab({
                         ))}
                       </TextField>
                     </TableCell>
-                    <TableCell align="right">{numberField("valorDefecto", "Valor por defecto")}</TableCell>
-                    <TableCell align="right">{numberField("minimo", "Mínimo")}</TableCell>
-                    <TableCell align="right">{numberField("maximo", "Máximo")}</TableCell>
+                    <TableCell>{numberField("valorDefecto", "Valor por defecto")}</TableCell>
+                    <TableCell>{numberField("minimo", "Mínimo")}</TableCell>
+                    <TableCell>{numberField("maximo", "Máximo")}</TableCell>
                     <TableCell sx={{ minWidth: 260 }}>
                       {param.tipo === "OPCION" && <OptionsField value={param.opciones} onChange={(opciones) => patch(index, { opciones })} />}
                       {param.tipo === "CALCULADO" && (
                         <FormulaInput
                           id={`param-${param.uid}-formula`}
                           label="Fórmula"
+                          kind="medida-calculada"
                           value={param.formula ?? ""}
                           onChange={(formula) => patch(index, { formula })}
                           suggestions={suggestions.filter((item) => item.insert !== param.clave)}
@@ -244,14 +254,16 @@ export function ParametersTab({
                         onChange={(event) => patch(index, { ayuda: event.target.value })}
                         multiline
                         maxRows={3}
-                        slotProps={{ htmlInput: { "aria-label": "Ayuda" } }}
-                        sx={{ width: 200 }}
+                        slotProps={{ input: fieldIcon(<HelpOutlineIcon />), htmlInput: { "aria-label": "Ayuda" } }}
+                        sx={{ width: 224 }}
                       />
                     </TableCell>
                     <TableCell>
-                      <IconButton size="small" color="error" aria-label={`Quitar ${param.clave}`} onClick={() => onRemove(index)}>
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
+                      <Tooltip title="Quitar medida">
+                        <IconButton size="small" color="error" aria-label={`Quitar ${param.clave}`} onClick={() => onRemove(index)}>
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 );

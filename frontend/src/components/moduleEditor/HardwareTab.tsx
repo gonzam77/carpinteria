@@ -1,9 +1,15 @@
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import AddIcon from "@mui/icons-material/Add";
+import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import HardwareOutlinedIcon from "@mui/icons-material/HardwareOutlined";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import { Alert, Box, Chip, IconButton, ListSubheader, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { FormulaInput } from "../FormulaInput";
+import { fieldIcon } from "../fieldIcon";
+import { SectionHeading } from "../SectionHeading";
 import { formulaSyntaxError, type FormulaSuggestion, type ModuleDraft } from "../../lib/moduleEditor";
 import { hardwareLabel, hardwareMeasureNote } from "../../lib/hardware";
 import type { ResolvedHardware } from "../../lib/moduleFormula";
@@ -83,11 +89,17 @@ export function HardwareTab({
           Todavía no hay herrajes cargados. Cargalos en <RouterLink to="/configuracion-herrajes">Configuración › Herrajes</RouterLink>.
         </Alert>
       )}
-      <Typography variant="body2" color="text.secondary">
-        Cada herraje lleva su fórmula de cantidad y, si va por medida, la de la medida que necesita. Pueden usar las medidas y las piezas del módulo (por ejemplo,{" "}
-        <Box component="code">PUERTAS.cant * 2</Box> o <Box component="code">INT_CAJON.largo - 10</Box>). Al elegir el modelo se precargan sus fórmulas por defecto. Los resultados
-        usan las medidas de prueba de la pestaña Despiece.
-      </Typography>
+      <SectionHeading
+        icon={<HardwareOutlinedIcon />}
+        title="Herrajes del módulo"
+        subtitle={
+          <>
+            Cada herraje lleva su fórmula de cantidad y, si va por medida, la de la medida que necesita. Pueden usar las medidas y las piezas del módulo (por ejemplo,{" "}
+            <Box component="code">PUERTAS.cant * 2</Box> o <Box component="code">INT_CAJON.largo - 10</Box>). Al elegir el modelo se precargan sus fórmulas por defecto. Los
+            resultados usan las medidas de prueba de la pestaña Despiece.
+          </>
+        }
+      />
       {lines.length === 0 && (
         <Paper variant="outlined" sx={{ p: 3, textAlign: "center", borderRadius: "10px" }}>
           <Typography color="text.secondary">Este módulo no lleva herrajes.</Typography>
@@ -136,7 +148,8 @@ export function HardwareTab({
                     const first = hardware.find((herraje) => herraje.tipoId === event.target.value && herraje.activo && !usados.has(herraje.id));
                     changeModel(index, first?.id ?? "");
                   }}
-                  sx={{ width: { xs: "100%", sm: 200 } }}
+                  slotProps={{ input: fieldIcon(<CategoryOutlinedIcon />) }}
+                  sx={{ width: { xs: "100%", sm: 220 } }}
                 >
                   {activeTypes.map((tipo) => (
                     <MenuItem key={tipo.id} value={tipo.id}>
@@ -152,7 +165,8 @@ export function HardwareTab({
                   onChange={(event) => changeModel(index, event.target.value)}
                   error={!modelo}
                   helperText={!modelo ? "Elegí el modelo" : modelo.activo ? "Se puede cambiar en la solicitud" : "Está inactivo: elegí otro para que el módulo se pueda pedir"}
-                  sx={{ width: { xs: "100%", sm: 300 } }}
+                  slotProps={{ input: fieldIcon(<Inventory2OutlinedIcon />) }}
+                  sx={{ width: { xs: "100%", sm: 320 } }}
                 >
                   {opciones.map((herraje) => (
                     <MenuItem key={herraje.id} value={herraje.id} disabled={herraje.id !== line.herrajeId && usados.has(herraje.id)}>
@@ -170,12 +184,20 @@ export function HardwareTab({
                     aria-label={`Resultado del herraje ${index + 1}`}
                     sx={{ fontWeight: 700, maxWidth: { xs: 220, sm: 360 } }}
                   />
-                  <IconButton size="small" aria-label={`Subir el herraje ${index + 1}`} disabled={index === 0} onClick={() => move(index, -1)}>
-                    <ArrowUpwardIcon fontSize="inherit" />
-                  </IconButton>
-                  <IconButton size="small" aria-label={`Bajar el herraje ${index + 1}`} disabled={index === lines.length - 1} onClick={() => move(index, 1)}>
-                    <ArrowDownwardIcon fontSize="inherit" />
-                  </IconButton>
+                  <Tooltip title="Subir">
+                    <span>
+                      <IconButton size="small" aria-label={`Subir el herraje ${index + 1}`} disabled={index === 0} onClick={() => move(index, -1)}>
+                        <ArrowUpwardIcon fontSize="inherit" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Bajar">
+                    <span>
+                      <IconButton size="small" aria-label={`Bajar el herraje ${index + 1}`} disabled={index === lines.length - 1} onClick={() => move(index, 1)}>
+                        <ArrowDownwardIcon fontSize="inherit" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
                   <Tooltip title="Quitar este herraje">
                     <IconButton size="small" color="error" aria-label={`Quitar el herraje ${index + 1}`} onClick={() => setLines((current) => current.filter((_, position) => position !== index))}>
                       <DeleteOutlineIcon fontSize="small" />
@@ -187,6 +209,7 @@ export function HardwareTab({
                 <FormulaInput
                   id={`herraje-${index}-cantidad`}
                   label="Cantidad"
+                  kind="herraje-cantidad"
                   value={line.formulaCantidad}
                   onChange={(formulaCantidad) => patch(index, { formulaCantidad })}
                   suggestions={suggestions}
@@ -196,6 +219,7 @@ export function HardwareTab({
                 <FormulaInput
                   id={`herraje-${index}-medida`}
                   label="Medida que necesita (mm)"
+                  kind="herraje-medida"
                   value={line.formulaMedida ?? ""}
                   onChange={(formulaMedida) => patch(index, { formulaMedida: formulaMedida.trim() ? formulaMedida : null })}
                   suggestions={suggestions}
@@ -230,7 +254,8 @@ export function HardwareTab({
             setLines((current) => [...current, { herrajeId: model.id, ...defaultsOf(model), orden: current.length + 1 }]);
           }}
           helperText={disponibles.length ? "Elegí el modelo: se agrega con sus fórmulas por defecto." : "No quedan modelos activos para agregar."}
-          sx={{ width: { xs: "100%", sm: 360 } }}
+          slotProps={{ input: fieldIcon(<AddIcon />) }}
+          sx={{ width: { xs: "100%", sm: 380 } }}
         >
           {tiposDisponibles.flatMap((tipo) => [
             <ListSubheader key={`tipo-${tipo.id}`}>{tipo.nombre}</ListSubheader>,

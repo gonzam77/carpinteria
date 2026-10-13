@@ -1,14 +1,28 @@
 import AddIcon from "@mui/icons-material/Add";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import CloseIcon from "@mui/icons-material/Close";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import EditIcon from "@mui/icons-material/Edit";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
+import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
+import FilterAltOffOutlinedIcon from "@mui/icons-material/FilterAltOffOutlined";
+import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
+import LabelOutlinedIcon from "@mui/icons-material/LabelOutlined";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
+import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
+import RoundedCornerIcon from "@mui/icons-material/RoundedCorner";
+import SaveIcon from "@mui/icons-material/Save";
+import SearchIcon from "@mui/icons-material/Search";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import ToggleOffOutlinedIcon from "@mui/icons-material/ToggleOffOutlined";
 import ToggleOnOutlinedIcon from "@mui/icons-material/ToggleOnOutlined";
+import ViewModuleOutlinedIcon from "@mui/icons-material/ViewModuleOutlined";
 import {
   Alert,
   Box,
   Button,
+  ButtonBase,
   Dialog,
   DialogActions,
   DialogContent,
@@ -22,6 +36,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -36,24 +51,19 @@ import {
   updateModulesConfig
 } from "../api/catalog";
 import { api } from "../api/client";
-import { ModuleCard } from "../components/ModuleCard";
+import { SectionHeading } from "../components/SectionHeading";
+import { fieldIcon } from "../components/fieldIcon";
+import { MetricGrid, MetricTile } from "../components/MetricTile";
+import { ModuleCard, ModuleCardAction } from "../components/ModuleCard";
+import { ModuleObservationsDialog } from "../components/ModuleObservationsDialog";
+import { countByCategory, filterModules, modulesToReview } from "../lib/moduleCatalog";
 import type { Material, ModuleCategory, ModuleListItem, ModulesConfig } from "../types";
 import { useErrorDialog } from "../context/ErrorDialogContext";
 
 type Feedback = { severity: "success" | "error" | "warning"; message: string } | null;
 
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <Paper variant="outlined" sx={{ px: 2, py: 1.25, borderRadius: "10px", minWidth: 150 }}>
-      <Typography variant="h5" fontWeight={800} sx={{ fontVariantNumeric: "tabular-nums" }}>
-        {value}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {label}
-      </Typography>
-    </Paper>
-  );
-}
+// Un color por categoria, en el orden de las categorias (tonos calidos de la marca y otros que se distinguen bien).
+const CATEGORY_COLORS = ["#f28c28", "#2f6f8f", "#24663f", "#8a5a9e", "#b4432f", "#a16807", "#3b7d7a", "#5d544c"];
 
 /** ABM minimo de categorias (spec §6.3). */
 function CategoriesDialog({ open, onClose, categories, onChanged }: { open: boolean; onClose: () => void; categories: ModuleCategory[]; onChanged: () => void }) {
@@ -103,6 +113,7 @@ function CategoriesDialog({ open, onClose, categories, onChanged }: { open: bool
                 label="Nombre"
                 value={category.nombre}
                 onChange={(event) => setDrafts((current) => current.map((item, i) => (i === index ? { ...item, nombre: event.target.value } : item)))}
+                slotProps={{ input: fieldIcon(<LabelOutlinedIcon />) }}
                 sx={{ flex: 1 }}
               />
               <TextField
@@ -111,19 +122,27 @@ function CategoriesDialog({ open, onClose, categories, onChanged }: { open: bool
                 type="number"
                 value={category.orden}
                 onChange={(event) => setDrafts((current) => current.map((item, i) => (i === index ? { ...item, orden: Number(event.target.value) } : item)))}
-                sx={{ width: 90 }}
+                slotProps={{ input: fieldIcon(<FormatListNumberedIcon />) }}
+                sx={{ width: { sm: 120 } }}
               />
               <FormControlLabel
                 control={<Switch checked={category.activo} onChange={(event) => setDrafts((current) => current.map((item, i) => (i === index ? { ...item, activo: event.target.checked } : item)))} />}
                 label="Activa"
               />
-              <Button size="small" onClick={() => save(drafts[index])}>
+              <Button size="small" startIcon={<SaveIcon />} onClick={() => save(drafts[index])}>
                 Guardar
               </Button>
             </Stack>
           ))}
           <Stack direction="row" spacing={1}>
-            <TextField size="small" label="Nueva categoría" value={newName} onChange={(event) => setNewName(event.target.value)} sx={{ flex: 1 }} />
+            <TextField
+              size="small"
+              label="Nueva categoría"
+              value={newName}
+              onChange={(event) => setNewName(event.target.value)}
+              slotProps={{ input: fieldIcon(<CategoryOutlinedIcon />) }}
+              sx={{ flex: 1 }}
+            />
             <Button variant="outlined" startIcon={<AddIcon />} onClick={add} disabled={newName.trim().length < 2}>
               Agregar
             </Button>
@@ -131,7 +150,9 @@ function CategoriesDialog({ open, onClose, categories, onChanged }: { open: bool
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cerrar</Button>
+        <Button startIcon={<CloseIcon />} onClick={onClose}>
+          Cerrar
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -191,7 +212,7 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
                 label="Material de fondo por defecto"
                 value={config.materialFondoId ?? ""}
                 onChange={(event) => setConfig({ ...config, materialFondoId: event.target.value || null })}
-                slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+                slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true }, input: fieldIcon(<LayersOutlinedIcon />) }}
                 helperText="Para las piezas que van en fondo, salvo que el módulo tenga uno propio. Por ejemplo, fibrofácil blanco de 3 mm."
               >
                 <MenuItem value="">Sin configurar</MenuItem>
@@ -206,6 +227,7 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
                 label="Redondeo de las medidas"
                 value={config.redondeo}
                 onChange={(event) => setConfig({ ...config, redondeo: event.target.value as ModulesConfig["redondeo"] })}
+                slotProps={{ input: fieldIcon(<RoundedCornerIcon />) }}
                 helperText="Las fórmulas pueden dar decimales; la máquina corta en mm enteros. Se redondea solo el resultado final de cada pieza. Pendiente de confirmar con ROMA."
               >
                 <MenuItem value="REDONDEAR">Al mm más cercano (412,5 → 413)</MenuItem>
@@ -217,7 +239,7 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
                   type="number"
                   value={config.diasEntregaDefecto}
                   onChange={(event) => setConfig({ ...config, diasEntregaDefecto: days(event.target.value) })}
-                  slotProps={{ htmlInput: { min: 0, max: 365 } }}
+                  slotProps={{ htmlInput: { min: 0, max: 365 }, input: fieldIcon(<EventOutlinedIcon />) }}
                   fullWidth
                 />
                 <TextField
@@ -225,7 +247,7 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
                   type="number"
                   value={config.diasAvisoVencimiento}
                   onChange={(event) => setConfig({ ...config, diasAvisoVencimiento: days(event.target.value) })}
-                  slotProps={{ htmlInput: { min: 0, max: 60 } }}
+                  slotProps={{ htmlInput: { min: 0, max: 60 }, input: fieldIcon(<NotificationsActiveOutlinedIcon />) }}
                   fullWidth
                 />
               </Stack>
@@ -234,8 +256,10 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button variant="contained" onClick={save} disabled={!config || saving}>
+        <Button startIcon={<CloseIcon />} onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button variant="contained" startIcon={<SaveIcon />} onClick={save} disabled={!config || saving}>
           Guardar
         </Button>
       </DialogActions>
@@ -243,8 +267,100 @@ function ConfigDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
   );
 }
 
+/**
+ * Cuantos modulos hay de cada categoria (2026-10-13): una barra con la proporcion y una ficha por categoria. Tocar una
+ * ficha filtra el listado por esa categoria; tocarla de nuevo lo vuelve a mostrar entero.
+ */
+function CategoryBreakdown({
+  items,
+  total,
+  selected,
+  onSelect
+}: {
+  items: Array<{ id: string; nombre: string; cantidad: number }>;
+  total: number;
+  selected: string;
+  onSelect: (id: string) => void;
+}) {
+  const colorOf = (index: number) => CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+  const percent = (count: number) => (total ? Math.round((count / total) * 100) : 0);
+  return (
+    <Paper sx={{ p: { xs: 2, sm: 2.25 }, borderRadius: "14px" }} component="section" aria-labelledby="catalogo-por-categoria">
+      <SectionHeading
+        id="catalogo-por-categoria"
+        sx={{ mb: 2 }}
+        icon={<CategoryOutlinedIcon />}
+        title="Módulos por categoría"
+        subtitle="Tocá una categoría para ver solo sus módulos."
+        action={
+          selected ? (
+            <Button size="small" startIcon={<FilterAltOffOutlinedIcon />} onClick={() => onSelect("")} sx={{ alignSelf: { xs: "flex-start", md: "center" } }}>
+              Ver todas
+            </Button>
+          ) : undefined
+        }
+      />
+      {total > 0 && (
+        <Box aria-hidden sx={{ display: "flex", height: 8, borderRadius: "999px", overflow: "hidden", bgcolor: "#f1e9de", mb: 1.75, gap: "2px" }}>
+          {items.map((item, index) =>
+            item.cantidad ? (
+              <Box key={item.id} sx={{ flex: item.cantidad, bgcolor: colorOf(index), opacity: selected && selected !== item.id ? 0.3 : 1, transition: "opacity 160ms ease" }} />
+            ) : null
+          )}
+        </Box>
+      )}
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.25 }}>
+        {items.map((item, index) => {
+          const color = colorOf(index);
+          const active = selected === item.id;
+          return (
+            <ButtonBase
+              key={item.id}
+              onClick={() => onSelect(active ? "" : item.id)}
+              aria-pressed={active}
+              aria-label={`${item.nombre}: ${item.cantidad} ${item.cantidad === 1 ? "módulo" : "módulos"}`}
+              sx={{
+                flex: "1 1 140px",
+                minWidth: 0,
+                justifyContent: "flex-start",
+                textAlign: "left",
+                gap: 1.25,
+                px: 1.5,
+                py: 1.1,
+                borderRadius: "12px",
+                border: "1px solid",
+                borderColor: active ? alpha(color, 0.65) : "divider",
+                bgcolor: active ? alpha(color, 0.09) : "background.paper",
+                boxShadow: active ? `0 0 0 1px ${alpha(color, 0.35)}` : "none",
+                transition: "border-color 160ms ease, background-color 160ms ease, transform 140ms ease",
+                "&:hover": { borderColor: alpha(color, 0.55), bgcolor: alpha(color, 0.06), transform: "translateY(-1px)" },
+                "&.Mui-focusVisible": { outline: `2px solid ${color}`, outlineOffset: 1 },
+                "@media (prefers-reduced-motion: reduce)": { "&:hover": { transform: "none" } }
+              }}
+            >
+              <Box aria-hidden sx={{ width: 10, height: 10, borderRadius: "3px", bgcolor: color, flexShrink: 0 }} />
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography noWrap title={item.nombre} sx={{ fontSize: "0.82rem", fontWeight: 700, color: "text.secondary", lineHeight: 1.3 }}>
+                  {item.nombre}
+                </Typography>
+                <Stack direction="row" spacing={0.75} alignItems="baseline">
+                  <Typography sx={{ fontSize: "1.3rem", fontWeight: 900, lineHeight: 1.15, fontVariantNumeric: "tabular-nums" }}>{item.cantidad}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                    {percent(item.cantidad)} %
+                  </Typography>
+                </Stack>
+              </Box>
+            </ButtonBase>
+          );
+        })}
+      </Box>
+    </Paper>
+  );
+}
+
 export function ModuleCatalogPage() {
   const navigate = useNavigate();
+  // Todo el catalogo (con o sin los inactivos): las metricas lo cuentan entero y el filtro se aplica aca (2026-10-13).
   const [modules, setModules] = useState<ModuleListItem[] | null>(null);
   const [categories, setCategories] = useState<ModuleCategory[]>([]);
   const [categoriaId, setCategoriaId] = useState("");
@@ -260,32 +376,31 @@ export function ModuleCatalogPage() {
   }, [feedback, showError]);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
+  const [observationsOpen, setObservationsOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [items, cats] = await Promise.all([listModules({ categoriaId: categoriaId || undefined, search: search.trim() || undefined, incluirInactivos: showInactive }), listModuleCategories()]);
+      const [items, cats] = await Promise.all([listModules({ incluirInactivos: showInactive }), listModuleCategories()]);
       setModules(items);
       setCategories(cats);
     } catch (error) {
       setModules([]);
       setFeedback({ severity: "error", message: catalogErrorMessage(error, "No se pudo cargar el catálogo de módulos.") });
     }
-  }, [categoriaId, search, showInactive]);
+  }, [showInactive]);
 
   useEffect(() => {
-    const timer = window.setTimeout(load, search ? 250 : 0);
-    return () => window.clearTimeout(timer);
-  }, [load, search]);
+    void load();
+  }, [load]);
 
-  const metrics = useMemo(
-    () => ({
-      modulos: modules?.length ?? 0,
-      piezas: (modules ?? []).reduce((total, module) => total + module.piezas, 0),
-      observaciones: (modules ?? []).reduce((total, module) => total + module.cantidadObservaciones, 0)
-    }),
-    [modules]
-  );
+  const all = useMemo(() => modules ?? [], [modules]);
+  const visible = useMemo(() => filterModules(all, { categoriaId, search }), [all, categoriaId, search]);
+  const byCategory = useMemo(() => countByCategory(all, categories), [all, categories]);
+  const toReview = useMemo(() => modulesToReview(all), [all]);
+  const totalObservations = toReview.reduce((sum, item) => sum + item.lines.length, 0);
+  const withErrors = all.filter((module) => module.estadoFormulas === "CON_ERRORES").length;
+  const inactive = all.filter((module) => !module.activo).length;
 
   async function duplicate(module: ModuleListItem) {
     setBusyId(module.id);
@@ -321,7 +436,7 @@ export function ModuleCatalogPage() {
           <Typography variant="h4">Catálogo de módulos</Typography>
           <Typography color="text.secondary">Los muebles que se pueden pedir a medida: medidas, piezas, fórmulas y cantos de cada uno.</Typography>
         </Stack>
-        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ flexShrink: 0 }}>
           <Button variant="outlined" startIcon={<SettingsOutlinedIcon />} onClick={() => setConfigOpen(true)}>
             Configuración
           </Button>
@@ -340,15 +455,43 @@ export function ModuleCatalogPage() {
         </Alert>
       )}
 
-      <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
-        <Metric label="Módulos" value={metrics.modulos} />
-        <Metric label="Piezas con fórmula" value={metrics.piezas} />
-        <Metric label="Observaciones para revisar" value={metrics.observaciones} />
-      </Stack>
+      <MetricGrid min={220} sx={{ gridTemplateColumns: { xs: "1fr", sm: "repeat(auto-fit, minmax(220px, 1fr))" } }}>
+        <MetricTile
+          icon={<ViewModuleOutlinedIcon />}
+          label="Módulos"
+          value={modules === null ? "…" : all.length}
+          hint={showInactive ? `${all.length - inactive} ${all.length - inactive === 1 ? "activo" : "activos"} · ${inactive} ${inactive === 1 ? "inactivo" : "inactivos"}` : "Activos, listos para pedir"}
+        />
+        <MetricTile
+          icon={<RateReviewOutlinedIcon />}
+          label="Observaciones para revisar"
+          value={modules === null ? "…" : totalObservations}
+          tone={totalObservations ? "warning" : "success"}
+          hint={toReview.length ? `En ${toReview.length} ${toReview.length === 1 ? "módulo" : "módulos"} · tocá para verlas` : "Nada pendiente"}
+          onClick={() => setObservationsOpen(true)}
+        />
+        <MetricTile
+          icon={<ErrorOutlineRoundedIcon />}
+          label="Con errores en las fórmulas"
+          value={modules === null ? "…" : withErrors}
+          tone={withErrors ? "error" : "success"}
+          hint={withErrors ? "Alguna fórmula no se puede calcular" : "Todas las fórmulas calculan"}
+        />
+      </MetricGrid>
 
-      <Paper sx={{ p: 2, borderRadius: "10px" }}>
+      {modules !== null && byCategory.length > 0 && <CategoryBreakdown items={byCategory} total={all.length} selected={categoriaId} onSelect={setCategoriaId} />}
+
+      <Paper sx={{ p: 2, borderRadius: "14px" }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }}>
-          <TextField select size="small" label="Categoría" value={categoriaId} onChange={(event) => setCategoriaId(event.target.value)} sx={{ minWidth: 220 }}>
+          <TextField
+            select
+            size="small"
+            label="Categoría"
+            value={categoriaId}
+            onChange={(event) => setCategoriaId(event.target.value)}
+            slotProps={{ input: fieldIcon(<CategoryOutlinedIcon />), select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+            sx={{ minWidth: 240 }}
+          >
             <MenuItem value="">Todas</MenuItem>
             {categories.map((category) => (
               <MenuItem key={category.id} value={category.id}>
@@ -356,54 +499,78 @@ export function ModuleCatalogPage() {
               </MenuItem>
             ))}
           </TextField>
-          <TextField size="small" label="Buscar por nombre o código" value={search} onChange={(event) => setSearch(event.target.value)} sx={{ flex: 1 }} />
-          <FormControlLabel control={<Switch checked={showInactive} onChange={(event) => setShowInactive(event.target.checked)} />} label="Mostrar inactivos" />
+          <TextField
+            size="small"
+            label="Buscar por nombre o código"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            slotProps={{ input: fieldIcon(<SearchIcon />) }}
+            sx={{ flex: 1 }}
+          />
+          <FormControlLabel control={<Switch checked={showInactive} onChange={(event) => setShowInactive(event.target.checked)} />} label="Mostrar inactivos" sx={{ flexShrink: 0, mr: 0 }} />
         </Stack>
       </Paper>
 
-      <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+      <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 270px), 1fr))" }}>
         {modules === null
-          ? Array.from({ length: 8 }, (_, index) => <Skeleton key={index} variant="rounded" height={290} />)
-          : modules.map((module) => (
+          ? Array.from({ length: 8 }, (_, index) => <Skeleton key={index} variant="rounded" height={320} sx={{ borderRadius: "14px" }} />)
+          : visible.map((module) => (
               <ModuleCard
                 key={module.id}
                 module={module}
                 onClick={() => navigate(`/configuracion-modulos/${module.id}`)}
+                actionsBar
                 actions={
                   <>
-                    <Button size="small" startIcon={<EditIcon />} onClick={() => navigate(`/configuracion-modulos/${module.id}`)}>
-                      Editar
-                    </Button>
-                    <Button size="small" startIcon={<ContentCopyIcon />} onClick={() => duplicate(module)} disabled={busyId === module.id}>
-                      Duplicar
-                    </Button>
-                    <Button
-                      size="small"
-                      color={module.activo ? "warning" : "success"}
-                      startIcon={module.activo ? <ToggleOffOutlinedIcon /> : <ToggleOnOutlinedIcon />}
+                    <ModuleCardAction icon={<EditOutlinedIcon />} label="Editar" onClick={() => navigate(`/configuracion-modulos/${module.id}`)} />
+                    <ModuleCardAction icon={<ContentCopyIcon />} label="Duplicar" onClick={() => duplicate(module)} disabled={busyId === module.id} />
+                    <ModuleCardAction
+                      icon={module.activo ? <ToggleOffOutlinedIcon /> : <ToggleOnOutlinedIcon />}
+                      label={module.activo ? "Desactivar" : "Activar"}
+                      tone={module.activo ? "error" : "success"}
                       onClick={() => toggleActive(module)}
                       disabled={busyId === module.id}
-                    >
-                      {module.activo ? "Desactivar" : "Activar"}
-                    </Button>
+                    />
                   </>
                 }
               />
             ))}
       </Box>
-      {modules !== null && modules.length === 0 && (
-        <Paper variant="outlined" sx={{ p: 4, textAlign: "center", borderRadius: "10px" }}>
+      {modules !== null && visible.length === 0 && (
+        <Paper variant="outlined" sx={{ p: 4, textAlign: "center", borderRadius: "14px" }}>
           <Typography color="text.secondary" gutterBottom>
             {search || categoriaId ? "No hay módulos que coincidan con el filtro." : "Todavía no hay módulos en el catálogo."}
           </Typography>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate("/configuracion-modulos/nuevo")}>
-            Cargar el primero
-          </Button>
+          {search || categoriaId ? (
+            <Button
+              variant="outlined"
+              startIcon={<FilterAltOffOutlinedIcon />}
+              onClick={() => {
+                setSearch("");
+                setCategoriaId("");
+              }}
+            >
+              Ver todos
+            </Button>
+          ) : (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate("/configuracion-modulos/nuevo")}>
+              Cargar el primero
+            </Button>
+          )}
         </Paper>
       )}
 
       <ConfigDialog open={configOpen} onClose={() => setConfigOpen(false)} onSaved={(message) => setFeedback({ severity: "success", message })} />
       <CategoriesDialog open={categoriesOpen} onClose={() => setCategoriesOpen(false)} categories={categories} onChanged={load} />
+      <ModuleObservationsDialog
+        open={observationsOpen}
+        onClose={() => setObservationsOpen(false)}
+        items={toReview}
+        onEdit={(id) => {
+          setObservationsOpen(false);
+          navigate(`/configuracion-modulos/${id}`);
+        }}
+      />
     </Stack>
   );
 }

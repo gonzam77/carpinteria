@@ -25,6 +25,9 @@ export const deleteModule = async (id: string) => {
 export const evaluateModuleDefinition = async (definicion: Pick<ModuleInput, "parametros" | "piezas" | "espesorDisenoMm" | "herrajes">, valores: Record<string, number> = {}) =>
   (await api.post<ModuleEvaluation>("/modulos/evaluar", { definicion, valores })).data;
 
+/** Las medidas y piezas que existen en el catalogo activo (la ayuda de las formulas por defecto de un herraje). */
+export type FormulaReferences = { medidas: Array<{ nombre: string; detalle: string; modulos: number }>; piezas: Array<{ nombre: string; detalle: string; modulos: number }> };
+export const getFormulaReferences = async () => (await api.get<FormulaReferences>("/modulos/referencias")).data;
 export const listModuleCategories = async () => (await api.get<ModuleCategory[]>("/modulos/categorias")).data;
 export const createModuleCategory = async (data: { nombre: string; orden?: number }) => (await api.post<ModuleCategory>("/modulos/categorias", data)).data;
 export const updateModuleCategory = async (id: string, data: { nombre: string; orden: number; activo: boolean }) =>

@@ -92,6 +92,31 @@ catalogRouter.post(
   })
 );
 
+// ---------------------------------------------------------------- nombres para las formulas
+
+// Las medidas y las piezas que existen en el catalogo, con en cuantos modulos estan (2026-10-13): la ayuda de las
+// formulas por defecto de un herraje las muestra, porque ahi todavia no hay un modulo elegido.
+catalogRouter.get(
+  "/referencias",
+  asyncHandler(async (_req: any, res: any) => {
+    const [parametros, piezas] = await Promise.all([
+      prisma.moduloParametro.groupBy({ by: ["clave"], where: { modulo: { activo: true } }, _count: { _all: true } }),
+      prisma.moduloPieza.groupBy({ by: ["codigo"], where: { modulo: { activo: true } }, _count: { _all: true } })
+    ]);
+    const [etiquetas, nombres] = await Promise.all([
+      prisma.moduloParametro.findMany({ where: { modulo: { activo: true } }, select: { clave: true, etiqueta: true }, distinct: ["clave"], orderBy: { clave: "asc" } }),
+      prisma.moduloPieza.findMany({ where: { modulo: { activo: true } }, select: { codigo: true, nombre: true }, distinct: ["codigo"], orderBy: { codigo: "asc" } })
+    ]);
+    const etiqueta = new Map(etiquetas.map((item) => [item.clave, item.etiqueta]));
+    const nombre = new Map(nombres.map((item) => [item.codigo, item.nombre]));
+    const byCount = (a: { modulos: number; nombre: string }, b: { modulos: number; nombre: string }) => b.modulos - a.modulos || a.nombre.localeCompare(b.nombre);
+    res.json({
+      medidas: parametros.map((item) => ({ nombre: item.clave, detalle: etiqueta.get(item.clave) ?? "", modulos: item._count._all })).sort(byCount),
+      piezas: piezas.map((item) => ({ nombre: item.codigo, detalle: nombre.get(item.codigo) ?? "", modulos: item._count._all })).sort(byCount)
+    });
+  })
+);
+
 // ---------------------------------------------------------------- modulos
 
 catalogRouter.get(

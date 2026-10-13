@@ -1,9 +1,14 @@
 import AddIcon from "@mui/icons-material/Add";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import { Box, Button, FormControlLabel, Paper, Radio, Stack, TextField, Typography } from "@mui/material";
+import BorderStyleIcon from "@mui/icons-material/BorderStyle";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import LabelOutlinedIcon from "@mui/icons-material/LabelOutlined";
+import { Box, Button, Chip, FormControlLabel, Paper, Radio, Stack, TextField } from "@mui/material";
 import type { ModuleDraft } from "../../lib/moduleEditor";
 import type { ModuleProfile } from "../../types";
+import { fieldIcon } from "../fieldIcon";
+import { SectionHeading } from "../SectionHeading";
 
 export function ProfilesTab({
   draft,
@@ -25,20 +30,22 @@ export function ProfilesTab({
 
   return (
     <Stack spacing={2}>
-      <Typography variant="body2" color="text.secondary">
-        Un módulo puede tener uno o dos juegos de cantos (por ejemplo, "Estandar" con canto en todos los lados vistos y "Economico" solo en los frentes). Al
-        cargar la solicitud se elige cuál usar; el predeterminado viene marcado. Los cantos de cada pieza se eligen en la pestaña Despiece y cantos.
-      </Typography>
+      <SectionHeading
+        icon={<BorderStyleIcon />}
+        title="Perfiles de canto"
+        subtitle='Un módulo puede tener uno o dos juegos de cantos (por ejemplo, "Estandar" con canto en todos los lados vistos y "Economico" solo en los frentes). Al cargar la solicitud se elige cuál usar; el predeterminado viene marcado. Los cantos de cada pieza se eligen en la pestaña Despiece y cantos.'
+      />
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
         {perfiles.map((perfil) => (
           <Paper key={perfil.orden} sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: "10px" }}>
             <Stack spacing={1.5}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography fontWeight={800}>{perfil.orden === 1 ? "Perfil A" : "Perfil B"}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {cantosPorPerfil(perfil.orden)} lados con canto
-                </Typography>
-              </Stack>
+              <SectionHeading
+                icon={<BorderStyleIcon />}
+                title={perfil.orden === 1 ? "Perfil A" : "Perfil B"}
+                variant="subtitle1"
+                component="h3"
+                action={<Chip size="small" variant="outlined" color="primary" label={`${cantosPorPerfil(perfil.orden)} lados con canto`} sx={{ fontWeight: 700 }} />}
+              />
               <TextField
                 size="small"
                 label="Nombre"
@@ -46,6 +53,7 @@ export function ProfilesTab({
                 onChange={(event) => patch(perfil.orden, { nombre: event.target.value })}
                 error={!perfil.nombre.trim()}
                 helperText={perfil.nombre.trim() ? " " : "Completá el nombre"}
+                slotProps={{ input: fieldIcon(<LabelOutlinedIcon />) }}
               />
               <TextField
                 size="small"
@@ -54,6 +62,8 @@ export function ProfilesTab({
                 onChange={(event) => patch(perfil.orden, { descripcion: event.target.value })}
                 multiline
                 minRows={2}
+                slotProps={{ input: fieldIcon(<DescriptionOutlinedIcon />) }}
+                sx={{ "& .MuiInputBase-root": { alignItems: "flex-start" }, "& .MuiInputAdornment-root": { mt: 1 } }}
               />
               <FormControlLabel
                 control={
@@ -79,7 +89,7 @@ export function ProfilesTab({
         ))}
         {perfiles.length < 2 && (
           <Paper variant="outlined" sx={{ p: 2.5, borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", borderStyle: "dashed" }}>
-            <Button startIcon={<AddIcon />} onClick={onAddB}>
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={onAddB}>
               Agregar Perfil B
             </Button>
           </Paper>
