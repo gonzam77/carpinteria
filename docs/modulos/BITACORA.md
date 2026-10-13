@@ -41,11 +41,11 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 **Verificaciones:** frontend `npm test` y backend `npm test` (46), `tsc` de los dos y build (con `check:optimizer`) en verde. e2e contra la copia, todas sin fallas: excel-corte-navegador 19/19, f04 12/12, f05 22/22, f23 4/4, f31, f41 10/10, f42 106/106, f43 96/96, f52 43/43, f53 21/21, f55 27/27, f71 25/25, f74 8/8, y de navegador f44, f45 139/139, f51 64/64, f52 40/40, f54 24/24, f61 28/28, f62 20/20, f63 24/24, f64 30/30, f71 17/17, f72 18/18 y f74 5/5. La ventana de error y la del borrador, revisadas en celular (390 px), sin scroll horizontal.
 
-**Commits:** sin commit: los cambios están solo en este equipo, esperando el OK de Gonzalo.
+**Commits:** con el OK de Gonzalo, 5ad76e2 (código y pruebas) y 4d26b0c (documentación), subidos.
 
 **Próximo paso:** que Gonzalo pruebe F7.5 y F7.6; después F6.5 y el listado de herrajes de ROMA.
 
-**Esperando a Gonzalo o a ROMA:** el OK para el commit de F7.6; las respuestas de ROMA sobre los herrajes; P5 y P6.
+**Esperando a Gonzalo o a ROMA:** que Gonzalo pruebe F7.5 y F7.6 en su Docker; las respuestas de ROMA sobre los herrajes; P5 y P6.
 
 ---
 
