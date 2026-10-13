@@ -27,6 +27,34 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-13 (39) · equipo Pinformatico15 · rama main
+
+**Pasos:** F7.7 terminado (rediseño visual, pedido de Gonzalo del 2026-10-13).
+
+**Hecho:**
+- Base común (DECISIONES 67):
+  - el tema: botones con hover, íconos de campos y grillas centradas;
+  - `MetricTile` y `MetricGrid`;
+  - `fieldIcon()` y `SectionHeading`.
+- Ingreso nuevo, sin scroll, con el plano de cortes como motivo, íconos en los campos y mostrar u ocultar la contraseña.
+- Botón (i) de ayuda en cada campo de fórmula: piezas, medidas calculadas, herrajes del módulo y fórmulas por defecto de un herraje (DECISIONES 68). Endpoint nuevo `GET /api/modulos/referencias`.
+- Dashboard en tres pestañas: corte, módulos y stock (DECISIONES 69). `GET /api/stats` suma `corte` y `modulos.topCategorias`.
+- Menú en el orden pedido y las pantallas de DECISIONES 70: Solicitudes de corte, Herrajes, Catálogo, la ficha de módulos y el fondo por defecto en el asistente.
+- Barrido de íconos, botones y orden Volver/Siguiente en formularios, materiales, usuarios, configuración, editor de módulos y diálogos.
+- Trabajo repartido entre tres agentes por pantallas, sin archivos en común, y revisado con capturas a 1440 y 390 px.
+
+**Decisiones nuevas:** 67 a 70.
+
+**Verificaciones:** frontend `npm test` (14 suites, con las nuevas de la ayuda de fórmulas y del catálogo) y backend `npm test` (48), `tsc` de los dos, `check:optimizer` y build en verde, también commit por commit (en un worktree). e2e contra la copia: f61 28/28, f62 20/20, f44 todo ok, f45 139/139, f51 64/64, f52-navegador 40/40, f54 24/24, f63 24/24, f64 30/30, f71 17/17, f72 18/18, f74 5/5 y excel-corte 19/19. Actualizadas: f44 (orden del menú y el Fondo en la barra), f45 (título Acciones) y f51 (métricas arriba). Arreglado por las e2e: el botón (i) se llamaba "Ayuda de fórmulas para <campo>" y buscar el campo por su etiqueta encontraba dos; el rayado de filas tapaba el foco del teclado (se sacó); las columnas del listado de módulos, más angostas para que Plazo y Estado entren en 1024 px; la pista de Buscar, más corta para que entre con el ícono. Una vez f45 dio un error interno de la grilla de MUI mientras carga ("Expected skeleton cells...", una carrera al redimensionar con el esqueleto); en la corrida siguiente, 139/139. Al verificar commit por commit, `git worktree remove --force` falló por una ruta larga y alcanzó a borrar parte de `backend/node_modules` a través del enlace (junction): se reinstaló con `npm ci` (raíz, backend y frontend), se corrió `prisma generate` y se repitieron tsc, tests y build, todo en verde. Para la próxima: borrar los enlaces con `[System.IO.Directory]::Delete(<enlace>, $false)` en PowerShell (el `rmdir` desde Git Bash no los sacó) y recién después borrar la carpeta. Para las e2e el backend tiene que arrancar con `UPLOADS_DIR` apuntando a las imágenes del catálogo; si no, las imágenes dan 404 y las pruebas lo cuentan como error de consola.
+
+**Commits:** Gonzalo pidió ordenar los commits y subirlos a main (2026-10-13): cinco de código por tema (base visual e ingreso; ayuda de fórmulas con Herrajes y Catálogo; dashboard, corte y menú; solicitudes de módulos y asistente; barrido del resto) y uno de documentación. Ver `git log`.
+
+**Próximo paso:** que Gonzalo pruebe F7.5 a F7.7; después F6.5 y el listado de herrajes de ROMA.
+
+**Esperando a Gonzalo o a ROMA:** que Gonzalo pruebe en su Docker; las respuestas de ROMA sobre los herrajes; P5 y P6.
+
+---
+
 ## 2026-10-13 (38) · equipo Pinformatico15 · rama main
 
 **Pasos:** F7.6 terminado (errores en una ventana, pedido de Gonzalo del 2026-10-13).

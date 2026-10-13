@@ -12,9 +12,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 **Actualizado:** 2026-10-13
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.4 está subido (Gonzalo subió F6.4 y el arreglo del build de Docker, b8de29f). F7.5 (las mejoras que pidió el 2026-10-09) está terminado y subido (con el OK de Gonzalo, 2026-10-10). F7.6 (errores en una ventana) está terminado y subido (con el OK de Gonzalo, 2026-10-13). Cada push espera su OK.
-- **Último paso terminado:** F7.6, los errores del sistema en una ventana en el medio (pedido de Gonzalo, 2026-10-13); antes, F7.5 (las 16 mejoras del 2026-10-09). Las Fases 0 a 5 están completas; la 6 (herrajes) sigue con datos de ejemplo hasta que llegue el listado de ROMA.
-- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.5 (pruebas de punta a punta y no regresión de la Fase 6), con lo que diga Gonzalo de F7.5 y F7.6 y el listado de herrajes de ROMA. Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.4 está subido (Gonzalo subió F6.4 y el arreglo del build de Docker, b8de29f). F7.5 (las mejoras que pidió el 2026-10-09) está terminado y subido (con el OK de Gonzalo, 2026-10-10). F7.6 (errores en una ventana) está terminado y subido (con el OK de Gonzalo, 2026-10-13). F7.7 (el rediseño visual) está terminado y subido (Gonzalo pidió ordenar los commits y subirlos, 2026-10-13). Cada push espera su OK.
+- **Último paso terminado:** F7.7, el rediseño visual con la ayuda de las fórmulas y el dashboard en pestañas (pedido de Gonzalo, 2026-10-13); antes, F7.6 (los errores en una ventana) y F7.5 (las 16 mejoras del 2026-10-09). Las Fases 0 a 5 están completas; la 6 (herrajes) sigue con datos de ejemplo hasta que llegue el listado de ROMA.
+- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.5 (pruebas de punta a punta y no regresión de la Fase 6), con lo que diga Gonzalo de F7.5, F7.6 y F7.7 y el listado de herrajes de ROMA. Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
 - **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
 - **Esperando decisiones:** ver §6.
@@ -38,7 +38,7 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [x] |
 | F6 | Herrajes (contratados, DECISIONES 10 y 57) | [~] en curso, con datos de ejemplo |
-| F7.1–F7.6 | Recalcular módulo, pulido, mejoras pedidas y aceptación con ROMA | [~] F7.1, F7.2, F7.4, F7.5 y F7.6 hechos; falta F7.3 (con ROMA) |
+| F7.1–F7.7 | Recalcular módulo, pulido, mejoras pedidas y aceptación con ROMA | [~] F7.1, F7.2, F7.4, F7.5, F7.6 y F7.7 hechos; falta F7.3 (con ROMA) |
 | F8 | Pase a producción (VPS), al final | [ ] |
 
 ---
@@ -672,6 +672,16 @@ Pedido de Gonzalo: con muchos módulos cargados, el aviso del borrador y los err
 - [x] Pantallas: asistente de módulos (validaciones, crear y vista previa), formulario de solicitudes, ingreso, materiales, herrajes, catálogo, editor de módulos, listado de módulos y los dos detalles.
 - [x] El borrador del asistente se pregunta en una ventana al entrar; en el celular, los botones uno abajo del otro.
 - **Pruebas actualizadas:** f44, f45, f51, f52-navegador y f61 (leen la ventana y la cierran con Entendido). Revisado en celular (390 px).
+
+#### F7.7 Rediseño visual (2026-10-13) · [x]
+Pedido de Gonzalo: subir de nivel lo visual en toda la app, con la ayuda de las fórmulas como lo más importante para el usuario final (DECISIONES 67 a 70).
+- [x] Ingreso: sin scroll, con íconos en los campos, mostrar u ocultar la contraseña y el plano de cortes como motivo.
+- [x] Toda la app: métricas (`MetricTile` y `MetricGrid`), grillas centradas con "Acciones", botones con ícono y hover, campos con ícono, Volver a la izquierda y Siguiente a la derecha.
+- [x] Botón (i) en cada campo de fórmula, con todo lo que se puede escribir en ese campo (DECISIONES 68).
+- [x] Dashboard en tres pestañas (corte, módulos y stock), sin la métrica de usuarios y sin scroll en 1440 × 900 (DECISIONES 69).
+- [x] Menú en el orden pedido; indicadores en Solicitudes de corte; Herrajes, Catálogo (lista de observaciones y desglose por categoría), ficha de módulos y el fondo en los colores por defecto del asistente (DECISIONES 70).
+- **Backend:** `GET /api/stats` suma `corte` y `modulos.topCategorias`; nuevo `GET /api/modulos/referencias`. Sin migraciones.
+- **Pruebas nuevas o actualizadas:** `formulaHelp.test.ts`, `moduleCatalog.test.ts`, `moduleOrderWizard.test.ts` (fondo por defecto), `stats-summary.test.ts` (corte y categorías) y e2e-f44 (orden del menú).
 
 #### F7.3 Aceptación con ROMA · [ ]
 La prueba de spec §17.3 completa, incluida la importación real del Excel en la máquina.

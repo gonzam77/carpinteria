@@ -53,6 +53,8 @@ Scripts para comprobar los cálculos y el stock contra una copia restaurada de u
    DATABASE_URL=postgresql://carpinteria:analisis_local@127.0.0.1:55432/carpinteria JWT_SECRET=prueba-local-analisis-0123456789 PORT=4100 PUSH_VAPID_PUBLIC_KEY= PUSH_VAPID_PRIVATE_KEY= WHATSAPP_TOKEN= npx tsx src/server.ts
    ```
 
+   Para las pruebas de navegador, agregar `UPLOADS_DIR=<carpeta con las imágenes del catálogo>` (la que usó el importador): sin eso, las imágenes de los módulos dan 404 y las pruebas lo cuentan como error de consola.
+
 4. En otra terminal, correr `node docs/modulos/herramientas/e2e-f05.mjs`. En Git Bash hay que anteponer `MSYS_NO_PATHCONV=1`.
 
 5. Solo para los `e2e-*-navegador.mjs` (f44, f45, f51, f52, f54, f61, f62, f63, f64, f71, f72, f74 y excel-corte), que manejan el navegador:
