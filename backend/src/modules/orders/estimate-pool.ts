@@ -30,6 +30,7 @@ function getWorker() {
       const request = pending.get(id);
       if (!request) return;
       pending.delete(id);
+      if (pending.size === 0) created.unref();
       if (error !== undefined) request.reject(new Error(error));
       else request.resolve(result!);
     });
@@ -42,7 +43,9 @@ function getWorker() {
       if (worker === created) worker = null;
       if (code !== 0) failAll(new Error(`El hilo del optimizador terminó con el código ${code}.`));
     });
-    // No mantiene vivo el proceso: al apagar el servidor no hay que esperarlo.
+    // Sin calculos pendientes no mantiene vivo el proceso: al apagar el servidor no hay que esperarlo. Con uno pendiente
+    // si (ref en computeOrderEstimateInWorker): un script no tiene un servidor que lo mantenga vivo y Node lo cortaba
+    // a mitad de camino (2026-10-14).
     created.unref();
     worker = created;
     return worker;
@@ -60,6 +63,7 @@ export function computeOrderEstimateInWorker(args: Args): Promise<OrderEstimate>
   return new Promise((resolve, reject) => {
     const id = ++nextId;
     pending.set(id, { resolve, reject });
+    target.ref();
     target.postMessage({ id, args });
   });
 }
