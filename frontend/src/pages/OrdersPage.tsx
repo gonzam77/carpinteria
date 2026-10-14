@@ -26,6 +26,8 @@ import { OrderMaterialsDialog } from "../components/OrderMaterialsDialog";
 import { OrderReceiptDialog } from "../components/OrderReceiptDialog";
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
+import { useErrorDialog } from "../context/ErrorDialogContext";
+import { apiErrorMessage, isSilentApiError } from "../lib/apiError";
 import { CutOrdersStats, DashboardStats, EstadoSolicitud, Order } from "../types";
 
 const statusOptions: EstadoSolicitud[] = ["PENDIENTE", "EN_PROCESO", "TERMINADA", "ENTREGADA", "RECHAZADA"];
@@ -78,8 +80,10 @@ export function OrdersPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.rol === "ADMIN";
+  const { showError } = useErrorDialog();
   // Los indicadores del encabezado (2026-10-13), solo para el administrador: salen del tablero (GET /api/stats). Si el
-  // servidor todavia no los manda, la pantalla sigue igual, sin indicadores.
+  // servidor todavia no los manda, la pantalla sigue igual, sin indicadores. Si el pedido falla, se avisa (2026-10-14):
+  // en silencio, los indicadores desaparecian sin que nadie supiera por que.
   const [cutStats, setCutStats] = useState<CutOrdersStats | null>(null);
 
   async function loadOrders(nextStatus = status) {
@@ -92,7 +96,14 @@ export function OrdersPage() {
     api
       .get<DashboardStats>("/stats")
       .then((response) => setCutStats(response.data.corte ?? null))
-      .catch(() => undefined);
+      .catch((error) => {
+        if (isSilentApiError(error)) return;
+        showError({
+          title: "No se pudieron cargar los indicadores",
+          message: apiErrorMessage(error, "El servidor no pudo calcular los indicadores. Intentá de nuevo."),
+          actions: [{ label: "Reintentar", onClick: loadStats }]
+        });
+      });
   }
 
   useEffect(() => {
