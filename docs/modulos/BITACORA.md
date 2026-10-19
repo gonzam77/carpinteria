@@ -27,6 +27,49 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-19 (41) · equipo Pinformatico15 · rama main
+
+**Pasos:** F6.5 terminado, y con él la Fase 6. Solo queda F7.3, la aceptación con ROMA.
+
+**Hecho:**
+- Commit de la documentación del cierre de la sesión 40 (`88927df`). Gonzalo lo subió.
+- `e2e-f65-navegador.mjs` (nueva), 40/40 sobre la copia `carpinteria-analisis-db`, con datos de ejemplo (DECISIONES 71). Usa una copia activa de `BAJO_MESADA_2_PUERTAS` y la Alacena 2 puertas, que no tiene herrajes.
+  - **Prendidos:**
+    - en el editor del catálogo, la bisagra y la corredera por medida, con sus fórmulas por defecto;
+    - el asistente con los dos módulos: los herrajes salen solo en el que los tiene;
+    - el total con herrajes es el mismo en el resumen, el alta, el detalle, el listado y el dashboard (`presupuestoActivo`);
+    - la hoja de taller tiene una sola tabla de herrajes;
+    - el presupuesto de placas es igual al de corte con las mismas filas.
+  - **Apagados, con el interruptor de la pantalla:**
+    - el asistente avisa y no los cobra;
+    - la misma solicitud da las mismas placas, el mismo presupuesto de placas, el mismo Excel de la máquina (sin código de barra ni cliente) y el mismo `materiales.xlsx`;
+    - el editor del módulo avisa y conserva las líneas;
+    - la solicitud que ya los tenía los muestra y los cobra (detalle y taller), y editarle el teléfono los conserva, también en el comprobante.
+  - **Prendidos otra vez:**
+    - ajustar la bisagra en la edición actualiza el comprobante y el detalle;
+    - recalcular el módulo 1 con profundidad 400 cambia a la corredera de 350 y no toca las piezas del módulo 2;
+    - En proceso reserva exactamente las placas de cada material, después pasa a Terminada y a Entregada (con el historial), y la entregada sale del presupuesto en curso.
+- Sin cambios en el código de la app: no salió ninguna falla.
+- LEEME de herramientas y PLAN (§1, tabla, Fase 6 y F6.5).
+- Las imágenes del catálogo no estaban en este equipo. Se rearmaron en una carpeta temporal desde `docs/modulos/imagenes`, con los nombres de `modulos_imagen.archivo`, y el backend de las e2e arrancó con `UPLOADS_DIR` apuntando ahí.
+
+**Quedó a medias (si aplica):** nada.
+
+**Decisiones nuevas:** ninguna.
+
+**Verificaciones:**
+- frontend `npm test` 147/147 (14 suites) y backend `npm test` 49/49;
+- `check:optimizer`, `tsc` de los dos y build, en verde;
+- e2e contra la copia: f65 40/40, f61 28/28, f62 20/20, f63 24/24, f64 30/30, f55 27/27, f71 25/25, f71-navegador 17/17, f51 64/64 y f44 todo ok.
+
+**Commits:** `88927df` (docs del cierre de la sesión 40, subido) y `24f6d3a` (F6.5), subido con el OK de Gonzalo. La documentación de este cierre va en un commit aparte.
+
+**Próximo paso:** confirmar que la VPS tiene `fb15148`. Después, F7.3 en producción con ROMA, cuando hayan cargado sus herrajes en Configuración › Herrajes y en el Catálogo de módulos: la prueba de spec §17.3, incluido el Excel en la máquina.
+
+**Esperando a Gonzalo o a ROMA:** que ROMA cargue sus herrajes y haga la aceptación (F7.3); P5 y P6. En este equipo siguen el contenedor `carpinteria-backup-1014` (borrar cuando diga Gonzalo) y el backup del 2026-10-14, que tiene datos de clientes.
+
+---
+
 ## 2026-10-14 (40) · equipo Pinformatico15 · rama main
 
 **Pasos:** F8 terminado (pase a producción, hecho por Gonzalo; DECISIONES 72). F6.5 y F7.3 siguen pendientes.
