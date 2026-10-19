@@ -27,6 +27,43 @@ Una entrada por sesión, la más reciente arriba. La completa la sesión al cerr
 
 ---
 
+## 2026-10-14 (40) · equipo Pinformatico15 · rama main
+
+**Pasos:** F8 terminado (pase a producción, hecho por Gonzalo; DECISIONES 72). F6.5 y F7.3 siguen pendientes.
+
+**Hecho:**
+- Análisis de los logs de la VPS: Gonzalo había desplegado `7e4bf39` y la API aplicó las 11 migraciones nuevas sin errores.
+- Dos problemas en producción con la misma causa, `GET /api/stats`, que pasaba de 60 s:
+  - el dashboard mostraba "Se cortó la conexión con el servidor";
+  - Solicitudes de corte no mostraba los indicadores, y no avisaba nada.
+- La causa fue que faltaba `pedidos:completar-detalle`. Había 51 pedidos sin `estimacionDetalle` (34 pendientes), y el tablero los recalculaba con el optimizador en cada carga (DECISIONES 0.12).
+- El script se cortaba con `unsettled top-level await`: el hilo del optimizador (`estimate-pool.ts`) estaba con `unref()`, y un script no tiene un servidor que lo mantenga vivo. En la VPS se corrió con un `setInterval` que lo mantiene vivo. Arreglado en `computeOrderEstimateInWorker`: `ref()` mientras hay un cálculo pendiente y `unref()` cuando no queda ninguno. Test nuevo, `estimate-pool.test.ts`, que falla sin el arreglo.
+- `OrdersPage.loadStats`: si `/api/stats` falla, ahora abre la ventana de errores con Reintentar (DECISIONES 66). El 401 y un servidor sin `corte` siguen sin aviso.
+- En la VPS:
+  - importador del catálogo (`node dist/prisma/seed-modulos.js`): 33 módulos, 11 imágenes en el volumen y el fondo "Fibroplus blanco" de 3 mm;
+  - backups comprobados con `pg_restore`.
+- Recálculo (`pedidos:recalcular`) sobre una copia del backup de las 16:00, en el contenedor descartable `carpinteria-backup-1014` (127.0.0.1:55433):
+  - 61 pedidos, 5 con otra cantidad de placas que su constancia;
+  - 3 abiertos: `4ee1d33c` 4 → 5, `7f59459f` 5 → 4 y `c0c388ac` 8 → 9, este último con reserva forzada;
+  - las reservas viejas que se devuelven recalculando coinciden;
+  - Gonzalo decidió dejarlos como están (DECISIONES 73).
+- Gonzalo decidió que los herrajes reales los carga ROMA desde el sistema (DECISIONES 71).
+- PLAN: §1, tabla, F6.5, F8 hecho y §7, con el backup con `-T` y cómo correr los scripts en la VPS.
+
+**Quedó a medias (si aplica):** nada en el código. Falta confirmar que la VPS tiene `fb15148`: hay que hacer `git pull` y `docker compose up -d --build api web` si no lo tiene.
+
+**Decisiones nuevas:** DECISIONES 71, 72 y 73.
+
+**Verificaciones:** frontend `npm test` 147/147 (14 suites), backend `npm test` 49/49 (con el nuevo `estimate-pool.test.ts`), `check:optimizer`, `tsc` de los dos y build, todo en verde. La ventana de los indicadores no se probó en el navegador.
+
+**Commits:** `15aa145` (el hilo del optimizador mantiene vivo el proceso) y `fb15148` (aviso de los indicadores), subidos con el OK de Gonzalo. La documentación de este cierre está en un commit aparte.
+
+**Próximo paso:** confirmar `fb15148` en la VPS. Después, F6.5 en local con datos de ejemplo, empezando por una e2e de punta a punta de herrajes (catálogo, alta, edición, recalcular y taller) y la no regresión con los herrajes apagados. En paralelo, F7.3 con ROMA en producción.
+
+**Esperando a Gonzalo o a ROMA:** que ROMA cargue sus herrajes y haga la aceptación (F7.3); P5 y P6. En este equipo quedan el contenedor `carpinteria-backup-1014` (borrar cuando Gonzalo diga) y `Downloadsackup-2026-10-14-1600.dump`, que tiene datos de clientes.
+
+---
+
 ## 2026-10-13 (39) · equipo Pinformatico15 · rama main
 
 **Pasos:** F7.7 terminado (rediseño visual, pedido de Gonzalo del 2026-10-13).

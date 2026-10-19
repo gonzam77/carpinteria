@@ -10,13 +10,13 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 
 ## 1. Estado actual
 
-**Actualizado:** 2026-10-13
+**Actualizado:** 2026-10-14
 
-- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.4 está subido (Gonzalo subió F6.4 y el arreglo del build de Docker, b8de29f). F7.5 (las mejoras que pidió el 2026-10-09) está terminado y subido (con el OK de Gonzalo, 2026-10-10). F7.6 (errores en una ventana) está terminado y subido (con el OK de Gonzalo, 2026-10-13). F7.7 (el rediseño visual) está terminado y subido (Gonzalo pidió ordenar los commits y subirlos, 2026-10-13). Cada push espera su OK.
-- **Último paso terminado:** F7.7, el rediseño visual con la ayuda de las fórmulas y el dashboard en pestañas (pedido de Gonzalo, 2026-10-13); antes, F7.6 (los errores en una ventana) y F7.5 (las 16 mejoras del 2026-10-09). Las Fases 0 a 5 están completas; la 6 (herrajes) sigue con datos de ejemplo hasta que llegue el listado de ROMA.
-- **Próximo paso:** **Fase 6**, herrajes, con datos de ejemplo hasta que llegue el listado de ROMA (DECISIONES 57). Sigue F6.5 (pruebas de punta a punta y no regresión de la Fase 6), con lo que diga Gonzalo de F7.5, F7.6 y F7.7 y el listado de herrajes de ROMA. Después quedan **F7.3**, la aceptación con ROMA, y **F8**, el pase a producción, que hace Gonzalo.
+- **Rama:** `main`, porque se trabaja directo sobre main (ver §4). Todo lo hecho hasta F6.4 está subido (Gonzalo subió F6.4 y el arreglo del build de Docker, b8de29f). F7.5 (las mejoras que pidió el 2026-10-09) está terminado y subido (con el OK de Gonzalo, 2026-10-10). F7.6 (errores en una ventana) está terminado y subido (con el OK de Gonzalo, 2026-10-13). F7.7 (el rediseño visual) está terminado y subido (Gonzalo pidió ordenar los commits y subirlos, 2026-10-13). Los arreglos del pase a producción (15aa145 y fb15148) están subidos (con el OK de Gonzalo, 2026-10-14). Cada push espera su OK.
+- **Último paso terminado:** F8, el pase a producción: Gonzalo desplegó `7e4bf39` en la VPS el 2026-10-14, y en la sesión se completó el detalle de los pedidos viejos, se importó el catálogo y se arreglaron el script del detalle y el aviso de los indicadores (DECISIONES 72). Antes, F7.7, el rediseño visual con la ayuda de las fórmulas y el dashboard en pestañas (pedido de Gonzalo, 2026-10-13); antes, F7.6 (los errores en una ventana) y F7.5 (las 16 mejoras del 2026-10-09). Las Fases 0 a 5 están completas; de la 6 (herrajes) falta F6.5. Los herrajes reales los carga ROMA desde el sistema (DECISIONES 71).
+- **Próximo paso:** confirmar que la VPS tiene `fb15148` (`git log --oneline -1` y `docker compose up -d --build api web` si no). Después, **F6.5** (pruebas de punta a punta y no regresión de la Fase 6, en local y con datos de ejemplo) y **F7.3**, la aceptación con ROMA, que ahora se hace en producción.
 - **Para mandar a ROMA:** `docs/modulos/revision-roma/planilla-revision-catalogo.xlsx`.
-- **Producción:** la VPS **no se toca hasta terminar y probar todo**. Lo decidió Gonzalo el 2026-10-02. Mientras tanto se desarrolla y se prueba en local, con Docker y PostgreSQL (§3.1). El pase a producción es el paso F8.
+- **Producción:** desde el 2026-10-14 la VPS corre la versión con módulos y herrajes (F8, DECISIONES 72). Se sigue desarrollando y probando en local (§3.1), y cada actualización de la VPS la hace Gonzalo: backup con `docker compose exec -T` (§7), `git pull` y `docker compose up -d --build api web`. Los pedidos que dan otra cantidad de placas que su constancia se dejan como están (DECISIONES 73).
 - **Esperando decisiones:** ver §6.
 
 | Paso | Qué | Estado |
@@ -37,9 +37,9 @@ Fuente de verdad del avance. Cualquier sesión, en cualquier computadora, arranc
 | F4.1–F4.5 | API, asistente y listado de solicitudes de módulos | [x] |
 | F4.6–F4.7 | Tildes, colores de estado, sin Remark y cantos por pieza | [x] |
 | F5.1–F5.5 | Detalle, edición, Excel, hoja de taller, no regresión | [x] |
-| F6 | Herrajes (contratados, DECISIONES 10 y 57) | [~] en curso, con datos de ejemplo |
+| F6 | Herrajes (contratados, DECISIONES 10, 57 y 71) | [~] falta F6.5; los herrajes reales los carga ROMA |
 | F7.1–F7.7 | Recalcular módulo, pulido, mejoras pedidas y aceptación con ROMA | [~] F7.1, F7.2, F7.4, F7.5, F7.6 y F7.7 hechos; falta F7.3 (con ROMA) |
-| F8 | Pase a producción (VPS), al final | [ ] |
+| F8 | Pase a producción (VPS) | [x] 2026-10-14 (DECISIONES 72) |
 
 ---
 
@@ -615,6 +615,7 @@ Los resultados están en DECISIONES 0.2, 0.5 y 0.6. Los scripts de esa medición
     - **Hecho (2026-10-09):** `OrderHardwareEditor` en el Resumen de la edición (`OrderFormPage`, con su borrador) y `lib/moduleOrderHardwareEdit.ts`; el `PUT` recibe `herrajes` y los resuelve con `resolveHardwareEdit` (compartido); `POST /api/pedidos-modulos/:id/herrajes/recalcular` con `catalogModuleHardware`; el comprobante suma los herrajes editados; el diálogo de recalcular un módulo avisa los herrajes ajustados que se pierden; la hoja de taller tiene la tabla de herrajes. `hardwareCost` pasó a `orderEstimate.ts`. La carga de la edición se cancela si llega tarde (no pisa lo que se está editando). Pruebas: tests (frontend 12 suites, backend 41) y e2e-f64-navegador 30/30 (nueva); sin fallas f63-navegador 21/21, f04, f05, f42, f43, f52 43/43, f53 21/21, f55 26/26, f71 25/25 y los de navegador f44, f45 139/139, f51 63/63, f52 40/40, f54 23/23, f61 28/28, f62 15/15, f71 17/17, f72 18/18 y f74 5/5 (DECISIONES 57).
     - **Tener en cuenta para F6.5:** los datos de herrajes son de ejemplo (DECISIONES 57): cuando llegue el listado de ROMA, cargarlo en Configuración › Herrajes y armar las líneas de los módulos reales. Las e2e de la fase son f61, f62, f63 y f64; F6.5 puede sumar una de punta a punta con el flujo completo (catálogo, alta, edición, recalcular y taller) y la no regresión con los herrajes apagados.
   - **F6.5** · [ ] Pruebas de punta a punta y no regresión.
+    - **Tener en cuenta:** los herrajes reales los carga ROMA desde Configuración › Herrajes y el Catálogo de módulos (DECISIONES 71): F6.5 no espera ningún listado y se prueba en local con datos de ejemplo. En producción, Herrajes está vacío hasta que ROMA cargue lo suyo.
 - **Contratada** (Gonzalo, 2026-10-07, DECISIONES 10). Las reglas reales de cada herraje las pasa ROMA.
 - **Tener en cuenta (de F5.4):** ~~la hoja de taller todavía no tiene la sección de herrajes~~ Hecho en F6.4.
 - **Hacer:** lo de spec §12 y §13.4, detrás de `herrajesHabilitados`. Las cantidades se redondean con la misma tolerancia que `roundMm` (DECISIONES R7). Las reglas reales las tiene que pasar ROMA.
@@ -688,7 +689,7 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 
 ---
 
-### Fase 8: Pase a producción · [ ] al final
+### Fase 8: Pase a producción · [x] (2026-10-14)
 - **Depende de:** todas las fases anteriores, probadas en local por Gonzalo.
 - **Hacer:**
   1. Hacer un backup reciente de producción y restaurarlo en local (§7). Desde esta versión, el backup incluye la base y el volumen de imágenes `uploads_data`.
@@ -700,6 +701,11 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
      Después de desplegar, correr `pedidos:completar-detalle` y el importador del catálogo (`prisma:seed:modulos:prod`) contra la base de producción.
   6. Si algo falla: volver al backup y a la versión anterior.
 - **Terminado cuando:** producción corre la versión nueva y los pedidos existentes muestran lo mismo que en la prueba local.
+- **Hecho (2026-10-14):** Gonzalo desplegó `7e4bf39` (hasta F7.7) en la VPS, antes de F6.5 y F7.3 (DECISIONES 72). La API aplicó las 11 migraciones nuevas sin errores. Lo que faltaba del paso 5 se hizo en la sesión del 2026-10-14:
+  - `pedidos:completar-detalle`: había 51 pedidos sin detalle (34 pendientes), y por eso `GET /api/stats` pasaba de 60 s. El dashboard mostraba "Se cortó la conexión con el servidor", y Solicitudes de corte no mostraba los indicadores, sin aviso. El script se cortaba con `unsettled top-level await` porque el hilo del optimizador no mantenía vivo el proceso (arreglado en `15aa145`); se corrió con un `setInterval` que lo mantiene vivo.
+  - Importador del catálogo (`node dist/prisma/seed-modulos.js`): 33 módulos, 11 imágenes en el volumen y el fondo "Fibroplus blanco" de 3 mm.
+  - `pedidos:recalcular` sobre una copia del backup de las 16:00 (61 pedidos): 5 dan otra cantidad de placas que su constancia, y de ellos, 3 están abiertos: `4ee1d33c` (pendiente, 4 → 5), `7f59459f` (pendiente, 5 → 4) y `c0c388ac` (en proceso, 8 → 9, con reserva vieja forzada, así que no mueve stock). Los 4 pedidos con reserva vieja que se devuelve recalculando coinciden. Se dejan como están (DECISIONES 73).
+  - Falta confirmar que la VPS tiene `fb15148` (el aviso de los indicadores).
 
 ## 6. Decisiones pendientes (de Gonzalo o de ROMA)
 
@@ -725,6 +731,8 @@ La prueba de spec §17.3 completa, incluida la importación real del Excel en la
 ## 7. Datos de producción
 
 - **Imágenes de los módulos:** están en el volumen `uploads_data` (en local, en `backend/uploads/`). El backup de producción tiene que incluir ese volumen además de la base (DECISIONES 12).
+- **Backup de producción, en la VPS y desde `~/carpinteria`:** `docker compose exec -T db pg_dump -U carpinteria -d carpinteria -Fc > ~/backup-$(date +%F-%H%M).dump`. Sin `-T`, Docker abre una terminal y puede alterar el archivo binario. Para comprobar que se lee entero: `docker compose exec -T db pg_restore -f /dev/null < <archivo>`. Se baja con `scp`, que se corre en la computadora local y no en la VPS.
+- **Scripts en la VPS:** la imagen de producción no tiene `tsx` ni `src/`; se corre lo compilado, por ejemplo `docker compose exec api node dist/src/scripts/completar-detalle-pedidos.js` o `docker compose exec api node dist/prisma/seed-modulos.js`. `pedidos:recalcular` se corre sobre una copia en local, no sobre producción.
 - **Los backups no se versionan nunca:** tienen nombres y teléfonos de clientes, y están en `.gitignore`. Se piden a Gonzalo y se guardan fuera del repo.
 - **Se restauran solo en un contenedor local descartable**, nunca sobre la base del docker-compose ni sobre producción. En PowerShell:
 
