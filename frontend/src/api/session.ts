@@ -175,7 +175,11 @@ export function refreshToken() {
 export async function ensureFreshToken() {
   const token = getToken();
   if (!token) return null;
-  if (!isTokenAlive(token)) return null;
+  // Vencido no es lo mismo que perdido: el servidor todavia renueva un token
+  // vencido hace poco. Es el caso del celular que durmio con la app abierta y,
+  // al volver, recarga la pagina con el token ya muerto: antes caia derecho al
+  // login y el formulario se perdia.
+  if (!isTokenAlive(token)) return refreshToken();
   if (!needsRefresh(token)) return token;
 
   return (await refreshToken()) ?? token;

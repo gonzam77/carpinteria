@@ -13,7 +13,7 @@ import axios from "axios";
 import { Alert, Box, Button, IconButton, InputAdornment, Link as MuiLink, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { alpha, keyframes } from "@mui/material/styles";
 import { FormEvent, useEffect, useState } from "react";
-import { Navigate, Link as RouterLink, useNavigate } from "react-router-dom";
+import { Navigate, Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { fieldIcon } from "../components/fieldIcon";
 import { useAuth } from "../context/AuthContext";
 import { useErrorDialog } from "../context/ErrorDialogContext";
@@ -103,6 +103,9 @@ function CutPlanArt({ compact = false }: { compact?: boolean }) {
 export function LoginPage({ mode }: { mode: "google" | "admin" }) {
   const { login, loginWithGoogle, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Donde estaba cuando lo mandaron a ingresar (lo deja ProtectedRoute).
+  const from = (location.state as { from?: string } | null)?.from;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -124,7 +127,7 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
     return fallback;
   }
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={from ?? "/"} replace />;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -132,7 +135,7 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate("/");
+      navigate(from ?? "/", { replace: true });
     } catch (err) {
       setError(getErrorMessage(err, "Email o contraseña incorrectos"));
     } finally {
@@ -256,7 +259,7 @@ export function LoginPage({ mode }: { mode: "google" | "admin" }) {
                       if (!response.credential) return;
                       try {
                         await loginWithGoogle(response.credential);
-                        navigate("/solicitar");
+                        navigate(from ?? "/solicitar", { replace: true });
                       } catch (err) {
                         setError(getErrorMessage(err, "Google inició sesión correctamente, pero la API rechazó el acceso"));
                       }

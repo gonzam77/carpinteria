@@ -216,17 +216,28 @@ export function useFormDraft<T>(
     setPendingDraft(null);
   }, [storageKey]);
 
-  /** Se guardo en el servidor: el borrador ya no tiene sentido. */
-  const clearDraft = useCallback(() => {
-    setFinished(true);
-    storeRef.current = false;
-    written.current = false;
-    if (storageKey) {
-      removeKey(storageKey);
-      removeKey(`${storageKey}${LIVE_SUFFIX}`);
-    }
-    setPendingDraft(null);
-  }, [storageKey]);
+  /**
+   * Se guardo en el servidor: lo que se venia escribiendo ya no hace falta.
+   *
+   * Con `keepPending`, un borrador anterior que se ofrecio y nadie recupero ni
+   * descarto queda intacto: es OTRO trabajo, no lo que se acaba de guardar.
+   * Borrarlo aca era justamente como se perdia una solicitud: vencia la sesion,
+   * la persona volvia, ignoraba el aviso, cargaba otra y al enviarla se llevaba
+   * puesta la primera.
+   */
+  const clearDraft = useCallback(
+    (options: { keepPending?: boolean } = {}) => {
+      setFinished(true);
+      storeRef.current = false;
+      written.current = false;
+      if (storageKey) {
+        removeKey(`${storageKey}${LIVE_SUFFIX}`);
+        if (!(options.keepPending && pendingDraft)) removeKey(storageKey);
+      }
+      setPendingDraft(null);
+    },
+    [pendingDraft, storageKey]
+  );
 
   /**
    * Guarda ya, sin esperar la pausa: para un dato que importa aunque se salga de la pantalla enseguida (por ejemplo,

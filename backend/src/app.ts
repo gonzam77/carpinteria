@@ -38,7 +38,11 @@ app.use(
   })
 );
 app.use(express.json({ limit: "2mb" }));
-app.use(morgan("dev"));
+// Fecha y usuario en cada linea: sin eso no hay forma de cruzar el log con lo
+// que cuenta un usuario ni con el log del proxy. `req.user` lo completa
+// `authenticate` mas adelante, pero morgan escribe al terminar la respuesta.
+morgan.token("user", (req: any) => req.user?.id ?? "-");
+app.use(morgan(":date[iso] :method :url :status :response-time ms - :res[content-length] user=:user"));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRouter);

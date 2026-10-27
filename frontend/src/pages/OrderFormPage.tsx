@@ -558,8 +558,11 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
         }
       }
 
-      // Guardado en el servidor: el borrador local ya no tiene sentido.
-      clearDraft();
+      // Guardado en el servidor: el borrador local ya no tiene sentido. En una
+      // solicitud nueva, el borrador anterior que se ofrecio y no se recupero es
+      // otra solicitud distinta y se conserva. En edicion es una version vieja
+      // de este mismo pedido, y ofrecerla despues pisaria lo recien guardado.
+      clearDraft({ keepPending: !id });
       setPreviewOrder(null);
       navigate(user?.rol === "ADMIN" ? `/pedidos/${response.data.id}` : "/mis-solicitudes", {
         state: { notification: id ? "Solicitud de corte actualizada correctamente." : "Solicitud de corte enviada correctamente." }
@@ -824,6 +827,13 @@ export function OrderFormPage({ kind = "CORTE" }: { kind?: OrderFormKind }) {
               variant="outlined"
               startIcon={<CloseIcon />}
               onClick={() => {
+                if (
+                  baseline !== null &&
+                  contentKey !== baseline &&
+                  !window.confirm("Tenés cambios sin guardar en esta solicitud. ¿Salir sin guardarlos?")
+                ) {
+                  return;
+                }
                 cancelPreview();
                 if (modules) navigate(moduleDetailPath, { state: { returnTo: moduleListReturnTo } });
                 else navigate(returnTo);

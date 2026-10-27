@@ -141,9 +141,38 @@ authRouter.put(
   })
 );
 
+/**
+ * Como `authenticate`, pero acepta un token vencido hace menos de
+ * REFRESH_GRACE_HOURS. Solo para /refresh: la firma se sigue validando, y el
+ * tope de SESSION_MAX_HOURS se controla igual dentro de la ruta.
+ */
+function authenticateForRefresh(req: any, _res: any, next: any) {
+  const header = req.headers.authorization;
+  const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
+
+  if (!token) {
+    throw new AppError(401, "Token requerido");
+  }
+
+  let payload: { id: string; email: string; rol: Rol; ses?: number; exp?: number };
+
+  try {
+    payload = jwt.verify(token, env.JWT_SECRET, { ignoreExpiration: true }) as typeof payload;
+  } catch {
+    throw new AppError(401, "Token invalido");
+  }
+
+  if (typeof payload.exp !== "number" || payload.exp * 1000 + env.REFRESH_GRACE_HOURS * 60 * 60 * 1000 < Date.now()) {
+    throw new AppError(401, "La sesion expiro");
+  }
+
+  req.user = payload;
+  next();
+}
+
 authRouter.post(
   "/refresh",
-  authenticate,
+  authenticateForRefresh,
   asyncHandler(async (req: any, res: any) => {
     // Renovacion deslizante: mientras el usuario trabaja, el front pide un token
     // nuevo antes de que venza el actual. Releemos el usuario de la base para que

@@ -11,6 +11,11 @@ const envSchema = z.object({
    *  aunque se la venga renovando. Sin esto la renovacion deslizante mantendria
    *  una sesion viva para siempre. */
   SESSION_MAX_HOURS: z.coerce.number().positive().default(24),
+  /** Cuanto despues de vencido se puede todavia renovar un token. Cubre al
+   *  celular que durmio con la app abierta y vuelve con el token ya muerto: sin
+   *  esto lo mandabamos al login y perdia lo que estaba cargando. Nunca pasa
+   *  por encima de SESSION_MAX_HOURS. */
+  REFRESH_GRACE_HOURS: z.coerce.number().min(0).default(12),
   PORT: z.coerce.number().default(4000),
   FRONTEND_URL: z.string().default("http://127.0.0.1:5173"),
   GOOGLE_CLIENT_ID: z.string().optional().default(""),

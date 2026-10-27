@@ -188,6 +188,13 @@ export function OrderReceiptDialog({
             {errorMessage}
           </Alert>
         )}
+        {/* Hubo quien vio la constancia, la imprimio y se fue creyendo que ya
+            estaba guardada. */}
+        {onConfirm && confirmLabel && !errorMessage && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Esta es una vista previa: todavía no se guardó. Para enviarla tocá <strong>{confirmLabel}</strong>.
+          </Alert>
+        )}
         <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: "12px", background: "linear-gradient(180deg, #fffef9 0%, #ffffff 100%)", border: "1px solid", borderColor: "divider" }}>
           <Stack spacing={3}>
             {loadError && <Alert severity="error">{loadError}</Alert>}
@@ -293,7 +300,8 @@ export function OrderReceiptDialog({
           Cerrar
         </Button>
         <Button variant="outlined" startIcon={<PrintOutlinedIcon />} onClick={handlePrint} disabled={loading || Boolean(loadError)}>
-          Imprimir / Guardar PDF
+          {/* En la vista previa "Guardar" al lado de "Confirmar" se leia como guardar la solicitud. */}
+          {onConfirm ? "Imprimir / PDF" : "Imprimir / Guardar PDF"}
         </Button>
         {onConfirm && confirmLabel ? (
           <Button variant="contained" startIcon={<CheckIcon />} onClick={onConfirm} disabled={loading || Boolean(loadError) || confirmLoading}>
