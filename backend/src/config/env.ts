@@ -33,7 +33,10 @@ const parsedEnv = envSchema.parse(process.env);
 
 export const env = {
   ...parsedEnv,
+  /** Lista de origenes permitidos por CORS. Se compara ENTERA contra el header
+   *  Origin, que nunca trae barra final, asi que se la sacamos aca: si no, un
+   *  FRONTEND_URL="https://app.com/" rechazaria todos los pedidos. */
   FRONTEND_URLS: parsedEnv.FRONTEND_URL.split(",")
-    .map((origin) => origin.trim())
+    .map((origin) => origin.trim().replace(/\/+$/, ""))
     .filter(Boolean)
 };

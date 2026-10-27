@@ -220,6 +220,53 @@ ordersRouter.put(
   })
 );
 
+// Unica forma de mover el presupuesto congelado de un pedido sin editarlo: un ajuste de precios o de la
+// configuracion del optimizador no le cambia el total a un pedido ya presupuestado hasta que un admin lo pide.
+ordersRouter.post(
+  "/:id/recalcular-presupuesto",
+  authorize(Rol.ADMIN),
+  asyncHandler(async (req: any, res: any) => {
+    const existing = await prisma.pedido.findFirst({
+      where: { id: req.params.id, ...orderAccessWhere(req.user) },
+      include: { detalles: DETALLES_ORDENADOS }
+    });
+    if (!existing) throw new AppError(404, "Pedido no encontrado");
+    if (existing.tipo === TipoPedido.MODULOS) {
+      throw new AppError(400, "Esta solicitud es de módulos a medida: su presupuesto se recalcula desde Solicitudes de módulos.", { code: "ORDER_IS_MODULES" });
+    }
+    // Con stock descontado, el listado de materiales y la devolucion se apoyan en lo reservado: mover el
+    // snapshot por debajo dejaria dos verdades distintas para el mismo pedido. Mismo criterio que editar.
+    if (hasStockCommitment(existing)) {
+      throw new AppError(409, "La solicitud tiene stock descontado. Pasala a pendiente antes de recalcular el presupuesto.");
+    }
+
+    const estimateSnapshot = await buildOrderEstimateSnapshot(prisma as any, existing.detalles as any);
+
+    const order = await prisma.$transaction(async (tx) => {
+      // Si el pedido cambio entre la lectura y la escritura (otra edicion, un cambio de estado), 409: el
+      // snapshot se calculo sobre filas que ya no son las del pedido.
+      const claimed = await tx.pedido.updateMany({
+        where: { id: existing.id, fechaActualizacion: existing.fechaActualizacion },
+        data: estimateSnapshot as any
+      });
+      if (claimed.count !== 1) {
+        throw new AppError(409, "La solicitud cambió mientras tanto. Recargá la página y volvé a intentar.", { code: "ORDER_CHANGED" });
+      }
+      await tx.historialPedido.create({
+        data: {
+          pedidoId: existing.id,
+          usuarioId: req.user.id,
+          accion: "RECALCULAR_PRESUPUESTO",
+          valorAnterior: existing.presupuestoEstimado.toFixed(2),
+          valorNuevo: estimateSnapshot.presupuestoEstimado.toFixed(2)
+        }
+      });
+      return tx.pedido.findUniqueOrThrow({ where: { id: existing.id }, include: { detalles: DETALLES_ORDENADOS } });
+    });
+    res.json(order);
+  })
+);
+
 ordersRouter.patch(
   "/:id/status",
   authorize(Rol.ADMIN),

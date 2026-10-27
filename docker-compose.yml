@@ -26,13 +26,17 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://carpinteria:carpinteria@db:5432/carpinteria?schema=public
+      # DATABASE_URL se arma con las MISMAS variables que el servicio db. Estaba
+      # hardcodeada: si alguien seguia .env.example (POSTGRES_PASSWORD=change-me)
+      # Postgres arrancaba con esa clave y la API no se podia conectar. Hoy anda
+      # solo porque el volumen ya quedo inicializado con la clave por defecto.
+      # Si la clave lleva @ : / o ? hay que percent-encodearla o la URL se rompe.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-carpinteria}:${POSTGRES_PASSWORD:-carpinteria}@db:5432/${POSTGRES_DB:-carpinteria}?schema=public
       JWT_SECRET: ${JWT_SECRET:-cambiar-este-secreto-en-produccion}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       SESSION_MAX_HOURS: ${SESSION_MAX_HOURS:-24}
       REFRESH_GRACE_HOURS: ${REFRESH_GRACE_HOURS:-12}
       PORT: 4000
-     # FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       FRONTEND_URL: ${FRONTEND_URL:-http://127.0.0.1:5173}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}

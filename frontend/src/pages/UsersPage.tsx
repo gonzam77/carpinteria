@@ -11,8 +11,9 @@ import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import SaveIcon from "@mui/icons-material/Save";
-import { Button, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import { Alert, Button, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
+import axios from "axios";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { fieldIcon } from "../components/fieldIcon";
@@ -45,6 +46,7 @@ export function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [form, setForm] = useState<UserForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [formError, setFormError] = useState("");
 
   async function loadUsers() {
     const response = await api.get<User[]>("/users");
@@ -70,10 +72,12 @@ export function UsersPage() {
   function resetForm() {
     setEditingId(null);
     setForm(emptyForm);
+    setFormError("");
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    setFormError("");
     const payload = {
       nombre: form.nombre,
       apellido: form.apellido,
@@ -83,10 +87,21 @@ export function UsersPage() {
       ...(form.password ? { password: form.password } : {})
     };
 
-    if (editingId) {
-      await api.put(`/users/${editingId}`, payload);
-    } else {
-      await api.post("/users", { ...payload, password: form.password });
+    try {
+      if (editingId) {
+        await api.put(`/users/${editingId}`, payload);
+      } else {
+        await api.post("/users", { ...payload, password: form.password });
+      }
+    } catch (error) {
+      // Sin este catch el 409 de email duplicado quedaba como promesa
+      // rechazada: el usuario apretaba Crear Usuario y no pasaba nada visible.
+      setFormError(
+        axios.isAxiosError<{ message?: string }>(error)
+          ? error.response?.data?.message ?? "No se pudo guardar el usuario."
+          : "No se pudo guardar el usuario."
+      );
+      return;
     }
 
     resetForm();
@@ -195,6 +210,11 @@ export function UsersPage() {
             </Button>
           </Stack>
         </Stack>
+        {formError && (
+          <Alert severity="error" sx={{ mt: 2 }} onClose={() => setFormError("")}>
+            {formError}
+          </Alert>
+        )}
       </Paper>
       <Paper sx={{ height: 520, borderRadius: "8px", overflowX: "auto", overflowY: "hidden" }}>
         <DataGrid rows={users} columns={columns} disableRowSelectionOnClick sx={{ minWidth: { xs: 860, md: "100%" } }} />

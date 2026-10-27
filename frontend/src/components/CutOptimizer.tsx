@@ -545,12 +545,15 @@ export function CutOptimizer({
   rows,
   materials,
   autoCalculate = false,
-  hideCosts = false
+  hideCosts = false,
+  onBoardsCalculated
 }: {
   rows: OrderDetail[];
   materials: Material[];
   autoCalculate?: boolean;
   hideCosts?: boolean;
+  /** Placas totales del plano cada vez que termina un calculo sin errores. */
+  onBoardsCalculated?: (placas: number) => void;
 }) {
   const [calculation, setCalculation] = useState<CutCalculation | null>(null);
   const results = calculation?.results ?? [];
@@ -636,6 +639,15 @@ export function CutOptimizer({
     // run usa las mismas dependencias.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCalculate, rows, materials, settings, budgetSettings]);
+
+  // Por ref: si el llamador pasa un callback inline, el efecto no se vuelve a disparar en cada render.
+  const boardsCallback = useRef(onBoardsCalculated);
+  boardsCallback.current = onBoardsCalculated;
+  useEffect(() => {
+    // Sin calculo o con errores no hay un numero de placas que comparar.
+    if (!calculation || calculation.errores.length > 0) return;
+    boardsCallback.current?.(calculation.results.reduce((total, result) => total + result.optimizedBoards.length, 0));
+  }, [calculation]);
 
   return (
     <Stack spacing={2}>

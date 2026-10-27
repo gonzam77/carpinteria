@@ -25,6 +25,7 @@ import {
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useCompanySettings } from "../context/CompanySettingsContext";
+import { escapeHtml } from "../lib/html";
 import { Order, OrderMaterialsSummary } from "../types";
 import { MetricGrid, MetricTile } from "./MetricTile";
 import { SectionHeading } from "./SectionHeading";
@@ -86,12 +87,12 @@ export function OrderMaterialsDialog({ order, open, onClose }: { order: Order | 
       .map(
         (placa) => `
           <tr>
-            <td>${placa.nombre}</td>
-            <td>${boardSize(placa.anchoPlaca, placa.altoPlaca)}</td>
-            <td>${formatThickness(placa.espesorMm)}</td>
-            <td>${placa.placas}</td>
-            <td>${placa.stockPlacas ?? "-"}</td>
-            <td>${placa.faltantePlacas > 0 ? placa.faltantePlacas : "-"}</td>
+            <td>${escapeHtml(placa.nombre)}</td>
+            <td>${escapeHtml(boardSize(placa.anchoPlaca, placa.altoPlaca))}</td>
+            <td>${escapeHtml(formatThickness(placa.espesorMm))}</td>
+            <td>${escapeHtml(placa.placas)}</td>
+            <td>${escapeHtml(placa.stockPlacas ?? "-")}</td>
+            <td>${escapeHtml(placa.faltantePlacas > 0 ? placa.faltantePlacas : "-")}</td>
           </tr>
         `
       )
@@ -101,9 +102,9 @@ export function OrderMaterialsDialog({ order, open, onClose }: { order: Order | 
       .map(
         (canto) => `
           <tr>
-            <td>${canto.nombre}</td>
-            <td>${formatThickness(canto.espesorMm)}</td>
-            <td>${canto.metros.toFixed(2)} m</td>
+            <td>${escapeHtml(canto.nombre)}</td>
+            <td>${escapeHtml(formatThickness(canto.espesorMm))}</td>
+            <td>${escapeHtml(canto.metros.toFixed(2))} m</td>
           </tr>
         `
       )
@@ -115,7 +116,7 @@ export function OrderMaterialsDialog({ order, open, onClose }: { order: Order | 
     printWindow.document.write(`
       <html>
         <head>
-          <title>Listado de materiales - ${order.cliente}</title>
+          <title>Listado de materiales - ${escapeHtml(order.cliente)}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
             table { width: 100%; border-collapse: collapse; margin-top: 8px; }
@@ -128,12 +129,12 @@ export function OrderMaterialsDialog({ order, open, onClose }: { order: Order | 
         </head>
         <body>
           <div class="card">
-            <h1 style="margin:0;">${companySettings.nombre}</h1>
+            <h1 style="margin:0;">${escapeHtml(companySettings.nombre)}</h1>
             <div class="section">
               <strong>Listado de materiales a comprar</strong><br />
-              Cliente: ${order.cliente}<br />
-              Solicitud: ${order.id.slice(0, 8).toUpperCase()}<br />
-              Fecha: ${new Date(order.fechaCreacion).toLocaleDateString()}
+              Cliente: ${escapeHtml(order.cliente)}<br />
+              Solicitud: ${escapeHtml(order.id.slice(0, 8).toUpperCase())}<br />
+              Fecha: ${escapeHtml(new Date(order.fechaCreacion).toLocaleDateString())}
             </div>
             <div class="section">
               <strong>Placas necesarias</strong>
@@ -143,7 +144,7 @@ export function OrderMaterialsDialog({ order, open, onClose }: { order: Order | 
                 </thead>
                 <tbody>${placasRows || emptyPlacasRow}</tbody>
               </table>
-              <div class="muted">Total de placas: ${summary.totalPlacas}</div>
+              <div class="muted">Total de placas: ${escapeHtml(summary.totalPlacas)}</div>
             </div>
             <div class="section">
               <strong>Cantos solicitados</strong>
@@ -153,7 +154,7 @@ export function OrderMaterialsDialog({ order, open, onClose }: { order: Order | 
                 </thead>
                 <tbody>${cantosRows || emptyCantosRow}</tbody>
               </table>
-              <div class="muted">Total de metros de canto: ${summary.totalMetrosCanto.toFixed(2)} m</div>
+              <div class="muted">Total de metros de canto: ${escapeHtml(summary.totalMetrosCanto.toFixed(2))} m</div>
             </div>
           </div>
         </body>

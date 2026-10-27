@@ -13,6 +13,8 @@ import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, 
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useCompanySettings } from "../context/CompanySettingsContext";
+import { escapeHtml } from "../lib/html";
+import { cuttingLaborCost, formatMoney } from "../lib/orderBudget";
 import { Order } from "../types";
 import { SectionHeading } from "./SectionHeading";
 
@@ -33,20 +35,14 @@ function InfoLine({ icon, label, children }: { icon: React.ReactNode; label: str
   );
 }
 
-function formatMoney(value: number) {
-  return value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
-}
-
-function cuttingLaborCost(order: Order) {
-  const cost = order.costoManoObraCortes ?? (order.presupuestoEstimado - order.costoPlacas - order.costoCantos);
-  return Math.abs(cost) < 0.01 ? 0 : cost;
-}
-
 /** Herrajes de una solicitud de modulos (DECISIONES 57): van aparte del presupuesto de placas y se suman al total. */
 function hardwareCost(order: Order) {
   return order.costoHerrajes ?? 0;
 }
 
+// `title` se escapa aca adentro, que es el unico punto de entrada: los llamadores NO
+// tienen que escaparlo de nuevo o la barra del titulo imprimiria "&amp;amp;".
+// `html`, en cambio, ya viene armado y escapado celda por celda por el llamador.
 function openPrintWindow(title: string, html: string) {
   const printWindow = window.open("", "_blank", "width=980,height=760");
   if (!printWindow) return;
@@ -54,7 +50,7 @@ function openPrintWindow(title: string, html: string) {
   printWindow.document.write(`
     <html>
       <head>
-        <title>${title}</title>
+        <title>${escapeHtml(title)}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
@@ -148,22 +144,24 @@ export function OrderReceiptDialog({
     const title = `Constancia - ${printableOrder.cliente}`;
     const date = new Date(printableOrder.fechaCreacion).toLocaleDateString();
 
+    // Se escapa TAMBIEN lo ya formateado (formatMoney, toFixed, la fecha): hoy no puede
+    // traer HTML, pero asi ningun cambio de formato futuro reabre el agujero.
     openPrintWindow(
       title,
       `
         <div class="card">
-          <h1 style="margin:0;">${companySettings.nombre}</h1>
-          <div class="muted">Teléfono: ${companySettings.telefono || "-"}</div>
-          <div class="muted">Email: ${companySettings.email || "-"}</div>
+          <h1 style="margin:0;">${escapeHtml(companySettings.nombre)}</h1>
+          <div class="muted">Teléfono: ${escapeHtml(companySettings.telefono || "-")}</div>
+          <div class="muted">Email: ${escapeHtml(companySettings.email || "-")}</div>
           <div class="section">
             <strong>Constancia de solicitud</strong><br />
-            Cliente: ${printableOrder.cliente}<br />
-            Contacto: ${printableOrder.numeroContacto ?? "-"}<br />
-            Fecha: ${date}
+            Cliente: ${escapeHtml(printableOrder.cliente)}<br />
+            Contacto: ${escapeHtml(printableOrder.numeroContacto ?? "-")}<br />
+            Fecha: ${escapeHtml(date)}
           </div>
           <div class="section">
-            <strong>Presupuesto estimado:</strong> ${formatMoney(printableOrder.presupuestoEstimado + printableHardware)}<br />
-            <span class="muted">Placas: ${formatMoney(printableOrder.costoPlacas)} - Mano de obra de cortes: ${formatMoney(printableCuttingLaborCost)} - Material canto: ${formatMoney(printableOrder.costoMaterialCantos)} - Pegado canto: ${formatMoney(printableOrder.costoPegadoCantos)} - Total cantos (material + pegado): ${formatMoney(printableOrder.costoCantos)} (${printableOrder.metrosCanto.toFixed(2)} m)${printableHardware > 0 ? ` - Herrajes: ${formatMoney(printableHardware)}` : ""}</span>
+            <strong>Presupuesto estimado:</strong> ${escapeHtml(formatMoney(printableOrder.presupuestoEstimado + printableHardware))}<br />
+            <span class="muted">Placas: ${escapeHtml(formatMoney(printableOrder.costoPlacas))} - Mano de obra de cortes: ${escapeHtml(formatMoney(printableCuttingLaborCost))} - Material canto: ${escapeHtml(formatMoney(printableOrder.costoMaterialCantos))} - Pegado canto: ${escapeHtml(formatMoney(printableOrder.costoPegadoCantos))} - Total cantos (material + pegado): ${escapeHtml(formatMoney(printableOrder.costoCantos))} (${escapeHtml(printableOrder.metrosCanto.toFixed(2))} m)${printableHardware > 0 ? ` - Herrajes: ${escapeHtml(formatMoney(printableHardware))}` : ""}</span>
           </div>
           <div class="section">
             <strong>Entrega estimada:</strong> "Observación: la entrega puede demorar algunos días adicionales según disponibilidad del material al momento de procesar la solicitud."

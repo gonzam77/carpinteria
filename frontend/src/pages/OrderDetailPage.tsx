@@ -6,12 +6,16 @@ import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
 import HistoryIcon from "@mui/icons-material/History";
 import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import RequestQuoteOutlinedIcon from "@mui/icons-material/RequestQuoteOutlined";
 import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
 import {
+  Alert,
   type AlertColor,
   Box,
   Button,
   Chip,
+  Divider,
   InputAdornment,
   MenuItem,
   Paper,
@@ -34,6 +38,7 @@ import { DeleteOrderDialog } from "../components/DeleteOrderDialog";
 import { ActionSnackbar, OrderCompletedDialog, StockShortageDialog, type StockShortage } from "../components/OrderStatusDialogs";
 import { getStatusStyle, StatusChip } from "../components/StatusChip";
 import { useAuth } from "../context/AuthContext";
+import { cuttingLaborCost, formatMoney } from "../lib/orderBudget";
 import { buildWhatsappLink } from "../lib/whatsapp";
 import { EstadoSolicitud, Material, Order } from "../types";
 import { useErrorDialog } from "../context/ErrorDialogContext";
@@ -67,6 +72,9 @@ export function OrderDetailPage() {
   const [pendingStatus, setPendingStatus] = useState<EstadoSolicitud | null>(null);
   const [stockShortages, setStockShortages] = useState<StockShortage[]>([]);
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
+  /** Placas que da el plano en vivo. Null hasta que el optimizador termina un calculo. */
+  const [livePlacas, setLivePlacas] = useState<number | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -152,6 +160,26 @@ export function OrderDetailPage() {
   async function confirmStatusWithoutStock() {
     if (!pendingStatus) return;
     await submitStatusChange(pendingStatus, true);
+  }
+
+  // Unica forma de mover el snapshot: el presupuesto no se recalcula solo al abrir la pagina, asi
+  // que un ajuste de valores en Materiales no le cambia el total a un pedido ya presupuestado.
+  async function recalculateBudget() {
+    if (!order) return;
+    setRecalculating(true);
+    try {
+      await api.post(`/orders/${order.id}/recalcular-presupuesto`);
+      await loadOrder();
+      setNotificationSeverity("success");
+      setNotification("Presupuesto recalculado con los precios y la configuración de hoy.");
+    } catch (error) {
+      const message = axios.isAxiosError<StatusChangeError>(error)
+        ? error.response?.data?.message ?? "No se pudo recalcular el presupuesto."
+        : "No se pudo recalcular el presupuesto.";
+      showError({ title: "No se pudo recalcular el presupuesto", message });
+    } finally {
+      setRecalculating(false);
+    }
   }
 
   async function deleteOrder() {
@@ -308,9 +336,50 @@ export function OrderDetailPage() {
         </Table>
         </Box>
       </Paper>
+      {/* El presupuesto es el snapshot congelado del pedido, el que vio el cliente en su constancia. El plano
+          de abajo se recalcula con los precios y la configuracion de hoy y por eso no muestra importes: si se
+          ajustaron valores despues de cargar el pedido, los dos numeros no coincidirian. */}
+      <Paper sx={{ p: 2.5, borderRadius: "8px" }}>
+        <SectionHeading
+          icon={<RequestQuoteOutlinedIcon />}
+          title="Presupuesto estimado"
+          sx={{ mb: 1.5 }}
+          action={
+            user?.rol === "ADMIN" ? (
+              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={recalculateBudget} disabled={recalculating}>
+                {recalculating ? "Recalculando..." : "Recalcular presupuesto"}
+              </Button>
+            ) : undefined
+          }
+        />
+        {order.faltanteStock && (
+          <Alert severity="warning" variant="outlined" sx={{ mb: 1.5 }}>
+            Al presupuestar no había stock suficiente para todas las placas de esta solicitud.
+          </Alert>
+        )}
+        <Stack spacing={1}>
+          <Typography>Placas estimadas: {order.placasEstimadas}</Typography>
+          <Typography>Costo placas: {formatMoney(order.costoPlacas)}</Typography>
+          <Typography>Mano de obra de cortes: {formatMoney(cuttingLaborCost(order))}</Typography>
+          <Typography>Costo material de canto: {formatMoney(order.costoMaterialCantos)}</Typography>
+          <Typography>Costo pegado de canto: {formatMoney(order.costoPegadoCantos)}</Typography>
+          <Typography>Total cantos (material + pegado): {formatMoney(order.costoCantos)}</Typography>
+          <Typography color="text.secondary">Metros de canto estimados: {order.metrosCanto.toFixed(2)} m</Typography>
+          <Divider sx={{ my: 0.5 }} />
+          <Typography variant="h5" fontWeight={900}>
+            {formatMoney(order.presupuestoEstimado)}
+          </Typography>
+        </Stack>
+        {livePlacas !== null && livePlacas > 0 && livePlacas !== order.placasEstimadas && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5 }}>
+            El plano actual da {livePlacas} placas contra {order.placasEstimadas} del presupuesto guardado
+            {user?.rol === "ADMIN" ? "; recalculá si querés actualizarlo." : "."}
+          </Typography>
+        )}
+      </Paper>
       {user?.rol === "ADMIN" && (
         <Paper sx={{ p: 2, borderRadius: "8px" }}>
-          <CutOptimizer rows={order.detalles} materials={materials} autoCalculate />
+          <CutOptimizer rows={order.detalles} materials={materials} autoCalculate hideCosts onBoardsCalculated={setLivePlacas} />
         </Paper>
       )}
       <Paper sx={{ p: 2.5, borderRadius: "8px" }}>

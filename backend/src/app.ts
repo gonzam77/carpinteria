@@ -27,7 +27,12 @@ app.use(
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || env.FRONTEND_URL.includes(origin)) {
+      // Comparacion exacta contra la lista, no substring: antes esto era
+      // env.FRONTEND_URL.includes(origin) sobre el string crudo de la variable,
+      // o sea un String.includes, y con FRONTEND_URL="https://app.example.com"
+      // tambien pasaba el filtro un origen atacante "https://app.example.co".
+      // FRONTEND_URLS ya viene partido por comas y trimmeado desde config/env.js.
+      if (!origin || env.FRONTEND_URLS.includes(origin)) {
         callback(null, true);
         return;
       }
